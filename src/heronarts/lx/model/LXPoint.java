@@ -168,7 +168,7 @@ public class LXPoint {
   /**
    * Updates the point's meta-coordinates, based upon the x y z values.
    *
-   * @return
+   * @return this
    */
   public LXPoint update() {
     this.r = (float) Math.sqrt(x * x + y * y + z * z);

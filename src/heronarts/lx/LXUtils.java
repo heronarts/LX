@@ -89,7 +89,7 @@ public class LXUtils {
    * @param v1 First value
    * @param v2 Second value
    * @param modulus Modulus to wrap around
-   * @return
+   * @return shortest distance between v1-v2 wrapping around the modulus
    */
   public static double wrapdist(double v1, double v2, double modulus) {
     if (v1 < v2) {
@@ -179,8 +179,9 @@ public class LXUtils {
 
     /**
      * Looks up the value in the table
-     * @param basis
-     * @return
+     *
+     * @param basis Basis
+     * @return value nearest to the basis
      */
     public float get(float basis) {
       return this.values[Math.round(basis * this.tableSize)];

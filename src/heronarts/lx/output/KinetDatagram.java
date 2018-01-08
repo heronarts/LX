@@ -48,7 +48,7 @@ public class KinetDatagram extends LXDatagram {
    * Constructs a datagram that sends on the given kinet supply output port
    *
    * @param kinetPort Number of the output port on the kinet power supply
-   * @param indices A list of the point indices that should be sent on this port
+   * @param fixture Fixture to output points for
    */
   public KinetDatagram(int kinetPort, LXFixture fixture) {
     this(kinetPort, fixture, Version.PORTOUT);
@@ -58,7 +58,7 @@ public class KinetDatagram extends LXDatagram {
    * Constructs a datagram that sends on the given kinet supply output port
    *
    * @param kinetPort Number of the output port on the kinet power supply
-   * @param indices A list of the point indices that should be sent on this port
+   * @param fixture Fixture that this datagram outputs points for
    * @param version Version of Kinet Protocol
    */
   public KinetDatagram(int kinetPort, LXFixture fixture, Version version) {

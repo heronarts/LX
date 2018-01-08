@@ -254,8 +254,10 @@ public class LXVector {
 
   /**
    * Calculates and returns the angle (in radians) between two vectors.
+   *
    * @param v1 the x, y, and z components of an LXVector
    * @param v2 the x, y, and z components of an LXVector
+   * @return angle between vectors in radians
    */
   static public float angleBetween(LXVector v1, LXVector v2) {
 

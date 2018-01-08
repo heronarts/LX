@@ -41,7 +41,7 @@ public class ObjectParameter<T> extends DiscreteParameter {
   /**
    * Set a list of objects for the parameter
    *
-   * @param options Array of arbitrary object values
+   * @param objects Array of arbitrary object values
    * @return this
    */
   public ObjectParameter<T> setObjects(T[] objects) {

@@ -232,7 +232,7 @@ public class LXModel implements LXFixture {
    *
    * @param normalize If true, normalize the points relative to this model
    * @param recurse If true, compute averages for sub-models as well
-   * @return
+   * @return this
    */
   public LXModel update(boolean normalize, boolean recurse) {
     // Recursively update values of sub-models
@@ -264,7 +264,7 @@ public class LXModel implements LXFixture {
   /**
    * Recompute the averages in this model
    *
-   * @return
+   * @return this
    */
   public LXModel average() {
     float ax = 0, ay = 0, az = 0;

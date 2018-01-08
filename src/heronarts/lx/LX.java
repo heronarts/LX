@@ -537,8 +537,7 @@ public class LX {
   /**
    * Sets the patterns to rotate automatically
    *
-   * @param autoTransitionThreshold Number of milliseconds after which to rotate
-   *          pattern
+   * @param autoCycleThreshold Number of milliseconds after which to cycle
    * @return this
    */
   public LX enableAutoCycle(int autoCycleThreshold) {
@@ -580,7 +579,7 @@ public class LX {
   /**
    * Register a pattern class with the engine
    *
-   * @param pattern
+   * @param pattern Pattern class
    * @return this
    */
   public LX registerPattern(Class<? extends LXPattern> pattern) {
@@ -591,7 +590,7 @@ public class LX {
   /**
    * Register a pattern class with the engine
    *
-   * @param pattern
+   * @param patterns List of pattern classes
    * @return this
    */
   public LX registerPatterns(Class<LXPattern>[] patterns) {
@@ -613,7 +612,7 @@ public class LX {
   /**
    * Register an effect class with the engine
    *
-   * @param effect
+   * @param effect Effect class
    * @return this
    */
   public LX registerEffect(Class<? extends LXEffect> effect) {
@@ -624,7 +623,7 @@ public class LX {
   /**
    * Register an effect class with the engine
    *
-   * @param effects
+   * @param effects List of effect classes
    * @return this
    */
   public LX registerEffects(Class<? extends LXEffect>[] effects) {

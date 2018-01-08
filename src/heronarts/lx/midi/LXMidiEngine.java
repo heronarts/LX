@@ -302,8 +302,8 @@ public class LXMidiEngine implements LXSerializable {
    * Called when a component is disposed. Remove any midi mappings
    * pointing to the now-nonexistent component.
    *
-   * @param component
-   * @return
+   * @param component Component to remove any midi mappings from
+   * @return this
    */
   public LXMidiEngine removeMappings(LXComponent component) {
     Iterator<LXMidiMapping> iterator = this.mutableMappings.iterator();

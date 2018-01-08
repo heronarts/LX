@@ -96,8 +96,8 @@ public class CompoundParameter extends BoundedParameter {
   /**
    * Adds a modulation to this parameter
    *
-   * @param modulation
-   * @return
+   * @param modulation Modulation mapping to add to this parameter
+   * @return this
    */
   public CompoundParameter addModulation(LXCompoundModulation modulation) {
     if (this.mutableModulations.contains(modulation)) {
@@ -111,8 +111,8 @@ public class CompoundParameter extends BoundedParameter {
   /**
    * Removes a modulation from this parameter
    *
-   * @param modulation
-   * @return
+   * @param modulation Modulation mapping to remove
+   * @return this
    */
   public CompoundParameter removeModulation(LXCompoundModulation modulation) {
     this.mutableModulations.remove(modulation);

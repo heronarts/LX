@@ -118,7 +118,7 @@ public class DampedParameter extends LXModulator {
   /**
    * Sets whether a modulus value is used.
    *
-   * @param modulus Whether to use modulus
+   * @param hasModulus Whether to use modulus
    * @return this
    */
   public DampedParameter setModulus(boolean hasModulus) {

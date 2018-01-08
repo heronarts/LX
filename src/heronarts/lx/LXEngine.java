@@ -493,7 +493,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * Sets the blend modes available to the channel mixer
    *
-   * @param channelBlends
+   * @param channelBlends List of available blend operators
    * @return this
    */
   public LXEngine setChannelBlends(LXBlend[] channelBlends) {
@@ -633,8 +633,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * Sets a global speed factor on the core animation engine.
    * This does not impact the tempo object.
    *
-   * @param speed
-   * @return
+   * @param speed Global speed multiplier
+   * @return this
    */
   public LXEngine setSpeed(double speed) {
     this.speed.setValue(speed);
@@ -661,6 +661,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   /**
    * Register a component with the engine. It will be saved and loaded.
+   *
+   * @param key Unique path key for saving and loading component
+   * @param component Component
+   * @return this
    */
   public LXEngine registerComponent(String key, LXComponent component) {
     this.components.put(key, component);
@@ -681,8 +685,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * Add a task to be run on every loop of the engine thread.
    *
-   * @param loopTask
-   * @return
+   * @param loopTask Task to run on each engine loop
+   * @return this
    */
   public LXEngine addLoopTask(LXLoopTask loopTask) {
     if (this.loopTasks.contains(loopTask)) {
@@ -695,8 +699,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * Remove a task from the list run on every loop invocation
    *
-   * @param loopTask
-   * @return
+   * @param loopTask Task to stop running on every loop
+   * @return this
    */
   public LXEngine removeLoopTask(LXLoopTask loopTask) {
     this.loopTasks.remove(loopTask);
@@ -815,13 +819,19 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * Get the boolean parameter that launches a scene
    *
-   * @param index
-   * @return
+   * @param index Index of scene
+   * @return Scene at index
    */
   public BooleanParameter getScene(int index) {
     return this.scenes[index];
   }
 
+  /**
+   * Launches the scene at given index
+   *
+   * @param index Scene index
+   * @return this
+   */
   public LXEngine launchScene(int index) {
     LXClip clip;
     for (LXChannel channel : this.lx.engine.channels) {
@@ -837,6 +847,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this;
   }
 
+  /**
+   * Stops all running clips
+   *
+   * @return this
+   */
   public LXEngine stopClips() {
     for (LXChannel channel : this.lx.engine.channels) {
       for (LXClip clip : channel.clips) {

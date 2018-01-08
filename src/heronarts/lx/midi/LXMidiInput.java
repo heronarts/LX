@@ -68,7 +68,7 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
   /**
    * Opens the midi input.
    *
-   * @return
+   * @return this
    */
   @Override
   public LXMidiInput open() {
@@ -89,11 +89,23 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
     }
   }
 
+  /**
+   * Registers a listener to this MIDI input
+   *
+   * @param listener Listener to receive callbacks
+   * @return this
+   */
   public LXMidiInput addListener(LXMidiListener listener) {
     this.listeners.add(listener);
     return this;
   }
 
+  /**
+   * Removes a listener to this MIDI input
+   *
+   * @param listener Listener to stop receiving callbacks
+   * @return this
+   */
   public LXMidiInput removeListener(LXMidiListener listener) {
     this.listeners.remove(listener);
     return this;

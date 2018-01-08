@@ -679,11 +679,11 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
   /**
    * Enable automatic transition from pattern to pattern on this channel
    *
-   * @param autoTransitionThresholdTransition time in seconds
-   * @return
+   * @param autoCycleThreshold time in seconds
+   * @return this
    */
-  public LXBus enableAutoCycle(double autoTransitionThreshold) {
-    this.autoCycleTimeSecs.setValue(autoTransitionThreshold);
+  public LXBus enableAutoCycle(double autoCycleThreshold) {
+    this.autoCycleTimeSecs.setValue(autoCycleThreshold);
     this.autoCycleEnabled.setValue(true);
     return this;
   }

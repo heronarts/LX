@@ -109,6 +109,7 @@ public interface LXParameter {
    * Sets the component that owns this parameter
    *
    * @param component Component
+   * @param path Path name for parameter
    * @return this
    */
   public LXParameter setComponent(LXComponent component, String path);
@@ -151,6 +152,8 @@ public interface LXParameter {
 
   /**
    * Gets the polarity of this parameter.
+   *
+   * @return polarity of this parameter
    */
   public Polarity getPolarity();
 

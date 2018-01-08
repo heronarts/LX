@@ -106,6 +106,7 @@ public class LXMatrix {
    * Multiplies the matrix by another matrix
    *
    * @param m Matrix to multiply by
+   * @return this
    */
   public LXMatrix multiply(LXMatrix m) {
     return multiply(

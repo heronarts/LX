@@ -38,7 +38,7 @@ import heronarts.lx.parameter.MutableParameter;
  * "Beats" are indicated by the return value of {@link #beat()}. {@link #ramp()} returns the current beat phase
  * from 0 to 1
  *
- * The {@link #bpm} parameter indicates the current BPM, and {@link #getPeriodMs()} can be used to invert the beat
+ * The {@link #bpm} parameter indicates the current BPM, and {@link #period} can be used to invert the beat
  * frequency (BPM) into a listenable period (ms per beat).
  *
  * Additional utility functions are available that assume beats represent the tempo:
@@ -307,8 +307,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   /**
    * Sets the period of one beat
    *
-   * @param beatMillis
-   * @return
+   * @param beatMillis Milliseconds in a beat
+   * @return this
    */
   public Tempo setPeriod(double beatMillis) {
     this.period.setValue(beatMillis);
