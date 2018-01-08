@@ -1,0 +1,19 @@
+<project name="LXHeadless" default="compile" basedir=".">
+	<target name="compile">
+		<delete dir="./bin" />
+		<mkdir dir="./bin" />
+		<javac destdir="./bin" includeantruntime="false">
+			<src path="./src" />
+			<src path="../../src" />
+			<classpath>
+				<pathelement location="../../lib/gson-2.8.0.jar"/>
+			</classpath>
+			<compilerarg value="-Xlint"/>
+		</javac>
+		<jar jarfile="./bin/LXHeadless.jar" basedir="./bin">
+			<manifest>
+				<attribute name="Main-Class" value="heronarts.lx.headless.LXHeadless"/>
+			</manifest>
+		</jar>
+	</target>
+</project>

@@ -1,0 +1,312 @@
+/* Javadoc style sheet */
+/* Define colors, fonts and other style attributes here to override the defaults */
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+	font-size: 13px;
+	font-family: Avenir, Helvetica, Arial, sans-serif;
+}
+
+pre, code {
+	font-family: Courier, monospace;
+  font-size: 12px;
+  margin: 0;
+  padding: 0;
+}
+
+p {
+  margin: 0;
+  padding: 0;
+}
+
+a, a:visited, a:link {
+	color: #47708A;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1.bar {
+  background: #333;
+  color: #fff;
+	font-size: 12px; 
+  margin: 0;
+  padding: 6px 12px;
+}
+
+h1.bar a {
+  color: #fff;
+}
+
+.header ul,
+.header li {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.indexHeader {
+  padding: 8px 12px 4px;
+}
+
+.indexContainer h2 {
+	font-size: 12px; 
+  margin: 0;
+  padding: 6px 12px;  
+}
+
+.indexContainer ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px 12px;
+}
+
+.skipNav {
+  display: none;
+}
+
+ul.navList {
+  float: left;
+  list-style: none;
+  margin: 0 20px 0 0;
+  padding: 2px 0;
+}
+
+.navList li {
+  float: left;
+  list-style: none;
+  margin: 0 4px;
+  padding: 4px;
+}
+
+.navList li.navBarCell1Rev {
+  font-weight: bold;  
+}
+
+ul.subNavList {
+  float: left;
+  font-size: 11px;
+  list-style: none;
+  margin: 0;
+  padding: 0 20px 4px 8px;
+}
+
+.subNavList li {
+  float: left;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.topNav, .subNav, .bottomNav {
+  overflow: hidden;
+}
+
+.topNav, .bottomNav {
+  background: #333;
+  color: #fff;
+}
+
+.topNav ul a,
+.bottomNav ul a {
+  color: #fff;
+}
+
+.subNav {
+  background: #f0f0f0;
+  border-bottom: solid #e9e9e9 1px;
+}
+
+.subNav div {
+  clear: both;
+}
+
+.header,
+.contentContainer {
+  margin: 8px;
+}
+
+.header h1,
+.header h2,
+.contentContainer h2 {
+  font-size: 16px;
+  margin: 4px 0 0;
+  padding: 0;
+}
+
+.header p {
+  margin: 0;
+  padding: 4px 0 0;
+}
+
+.contentContainer table {
+  border-bottom: solid #e0e0e0 1px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+
+.contentContainer table .colFirst {
+  width: 25%;
+}
+
+.contentContainer table caption {
+  background: #444;
+  border-radius: 4px 4px 0 0;
+  color: #fff;
+  position: relative;
+  font-weight: bold;
+  padding: 4px 7px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.contentContainer table caption span {
+  margin: 0 2px;
+}
+
+.contentContainer table caption span a {
+  color: #ccc;
+}
+
+.contentContainer table caption span.activeTableTab a {
+  color: #fff;
+}
+
+.contentContainer table td a {
+  font-weight: bold;
+}
+
+.contentContainer table .colFirst,
+.contentContainer table .colOne {
+  border-left: solid #d9d9d9 1px;
+}
+
+.contentContainer table .colLast,
+.contentContainer table .colOne {
+  border-right: solid #d9d9d9 1px;
+}
+
+.contentContainer table th,
+.contentContainer table td {
+  padding: 2px 8px;
+}
+
+.contentContainer table tr {
+  border-left: solid #d9d9d9 1px;
+  border-right: solid #d9d9d9 1px;
+}
+
+.contentContainer table th {
+  background: #e0e0e0;
+  border-bottom: solid #e9e9e9 1px;
+  border-top: solid #e0e0e0 1px;
+  text-align: left;
+}
+
+.contentContainer table tr:nth-child(even) {
+  background: #e9e9e9;
+}
+
+.contentContainer .blockList,
+.contentContainer .blockListLast {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+ul.inheritance {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.inheritance li ul.inheritance {
+  margin-left: 12px;
+}
+
+.blockList .blockList .blockList li.blockList {
+  background: #f9f9f9;
+  border: solid #e9e9e9 1px;
+  margin: 18px 0 6px;
+  padding: 4px 8px;
+}
+
+.blockList .blockList .blockList li.blockList h3 {
+  margin: 4px 0 6px;
+}
+
+.blockList .blockList .blockList .blockList li.blockList a[name] {
+  display: none;
+}
+
+.blockList .blockList .blockList .blockList li.blockList h3,
+.blockList .blockList .blockList .blockList li.blockList h4 {
+  background: #f0f0f0;
+  border-bottom: solid #e9e9e9 1px;
+  margin: 0 -6px 2px;
+  padding: 4px 6px;
+}
+
+.blockList .blockList .blockList .blockList li.blockList {
+  background: #fff;
+  border: solid #e9e9e9 1px;
+  padding: 0 6px 4px;
+  margin: 0 0 6px;
+}
+
+.blockList .blockList .blockList .blockList li.blockList h3 {
+  margin-top: 0;
+}
+
+.blockList .blockList pre {
+  margin-bottom: 12px;
+}
+
+.blockList .blockList .blockList pre {
+  margin: 12px 0;
+}
+
+.blockList .block {
+  margin: 4px 0;
+}
+
+.blockList h3,
+.blockList h4 {
+  margin: 0;
+  padding: 0;
+}
+
+dt {
+  font-weight: bold;
+  margin: 0;
+}
+
+dd {
+  margin: 0 0 6px;
+}
+
+.packageHierarchyLabel {
+  font-weight: bold;
+}
+
+ul.horizontal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ul.horizontal li {
+  display: inline;
+  margin: 0;
+  padding: 0;
+}
+
+.legalCopy {
+  padding: 2px 6px;
+}

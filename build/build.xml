@@ -1,0 +1,48 @@
+<project name="LX" default="compile">
+  
+  <property file="build.properties" />
+	
+  <path id="lib.path">
+    <fileset dir="../lib">
+      <include name="*.jar"/>
+    </fileset>
+  </path>
+	
+  <target name="javadoc" depends="clean">
+  	<mkdir dir="../doc"/>
+  	<javadoc
+  		bottom="LX library by Mark C. Slee. (C) 2012-" 
+  		classpath="../lib/gson-2.8.0.jar;" 
+  		destdir="../doc" 
+  		verbose="false" 
+  		stylesheetfile="stylesheet.css" 
+  		doctitle="LX API Specification" 
+  		version="false" 
+  		windowtitle="LX API">
+  	 			
+		<link href="${javadoc.java.href}" />
+  		<link href="${javadoc.gson.href}" offline="true" packagelistLoc="." />
+  		
+		<fileset dir="../src" defaultexcludes="yes">
+  			<include name="**/*"/>
+  		</fileset>
+  	</javadoc>
+  </target>
+	
+  <target name="compile" depends="clean">
+    <mkdir dir="../tmp"/>
+    <javac srcdir="../src" destdir="../tmp" includeAntRuntime="false">
+      <classpath refid="lib.path" />
+    </javac>
+    <mkdir dir="../bin"/>
+  	<jar destfile="../bin/LX.jar" basedir="../tmp" includes="**/*.class">
+  		<zipgroupfileset dir="../lib" includes="coremidi4j-0.9.jar" />
+    </jar>
+  	<delete dir="../tmp"/>
+  </target>
+
+  <target name="clean">
+  	<delete dir="../tmp"/>
+    <delete dir="../bin"/>
+  </target>
+</project>

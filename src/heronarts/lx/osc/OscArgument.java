@@ -1,0 +1,58 @@
+/**
+ * Copyright 2017- Mark C. Slee, Heron Arts LLC
+ *
+ * This file is part of the LX Studio software library. By using
+ * LX, you agree to the terms of the LX Studio Software License
+ * and Distribution Agreement, available at: http://lx.studio/license
+ *
+ * Please note that the LX license is not open-source. The license
+ * allows for free, non-commercial use.
+ *
+ * HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR
+ * OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF
+ * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
+ * PURPOSE, WITH RESPECT TO THE SOFTWARE.
+ *
+ * @author Mark C. Slee <mark@heronarts.com>
+ */
+
+package heronarts.lx.osc;
+
+import java.nio.ByteBuffer;
+
+public interface OscArgument {
+  /**
+   * Gets the number of bytes used by this argument uses in its encoded representation.
+   *
+   * @return Number of bytes of data this argument consumes
+   */
+  public int getByteLength();
+
+  /**
+   * Returns the type tag used to encode this argument
+   *
+   * @return Type-tag character for this argument
+   */
+  public char getTypeTag();
+
+  /**
+   * Serializes this argument to a buffer
+   *
+   * @param buffer ByteByffer to write to
+   */
+  public void serialize(ByteBuffer buffer);
+
+  /**
+   * Gets an integer value of this argument
+   *
+   * @return Integer value of this argument
+   */
+  public int toInt();
+
+  public float toFloat();
+
+  public double toDouble();
+
+  public boolean toBoolean();
+
+}

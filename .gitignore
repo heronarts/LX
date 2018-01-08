@@ -1,0 +1,5 @@
+/tmp
+/bin
+/doc
+.DS_Store
+/examples/LXHeadless/bin
