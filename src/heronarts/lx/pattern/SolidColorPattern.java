@@ -22,7 +22,6 @@ import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
-import heronarts.lx.parameter.LXParameter;
 
 public class SolidColorPattern extends LXPattern {
 
@@ -40,13 +39,11 @@ public class SolidColorPattern extends LXPattern {
   }
 
   @Override
-  public void onParameterChanged(LXParameter p) {
-    if (p == this.color) {
-      setColors(this.color.getColor());
-    }
-  }
-
-  @Override
   public void run(double deltaMs) {
+    setColors(LXColor.hsb(
+      this.color.hue.getValue(),
+      this.color.saturation.getValue(),
+      this.color.brightness.getValue()
+    ));
   }
 }
