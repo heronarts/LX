@@ -113,7 +113,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private final List<Listener> listeners = new ArrayList<Listener>();
   private final List<MessageListener> messageListeners = new ArrayList<MessageListener>();
 
-  public final DiscreteParameter focusedChannel = new DiscreteParameter("Channel", 1);
+  public final DiscreteParameter focusedChannel =
+    new DiscreteParameter("Channel", 1)
+    .setDescription("Which channel is currently focused in the UI");
 
   public final BoundedParameter framesPerSecond =
     new BoundedParameter("FPS", 60, 0, 300)
