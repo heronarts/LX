@@ -103,8 +103,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private final List<Runnable> engineThreadTaskQueue = new ArrayList<Runnable>();
   private final Map<String, LXComponent> components = new HashMap<String, LXComponent>();
 
-  private final List<LXChannel> mutableChannels = new ArrayList<LXChannel>();
-  public final List<LXChannel> channels = Collections.unmodifiableList(this.mutableChannels);
+  private final List<LXChannelBus> mutableChannels = new ArrayList<LXChannelBus>();
+  public final List<LXChannelBus> channels = Collections.unmodifiableList(this.mutableChannels);
 
   public final LXMasterChannel masterChannel;
 
@@ -191,9 +191,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   public interface Listener {
-    public void channelAdded(LXEngine engine, LXChannel channel);
-    public void channelRemoved(LXEngine engine, LXChannel channel);
-    public void channelMoved(LXEngine engine, LXChannel channel);
+    public void channelAdded(LXEngine engine, LXChannelBus channel);
+    public void channelRemoved(LXEngine engine, LXChannelBus channel);
+    public void channelMoved(LXEngine engine, LXChannelBus channel);
   }
 
   @Deprecated
@@ -373,7 +373,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         if (cueA.isOn()) {
           cueB.setValue(false);
           lx.palette.cue.setValue(false);
-          for (LXChannel channel : mutableChannels) {
+          for (LXChannelBus channel : channels) {
             channel.cueActive.setValue(false);
           }
         }
@@ -384,7 +384,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         if (cueB.isOn()) {
           cueA.setValue(false);
           lx.palette.cue.setValue(false);
-          for (LXChannel channel : mutableChannels) {
+          for (LXChannelBus channel : channels) {
             channel.cueActive.setValue(false);
           }
         }
@@ -395,7 +395,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         if (lx.palette.cue.isOn()) {
           cueA.setValue(false);
           cueB.setValue(false);
-          for (LXChannel channel : mutableChannels) {
+          for (LXChannelBus channel : channels) {
             channel.cueActive.setValue(false);
           }
         }
@@ -503,7 +503,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       throw new UnsupportedOperationException("setChannelBlends() may only be invoked before engine has started");
     }
     this.channelBlends = channelBlends;
-    for (LXChannel channel : this.mutableChannels) {
+    for (LXChannelBus channel : this.mutableChannels) {
       channel.blendMode.setObjects(channelBlends);
     }
     return this;
@@ -720,20 +720,25 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this;
   }
 
-  public List<LXChannel> getChannels() {
+  public List<LXChannelBus> getChannels() {
     return this.channels;
   }
 
   public LXChannel getDefaultChannel() {
-    return this.mutableChannels.get(0);
+    for (LXChannelBus channel : this.channels) {
+      if (channel instanceof LXChannel) {
+        return (LXChannel) channel;
+      }
+    }
+    return null;
   }
 
-  public LXChannel getChannel(int channelIndex) {
+  public LXChannelBus getChannel(int channelIndex) {
     return this.mutableChannels.get(channelIndex);
   }
 
-  public LXChannel getChannel(String label) {
-    for (LXChannel channel : this.mutableChannels) {
+  public LXChannelBus getChannel(String label) {
+    for (LXChannelBus channel : this.mutableChannels) {
       if (channel.getLabel().equals(label)) {
         return channel;
       }
@@ -758,31 +763,41 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   public LXChannel addChannel() {
-    return addChannel(new LXPattern[] { new SolidColorPattern(lx) });
+    return addChannel(new LXPattern[] { new SolidColorPattern(this.lx) });
   }
 
   public LXChannel addChannel(LXPattern[] patterns) {
-    LXChannel channel = new LXChannel(lx, this.mutableChannels.size(), patterns);
+    LXChannel channel = new LXChannel(this.lx, this.mutableChannels.size(), patterns);
+    _addChannel(channel);
+    return channel;
+  }
+
+  public LXGroup addGroup() {
+    LXGroup group = new LXGroup(this.lx, this.mutableChannels.size());
+    _addChannel(group);
+    return group;
+  }
+
+  private void _addChannel(LXChannelBus channel) {
     channel.setParent(this);
     this.mutableChannels.add(channel);
     this.focusedChannel.setRange(this.mutableChannels.size() + 1);
     for (Listener listener : this.listeners) {
       listener.channelAdded(this, channel);
     }
-    return channel;
   }
 
-  public void removeChannel(LXChannel channel) {
+  public void removeChannel(LXChannelBus channel) {
     removeChannel(channel, true);
   }
 
-  private void removeChannel(LXChannel channel, boolean checkLast) {
+  private void removeChannel(LXChannelBus channel, boolean checkLast) {
     if (checkLast && (this.mutableChannels.size() == 1)) {
       throw new UnsupportedOperationException("Cannot remove last channel from LXEngine");
     }
     if (this.mutableChannels.remove(channel)) {
       int i = 0;
-      for (LXChannel c : this.mutableChannels) {
+      for (LXChannelBus c : this.mutableChannels) {
         c.setIndex(i++);
       }
       boolean notified = false;
@@ -797,17 +812,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       for (Listener listener : this.listeners) {
         listener.channelRemoved(this, channel);
       }
-
       channel.dispose();
     }
   }
 
-  public void moveChannel(LXChannel channel, int index) {
+  public void moveChannel(LXChannelBus channel, int index) {
     boolean focused = channel.getIndex() == this.focusedChannel.getValuei();
     this.mutableChannels.remove(channel);
     this.mutableChannels.add(index, channel);
     int i = 0;
-    for (LXChannel c: this.mutableChannels) {
+    for (LXChannelBus c: this.mutableChannels) {
       c.setIndex(i++);
     }
     if (focused) {
@@ -836,7 +850,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    */
   public LXEngine launchScene(int index) {
     LXClip clip;
-    for (LXChannel channel : this.lx.engine.channels) {
+    for (LXChannelBus channel : this.lx.engine.channels) {
       clip = channel.getClip(index);
       if (clip != null) {
         clip.trigger();
@@ -855,7 +869,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * @return this
    */
   public LXEngine stopClips() {
-    for (LXChannel channel : this.lx.engine.channels) {
+    for (LXChannelBus channel : this.lx.engine.channels) {
       for (LXClip clip : channel.clips) {
         if (clip != null) {
           clip.stop();
@@ -871,43 +885,76 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   public void setPatterns(LXPattern[] patterns) {
-    this.getDefaultChannel().setPatterns(patterns);
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      channel.setPatterns(patterns);
+    }
   }
 
   public List<LXPattern> getPatterns() {
-    return this.getDefaultChannel().getPatterns();
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      return channel.getPatterns();
+    }
+    return null;
   }
 
   protected LXPattern getActivePattern() {
-    return this.getDefaultChannel().getActivePattern();
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      return channel.getActivePattern();
+    }
+    return null;
   }
 
   protected LXPattern getNextPattern() {
-    return this.getDefaultChannel().getNextPattern();
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      return channel.getNextPattern();
+    }
+    return null;
   }
 
   public void goPrev() {
-    this.getDefaultChannel().goPrev();
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      channel.goPrev();
+    }
   }
 
   public final void goNext() {
-    this.getDefaultChannel().goNext();
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      channel.goNext();
+    }
   }
 
   public void goPattern(LXPattern pattern) {
-    this.getDefaultChannel().goPattern(pattern);
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      channel.goPattern(pattern);
+    }
   }
 
   public void goIndex(int index) {
-    this.getDefaultChannel().goIndex(index);
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      channel.goIndex(index);
+    }
   }
 
   protected void disableAutoCycle() {
-    getDefaultChannel().disableAutoCycle();
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      channel.disableAutoCycle();
+    }
   }
 
   protected void enableAutoCycle(int autoCycleThreshold) {
-    getDefaultChannel().enableAutoCycle(autoCycleThreshold);
+    LXChannel channel = getDefaultChannel();
+    if (channel != null) {
+      channel.enableAutoCycle(autoCycleThreshold);
+    }
   }
 
   public void run() {
@@ -1001,7 +1048,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // If we are in super-threaded mode, run the channels on their own threads!
     if (isChannelMultithreaded) {
       // Kick off threads per channel
-      for (LXChannel channel : this.mutableChannels) {
+      for (LXChannelBus channel : this.mutableChannels) {
         if (channel.enabled.isOn() || channel.cueActive.isOn()) {
           synchronized (channel.thread) {
             channel.thread.signal.workDone = false;
@@ -1017,7 +1064,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
 
       // Wait for all the channel threads to finish
-      for (LXChannel channel : this.mutableChannels) {
+      for (LXChannelBus channel : this.mutableChannels) {
         if (channel.enabled.isOn() || channel.cueActive.isOn()) {
           synchronized (channel.thread.signal) {
             while (!channel.thread.signal.workDone) {
@@ -1034,7 +1081,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     }
 
-    for (LXChannel channel : this.mutableChannels) {
+    for (LXChannelBus channel : this.mutableChannels) {
       boolean channelIsEnabled = channel.enabled.isOn();
       boolean channelIsCue = channel.cueActive.isOn();
       if (channelIsEnabled || channelIsCue) {
@@ -1199,10 +1246,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       StringBuilder sb = new StringBuilder();
       sb.append("LXEngine::run() " + ((int) (this.timer.runNanos / 1000000)) + "ms\n");
       sb.append("LXEngine::run()::channels " + ((int) (this.timer.channelNanos / 1000000)) + "ms\n");
-      for (LXChannel channel : this.channels) {
+      for (LXChannelBus channel : this.channels) {
         sb.append("LXEngine::" + channel.getLabel() + "::loop() " + ((int) (channel.timer.loopNanos / 1000000)) + "ms\n");
-        LXPattern pattern = channel.getActivePattern();
-        sb.append("LXEngine::" + channel.getLabel() + "::" + pattern.getLabel() + "::run() " + ((int) (pattern.timer.runNanos / 1000000)) + "ms\n");
+        if (channel instanceof LXChannel) {
+          LXPattern pattern = ((LXChannel)channel).getActivePattern();
+          sb.append("LXEngine::" + channel.getLabel() + "::" + pattern.getLabel() + "::run() " + ((int) (pattern.timer.runNanos / 1000000)) + "ms\n");
+        }
       }
       System.out.println(sb);
       this.logTimers = false;

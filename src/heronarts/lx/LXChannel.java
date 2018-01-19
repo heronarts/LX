@@ -25,7 +25,6 @@ import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.BoundedParameter;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -46,16 +45,7 @@ import com.google.gson.JsonObject;
  * which it plays and rotates. It also has a fader to control how this channel
  * is blended with the channels before it.
  */
-public class LXChannel extends LXBus implements LXComponent.Renamable {
-
-  public class Timer extends LXModulatorComponent.Timer {
-    public long blendNanos;
-  }
-
-  @Override
-  protected LXModulatorComponent.Timer constructTimer() {
-    return new Timer();
-  }
+public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
 
   /**
    * Listener interface for objects which want to be notified when the internal
@@ -63,6 +53,7 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
    */
   public interface Listener extends LXBus.Listener {
     public void indexChanged(LXChannel channel);
+    public void groupChanged(LXChannel channel, LXGroup group);
     public void patternAdded(LXChannel channel, LXPattern pattern);
     public void patternRemoved(LXChannel channel, LXPattern pattern);
     public void patternMoved(LXChannel channel, LXPattern pattern);
@@ -81,6 +72,10 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
 
     @Override
     public void indexChanged(LXChannel channel) {
+    }
+
+    @Override
+    public void groupChanged(LXChannel channel, LXGroup group) {
     }
 
     @Override
@@ -121,12 +116,6 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
   private final List<Listener> listenerSnapshot = new ArrayList<Listener>();
   private final List<MidiListener> midiListeners = new ArrayList<MidiListener>();
 
-  public enum CrossfadeGroup {
-    BYPASS,
-    A,
-    B
-  };
-
   public enum AutoCycleMode {
     NEXT,
     RANDOM;
@@ -144,28 +133,9 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
   };
 
   /**
-   * The index of this channel in the engine.
-   */
-  private int index;
-
-  /**
    * Which pattern is focused in the channel
    */
   public final DiscreteParameter focusedPattern;
-
-  /**
-   * Whether this channel is enabled.
-   */
-  public final BooleanParameter enabled =
-    new BooleanParameter("On", true)
-    .setDescription("Sets whether this channel is on or off");
-
-  /**
-   * Crossfade group this channel belongs to
-   */
-  public final EnumParameter<CrossfadeGroup> crossfadeGroup =
-    new EnumParameter<CrossfadeGroup>("Group", CrossfadeGroup.BYPASS)
-    .setDescription("Assigns this channel to crossfader group A or B");
 
   /**
    * Whether this channel should listen to MIDI events
@@ -180,13 +150,6 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
   public final EnumParameter<LXMidiEngine.Channel> midiChannel =
     new EnumParameter<LXMidiEngine.Channel>("MIDI Channel", LXMidiEngine.Channel.OMNI)
     .setDescription("Determines which MIDI channel is responded to");
-
-  /**
-   * Whether this channel should show in the cue UI.
-   */
-  public final BooleanParameter cueActive =
-    new BooleanParameter("Cue", false)
-    .setDescription("Toggles the channel CUE state, determining whether it is shown in the preview window");
 
   /**
    * Whether auto pattern transition is enabled on this channel
@@ -221,11 +184,8 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
 
   public final ObjectParameter<LXBlend> transitionBlendMode;
 
-  public final CompoundParameter fader =
-    new CompoundParameter("Fader", 0)
-    .setDescription("Sets the alpha level of the output of this channel");
-
-  public final ObjectParameter<LXBlend> blendMode;
+  private final List<LXPattern> mutablePatterns = new ArrayList<LXPattern>();
+  public final List<LXPattern> patterns = Collections.unmodifiableList(mutablePatterns);
 
   public final MutableParameter controlSurfaceFocusIndex = (MutableParameter)
     new MutableParameter("SurfaceFocusIndex", 0)
@@ -235,118 +195,48 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
     new MutableParameter("SurfaceFocusLength", 0)
     .setDescription("Control surface focus length");
 
-  private final List<LXPattern> mutablePatterns = new ArrayList<LXPattern>();
-  public final List<LXPattern> patterns = Collections.unmodifiableList(mutablePatterns);
-
-  /**
-   * This is a local buffer used for transition blending on this channel
-   */
-  private final ModelBuffer blendBuffer;
-
-  private int[] colors;
-
   private double autoCycleProgress = 0;
   private double transitionProgress = 0;
   private int activePatternIndex = 0;
   private int nextPatternIndex = 0;
 
+  private LXGroup group = null;
+
   private LXBlend transition = null;
   private long transitionMillis = 0;
 
-  ChannelThread thread = new ChannelThread();
-
-  private static int channelThreadCount = 1;
-
-  class ChannelThread extends Thread {
-
-    ChannelThread() {
-      super("LXChannel thread #" + channelThreadCount++);
-    }
-
-    boolean hasStarted = false;
-    boolean workReady = true;
-    double deltaMs;
-
-    class Signal {
-      boolean workDone = false;
-    }
-
-    Signal signal = new Signal();
-
-    @Override
-    public void run() {
-      System.out.println("LXEngine Channel thread started [" + getLabel() + "]");
-      while (!isInterrupted()) {
-        synchronized (this) {
-          try {
-            while (!this.workReady) {
-              wait();
-            }
-          } catch (InterruptedException ix) {
-            // Channel is finished
-            break;
-          }
-          this.workReady = false;
-        }
-        loop(this.deltaMs);
-        synchronized (this.signal) {
-          this.signal.workDone = true;
-          this.signal.notify();
-        }
-      }
-      System.out.println("LXEngine Channel thread finished [" + getLabel() + "]");
-    }
-  };
-
   LXChannel(LX lx, int index, LXPattern[] patterns) {
-    super(lx, "Channel-" + (index+1));
-    this.index = index;
-    this.label.setDescription("The name of this channel");
-    this.blendBuffer = new ModelBuffer(lx);
+    super(lx, index, "Channel-" + (index+1));
 
     this.focusedPattern =
       new DiscreteParameter("Focused Pattern", 0, patterns.length)
       .setDescription("Which pattern has focus in the UI");
 
-    this.blendMode = new ObjectParameter<LXBlend>("Blend", lx.engine.channelBlends)
-      .setDescription("Specifies the blending function used for the channel fader");
-
     this.transitionBlendMode = new ObjectParameter<LXBlend>("Transition Blend", lx.engine.crossfaderBlends)
       .setDescription("Specifies the blending function used for transitions between patterns on the channel");
 
     this.transitionMillis = lx.engine.nowMillis;
+
     _updatePatterns(patterns);
+
     this.colors = this.getActivePattern().getColors();
 
-    addParameter("enabled", this.enabled);
-    addParameter("cue", this.cueActive);
     addParameter("midiMonitor", this.midiMonitor);
     addParameter("midiChannel", this.midiChannel);
     addParameter("autoCycleEnabled", this.autoCycleEnabled);
     addParameter("autoCycleMode", this.autoCycleMode);
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
-    addParameter("fader", this.fader);
-    addParameter("crossfadeGroup", this.crossfadeGroup);
-    addParameter("blendMode", this.blendMode);
     addParameter("transitionEnabled", this.transitionEnabled);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
     addParameter("transitionBlendMode", this.transitionBlendMode);
   }
 
-  public String getOscAddress() {
-    return "/lx/channel/" + (this.index+1);
-  }
-
   @Override
   public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
     if (p == this.autoCycleEnabled) {
       if (this.transition == null) {
         this.transitionMillis = this.lx.engine.nowMillis;
-      }
-    } else if (p == this.cueActive) {
-      if (this.cueActive.isOn()) {
-        this.lx.engine.cueA.setValue(false);
-        this.lx.engine.cueB.setValue(false);
       }
     }
   }
@@ -395,18 +285,14 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
     }
   }
 
-  final LXChannel setIndex(int index) {
-    if (this.index != index) {
-      this.index = index;
-      for (LXBus.Listener listener : this.listeners) {
-        ((LXChannel.Listener)listener).indexChanged(this);
+  protected LXChannel setGroup(LXGroup group) {
+    if (this.group != group) {
+      this.group = group;
+      for (Listener listener : this.listeners) {
+        listener.groupChanged(this, group);
       }
     }
     return this;
-  }
-
-  public final int getIndex() {
-    return this.index;
   }
 
   @Override
@@ -823,10 +709,6 @@ public class LXChannel extends LXBus implements LXComponent.Renamable {
 
     this.colors = colors;
     this.timer.loopNanos = System.nanoTime() - loopStart;
-  }
-
-  int[] getColors() {
-    return this.colors;
   }
 
   @Override

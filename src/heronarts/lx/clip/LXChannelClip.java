@@ -28,11 +28,12 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXChannel;
+import heronarts.lx.LXGroup;
 import heronarts.lx.LXPattern;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiNote;
 
-public class LXChannelClip extends LXClip implements LXChannel.Listener, LXChannel.MidiListener {
+public class LXChannelClip extends LXChannelBusClip implements LXChannel.Listener, LXChannel.MidiListener {
 
   public final PatternClipLane patternLane = new PatternClipLane(this);
   public final MidiNoteClipLane midiNoteLane = new MidiNoteClipLane(this);
@@ -47,9 +48,6 @@ public class LXChannelClip extends LXClip implements LXChannel.Listener, LXChann
 
     channel.addListener(this);
     channel.addMidiListener(this);
-    channel.fader.addListener(this.parameterRecorder);
-    channel.enabled.addListener(this.parameterRecorder);
-
     for (LXPattern pattern : channel.patterns) {
       registerComponent(pattern);
     }
@@ -59,9 +57,6 @@ public class LXChannelClip extends LXClip implements LXChannel.Listener, LXChann
   public void dispose() {
     this.channel.removeListener(this);
     this.channel.removeMidiListener(this);
-    this.channel.fader.removeListener(this.parameterRecorder);
-    this.channel.enabled.removeListener(this.parameterRecorder);
-    this.channel.removeListener(this);
     for (LXPattern pattern : this.channel.patterns) {
       unregisterComponent(pattern);
     }
@@ -75,6 +70,9 @@ public class LXChannelClip extends LXClip implements LXChannel.Listener, LXChann
 
   @Override
   public void indexChanged(LXChannel channel) {}
+
+  @Override
+  public void groupChanged(LXChannel channel, LXGroup group) {}
 
   @Override
   public void patternAdded(LXChannel channel, LXPattern pattern) {

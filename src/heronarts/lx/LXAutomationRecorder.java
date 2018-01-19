@@ -81,7 +81,7 @@ public class LXAutomationRecorder extends LXRunnableComponent implements LXEngin
    */
   public final BooleanParameter looping = new BooleanParameter("LOOP", false);
 
-  private final List<LXChannel> channels = new ArrayList<LXChannel>();
+  private final List<LXChannelBus> channels = new ArrayList<LXChannelBus>();
 
   private final List<LXAutomationEvent> events = new ArrayList<LXAutomationEvent>();
 
@@ -234,7 +234,7 @@ public class LXAutomationRecorder extends LXRunnableComponent implements LXEngin
   public LXAutomationRecorder(LX lx) {
     this.engine = lx.engine;
     registerEngine();
-    for (LXChannel channel : engine.getChannels()) {
+    for (LXChannelBus channel : engine.getChannels()) {
       registerChannel(channel);
     }
     for (LXEffect effect : engine.masterChannel.getEffects()) {
@@ -258,7 +258,7 @@ public class LXAutomationRecorder extends LXRunnableComponent implements LXEngin
     return this;
   }
 
-  private LXAutomationRecorder registerChannel(LXChannel channel) {
+  private LXAutomationRecorder registerChannel(LXChannelBus channel) {
     String path = "channel/" + channel.getIndex();
     this.channels.add(channel);
     channel.addListener(new LXChannel.AbstractListener() {
@@ -272,8 +272,10 @@ public class LXAutomationRecorder extends LXRunnableComponent implements LXEngin
     });
     registerParameter(path + "/fader", channel.fader);
     registerParameter(path + "/blendMode", channel.blendMode);
-    for (LXPattern pattern : channel.getPatterns()) {
-      registerComponent(path + "/pattern/" + pattern.getClass().getName(), pattern);
+    if (channel instanceof LXChannel) {
+      for (LXPattern pattern : ((LXChannel)channel).getPatterns()) {
+        registerComponent(path + "/pattern/" + pattern.getClass().getName(), pattern);
+      }
     }
     return this;
   }
@@ -302,8 +304,11 @@ public class LXAutomationRecorder extends LXRunnableComponent implements LXEngin
       for (LXParameter parameter : getParameters()) {
         this.events.add(new ParameterAutomationEvent(parameter));
       }
-      for (LXChannel channel : this.channels) {
-        this.events.add(new PatternAutomationEvent(channel, channel.getActivePattern()));
+      for (LXChannelBus channel : this.channels) {
+        if (channel instanceof LXChannel) {
+          LXChannel c = (LXChannel) channel;
+          this.events.add(new PatternAutomationEvent(c, c.getActivePattern()));
+        }
       }
     }
   }
@@ -371,7 +376,7 @@ public class LXAutomationRecorder extends LXRunnableComponent implements LXEngin
         } else if (eventType.equals(EVENT_PATTERN)) {
           int channelIndex = obj.get(KEY_CHANNEL).getAsInt();
           String patternClassName = obj.get(KEY_PATTERN).getAsString();
-          LXChannel channel = this.engine.getChannel(channelIndex);
+          LXChannel channel = (LXChannel) this.engine.getChannel(channelIndex);
           LXPattern pattern = channel.getPatternByClassName(patternClassName);
           event = new PatternAutomationEvent(channel, pattern);
         } else if (eventType.equals(EVENT_MIDI)) {

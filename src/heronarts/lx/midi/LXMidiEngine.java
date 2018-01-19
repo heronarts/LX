@@ -20,6 +20,7 @@ package heronarts.lx.midi;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXChannel;
+import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXMappingEngine;
 import heronarts.lx.LXSerializable;
@@ -369,9 +370,12 @@ public class LXMidiEngine implements LXSerializable {
     }
 
     if (input == null || input.channelEnabled.isOn()) {
-      for (LXChannel channel : this.lx.engine.getChannels()) {
-        if (channel.midiMonitor.isOn() && channel.midiChannel.getEnum().matches(message)) {
-          channel.midiMessage(message);
+      for (LXChannelBus channelBus : this.lx.engine.channels) {
+        if (channelBus instanceof LXChannel) {
+          LXChannel channel = (LXChannel) channelBus;
+          if (channel.midiMonitor.isOn() && channel.midiChannel.getEnum().matches(message)) {
+            channel.midiMessage(message);
+          }
         }
       }
     }

@@ -34,9 +34,11 @@ import javax.sound.midi.InvalidMidiDataException;
 import heronarts.lx.LX;
 import heronarts.lx.LXBus;
 import heronarts.lx.LXChannel;
+import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXEffect;
 import heronarts.lx.LXEngine;
+import heronarts.lx.LXGroup;
 import heronarts.lx.LXModulationComponent;
 import heronarts.lx.LXModulationEngine;
 import heronarts.lx.LXPattern;
@@ -364,24 +366,28 @@ public class LXOscEngine extends LXComponent {
       }
       lx.engine.modulation.addListener(this);
       registerComponent(lx.engine.masterChannel);
-      for (LXChannel channel : lx.engine.getChannels()) {
+      for (LXChannelBus channel : lx.engine.channels) {
         registerChannel(channel);
       }
       lx.engine.addListener(this);
     }
 
-    private void registerChannel(LXChannel channel) {
+    private void registerChannel(LXChannelBus channel) {
       registerComponent(channel);
-      for (LXPattern p : channel.patterns) {
-        registerComponent(p);
+      if (channel instanceof LXChannel) {
+        for (LXPattern p : ((LXChannel)channel).patterns) {
+          registerComponent(p);
+        }
       }
       channel.addListener(this);
     }
 
-    private void unregisterChannel(LXChannel channel) {
+    private void unregisterChannel(LXChannelBus channel) {
       unregisterComponent(channel);
-      for (LXPattern p : channel.patterns) {
-        unregisterComponent(p);
+      if (channel instanceof LXChannel) {
+        for (LXPattern p : ((LXChannel)channel).patterns) {
+          unregisterComponent(p);
+        }
       }
       channel.removeListener(this);
     }
@@ -474,6 +480,9 @@ public class LXOscEngine extends LXComponent {
     public void indexChanged(LXChannel channel) {}
 
     @Override
+    public void groupChanged(LXChannel channel, LXGroup group) {}
+
+    @Override
     public void patternAdded(LXChannel channel, LXPattern pattern) {
       registerComponent(pattern);
     }
@@ -500,17 +509,17 @@ public class LXOscEngine extends LXComponent {
     }
 
     @Override
-    public void channelAdded(LXEngine engine, LXChannel channel) {
+    public void channelAdded(LXEngine engine, LXChannelBus channel) {
       registerChannel(channel);
     }
 
     @Override
-    public void channelRemoved(LXEngine engine, LXChannel channel) {
+    public void channelRemoved(LXEngine engine, LXChannelBus channel) {
       unregisterChannel(channel);
     }
 
     @Override
-    public void channelMoved(LXEngine engine, LXChannel channel) {}
+    public void channelMoved(LXEngine engine, LXChannelBus channel) {}
 
     @Override
     public void modulatorAdded(LXModulationEngine engine, LXModulator modulator) {
