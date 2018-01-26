@@ -30,9 +30,31 @@ Output via a variety of lighting protocols is supported, including:
 
 LX differs from many other lighting/VJ software packages in that it is designed to support non-uniform 3D pixel layouts, rather than dense 2D screens. Whereas many applications are capable of video mapping LED pixel arrays, LX functions more like a sparse vertex shader. The rendering engine takes into account the discrete spatial position of each pixel.
 
+### GUI ###
+
 A companion library, [P3LX](https://github.com/heronarts/P3LX), makes it simple to embed LX in the Processing 3 environment with modular UI controls and simulation, the  most typical use case. This core library is kept separate, free of any dependency on the Processing libraries or runtime.
 
 [LX Studio](https://github.com/heronarts/LXStudio) is a fully-featured digital lighting workstation with a rich UI for visualization and control.
+
+### Headless ###
+
+LX may be run in headless mode on any Java-enabled device (such as a Raspberry Pi).
+
+```
+cd examples/LXHeadless
+ant
+./LXHeadless
+```
+
+By default, the provided headless example outputs OPC formatted data via TCP on `localhost:7890`. This data can be viewed using the emulator that comes with [openpixelcontrol](https://github.com/zestyping/openpixelcontrol) as follows...
+```
+git clone git://github.com/zestyping/openpixelcontrol.git
+cd openpixelcontrol
+make
+bin/gl_server -l layouts/freespace.json
+```
+Alternatively, you could monitor raw network output with netcat: `nc -l 7890`
+
 
 ### Contact and Collaboration ###
 
