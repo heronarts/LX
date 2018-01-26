@@ -22,10 +22,21 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXGroupClip;
+import heronarts.lx.parameter.LXParameter;
 
 public class LXGroup extends LXChannelBus {
+
+  public class Timer extends LXChannelBus.Timer {
+    public long compositeNanos;
+  }
+
+  @Override
+  protected LXModulatorComponent.Timer constructTimer() {
+    return new Timer();
+  }
 
   private final List<LXChannel> mutableChannels = new ArrayList<LXChannel>();
   public final List<LXChannel> channels = Collections.unmodifiableList(this.mutableChannels);
@@ -39,20 +50,80 @@ public class LXGroup extends LXChannelBus {
     return new LXGroupClip(this.lx, this, index);
   }
 
-  public LXGroup addChannel(LXChannel channel) {
+  LXGroup addChannel(LXChannel channel) {
     if (this.channels.contains(channel)) {
       throw new IllegalStateException("Cannot add channel to group twice: " + channel + " " + this);
     }
     this.mutableChannels.add(channel);
+    channel.setGroup(this);
     return this;
   }
 
-  public LXGroup removeChannel(LXChannel channel) {
+  LXGroup removeChannel(LXChannel channel) {
     if (!this.channels.contains(channel)) {
       throw new IllegalStateException("Cannot remove channel not in group: " + channel + " " + this);
     }
     this.mutableChannels.remove(channel);
+    channel.setGroup(null);
     return this;
+  }
+
+  public void ungroup() {
+    // Remove all our channels
+    for (int i = this.channels.size() - 1; i >= 0; --i) {
+      removeChannel(this.channels.get(i));
+    }
+    // Remove ourselves
+    this.lx.engine.removeChannel(this);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter parameter) {
+    super.onParameterChanged(parameter);
+    if (parameter == this.selected) {
+      for (LXChannel channel : this.channels) {
+        channel.selected.setValue(this.selected.isOn());
+      }
+    }
+  }
+
+  void afterLoop(double deltaMs) {
+    // Composite all the channels in this group
+    long compositeStart = System.nanoTime();
+    int[] blendDestination = this.lx.engine.background.getArray();
+    int[] blendOutput = this.blendBuffer.getArray();
+    for (LXChannel channel : this.channels) {
+      if (channel.enabled.isOn()) {
+        LXBlend blend = channel.blendMode.getObject();
+        blend.blend(blendDestination, channel.getColors(), channel.fader.getValue(), blendOutput);
+        blendDestination = blendOutput;
+      }
+    }
+    this.colors = blendDestination;
+    ((LXGroup.Timer) this.timer).compositeNanos = System.nanoTime() - compositeStart;
+
+    // Run group effects
+    long effectStart = System.nanoTime();
+    if (this.effects.size() > 0) {
+      if (blendDestination != blendOutput) {
+        System.arraycopy(blendDestination, 0, blendOutput, 0, blendOutput.length);
+      }
+      for (LXEffect effect : this.effects) {
+        effect.setBuffer(this.blendBuffer);
+        effect.loop(deltaMs);
+      }
+      this.colors = blendOutput;
+    }
+    ((LXBus.Timer) this.timer).effectNanos = System.nanoTime() - effectStart;
+
+  }
+
+  @Override
+  public void dispose() {
+    if (!this.channels.isEmpty()) {
+      throw new IllegalStateException("Cannot dispose of LXGroup that still has channels");
+    }
+    super.dispose();
   }
 
 }

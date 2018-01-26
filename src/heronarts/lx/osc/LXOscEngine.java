@@ -477,7 +477,7 @@ public class LXOscEngine extends LXComponent {
     public void effectMoved(LXBus channel, LXEffect effect) {}
 
     @Override
-    public void indexChanged(LXChannel channel) {}
+    public void indexChanged(LXChannelBus channel) {}
 
     @Override
     public void groupChanged(LXChannel channel, LXGroup group) {}

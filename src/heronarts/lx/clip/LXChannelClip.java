@@ -28,6 +28,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXChannel;
+import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXGroup;
 import heronarts.lx.LXPattern;
 import heronarts.lx.midi.LXShortMessage;
@@ -69,7 +70,7 @@ public class LXChannelClip extends LXChannelBusClip implements LXChannel.Listene
   }
 
   @Override
-  public void indexChanged(LXChannel channel) {}
+  public void indexChanged(LXChannelBus channel) {}
 
   @Override
   public void groupChanged(LXChannel channel, LXGroup group) {}

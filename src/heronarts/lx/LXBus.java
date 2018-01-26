@@ -52,6 +52,14 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     public void clipRemoved(LXBus bus, LXClip clip);
   }
 
+  public class Timer extends LXModulatorComponent.Timer {
+    public long effectNanos;
+  }
+
+  @Override
+  protected LXModulatorComponent.Timer constructTimer() {
+    return new Timer();
+  }
 
   /**
    * Arms the channel for clip recording.
@@ -59,6 +67,13 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   public final BooleanParameter arm =
     new BooleanParameter("Arm")
     .setDescription("Arms the channel for clip recording");
+
+  /**
+   * Whether channel is selected in the UI
+   */
+  public final BooleanParameter selected =
+    new BooleanParameter("Selected")
+    .setDescription("Whether the channel is selected");
 
   protected final LX lx;
 
@@ -79,6 +94,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     super(lx, label);
     this.lx = lx;
     addParameter("arm", this.arm);
+    addParameter("selected", this.selected);
   }
 
   @Override
@@ -224,10 +240,14 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
 
   @Override
   public void loop(double deltaMs) {
+    loop(deltaMs, true);
+  }
+
+  protected void loop(double deltaMs, boolean runComponents) {
     long loopStart = System.nanoTime();
 
     // Run the active clip...
-    // TODO(mcslee): keep tabs of which is active?
+    // TODO(mcslee): keep tabs of which is active rather than looping?
     for (LXClip clip : this.clips) {
       if (clip != null) {
         clip.loop(deltaMs);
@@ -235,7 +255,9 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     }
 
     // Run modulators and components
-    super.loop(deltaMs);
+    if (runComponents) {
+      super.loop(deltaMs);
+    }
 
     this.timer.loopNanos = System.nanoTime() - loopStart;
   }

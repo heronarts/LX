@@ -38,7 +38,6 @@ public abstract class LXChannelBus extends LXBus {
    * Utility class to extend in cases where only some methods need overriding.
    */
   public abstract static class AbstractListener implements Listener {
-
     @Override
     public void indexChanged(LXChannelBus channel) {
     }
@@ -46,7 +45,7 @@ public abstract class LXChannelBus extends LXBus {
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
-  public class Timer extends LXModulatorComponent.Timer {
+  public class Timer extends LXBus.Timer {
     public long blendNanos;
   }
 
@@ -60,6 +59,10 @@ public abstract class LXChannelBus extends LXBus {
     A,
     B
   };
+
+  // An internal state flag used by the engine to track which channels
+  // are actively animating (e.g. they are enabled or cued)
+  boolean isAnimating;
 
   /**
    * The index of this channel in the engine.
@@ -166,6 +169,10 @@ public abstract class LXChannelBus extends LXBus {
     return "/lx/channel/" + (this.index+1);
   }
 
+  public LXGroup getGroup() {
+    return null;
+  }
+
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
@@ -175,6 +182,32 @@ public abstract class LXChannelBus extends LXBus {
         this.lx.engine.cueB.setValue(false);
       }
     }
+  }
+
+  private boolean isAnimating() {
+    // Cue is active? We must loop to preview ourselves
+    if (this.cueActive.isOn()) {
+      return true;
+    }
+    // We're not active? Then we're disabled for sure
+    if (!this.enabled.isOn()) {
+      return false;
+    }
+    // Are we a group? Cool, we should animate.
+    if (this instanceof LXGroup) {
+      return true;
+    }
+    // Are we *in* a group? Only animate if that group is animating,
+    // otherwise if no group then we are good to go
+    LXGroup group = getGroup();
+    return (group == null) || group.isAnimating;
+  }
+
+  @Override
+  public void loop(double deltaMs) {
+    // Figure out if we need to loop components and modulators etc.
+    this.isAnimating = isAnimating();
+    super.loop(deltaMs, this.isAnimating);
   }
 
   public final void addListener(Listener listener) {

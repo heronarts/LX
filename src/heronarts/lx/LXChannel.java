@@ -51,8 +51,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
    * Listener interface for objects which want to be notified when the internal
    * channel state is modified.
    */
-  public interface Listener extends LXBus.Listener {
-    public void indexChanged(LXChannel channel);
+  public interface Listener extends LXChannelBus.Listener {
     public void groupChanged(LXChannel channel, LXGroup group);
     public void patternAdded(LXChannel channel, LXPattern pattern);
     public void patternRemoved(LXChannel channel, LXPattern pattern);
@@ -71,7 +70,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
   public abstract static class AbstractListener implements Listener {
 
     @Override
-    public void indexChanged(LXChannel channel) {
+    public void indexChanged(LXChannelBus channel) {
     }
 
     @Override
@@ -285,7 +284,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
     }
   }
 
-  protected LXChannel setGroup(LXGroup group) {
+  public LXChannel setGroup(LXGroup group) {
     if (this.group != group) {
       this.group = group;
       for (Listener listener : this.listeners) {
@@ -293,6 +292,10 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
       }
     }
     return this;
+  }
+
+  public LXGroup getGroup() {
+    return this.group;
   }
 
   @Override
@@ -629,8 +632,15 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
   public void loop(double deltaMs) {
     long loopStart = System.nanoTime();
 
-    // Run modulators and components
+    // Delegate to LXChannelBus loop method
     super.loop(deltaMs);
+
+    // LXChannelBus will have figured out if we need to run everything.
+    // If not, then we're done here and skip the rest.
+    if (!this.isAnimating) {
+      this.timer.loopNanos = System.nanoTime() - loopStart;
+      return;
+    }
 
     // Check for transition completion
     if (this.transition != null) {
@@ -668,7 +678,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
     if (this.transition != null) {
       this.autoCycleProgress = 1.;
       this.transitionProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.transitionTimeSecs.getValue());
-      getNextPattern().loop(deltaMs);;
+      getNextPattern().loop(deltaMs);
       // TODO(mcslee): this is incorrect. the blend objects are shared, so the same one may be run on multiple
       // channels. either they need to be per-channel instances, or they are not loopable with modulators etc.
       this.transition.loop(deltaMs);
@@ -695,6 +705,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
     }
 
     // Apply effects
+    long effectStart = System.nanoTime();
     if (this.mutableEffects.size() > 0) {
       int[] array = this.blendBuffer.getArray();
       if (colors != array) {
@@ -706,6 +717,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
         effect.loop(deltaMs);
       }
     }
+    ((LXBus.Timer) this.timer).effectNanos = System.nanoTime() - effectStart;
 
     this.colors = colors;
     this.timer.loopNanos = System.nanoTime() - loopStart;

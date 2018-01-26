@@ -398,7 +398,7 @@ public class APC40Mk2 extends LXMidiSurface {
     }
 
     @Override
-    public void indexChanged(LXChannel channel) {
+    public void indexChanged(LXChannelBus channel) {
       // Handled by the engine channelMoved listener.
     }
 
