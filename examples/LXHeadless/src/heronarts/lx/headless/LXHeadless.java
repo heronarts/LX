@@ -19,11 +19,13 @@ package heronarts.lx.headless;
 
 import java.io.File;
 import heronarts.lx.LX;
+import heronarts.lx.LXPattern;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.FadecandyOutput;
 import heronarts.lx.output.LXDatagramOutput;
+import heronarts.lx.output.OPCOutput;
 
 /**
  * Example headless CLI for the LX engine. Just write a bit of scaffolding code
@@ -33,7 +35,7 @@ public class LXHeadless {
 
   public static LXModel buildModel() {
     // TODO: implement code that loads and builds your model here
-    return new GridModel(10, 10);
+    return new GridModel(30, 30);
   }
 
   public static void addArtNetOutput(LX lx) throws Exception {
@@ -49,6 +51,10 @@ public class LXHeadless {
     lx.engine.addOutput(new FadecandyOutput(lx, "localhost", 9090, lx.model));
   }
 
+  public static void addOPCOutput(LX lx) throws Exception {
+    lx.engine.addOutput(new OPCOutput(lx, "localhost", 7890));
+  }
+
   public static void main(String[] args) {
     try {
       LXModel model = buildModel();
@@ -57,10 +63,15 @@ public class LXHeadless {
       // TODO: add your own output code here
       // addArtNetOutput(lx);
       // addFadecandyOutput(lx);
+      addOPCOutput(lx);
 
-      // On the CLI you specify an argument with an .lxp file
+      // On the CLI you may specify an argument with an .lxp file
       if (args.length > 0) {
         lx.openProject(new File(args[0]));
+      } else {
+        lx.setPatterns(new LXPattern[] {
+          new ExamplePattern(lx)
+        });
       }
 
       lx.engine.start();

@@ -37,6 +37,7 @@
     <mkdir dir="../bin"/>
   	<jar destfile="../bin/LX.jar" basedir="../tmp" includes="**/*.class">
   		<zipgroupfileset dir="../lib" includes="coremidi4j-0.9.jar" />
+  		<zipgroupfileset dir="../lib" includes="gson-2.8.0.jar" />
     </jar>
   	<delete dir="../tmp"/>
   </target>

@@ -119,6 +119,12 @@ public class LX {
   final LXComponent.Registry componentRegistry = new LXComponent.Registry();
 
   /**
+   * Sometimes we need to know if we are P3LX, but we don't want LX library to have
+   * any dependency upon P3LX.
+   */
+  final boolean isP3LX;
+
+  /**
    * The width of the grid, immutable.
    */
   public final int width;
@@ -214,7 +220,12 @@ public class LX {
    * @param model Pixel model
    */
   public LX(LXModel model) {
+    this(model, false);
+  }
+
+  protected LX(LXModel model, boolean isP3LX) {
     LX.initTimer.init();
+    this.isP3LX = isP3LX;
     this.model = model;
     if (model == null) {
       this.total = this.width = this.height = 0;

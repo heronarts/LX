@@ -531,14 +531,22 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * Starts the engine thread.
    */
   public void start() {
+    if (this.lx.isP3LX) {
+      throw new IllegalStateException("LXEngine start() may not be used from P3LX, call setThreaded() instead");
+    }
     setThreaded(true);
+    _setThreaded(true);
   }
 
   /**
    * Stops the engine thread.
    */
   public void stop() {
+    if (this.lx.isP3LX) {
+      throw new IllegalStateException("LXEngine stop() may not be used from P3LX, call setThreaded() instead");
+    }
     setThreaded(false);
+    _setThreaded(false);
   }
 
   /**

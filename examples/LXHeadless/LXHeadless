@@ -1,2 +1,2 @@
 #!/bin/sh
-java -cp ../../lib/gson-2.8.0.jar:bin/LXHeadless.jar heronarts.lx.headless.LXHeadless $1
+java -jar bin/LXHeadless.jar $1
