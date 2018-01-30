@@ -124,8 +124,16 @@ public class CompoundParameter extends BoundedParameter {
     return super.getValue();
   }
 
+  public float getBaseValuef() {
+    return (float) getBaseValue();
+  }
+
   public double getBaseNormalized() {
     return super.getNormalized(getBaseValue());
+  }
+
+  public float getBaseNormalizedf() {
+    return (float) getBaseNormalized();
   }
 
   @Override
