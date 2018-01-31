@@ -169,10 +169,6 @@ public abstract class LXChannelBus extends LXBus {
     return "/lx/channel/" + (this.index+1);
   }
 
-  public LXGroup getGroup() {
-    return null;
-  }
-
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);

@@ -284,7 +284,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
     }
   }
 
-  public LXChannel setGroup(LXGroup group) {
+  LXChannel setGroup(LXGroup group) {
     if (this.group != group) {
       this.group = group;
       for (Listener listener : this.listeners) {
@@ -294,6 +294,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
     return this;
   }
 
+  @Override
   public LXGroup getGroup() {
     return this.group;
   }
@@ -737,12 +738,16 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
 
   private static final String KEY_PATTERNS = "patterns";
   private static final String KEY_PATTERN_INDEX = "patternIndex";
+  private static final String KEY_GROUP = "group";
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     obj.addProperty(KEY_PATTERN_INDEX, this.activePatternIndex);
     obj.add(KEY_PATTERNS, LXSerializable.Utils.toArray(lx, this.mutablePatterns));
+    if (this.group != null) {
+      obj.addProperty(KEY_GROUP, this.group.getId());
+    }
   }
 
   @Override
@@ -750,6 +755,12 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
     // Remove patterns
     for (int i = this.mutablePatterns.size() - 1; i >= 0; --i) {
       removePattern(this.mutablePatterns.get(i), false);
+    }
+
+    // Set appropriate group membership
+    if (obj.has(KEY_GROUP)) {
+      LXGroup group = (LXGroup) lx.getProjectComponent(obj.get(KEY_GROUP).getAsInt());
+      group.addChannel(this);
     }
 
     // Add patterns

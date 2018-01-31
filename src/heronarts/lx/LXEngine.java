@@ -313,6 +313,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private static final long INIT_RUN = -1;
   private long lastMillis = INIT_RUN;
+
+  private boolean fixDeltaMs = false;
+  private double fixedDeltaMs;
+
   long nowMillis = System.currentTimeMillis();
 
   LXEngine(final LX lx) {
@@ -515,6 +519,19 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    */
   public float frameRate() {
     return this.frameRate;
+  }
+
+  /**
+   * Utility for when rendering offline videos. Ignore how much real-time has passed between
+   * frames and compute animations based upon the given deltaMs
+   *
+   * @param deltaMs Fixed deltaMs between rendered frames
+   * @return this
+   */
+  public LXEngine setFixedDeltaMs(double deltaMs) {
+    this.fixDeltaMs = true;
+    this.fixedDeltaMs = deltaMs;
+    return this;
   }
 
   /**
@@ -819,7 +836,35 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return channel;
   }
 
+  public LXEngine ungroup(LXChannel channel) {
+    boolean focused = this.focusedChannel.getValuei() == channel.index;
+    LXGroup group = channel.getGroup();
+    if (group != null) {
+      group.removeChannel(channel);
+      this.mutableChannels.remove(channel);
+      this.mutableChannels.add(group.getIndex() + group.channels.size() + 1, channel);
+      _reindexChannels();
+      for (Listener listener : this.listeners) {
+        listener.channelMoved(this, channel);
+      }
+      if (focused) {
+        this.focusedChannel.setValue(channel.index);
+      }
+    }
+    return this;
+  }
+
   public LXGroup addGroup() {
+    return addGroup(true);
+  }
+
+  private LXGroup addGroup(boolean fromSelection) {
+    if (!fromSelection) {
+      LXGroup group = new LXGroup(this.lx, this.mutableChannels.size());
+      _addChannel(group, group.getIndex());
+      return group;
+    }
+
     List<LXChannel> groupChannels = new ArrayList<LXChannel>();
     int groupIndex = -1;
     for (LXChannelBus channel : this.channels) {
@@ -868,13 +913,17 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private void _addChannel(LXChannelBus channel, int index) {
     channel.setParent(this);
     this.mutableChannels.add(index, channel);
-    int i = 0;
-    for (LXChannelBus channelBus : this.mutableChannels) {
-      channelBus.setIndex(i++);
-    }
+    _reindexChannels();
     this.focusedChannel.setRange(this.mutableChannels.size() + 1);
     for (Listener listener : this.listeners) {
       listener.channelAdded(this, channel);
+    }
+  }
+
+  private void _reindexChannels() {
+    int i = 0;
+    for (LXChannelBus channelBus : this.mutableChannels) {
+      channelBus.setIndex(i++);
     }
   }
 
@@ -886,7 +935,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Group channel? Remove all of the children first...
     if (channel instanceof LXGroup) {
       LXGroup group = (LXGroup) channel;
-      for (LXChannel c : group.channels) {
+      List<LXChannel> removeGroupChannels = new ArrayList<LXChannel>(group.channels);
+      for (LXChannel c : removeGroupChannels) {
         removeChannel(c);
       }
     }
@@ -901,7 +951,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Remove ourselves
     this.mutableChannels.remove(channel);
-
 
     // Fix indexing on all channels
     int i = 0;
@@ -1082,6 +1131,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
   }
 
+  @Override
+  public LXModulationEngine getModulation() {
+    return this.modulation;
+  }
+
   public void run() {
     this.hasStarted = true;
 
@@ -1095,6 +1149,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
     double deltaMs = this.nowMillis - this.lastMillis;
     this.lastMillis = this.nowMillis;
+
+    // Override deltaMs if in fixed render mode
+    if (this.fixDeltaMs) {
+      deltaMs = this.fixedDeltaMs;
+    }
 
     if (this.paused) {
       this.timer.channelNanos = 0;
@@ -1535,9 +1594,14 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     if (obj.has(KEY_CHANNELS)) {
       JsonArray channelsArray = obj.getAsJsonArray(KEY_CHANNELS);
       for (JsonElement channelElement : channelsArray) {
-        // TODO(mcslee): improve efficiency, allow no-patterns in a channel?
-        // TODO(mcslee): handle groups here as well
-        LXChannel channel = addChannel();
+        String channelClass = channelElement.getAsJsonObject().get(KEY_CLASS).getAsString();
+        LXChannelBus channel;
+        if (channelClass.equals("heronarts.lx.LXGroup")) {
+          channel = addGroup(false);
+        } else {
+          // TODO(mcslee): improve efficiency, allow no-patterns in a channel?
+          channel = addChannel();
+        }
         channel.load(lx, (JsonObject) channelElement);
       }
     } else {
@@ -1594,8 +1658,4 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     super.load(lx, obj);
   }
 
-  @Override
-  public LXModulationEngine getModulation() {
-    return this.modulation;
-  }
 }

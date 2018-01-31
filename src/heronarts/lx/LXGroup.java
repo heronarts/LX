@@ -50,7 +50,7 @@ public class LXGroup extends LXChannelBus {
     return new LXGroupClip(this.lx, this, index);
   }
 
-  LXGroup addChannel(LXChannel channel) {
+  public LXGroup addChannel(LXChannel channel) {
     if (this.channels.contains(channel)) {
       throw new IllegalStateException("Cannot add channel to group twice: " + channel + " " + this);
     }

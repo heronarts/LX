@@ -122,6 +122,10 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     return this;
   }
 
+  public LXGroup getGroup() {
+    return null;
+  }
+
   public final LXBus addEffect(LXEffect effect) {
     this.mutableEffects.add(effect);
     effect.setBus(this);
