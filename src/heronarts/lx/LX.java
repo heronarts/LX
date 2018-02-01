@@ -24,7 +24,8 @@ import heronarts.lx.color.LXPalette;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.output.LXOutput;
-import heronarts.lx.pattern.IteratorTestPattern;
+import heronarts.lx.pattern.IteratorPattern;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -261,7 +262,7 @@ public class LX {
     LX.initTimer.log("Tempo");
 
     // Add a default channel
-    this.engine.addChannel(new LXPattern[] { new IteratorTestPattern(this) }).fader.setValue(1);
+    this.engine.addChannel(new LXPattern[] { new IteratorPattern(this) }).fader.setValue(1);
     LX.initTimer.log("Default Channel");
 
   }

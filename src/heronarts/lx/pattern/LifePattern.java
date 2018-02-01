@@ -22,8 +22,6 @@ import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.LXUtils;
 import heronarts.lx.color.LXColor;
-import heronarts.lx.modulator.SawLFO;
-import heronarts.lx.modulator.SinLFO;
 import java.util.HashMap;
 
 public class LifePattern extends LXPattern {
@@ -31,9 +29,6 @@ public class LifePattern extends LXPattern {
   private enum CellState {
     DEAD, BIRTHING, ALIVE, DYING
   };
-
-  private final SawLFO sPos;
-  private final SinLFO hCenter;
 
   private CellState[] state;
   private CellState[] newState;
@@ -45,13 +40,7 @@ public class LifePattern extends LXPattern {
     super(lx);
     this.state = new CellState[lx.total];
     this.newState = new CellState[lx.total];
-    this.addModulator(
-        this.hCenter = new SinLFO(lx.width * .25, lx.width * .75,
-            lx.width * 1000)).trigger();
-    this.addModulator(
-        this.sPos = new SawLFO(-Math.max(lx.height, lx.width), lx.height
-            + lx.width, lx.width * 300)).trigger();
-    this.spawn();
+    spawn();
   }
 
   private boolean isLiveState(CellState state) {
@@ -71,8 +60,7 @@ public class LifePattern extends LXPattern {
 
   private void spawn() {
     for (int i = 0; i < this.state.length; ++i) {
-      this.state[i] = (LXUtils.random(0, 100) > 70) ? CellState.BIRTHING
-          : CellState.DEAD;
+      this.state[i] = (LXUtils.random(0, 100) > 70) ? CellState.BIRTHING : CellState.DEAD;
     }
   }
 
@@ -143,6 +131,7 @@ public class LifePattern extends LXPattern {
         this.transition();
       }
     }
+    double ramp = this.lx.tempo.ramp();
     for (int i = 0; i < lx.total; ++i) {
       double b = 0;
       switch (this.state[i]) {
@@ -150,22 +139,16 @@ public class LifePattern extends LXPattern {
         b = 100;
         break;
       case BIRTHING:
-        b = this.lx.tempo.ramp() * 100;
+        b = ramp * 100;
         break;
       case DEAD:
         b = 0;
         break;
       case DYING:
-        b = 100 - this.lx.tempo.ramp() * 100;
+        b = 100 * (1 - ramp);
         break;
       }
-      this.colors[i] = LXColor.hsb(
-          (palette.getHue() + lx.row(i) * 2. + Math.abs(lx.column(i)
-              - this.hCenter.getValue()) * 0.4) % 360,
-          Math.min(
-              100,
-              30. + Math.abs(i / this.lx.width - this.sPos.getValue() + i
-                  % this.lx.width) * 10.), b);
+      this.colors[i] = LXColor.gray(b);
     }
   }
 }

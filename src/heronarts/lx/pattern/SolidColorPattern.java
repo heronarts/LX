@@ -18,14 +18,18 @@
 
 package heronarts.lx.pattern;
 
+import heronarts.lx.Category;
 import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
 
+@Category(Category.COLOR)
 public class SolidColorPattern extends LXPattern {
 
-  public final ColorParameter color = new ColorParameter("Color");
+  public final ColorParameter color =
+    new ColorParameter("Color")
+    .setDescription("Color of the pattern");
 
   public SolidColorPattern(LX lx) {
     this(lx, LXColor.RED);
@@ -35,7 +39,6 @@ public class SolidColorPattern extends LXPattern {
     super(lx);
     this.color.setColor(color);
     addParameter("color", this.color);
-    setColors(this.color.getColor());
   }
 
   @Override

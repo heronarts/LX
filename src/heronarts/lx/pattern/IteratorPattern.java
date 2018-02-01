@@ -20,36 +20,39 @@ package heronarts.lx.pattern;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
+import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.modulator.SawLFO;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FunctionalParameter;
+import heronarts.lx.parameter.LXParameter.Units;
 
 /**
  * Braindead simple test pattern that iterates through all the nodes turning
  * them on one by one in fixed order.
  */
-public class IteratorTestPattern extends LXPattern {
+public class IteratorPattern extends LXPattern {
 
-  private final SawLFO index;
-  public final CompoundParameter speed = new CompoundParameter("Speed", 10, 1, 100);
+  public final CompoundParameter speed = (CompoundParameter)
+    new CompoundParameter("Speed", 10, 1, 100)
+    .setUnits(Units.MILLISECONDS)
+    .setDescription("Iteration speed through points in the model");
 
-  private final FunctionalParameter period = new FunctionalParameter() {
+  private final LXModulator index = startModulator(new SawLFO(0, lx.total, new FunctionalParameter() {
     @Override
     public double getValue() {
       return (1000 / speed.getValue()) * lx.total;
     }
-  };
+  }));
 
-  public IteratorTestPattern(LX lx) {
+  public IteratorPattern(LX lx) {
     super(lx);
-    addParameter(speed);
+    addParameter("speed", this.speed);
     setAutoCycleEligible(false);
-    startModulator(this.index = new SawLFO(0, lx.total, period));
   }
 
   @Override
   public void run(double deltaMs) {
-    int active = (int) Math.floor(this.index.getValue());
+    int active = (int) this.index.getValue();
     for (int i = 0; i < colors.length; ++i) {
       this.colors[i] = (i == active) ? 0xFFFFFFFF : 0xFF000000;
     }

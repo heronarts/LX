@@ -31,7 +31,6 @@ import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.midi.LXMidiEngine;
-import heronarts.lx.model.LXPoint;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.output.LXOutput;
@@ -375,7 +374,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       public void onParameterChanged(LXParameter p) {
         if (cueA.isOn()) {
           cueB.setValue(false);
-          lx.palette.cue.setValue(false);
           for (LXChannelBus channel : channels) {
             channel.cueActive.setValue(false);
           }
@@ -386,18 +384,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       public void onParameterChanged(LXParameter p) {
         if (cueB.isOn()) {
           cueA.setValue(false);
-          lx.palette.cue.setValue(false);
-          for (LXChannelBus channel : channels) {
-            channel.cueActive.setValue(false);
-          }
-        }
-      }
-    });
-    lx.palette.cue.addListener(new LXParameterListener() {
-      public void onParameterChanged(LXParameter p) {
-        if (lx.palette.cue.isOn()) {
-          cueA.setValue(false);
-          cueB.setValue(false);
           for (LXChannelBus channel : channels) {
             channel.cueActive.setValue(false);
           }
@@ -1404,16 +1390,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       effect.loop(deltaMs);
     }
     ((LXBus.Timer) this.masterChannel.timer).effectNanos = System.nanoTime() - effectStart;
-
-    // TODO(mcslee): remove this, it's the wrong abstraction
-    // If cue-ing the palette!
-    if (this.lx.palette.cue.isOn()) {
-      for (LXPoint p : this.lx.model.points) {
-        blendOutputCue[p.index] = lx.palette.getColor(p);
-      }
-      blendDestinationCue = blendOutputCue;
-      cueBusActive = true;
-    }
 
     // Step 5: our cue and render frames are ready! Let's get them output
     boolean isNetworkMultithreaded = this.isNetworkMultithreaded.isOn();

@@ -22,27 +22,23 @@ import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.LXUtils;
 import heronarts.lx.audio.GraphicMeter;
+import heronarts.lx.color.LXColor;
+import heronarts.lx.model.LXPoint;
 
 public class GraphicEqualizerPattern extends LXPattern {
 
-  private final GraphicMeter eq;
-
   public GraphicEqualizerPattern(LX lx) {
     super(lx);
-    addModulator(this.eq = new GraphicMeter(lx.engine.audio.getInput())).start();
   }
 
   @Override
   public void run(double deltaMs) {
-    for (int i = 0; i < this.lx.width; ++i) {
-      int avgIndex = (int) (i / (double) this.lx.width * (eq.numBands - 1));
-      double value = eq.getBand(avgIndex);
-      for (int j = 0; j < this.lx.height; ++j) {
-        double jscaled = (this.lx.height - 1 - j)
-            / (double) (this.lx.height - 1);
-        double b = LXUtils.constrain(400. * (value - jscaled), 0, 100);
-        this.setColor(i, j, palette.getColor(b));
-      }
+    GraphicMeter eq = lx.engine.audio.meter;
+    for (LXPoint p : model.points) {
+      double value = eq.getBand(Math.round(p.xn * (eq.numBands - 1)));
+      colors[p.index] = LXColor.gray(
+        LXUtils.constrain(400. * (value - p.yn), 0, 100)
+      );
     }
   }
 
