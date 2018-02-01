@@ -18,6 +18,7 @@
 
 package heronarts.lx.pattern;
 
+import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.color.LXColor;
@@ -26,6 +27,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 
+@LXCategory(LXCategory.COLOR)
 public class GradientPattern extends LXPattern {
 
   public final CompoundParameter spreadX = (CompoundParameter)

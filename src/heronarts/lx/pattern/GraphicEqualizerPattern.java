@@ -18,6 +18,7 @@
 
 package heronarts.lx.pattern;
 
+import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.LXUtils;
@@ -25,6 +26,7 @@ import heronarts.lx.audio.GraphicMeter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 
+@LXCategory(LXCategory.FORM)
 public class GraphicEqualizerPattern extends LXPattern {
 
   public GraphicEqualizerPattern(LX lx) {

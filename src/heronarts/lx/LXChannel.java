@@ -30,7 +30,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
-import heronarts.lx.pattern.SolidColorPattern;
+import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.parameter.BooleanParameter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -774,7 +774,7 @@ public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
       }
     }
     if (this.patterns.size() == 0) {
-      addPattern(new SolidColorPattern(lx));
+      addPattern(new IteratorPattern(lx));
     }
 
     // Set the active index instantly, do not transition!

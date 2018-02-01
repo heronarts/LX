@@ -43,7 +43,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
-import heronarts.lx.pattern.SolidColorPattern;
+import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.script.LXScriptEngine;
 
 import java.util.ArrayList;
@@ -813,7 +813,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   public LXChannel addChannel() {
-    return addChannel(new LXPattern[] { new SolidColorPattern(this.lx) });
+    return addChannel(new LXPattern[] { new IteratorPattern(this.lx) });
   }
 
   public LXChannel addChannel(LXPattern[] patterns) {

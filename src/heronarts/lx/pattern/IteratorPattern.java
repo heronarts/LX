@@ -18,23 +18,23 @@
 
 package heronarts.lx.pattern;
 
+import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.modulator.SawLFO;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FunctionalParameter;
-import heronarts.lx.parameter.LXParameter.Units;
 
 /**
  * Braindead simple test pattern that iterates through all the nodes turning
  * them on one by one in fixed order.
  */
+@LXCategory(LXCategory.TEST)
 public class IteratorPattern extends LXPattern {
 
-  public final CompoundParameter speed = (CompoundParameter)
+  public final CompoundParameter speed =
     new CompoundParameter("Speed", 10, 1, 100)
-    .setUnits(Units.MILLISECONDS)
     .setDescription("Iteration speed through points in the model");
 
   private final LXModulator index = startModulator(new SawLFO(0, lx.total, new FunctionalParameter() {
