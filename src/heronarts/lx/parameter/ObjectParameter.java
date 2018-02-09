@@ -74,6 +74,10 @@ public class ObjectParameter<T> extends DiscreteParameter {
     throw new IllegalArgumentException("Not a valid object for this parameter: " + object.toString());
   }
 
+  public T[] getObjects() {
+    return this.objects;
+  }
+
   public T getObject() {
     return this.objects[getValuei()];
   }
