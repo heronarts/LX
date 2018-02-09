@@ -28,7 +28,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 
-public abstract class LXChannelBus extends LXBus {
+public abstract class LXChannelBus extends LXBus implements LXComponent.Renamable {
 
   public interface Listener extends LXBus.Listener {
     public void indexChanged(LXChannelBus channel);

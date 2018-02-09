@@ -45,7 +45,7 @@ import com.google.gson.JsonObject;
  * which it plays and rotates. It also has a fader to control how this channel
  * is blended with the channels before it.
  */
-public class LXChannel extends LXChannelBus implements LXComponent.Renamable {
+public class LXChannel extends LXChannelBus {
 
   /**
    * Listener interface for objects which want to be notified when the internal
