@@ -313,8 +313,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private static final long INIT_RUN = -1;
   private long lastMillis = INIT_RUN;
 
-  private boolean fixDeltaMs = false;
-  private double fixedDeltaMs;
+  private double fixedDeltaMs = 0;
 
   long nowMillis = System.currentTimeMillis();
 
@@ -515,7 +514,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * @return this
    */
   public LXEngine setFixedDeltaMs(double deltaMs) {
-    this.fixDeltaMs = true;
     this.fixedDeltaMs = deltaMs;
     return this;
   }
@@ -1137,7 +1135,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.lastMillis = this.nowMillis;
 
     // Override deltaMs if in fixed render mode
-    if (this.fixDeltaMs) {
+    if (this.fixedDeltaMs > 0) {
       deltaMs = this.fixedDeltaMs;
     }
 
