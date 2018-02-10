@@ -46,7 +46,7 @@ public interface LXWaveshape {
 
     @Override
     public String toString() {
-      return "SIN";
+      return "Sine";
     }
   };
 
@@ -63,7 +63,7 @@ public interface LXWaveshape {
 
     @Override
     public String toString() {
-      return "TRI";
+      return "Triangle";
     }
   };
 
@@ -81,7 +81,7 @@ public interface LXWaveshape {
 
     @Override
     public String toString() {
-      return "UP";
+      return "Up";
     }
   };
 
@@ -99,7 +99,7 @@ public interface LXWaveshape {
 
     @Override
     public String toString() {
-      return "DOWN";
+      return "Down";
     }
   };
 
@@ -117,7 +117,7 @@ public interface LXWaveshape {
 
     @Override
     public String toString() {
-      return "SQUARE";
+      return "Square";
     }
   };
 
