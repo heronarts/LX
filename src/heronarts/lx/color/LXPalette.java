@@ -58,18 +58,13 @@ public class LXPalette extends LXModulatorComponent implements LXOscComponent {
    */
   public final ColorParameter clr = color;
 
-  public final CompoundParameter range = new CompoundParameter("Range", 0, 360)
-    .setDescription("Sets range in degrees (0-360) of how much spread the palette applies");
+  public final CompoundParameter range = new CompoundParameter("Range", 10, 360)
+    .setDescription("Sets range in degrees (0-360) of how much the palette oscillates");
 
   public final CompoundParameter period = (CompoundParameter)
     new CompoundParameter("Period", 120000, 1000, 3600000)
     .setDescription("Sets how long the palette takes to complete one full oscillation")
     .setUnits(LXParameter.Units.MILLISECONDS);
-
-  public final CompoundParameter gradient = (CompoundParameter)
-    new CompoundParameter("Gradient", 0, -360, 360)
-    .setDescription("Sets the amount of hue gradient")
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   private final DampedParameter hueFixed = new DampedParameter(this.color.hue, 1800).setModulus(360.);
 
@@ -94,7 +89,6 @@ public class LXPalette extends LXModulatorComponent implements LXOscComponent {
     addParameter("color", this.color);
     addParameter("period", this.period);
     addParameter("range", this.range);
-    addParameter("gradient", this.gradient);
     addModulator(this.hueFixed).start();
     addModulator(this.hueCycle);
     addModulator(this.hueOscillate);
