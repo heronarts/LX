@@ -325,9 +325,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   public void trigger(int beat) {
     this.beatCount = beat;
-    if (!beat()) {
-      this.click.fire();
-    }
+    this.click.fire();
     this.manuallyTriggered = true;
   }
 

@@ -27,6 +27,8 @@ import heronarts.lx.parameter.LXParameter;
  */
 public class Click extends LXPeriodicModulator {
 
+  private boolean fired = false;
+
   public Click(double periodMs) {
     this(new FixedParameter(periodMs));
   }
@@ -49,6 +51,7 @@ public class Click extends LXPeriodicModulator {
       setValue(0, false);
     }
     super.loop(deltaMs);
+    this.fired = false;
   }
 
   /**
@@ -59,8 +62,10 @@ public class Click extends LXPeriodicModulator {
    * @return this
    */
   public LXModulator fire() {
-    setValue(1);
+    setValue(1, false);
+    setBasis(0);
     start();
+    this.fired = true;
     return this;
   }
 
@@ -82,7 +87,7 @@ public class Click extends LXPeriodicModulator {
 
   @Override
   protected double computeValue(double deltaMs, double basis) {
-    return loop() || finished() ? 1 : 0;
+    return this.fired || loop() || finished() ? 1 : 0;
   }
 
   @Override
