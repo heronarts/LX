@@ -30,6 +30,11 @@ import heronarts.lx.parameter.LXParameter;
 @LXCategory(LXCategory.COLOR)
 public class GradientPattern extends LXPattern {
 
+  public final CompoundParameter gradient = (CompoundParameter)
+    new CompoundParameter("Gradient", 0, -360, 360)
+    .setDescription("Amount of total color gradient")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
   public final CompoundParameter spreadX = (CompoundParameter)
     new CompoundParameter("XSprd", 0, -1, 1)
     .setDescription("Sets the amount of hue spread on the X axis")
@@ -71,6 +76,7 @@ public class GradientPattern extends LXPattern {
 
   public GradientPattern(LX lx) {
     super(lx);
+    addParameter("gradient", this.gradient);
     addParameter("spreadX", this.spreadX);
     addParameter("spreadY", this.spreadY);
     addParameter("spreadZ", this.spreadZ);
@@ -85,7 +91,7 @@ public class GradientPattern extends LXPattern {
   public void run(double deltaMs) {
     float paletteHue = palette.getHuef();
     float paletteSaturation = palette.getSaturationf();
-    float paletteGradient = palette.gradient.getValuef();
+    float gradient = this.gradient.getValuef();
     float spreadX = this.spreadX.getValuef();
     float spreadY = this.spreadY.getValuef();
     float spreadZ = this.spreadZ.getValuef();
@@ -108,7 +114,7 @@ public class GradientPattern extends LXPattern {
       }
       float hue =
         paletteHue +
-        paletteGradient * (
+        gradient * (
           spreadX * dx +
           spreadY * dy +
           spreadZ * dz +
