@@ -563,8 +563,8 @@ public class APC40Mk2 extends LXMidiSurface {
     } else {
       for (int y = 0; y < CLIP_LAUNCH_ROWS; ++y) {
         sendNoteOn(
-          CLIP_LAUNCH + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - y) + index,
           LED_MODE_PRIMARY,
+          CLIP_LAUNCH + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - y) + index,
           LED_OFF
         );
       }
