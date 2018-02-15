@@ -29,28 +29,32 @@ import heronarts.lx.parameter.LXParameter;
 public class Accelerator extends LXModulator {
 
   private double initValue;
-  private double initVelocity;
-
   private double velocity;
 
+  private LXParameter initVelocity;
   private LXParameter acceleration;
 
   public Accelerator(double initValue, double initVelocity, double acceleration) {
     this(initValue, initVelocity, new FixedParameter(acceleration));
   }
 
-  public Accelerator(double initValue, double initVelocity,
-      LXParameter acceleration) {
+  public Accelerator(double initValue, double initVelocity, LXParameter acceleration) {
     this("ACCEL", initValue, initVelocity, acceleration);
   }
 
-  public Accelerator(String label, double initValue, double initVelocity,
-      double acceleration) {
-    this(label, initValue, initVelocity, new FixedParameter(acceleration));
+  public Accelerator(double initValue, LXParameter initVelocity, LXParameter acceleration) {
+    this("ACCEL", initValue, initVelocity, acceleration);
   }
 
-  public Accelerator(String label, double initValue, double initVelocity,
-      LXParameter acceleration) {
+  public Accelerator(String label, double initValue, double initVelocity, double acceleration) {
+    this(label, initValue, new FixedParameter(initVelocity), new FixedParameter(acceleration));
+  }
+
+  public Accelerator(String label, double initValue, double initVelocity, LXParameter acceleration) {
+    this(label, initValue, new FixedParameter(initVelocity), acceleration);
+  }
+
+  public Accelerator(String label, double initValue, LXParameter initVelocity, LXParameter acceleration) {
     super(label);
     setValue(this.initValue = initValue);
     setSpeed(initVelocity, acceleration);
@@ -58,7 +62,7 @@ public class Accelerator extends LXModulator {
 
   @Override
   protected void onReset() {
-    this.velocity = this.initVelocity;
+    setVelocity(this.initVelocity.getValue());
     setValue(this.initValue);
   }
 
@@ -91,7 +95,7 @@ public class Accelerator extends LXModulator {
   }
 
   public Accelerator setSpeed(double initVelocity, double acceleration) {
-    return setSpeed(initVelocity, new FixedParameter(acceleration));
+    return setSpeed(new FixedParameter(initVelocity), new FixedParameter(acceleration));
   }
 
   /**
@@ -103,20 +107,42 @@ public class Accelerator extends LXModulator {
    * @param acceleration Acceleration
    * @return this
    */
-  public Accelerator setSpeed(double initVelocity, LXParameter acceleration) {
-    this.velocity = this.initVelocity = initVelocity;
+  public Accelerator setSpeed(LXParameter initVelocity, LXParameter acceleration) {
+    this.initVelocity = initVelocity;
+    this.velocity = this.initVelocity.getValue();
     this.acceleration = acceleration;
     return this;
   }
 
   /**
-   * Updates the velocity. Does not reset the default.
+   * Updates the current velocity. Does not reset the default.
    *
    * @param velocity New velocity
    * @return this
    */
   public Accelerator setVelocity(double velocity) {
     this.velocity = velocity;
+    return this;
+  }
+
+  /**
+   * Sets the initial velocity to a fixed value
+   *
+   * @param initVelocity Fixed initial velocity value
+   * @return this
+   */
+  public Accelerator setInitVelocity(double initVelocity) {
+    return setInitVelocity(new FixedParameter(initVelocity));
+  }
+
+  /**
+   * Sets initial velocity of the Accelerator
+   *
+   * @param initVelocity Initial velocity parameter
+   * @return this
+   */
+  public Accelerator setInitVelocity(LXParameter initVelocity) {
+    this.initVelocity = initVelocity;
     return this;
   }
 
