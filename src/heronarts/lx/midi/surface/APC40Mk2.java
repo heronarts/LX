@@ -315,14 +315,18 @@ public class APC40Mk2 extends LXMidiSurface {
 
     ChannelListener(LXChannelBus channel) {
       this.channel = channel;
-      this.channel.addListener(this);
-      this.channel.addClipListener(this);
-      this.channel.cueActive.addListener(this);
-      this.channel.enabled.addListener(this);
-      this.channel.crossfadeGroup.addListener(this);
-      this.channel.arm.addListener(this);
-      if (this.channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) this.channel;
+      if (channel instanceof LXChannel) {
+        ((LXChannel) channel).addListener(this);
+      } else {
+        channel.addListener(this);
+      }
+      channel.addClipListener(this);
+      channel.cueActive.addListener(this);
+      channel.enabled.addListener(this);
+      channel.crossfadeGroup.addListener(this);
+      channel.arm.addListener(this);
+      if (channel instanceof LXChannel) {
+        LXChannel c = (LXChannel) channel;
         c.focusedPattern.addListener(this);
         c.controlSurfaceFocusLength.setValue(CLIP_LAUNCH_ROWS);
         int focusedPatternIndex = c.getFocusedPatternIndex();
@@ -331,6 +335,11 @@ public class APC40Mk2 extends LXMidiSurface {
     }
 
     public void dispose() {
+      if (channel instanceof LXChannel) {
+        ((LXChannel) channel).removeListener(this);
+      } else {
+        channel.removeListener(this);
+      }
       this.channel.removeListener(this);
       this.channel.removeClipListener(this);
       this.channel.cueActive.removeListener(this);
@@ -535,14 +544,11 @@ public class APC40Mk2 extends LXMidiSurface {
     }
     if (channelBus instanceof LXChannel) {
       LXChannel channel = (LXChannel) channelBus;
-      int endIndex = -1, activeIndex = -1, nextIndex = -1, focusedIndex = -1;
-      if (channel != null) {
-        int baseIndex = channel.controlSurfaceFocusIndex.getValuei();
-        endIndex = channel.patterns.size() - baseIndex;
-        activeIndex = channel.getActivePatternIndex() - baseIndex;
-        nextIndex = channel.getNextPatternIndex() - baseIndex;
-        focusedIndex = channel.focusedPattern.getValuei() - baseIndex;
-      }
+      int baseIndex = channel.controlSurfaceFocusIndex.getValuei();
+      int endIndex = channel.patterns.size() - baseIndex;
+      int activeIndex = channel.getActivePatternIndex() - baseIndex;
+      int nextIndex = channel.getNextPatternIndex() - baseIndex;
+      int focusedIndex = channel.focusedPattern.getValuei() - baseIndex;
       for (int y = 0; y < CLIP_LAUNCH_ROWS; ++y) {
         int note = CLIP_LAUNCH + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - y) + index;
         int midiChannel = LED_MODE_PRIMARY;
