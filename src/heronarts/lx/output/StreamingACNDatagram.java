@@ -161,10 +161,10 @@ public class StreamingACNDatagram extends LXDatagram {
     this.buffer[116] = (byte) (flagLength & 0xff);
 
     // DMP Set Property Message PDU
-    this.buffer[116] = (byte) 0x02;
+    this.buffer[117] = (byte) 0x02;
 
     // Address Type & Data Type
-    this.buffer[117] = (byte) 0xa1;
+    this.buffer[118] = (byte) 0xa1;
 
     // First Property Address
     this.buffer[119] = 0x00;
