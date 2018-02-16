@@ -26,6 +26,7 @@ import heronarts.lx.LXMappingEngine;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.midi.surface.LXMidiSurface;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 
@@ -108,6 +109,10 @@ public class LXMidiEngine implements LXSerializable {
   }
 
   private final InitializationLock initializationLock = new InitializationLock();
+
+  public final BooleanParameter computerKeyboardEnabled =
+    new BooleanParameter("Computer MIDI Keyboard", false)
+    .setDescription("Whether the computer keyboard plays notes to MIDI tracks");
 
   public LXMidiEngine(LX lx) {
     this.lx = lx;
@@ -384,6 +389,7 @@ public class LXMidiEngine implements LXSerializable {
   private static final String KEY_INPUTS = "inputs";
   private static final String KEY_SURFACES = "surfaces";
   private static final String KEY_MAPPINGS = "mapping";
+  private static final String KEY_COMPUTER_KEYBOARD = "keyboard";
 
   private final List<JsonObject> rememberMidiInputs = new ArrayList<JsonObject>();
   private final List<JsonObject> rememberMidiSurfaces = new ArrayList<JsonObject>();
@@ -413,10 +419,12 @@ public class LXMidiEngine implements LXSerializable {
     object.add(KEY_INPUTS, inputs);
     object.add(KEY_SURFACES, surfaces);
     object.add(KEY_MAPPINGS, LXSerializable.Utils.toArray(lx, this.mutableMappings));
+    object.addProperty(KEY_COMPUTER_KEYBOARD, this.computerKeyboardEnabled.isOn());
   }
 
   @Override
   public void load(final LX lx, final JsonObject object) {
+    LXSerializable.Utils.loadBoolean(this.computerKeyboardEnabled, object, KEY_COMPUTER_KEYBOARD);
     this.rememberMidiInputs.clear();
     this.mutableMappings.clear();
     if (object.has(KEY_MAPPINGS)) {
