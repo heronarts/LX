@@ -19,11 +19,13 @@
 package heronarts.lx.effect;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.LXEffect;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 
+@LXCategory(LXCategory.COLOR)
 public class DesaturationEffect extends LXEffect {
 
   private final CompoundParameter attack =

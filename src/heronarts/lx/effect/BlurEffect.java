@@ -19,6 +19,7 @@
 package heronarts.lx.effect;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.LXEffect;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.NormalBlend;
@@ -26,6 +27,7 @@ import heronarts.lx.blend.ScreenBlend;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.parameter.CompoundParameter;
 
+@LXCategory(LXCategory.TEXTURE)
 public class BlurEffect extends LXEffect {
 
   public final CompoundParameter amount =
