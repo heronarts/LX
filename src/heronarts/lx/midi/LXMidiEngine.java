@@ -426,6 +426,7 @@ public class LXMidiEngine implements LXSerializable {
   public void load(final LX lx, final JsonObject object) {
     LXSerializable.Utils.loadBoolean(this.computerKeyboardEnabled, object, KEY_COMPUTER_KEYBOARD);
     this.rememberMidiInputs.clear();
+    this.rememberMidiSurfaces.clear();
     this.mutableMappings.clear();
     if (object.has(KEY_MAPPINGS)) {
       JsonArray mappings = object.getAsJsonArray(KEY_MAPPINGS);
