@@ -135,7 +135,7 @@ public class StreamingACNDatagram extends LXDatagram {
     // Source name
     this.buffer[44] = 'L';
     this.buffer[45] = 'X';
-    for (int i = 44; i < 108; ++i) {
+    for (int i = 46; i < 108; ++i) {
       this.buffer[i] = 0;
     }
 
