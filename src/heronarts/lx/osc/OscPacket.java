@@ -36,7 +36,7 @@ public abstract class OscPacket {
     } else if (data[offset] == '/') {
       return OscMessage.parse(source,data, offset, len);
     } else {
-      throw new OscMalformedDataException("Osc Packet does not start with # or /", data, offset, len);
+      throw new OscMalformedDataException("Osc Packet does not start with # or / --- " + new String(data, 0, len < 10 ? len : 10), data, offset, len);
     }
   }
 
