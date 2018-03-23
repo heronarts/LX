@@ -22,10 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXPattern;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
-import heronarts.lx.output.ArtNetDatagram;
-import heronarts.lx.output.FadecandyOutput;
-import heronarts.lx.output.LXDatagramOutput;
-import heronarts.lx.output.OPCOutput;
+import heronarts.lx.output.*;
 
 /**
  * Example headless CLI for the LX engine. Just write a bit of scaffolding code
@@ -35,7 +32,7 @@ public class LXHeadless {
 
   public static LXModel buildModel() {
     // TODO: implement code that loads and builds your model here
-    return new GridModel(30, 30);
+    return new GridModel(10,17);
   }
 
   public static void addArtNetOutput(LX lx) throws Exception {
@@ -43,8 +40,8 @@ public class LXHeadless {
       new LXDatagramOutput(lx).addDatagram(
         new ArtNetDatagram(lx.model, 512, 0)
         .setAddress("localhost")
-      )
-    );
+          )
+  );
   }
 
   public static void addFadeCandyOutput(LX lx) throws Exception {
@@ -55,14 +52,47 @@ public class LXHeadless {
     lx.engine.addOutput(new OPCOutput(lx, "localhost", 7890));
   }
 
+
+  public static void addTenereOutput(LX lx, String ip) throws Exception {
+    lx.engine.addOutput(
+            new LXDatagramOutput(lx).addDatagram(
+                    new TenereDatagram(lx, LXOutput.fixtureToIndices(lx.model), (byte) 0x00).setAddress(ip).setPort(1337))
+                    .addDatagram(
+                    new TenereDatagram(lx, LXOutput.fixtureToIndices(lx.model), (byte) 0x04).setAddress(ip).setPort(1337))
+    );
+  }
+
+
+  public static void addDatagramOPCOutput(LX lx, String ip_addr) throws Exception {
+    lx.engine.addOutput(
+            new LXDatagramOutput(lx).addDatagram(
+                    new OPCDatagram(lx.model)
+                            .setAddress(ip_addr)
+                            .setPort(7890)
+
+            )
+    );
+  }
+
   public static void main(String[] args) {
     try {
       LXModel model = buildModel();
       LX lx = new LX(model);
 
+
+      addTenereOutput(lx, "10.200.1.64");
+      addTenereOutput(lx, "10.200.1.65");
+
+      // target some OPC servers
+      String[] controller_ips = { "10.200.1.146", "10.200.1.195", "10.200.1.197"};
+
+      for (String controller_ipaddr : controller_ips){
+        addDatagramOPCOutput(lx, controller_ipaddr);
+      }
+
       // TODO: add your own output code here
-      // addArtNetOutput(lx);
-      // addFadecandyOutput(lx);
+//       addArtNetOutput(lx);
+//       addFadecandyOutput(lx);
       addOPCOutput(lx);
 
       // On the CLI you may specify an argument with an .lxp file

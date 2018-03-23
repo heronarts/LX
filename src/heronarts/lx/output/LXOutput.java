@@ -39,7 +39,7 @@ import java.util.List;
  */
 public abstract class LXOutput extends LXComponent {
 
-  static int[] fixtureToIndices(LXFixture fixture) {
+  public static int[] fixtureToIndices(LXFixture fixture) {
     List<LXPoint> points = fixture.getPoints();
     int[] indices = new int[points.size()];
     int i = 0;
