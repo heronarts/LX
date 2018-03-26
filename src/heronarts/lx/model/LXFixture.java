@@ -27,4 +27,15 @@ public interface LXFixture {
 
   public List<LXPoint> getPoints();
 
+  public static class Utils {
+    public static int[] getIndices(LXFixture fixture) {
+      List<LXPoint> points = fixture.getPoints();
+      int[] indices = new int[points.size()];
+      int i = 0;
+      for (LXPoint p : points) {
+        indices[i++] = p.index;
+      }
+      return indices;
+    }
+  }
 }

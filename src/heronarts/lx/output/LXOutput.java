@@ -21,8 +21,6 @@ package heronarts.lx.output;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
-import heronarts.lx.model.LXFixture;
-import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -38,16 +36,6 @@ import java.util.List;
  * etc.
  */
 public abstract class LXOutput extends LXComponent {
-
-  static int[] fixtureToIndices(LXFixture fixture) {
-    List<LXPoint> points = fixture.getPoints();
-    int[] indices = new int[points.size()];
-    int i = 0;
-    for (LXPoint p : points) {
-      indices[i++] = p.index;
-    }
-    return indices;
-  }
 
   private final List<LXOutput> children = new ArrayList<LXOutput>();
 

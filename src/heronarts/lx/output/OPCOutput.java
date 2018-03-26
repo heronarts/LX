@@ -47,7 +47,7 @@ public class OPCOutput extends LXSocketOutput implements OPCConstants {
   }
 
   public OPCOutput(LX lx, String host, int port, LXFixture fixture) {
-    this(lx, host, port, LXOutput.fixtureToIndices(fixture));
+    this(lx, host, port, LXFixture.Utils.getIndices(fixture));
   }
 
   public OPCOutput(LX lx, String host, int port, int[] pointIndices) {

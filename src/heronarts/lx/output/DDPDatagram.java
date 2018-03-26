@@ -34,7 +34,7 @@ public class DDPDatagram extends LXDatagram {
   private final int[] pointIndices;
 
   public DDPDatagram(LXFixture fixture) {
-    this(LXOutput.fixtureToIndices(fixture));
+    this(LXFixture.Utils.getIndices(fixture));
   }
 
   public DDPDatagram(int[] pointIndices) {

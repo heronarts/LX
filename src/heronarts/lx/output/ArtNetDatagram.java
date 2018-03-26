@@ -42,7 +42,7 @@ public class ArtNetDatagram extends LXDatagram {
   }
 
   public ArtNetDatagram(LXFixture fixture, int universeNumber) {
-    this(LXOutput.fixtureToIndices(fixture), universeNumber);
+    this(LXFixture.Utils.getIndices(fixture), universeNumber);
   }
 
   public ArtNetDatagram(int[] indices, int universeNumber) {
@@ -50,7 +50,7 @@ public class ArtNetDatagram extends LXDatagram {
   }
 
   public ArtNetDatagram(LXFixture fixture, int dataLength, int universeNumber) {
-    this(LXOutput.fixtureToIndices(fixture), dataLength, universeNumber);
+    this(LXFixture.Utils.getIndices(fixture), dataLength, universeNumber);
   }
 
   public ArtNetDatagram(int[] indices, int dataLength, int universeNumber) {

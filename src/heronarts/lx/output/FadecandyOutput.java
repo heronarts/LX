@@ -34,7 +34,7 @@ public class FadecandyOutput extends OPCOutput {
   }
 
   public FadecandyOutput(LX lx, String host, int port, LXFixture fixture) {
-    this(lx, host, port, LXOutput.fixtureToIndices(fixture));
+    this(lx, host, port, LXFixture.Utils.getIndices(fixture));
   }
 
   public FadecandyOutput(LX lx, String host, int port, int[] pointIndices) {

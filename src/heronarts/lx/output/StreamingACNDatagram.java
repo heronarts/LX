@@ -65,7 +65,7 @@ public class StreamingACNDatagram extends LXDatagram {
   }
 
   public StreamingACNDatagram(int universeNumber, LXFixture fixture) {
-    this(universeNumber, LXOutput.fixtureToIndices(fixture));
+    this(universeNumber, LXFixture.Utils.getIndices(fixture));
   }
 
   /**

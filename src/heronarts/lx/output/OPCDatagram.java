@@ -32,7 +32,7 @@ public class OPCDatagram extends LXDatagram implements OPCConstants {
   }
 
   public OPCDatagram(LXFixture fixture, byte channel) {
-    this(LXOutput.fixtureToIndices(fixture), channel);
+    this(LXFixture.Utils.getIndices(fixture), channel);
   }
 
   public OPCDatagram(int[] indices) {

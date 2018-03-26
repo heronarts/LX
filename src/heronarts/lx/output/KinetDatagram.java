@@ -62,7 +62,7 @@ public class KinetDatagram extends LXDatagram {
    * @param version Version of Kinet Protocol
    */
   public KinetDatagram(int kinetPort, LXFixture fixture, Version version) {
-    this(kinetPort, LXOutput.fixtureToIndices(fixture), version);
+    this(kinetPort, LXFixture.Utils.getIndices(fixture), version);
   }
 
   /**
