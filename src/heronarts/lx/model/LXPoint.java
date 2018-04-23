@@ -20,6 +20,7 @@ package heronarts.lx.model;
 
 import heronarts.lx.LX;
 import heronarts.lx.transform.LXTransform;
+import heronarts.lx.transform.LXVector;
 
 /**
  * A point is a node with an immutable position in space and a location in
@@ -136,6 +137,24 @@ public class LXPoint {
   }
 
   /**
+   * Construct a point in 3-d space
+   *
+   * @param v LXVector
+   */
+  public LXPoint(LXVector v) {
+    this(v.x, v.y, v.z);
+  }
+
+  /**
+   * Construct a point from transform
+   *
+   * @param transform LXTransform stack
+   */
+  public LXPoint(LXTransform transform) {
+    this(transform.x(), transform.y(), transform.z());
+  }
+
+  /**
    * Updates this point to a new x-y-z position
    *
    * @param x X-position
@@ -178,15 +197,6 @@ public class LXPoint {
     this.azimuth = (float) ((LX.TWO_PI + Math.atan2(z, x)) % (LX.TWO_PI));
     this.elevation = (float) ((LX.TWO_PI + Math.atan2(y, rxz)) % (LX.TWO_PI));
     return this;
-  }
-
-  /**
-   * Construct a point from transform
-   *
-   * @param transform LXTransform stack
-   */
-  public LXPoint(LXTransform transform) {
-    this(transform.x(), transform.y(), transform.z());
   }
 
   void normalize(LXModel model) {
