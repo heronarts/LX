@@ -465,10 +465,10 @@ public class LXMidiEngine implements LXSerializable {
           if (surfaces.size() > 0) {
             for (JsonElement element : surfaces) {
               JsonObject surfaceObj = element.getAsJsonObject();
-              String surfaceDescription = surfaceObj.get(LXMidiSurface.KEY_DESCRIPTION).getAsString();
+              String surfaceName = surfaceObj.get(LXMidiSurface.KEY_NAME).getAsString();
               boolean found = false;
               for (LXMidiSurface surface : mutableSurfaces) {
-                if (surfaceDescription.equals(surface.getDescription())) {
+                if (surfaceName.equals(surface.getName())) {
                   found = true;
                   surface.enabled.setValue(true);
                   break;

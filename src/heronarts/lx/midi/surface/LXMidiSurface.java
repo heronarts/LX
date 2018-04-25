@@ -34,9 +34,9 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
 
   public static final String APC40_MK2 = "APC40 mkII";
 
-  private static LXMidiOutput findOutput(LXMidiEngine engine, String description) {
+  private static LXMidiOutput findOutput(LXMidiEngine engine, String name) {
     for (LXMidiOutput output : engine.outputs) {
-      if (output.getDescription().equals(description)) {
+      if (output.getName().equals(name)) {
         return output;
       }
     }
@@ -44,8 +44,8 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
   }
 
   public static LXMidiSurface get(LX lx, LXMidiEngine engine, LXMidiInput input) {
-    String description = input.getDescription();
-    if (description.equals(APC40_MK2)) {
+    String name = input.getName();
+    if (name.equals(APC40_MK2)) {
       return new APC40Mk2(lx, input, findOutput(engine, APC40_MK2));
     }
     return null;
@@ -78,8 +78,8 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
 
   }
 
-  public String getDescription() {
-    return this.input.getDescription();
+  public String getName() {
+    return this.input.getName();
   }
 
   protected void onEnable(boolean isOn) {}
@@ -96,7 +96,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     }
   }
 
-  public static final String KEY_DESCRIPTION = "description";
+  public static final String KEY_NAME = "name";
 
   @Override
   public void load(LX lx, JsonObject object) {
@@ -105,7 +105,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
 
   @Override
   public void save(LX lx, JsonObject object) {
-    object.addProperty(KEY_DESCRIPTION, this.input.getDescription());
+    object.addProperty(KEY_NAME, this.input.getName());
   }
 
 }
