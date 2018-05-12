@@ -30,6 +30,10 @@ public class LXMasterChannel extends LXBus {
     super(lx, "Master");
   }
 
+  public int getIndex() {
+    return lx.engine.channels.size();
+  }
+
   public String getOscAddress() {
     return "/lx/master";
   }

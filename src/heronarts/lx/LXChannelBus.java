@@ -39,8 +39,16 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
    */
   public abstract static class AbstractListener implements Listener {
     @Override
-    public void indexChanged(LXChannelBus channel) {
-    }
+    public void indexChanged(LXChannelBus channel) {}
+
+    @Override
+    public void effectAdded(LXBus channel, LXEffect effect) {}
+
+    @Override
+    public void effectRemoved(LXBus channel, LXEffect effect) {}
+
+    @Override
+    public void effectMoved(LXBus channel, LXEffect effect) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -226,6 +234,7 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     return this;
   }
 
+  @Override
   public final int getIndex() {
     return this.index;
   }

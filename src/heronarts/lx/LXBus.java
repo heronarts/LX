@@ -97,6 +97,8 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     addParameter("selected", this.selected);
   }
 
+  public abstract int getIndex();
+
   @Override
   protected void onModelChanged(LXModel model) {
     for (LXEffect effect : this.mutableEffects) {
@@ -158,7 +160,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     this.mutableEffects.add(index, effect);
     int i = 0;
     for (LXEffect e : this.mutableEffects) {
-       e.setIndex(i++);
+      e.setIndex(i++);
     }
     for (Listener listener : this.listeners) {
       listener.effectMoved(this, effect);

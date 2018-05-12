@@ -870,12 +870,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
       _addChannel(group, group.getIndex());
 
-      // Notify listener that group channels have moved
-      for (LXChannel channel : groupChannels) {
-        for (Listener listener : this.listeners) {
-          listener.channelMoved(this, channel);
-        }
-      }
+      // Fix indexing on all channels
+      _reindexChannels();
 
       // This new group channel is focused now!
       if (this.focusedChannel.getValuei() == groupIndex) {
@@ -949,10 +945,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.mutableChannels.remove(channel);
 
     // Fix indexing on all channels
-    int i = 0;
-    for (LXChannelBus channelBus : this.mutableChannels) {
-      channelBus.setIndex(i++);
-    }
+    _reindexChannels();
+
     boolean notified = false;
     if (this.focusedChannel.getValuei() > this.mutableChannels.size()) {
       notified = true;
@@ -968,35 +962,88 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     channel.dispose();
   }
 
-  public void moveChannel(LXChannelBus channel, int index) {
-    boolean focused = channel.getIndex() == this.focusedChannel.getValuei();
+  public void moveChannel(LXChannelBus channel, int delta) {
+    if (delta != 1 && delta != -1) {
+      throw new IllegalArgumentException("moveChannel() may only be called with delta of -1 or 1");
+    }
+    LXBus focused = getFocusedChannel();
 
-    // Cannot move a channel out of its group
+    int index = channel.getIndex() + delta;
+    if (index < 0 || index >= this.mutableChannels.size()) {
+      return;
+    }
+
     LXGroup group = channel.getGroup();
     if (group != null) {
+      // Channel is within a group, cannot be moved out of it
       if (index <= group.getIndex() || index > (group.getIndex() + group.channels.size())) {
         return;
       }
-    }
+      this.mutableChannels.remove(channel);
+      this.mutableChannels.add(index, channel);
+    } else {
+      // Channel is top-level, need to move groups in chunks
+      boolean isGroup = channel instanceof LXGroup;
+      if (isGroup && delta > 0) {
+        delta += ((LXGroup) channel).channels.size();
+      }
+      int neighborIndex = channel.getIndex() + delta;
+      if (neighborIndex < 0 || neighborIndex >= this.mutableChannels.size()) {
+        return;
+      }
 
-    // TODO(mcslee): need much more advanced checking here when moving groups,
-    // they always need to move in their entirety past neighbors
-    this.mutableChannels.remove(channel);
-    this.mutableChannels.add(index, channel);
-    if (channel instanceof LXGroup) {
-      for (LXChannel subchannel : ((LXGroup) channel).channels) {
-        this.mutableChannels.remove(subchannel);
-        this.mutableChannels.add(++index, subchannel);
+      // Figure out who our neighbor is
+      LXChannelBus neighbor = this.mutableChannels.get(neighborIndex);
+      LXGroup neighborGroup = (neighbor instanceof LXGroup) ? (LXGroup) neighbor : neighbor.getGroup();
+      if (neighborGroup != null) {
+        // Our neighbor is a group, flip-flop entirely with them
+        if (delta > 0) {
+          // Neighboring group is to our right, move their start position to our position
+          int startIndex = channel.getIndex();
+          this.mutableChannels.remove(neighbor);
+          this.mutableChannels.add(startIndex, neighbor);
+          for (LXChannel subchannel : ((LXGroup) neighbor).channels) {
+            this.mutableChannels.remove(subchannel);
+            this.mutableChannels.add(++startIndex, subchannel);
+          }
+        } else {
+          // Neighboring group is to our left, move us to their start position
+          int startIndex = neighborGroup.getIndex();
+          this.mutableChannels.remove(channel);
+          this.mutableChannels.add(startIndex, channel);
+          if (isGroup) {
+            for (LXChannel subchannel : ((LXGroup) channel).channels) {
+              this.mutableChannels.remove(subchannel);
+              this.mutableChannels.add(++startIndex, subchannel);
+            }
+          }
+        }
+      } else {
+        // Our neighbor is a single channel
+        if (delta > 0) {
+          // Neighbor is to our right, move their start position to our position
+          int startIndex = channel.getIndex();
+          this.mutableChannels.remove(neighbor);
+          this.mutableChannels.add(startIndex, neighbor);
+        } else {
+          // Neighbor is to our left, move them past us
+          int endIndex = channel.getIndex();
+          if (isGroup) {
+            endIndex += ((LXGroup) channel).channels.size();
+          }
+          this.mutableChannels.remove(neighbor);
+          this.mutableChannels.add(endIndex, neighbor);
+        }
+
       }
     }
 
-    int i = 0;
-    for (LXChannelBus c : this.mutableChannels) {
-      c.setIndex(i++);
-    }
-    if (focused) {
-      this.focusedChannel.setValue(index);
-    }
+    // Fix indexing on all channels
+    _reindexChannels();
+
+    // Focused channel may have moved
+    this.focusedChannel.setValue(focused.getIndex());
+
     for (Listener listener : this.listeners) {
       listener.channelMoved(this, channel);
     }
