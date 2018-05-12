@@ -805,6 +805,14 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       if (this.masterChannel != bus) {
         this.masterChannel.selected.setValue(false);
       }
+    } else {
+      // In multiple selection mode, de-select anything from another group
+      LXGroup busGroup = bus.getGroup();
+      for (LXChannelBus channel : this.channels) {
+        if (channel.getGroup() != busGroup) {
+          channel.selected.setValue(false);
+        }
+      }
     }
     bus.selected.setValue(true);
     return this;
