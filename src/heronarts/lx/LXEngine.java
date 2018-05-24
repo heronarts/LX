@@ -1187,6 +1187,49 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this.modulation;
   }
 
+  private class BlendStack {
+
+    private ModelBuffer destination;
+    private ModelBuffer output;
+    private boolean hasOutput;
+
+    void initialize(ModelBuffer destination, ModelBuffer output) {
+      this.destination = destination;
+      this.output = output;
+      this.hasOutput = false;
+    }
+
+    void blend(LXBlend blend, BlendStack that, double alpha) {
+      blend(blend, that.destination.getArray(), alpha);
+    }
+
+    void blend(LXBlend blend, int[] src, double alpha) {
+      blend.blend(this.destination.getArray(), src, alpha, this.output.getArray());
+      this.destination = this.output;
+      this.hasOutput = true;
+    }
+
+    void copyFrom(BlendStack that) {
+      System.arraycopy(that.destination.getArray(), 0, this.output.getArray(), 0, that.destination.getArray().length);
+      this.destination = this.output;
+      this.hasOutput = true;
+    }
+
+    void flatten() {
+      if (!this.hasOutput) {
+        System.arraycopy(this.destination.getArray(), 0, this.output.getArray(), 0, this.destination.getArray().length);
+        this.destination = this.output;
+        this.hasOutput = true;
+      }
+    }
+
+  }
+
+  private final BlendStack blendStackMain = new BlendStack();
+  private final BlendStack blendStackCue = new BlendStack();
+  private final BlendStack blendStackLeft = new BlendStack();
+  private final BlendStack blendStackRight = new BlendStack();
+
   public void run() {
     this.hasStarted = true;
 
@@ -1266,22 +1309,18 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // First, set up a bunch of state to keep track of which buffers we
     // are rendering into.
     long channelStart = System.nanoTime();
-    int[] backgroundArray = this.background.getArray();
-    int[] blendOutputMain = this.buffer.main.render.getArray();
-    int[] blendOutputCue = this.buffer.cue.render.getArray();
-    int[] blendOutputLeft = this.blendBufferLeft.getArray();
-    int[] blendOutputRight = this.blendBufferRight.getArray();
-    int[] blendDestinationCue = backgroundArray;
+
+    // Initialize blend stacks
+    this.blendStackMain.initialize(this.background, this.buffer.main.render);
+    this.blendStackCue.initialize(this.background, this.buffer.cue.render);
+    this.blendStackLeft.initialize(this.background, this.blendBufferLeft);
+    this.blendStackRight.initialize(this.background, this.blendBufferRight);
 
     double crossfadeValue = this.crossfader.getValue();
 
     boolean leftBusActive = crossfadeValue < 1.;
     boolean rightBusActive = crossfadeValue > 0.;
     boolean cueBusActive = false;
-
-    int leftChannelCount = 0;
-    int rightChannelCount = 0;
-    int mainChannelCount = 0;
 
     boolean isChannelMultithreaded = this.isChannelMultithreaded.isOn();
 
@@ -1333,6 +1372,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
 
     // Step 3: blend the channel buffers down
+    boolean blendLeft = leftBusActive || this.cueA.isOn();
+    boolean blendRight = rightBusActive || this.cueB.isOn();
+    boolean leftExists = false, rightExists = false;
     for (LXChannelBus channel : this.channels) {
       long blendStart = System.nanoTime();
 
@@ -1341,39 +1383,29 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       boolean isSubChannel = channel.getGroup() != null;
 
       // Blend into the output buffer
-      if (!isSubChannel && channel.isAnimating && channel.enabled.isOn()) {
-        boolean doBlend = false;
-        int[] blendDestination;
-        int[] blendOutput;
+      if (!isSubChannel) {
+        BlendStack blendStack = null;
 
         // Which output group is this channel mapped to
         switch (channel.crossfadeGroup.getEnum()) {
         case A:
-          blendDestination = (leftChannelCount++ > 0) ? blendOutputLeft : backgroundArray;
-          blendOutput = blendOutputLeft;
-          doBlend = leftBusActive || this.cueA.isOn();
+          leftExists = true;
+          blendStack = blendLeft ? this.blendStackLeft : null;
           break;
         case B:
-          blendDestination = (rightChannelCount++ > 0) ? blendOutputRight: backgroundArray;
-          blendOutput = blendOutputRight;
-          doBlend = rightBusActive || this.cueB.isOn();
+          rightExists = true;
+          blendStack = blendRight ? this.blendStackRight : null;
           break;
         default:
         case BYPASS:
-          blendDestination = (mainChannelCount++ > 0) ? blendOutputMain : backgroundArray;
-          blendOutput = blendOutputMain;
-          doBlend = true;
+          blendStack = blendStackMain;
           break;
         }
-        if (doBlend) {
+
+        if (blendStack != null && channel.enabled.isOn()) {
           double alpha = channel.fader.getValue();
           if (alpha > 0) {
-            LXBlend blend = channel.blendMode.getObject();
-            blend.blend(blendDestination, channel.getColors(), alpha, blendOutput);
-          } else if (blendDestination != blendOutput) {
-            // Edge-case: copy the blank buffer into the destination blend buffer when
-            // the channel fader is set to 0
-            System.arraycopy(blendDestination, 0, blendOutput, 0, blendDestination.length);
+            blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha);
           }
         }
       }
@@ -1381,8 +1413,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       // Blend into the cue buffer, always a direct add blend for any type of channel
       if (channel.cueActive.isOn()) {
         cueBusActive = true;
-        this.addBlend.blend(blendDestinationCue, channel.getColors(), 1, blendOutputCue);
-        blendDestinationCue = blendOutputCue;
+        this.blendStackCue.blend(this.addBlend, channel.getColors(), 1);
       }
 
       ((LXChannelBus.Timer) channel.timer).blendNanos = System.nanoTime() - blendStart;
@@ -1390,63 +1421,42 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Check if the crossfade group buses are cued
     if (this.cueA.isOn()) {
-      if (leftChannelCount > 0) {
-        blendDestinationCue = blendOutputLeft;
-        System.arraycopy(blendDestinationCue, 0, blendOutputCue, 0, blendOutputCue.length);
-      }
+      this.blendStackCue.copyFrom(this.blendStackLeft);
       cueBusActive = true;
     } else if (this.cueB.isOn()) {
-      if (rightChannelCount > 0) {
-        blendDestinationCue = blendOutputRight;
-        System.arraycopy(blendDestinationCue, 0, blendOutputCue, 0, blendOutputCue.length);
-      }
+      this.blendStackCue.copyFrom(this.blendStackRight);
       cueBusActive = true;
     }
 
     // Step 4: now we have three output buses that need mixing... the left/right crossfade
     // groups plus the main buffer. We figure out which of them are active and blend appropriately
     // Note that the A+B crossfade groups are additively mixed AFTER the main buffer
-    boolean leftContent = leftBusActive && (leftChannelCount > 0);
-    boolean rightContent = rightBusActive && (rightChannelCount > 0);
+    boolean leftContent = leftBusActive && leftExists;
+    boolean rightContent = rightBusActive && rightExists;
 
     if (leftContent && rightContent) {
       // There are left and right channels assigned!
-      int[] crossfadeSource, crossfadeDestination;
-      double crossfadeAlpha;
-      if (crossfadeValue <= 0.5) {
-        crossfadeDestination = blendOutputLeft;
-        crossfadeSource = blendOutputRight;
-        crossfadeAlpha = Math.min(1, 2. * crossfadeValue);
-      } else {
-        crossfadeDestination = blendOutputRight;
-        crossfadeSource = blendOutputLeft;
-        crossfadeAlpha = Math.min(1, 2. * (1-crossfadeValue));
-      }
-
-      // Compute the crossfade mix
+      BlendStack crossfadeBlend;
       LXBlend blend = this.crossfaderBlendMode.getObject();
-      blend.blend(crossfadeDestination, crossfadeSource, crossfadeAlpha, crossfadeDestination);
-
+      if (crossfadeValue <= 0.5) {
+        crossfadeBlend = blendStackLeft;
+        this.blendStackLeft.blend(blend, blendStackRight.destination.getArray(), Math.min(1, 2. * crossfadeValue));
+      } else {
+        crossfadeBlend = blendStackRight;
+        this.blendStackRight.blend(blend, blendStackLeft.destination.getArray(), Math.min(1, 2. * (1-crossfadeValue)));
+      }
       // Add the crossfaded groups to the main buffer
-      int[] blendDestination = (mainChannelCount > 0) ? blendOutputMain : backgroundArray;
-      addBlend.blend(blendDestination, crossfadeDestination, 1., blendOutputMain);
-
+      this.blendStackMain.blend(this.addBlend, crossfadeBlend, 1.);
     } else if (leftContent) {
       // Add the left group to the main buffer
-      int[] blendDestination = (mainChannelCount > 0) ? blendOutputMain : backgroundArray;
-      double blendAlpha = Math.min(1, 2. * (1-crossfadeValue));
-      addBlend.blend(blendDestination, blendOutputLeft, blendAlpha, blendOutputMain);
+      this.blendStackMain.blend(this.addBlend, this.blendStackLeft, Math.min(1, 2. * (1-crossfadeValue)));
     } else if (rightContent) {
       // Add the right group to the main buffer
-      int[] blendDestination = (mainChannelCount > 0) ? blendOutputMain : backgroundArray;
-      double blendAlpha = Math.min(1, 2. * crossfadeValue);
-      addBlend.blend(blendDestination, blendOutputRight, blendAlpha, blendOutputMain);
+      this.blendStackMain.blend(this.addBlend, this.blendStackRight, Math.min(1, 2. * crossfadeValue));
     }
 
     // Check for edge case of all channels being off, don't leave stale data in blend buffer!
-    if ((leftChannelCount + rightChannelCount + mainChannelCount) == 0) {
-      System.arraycopy(backgroundArray, 0, blendOutputMain, 0, backgroundArray.length);
-    }
+    this.blendStackMain.flatten();
 
     // Time to apply master FX to the main blended output
     long effectStart = System.nanoTime();
@@ -1476,7 +1486,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     } else {
       // Or do it ourself here on the engine thread
       long outputStart = System.nanoTime();
-      this.output.send(blendOutputMain);
+      this.output.send(this.buffer.main.render.getArray());
       this.timer.outputNanos = System.nanoTime() - outputStart;
     }
 
