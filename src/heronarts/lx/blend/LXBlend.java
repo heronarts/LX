@@ -31,20 +31,36 @@ import heronarts.lx.LXModulatorComponent;
  */
 public abstract class LXBlend extends LXModulatorComponent {
 
-  protected static final int ALPHA_SHIFT = 24;
-  protected static final int R_SHIFT = 16;
-  protected static final int G_SHIFT = 8;
-  protected static final int R_MASK = 0x00ff0000;
-  protected static final int G_MASK = 0x0000ff00;
-  protected static final int B_MASK = 0x000000ff;
-  protected static final int RB_MASK = R_MASK | B_MASK;
+  public static class FunctionalBlend extends LXBlend {
+    /**
+     * Functional interface for a static blending function
+     */
+    public interface BlendFunction {
+      /**
+       * Blend function to combine two colors
+       *
+       * @param dst Background color
+       * @param src Overlay color
+       * @param alpha Secondary alpha mask (from 0x00 - 0x100)
+       * @return Blended color
+       */
+      public int apply(int dst, int src, int alpha);
+    }
 
-  protected static int min(int a, int b) {
-    return (a < b) ? a : b;
-  }
+    private final BlendFunction function;
 
-  protected static int max(int a, int b) {
-    return (a > b) ? a : b;
+    public FunctionalBlend(LX lx, BlendFunction function) {
+      super(lx);
+      this.function = function;
+    }
+
+    @Override
+    public void blend(int[] dst, int[] src, double alpha, int[] output) {
+      int alphaMask = (int) (alpha * 0x100);
+      for (int i = 0; i < dst.length; ++i) {
+        output[i] = this.function.apply(dst[i], src[i], alphaMask);
+      }
+    }
   }
 
   private String name;

@@ -19,30 +19,10 @@
 package heronarts.lx.blend;
 
 import heronarts.lx.LX;
+import heronarts.lx.color.LXColor;
 
-public class LightestBlend extends LXBlend {
-
+public class LightestBlend extends LXBlend.FunctionalBlend {
   public LightestBlend(LX lx) {
-    super(lx);
-  }
-
-  @Override
-  public void blend(int[] dst, int[] src, double alpha, int[] output) {
-    int alphaAdjust = (int) (alpha * 0x100);
-    for (int i = 0; i < src.length; ++i) {
-      int a = (((src[i] >>> ALPHA_SHIFT) * alphaAdjust) >> 8) & 0xff;
-
-      int srcAlpha = a + (a >= 0x7F ? 1 : 0);
-      int dstAlpha = 0x100 - srcAlpha;
-
-      int rb =
-        max(src[i] & R_MASK, dst[i] & R_MASK) |
-        max(src[i] & B_MASK, dst[i] & B_MASK);
-      int gn = max(src[i] & G_MASK, dst[i] & G_MASK);
-
-      output[i] = min((dst[i] >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
-        (((dst[i] & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8) & RB_MASK |
-        (((dst[i] & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8) & G_MASK;
-    }
+    super(lx, LXColor::lightest);
   }
 }

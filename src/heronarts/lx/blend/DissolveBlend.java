@@ -19,7 +19,13 @@
 package heronarts.lx.blend;
 
 import heronarts.lx.LX;
+import heronarts.lx.color.LXColor;
 
+/**
+ * The dissolve blend is a special blend used in the crossfader. It is a normal linear
+ * blend except that full alpha on this blend represents an averaging of the two colors,
+ * and it also disregards the alpha channel of the individual pixels.
+ */
 public class DissolveBlend extends LXBlend {
 
   public DissolveBlend(LX lx) {
@@ -28,13 +34,13 @@ public class DissolveBlend extends LXBlend {
 
   @Override
   public void blend(int[] dst, int[] src, double alpha, int[] output) {
+    // Multiply the src alpha only by half!
     int srcAlpha = (int) (alpha * 0x80);
     for (int i = 0; i < src.length; ++i) {
       int dstAlpha = 0x100 - srcAlpha;
-
-      output[i] = 0xff << ALPHA_SHIFT |
-          ((dst[i] & RB_MASK) * dstAlpha + (src[i] & RB_MASK) * srcAlpha) >>> 8 & RB_MASK |
-          ((dst[i] & G_MASK) * dstAlpha + (src[i] & G_MASK) * srcAlpha) >>> 8 & G_MASK;
+      output[i] = 0xff << LXColor.ALPHA_SHIFT |
+          ((dst[i] & LXColor.RB_MASK) * dstAlpha + (src[i] & LXColor.RB_MASK) * srcAlpha) >>> 8 & LXColor.RB_MASK |
+          ((dst[i] & LXColor.G_MASK) * dstAlpha + (src[i] & LXColor.G_MASK) * srcAlpha) >>> 8 & LXColor.G_MASK;
     }
   }
 }

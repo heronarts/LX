@@ -21,7 +21,6 @@ package heronarts.lx.effect;
 import heronarts.lx.LX;
 import heronarts.lx.LXEffect;
 import heronarts.lx.LXUtils;
-import heronarts.lx.blend.MultiplyBlend;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.modulator.LXWaveshape;
 import heronarts.lx.modulator.SawLFO;
@@ -95,7 +94,9 @@ public class StrobeEffect extends LXEffect {
           setColors(LXColor.BLACK);
         } else {
           int src = LXColor.gray(100 * strobef);
-          MultiplyBlend.multiply(this.colors, src, 1, this.colors);
+          for (int i = 0; i < this.colors.length; ++i) {
+            this.colors[i] = LXColor.multiply(this.colors[i], src, 0x100);
+          }
         }
       }
     }

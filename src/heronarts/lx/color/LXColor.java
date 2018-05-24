@@ -45,28 +45,29 @@ public class LXColor {
   public static final int BLUE = 0xff0000ff;
 
   public static final int ALPHA_MASK = 0xff000000;
-  public static final int RED_MASK = 0x00ff0000;
-  public static final int GREEN_MASK = 0x0000ff00;
-  public static final int BLUE_MASK = 0x000000ff;
+  public static final int R_MASK = 0x00ff0000;
+  public static final int G_MASK = 0x0000ff00;
+  public static final int B_MASK = 0x000000ff;
+  public static final int RB_MASK = R_MASK | B_MASK;
 
   public static final int ALPHA_SHIFT = 24;
-  public static final int RED_SHIFT = 16;
-  public static final int GREEN_SHIFT = 8;
+  public static final int R_SHIFT = 16;
+  public static final int G_SHIFT = 8;
 
   public static byte alpha(int argb) {
     return (byte) ((argb & ALPHA_MASK) >>> ALPHA_SHIFT);
   }
 
   public static byte red(int argb) {
-    return (byte) ((argb & RED_MASK) >>> RED_SHIFT);
+    return (byte) ((argb & R_MASK) >>> R_SHIFT);
   }
 
   public static byte green(int argb) {
-    return (byte) ((argb & GREEN_MASK) >>> GREEN_SHIFT);
+    return (byte) ((argb & G_MASK) >>> G_SHIFT);
   }
 
   public static byte blue(int argb) {
-    return (byte) (argb & BLUE_MASK);
+    return (byte) (argb & B_MASK);
   }
 
   /**
@@ -76,9 +77,9 @@ public class LXColor {
    * @return Hue value from 0-360
    */
   public static float h(int rgb) {
-    int r = (rgb & RED_MASK) >> RED_SHIFT;
-    int g = (rgb & GREEN_MASK) >> GREEN_SHIFT;
-    int b = rgb & BLUE_MASK;
+    int r = (rgb & R_MASK) >> R_SHIFT;
+    int g = (rgb & G_MASK) >> G_SHIFT;
+    int b = rgb & B_MASK;
     int max = (r > g) ? r : g;
     if (b > max) {
       max = b;
@@ -119,9 +120,9 @@ public class LXColor {
    * @return Saturation value from 0-100
    */
   public static float s(int rgb) {
-    int r = (rgb & RED_MASK) >> RED_SHIFT;
-    int g = (rgb & GREEN_MASK) >> GREEN_SHIFT;
-    int b = rgb & BLUE_MASK;
+    int r = (rgb & R_MASK) >> R_SHIFT;
+    int g = (rgb & G_MASK) >> G_SHIFT;
+    int b = rgb & B_MASK;
     int max = (r > g) ? r : g;
     if (b > max) {
       max = b;
@@ -140,9 +141,9 @@ public class LXColor {
    * @return Brightness from 0-100
    */
   public static float b(int rgb) {
-    int r = (rgb & RED_MASK) >> RED_SHIFT;
-    int g = (rgb & GREEN_MASK) >> GREEN_SHIFT;
-    int b = rgb & BLUE_MASK;
+    int r = (rgb & R_MASK) >> R_SHIFT;
+    int g = (rgb & G_MASK) >> G_SHIFT;
+    int b = rgb & B_MASK;
     int max = (r > g) ? r : g;
     if (b > max) {
       max = b;
@@ -154,8 +155,8 @@ public class LXColor {
     int b = 0xff & (int) (255 * (brightness / 100.));
     return
       0xff000000 |
-      ((b & 0xff) << RED_SHIFT) |
-      ((b & 0xff) << GREEN_SHIFT) |
+      ((b & 0xff) << R_SHIFT) |
+      ((b & 0xff) << G_SHIFT) |
       (b & 0xff);
   }
 
@@ -163,8 +164,8 @@ public class LXColor {
     int b = 0xff & (int) (255 * (brightness / 100.f));
     return
       0xff000000 |
-      ((b & 0xff) << RED_SHIFT) |
-      ((b & 0xff) << GREEN_SHIFT) |
+      ((b & 0xff) << R_SHIFT) |
+      ((b & 0xff) << G_SHIFT) |
       (b & 0xff);
   }
 
@@ -192,8 +193,8 @@ public class LXColor {
   public static final int rgba(int r, int g, int b, int a) {
     return
       ((a & 0xff) << ALPHA_SHIFT) |
-      ((r & 0xff) << RED_SHIFT) |
-      ((g & 0xff) << GREEN_SHIFT) |
+      ((r & 0xff) << R_SHIFT) |
+      ((g & 0xff) << G_SHIFT) |
       (b & 0xff);
   }
 
@@ -341,9 +342,9 @@ public class LXColor {
     }
     for (int i = 0; i < rgbs.length; ++i) {
       rgb = rgbs[i];
-      r = (rgb & RED_MASK) >> RED_SHIFT;
-      g = (rgb & GREEN_MASK) >> GREEN_SHIFT;
-      b = rgb & BLUE_MASK;
+      r = (rgb & R_MASK) >> R_SHIFT;
+      g = (rgb & G_MASK) >> G_SHIFT;
+      b = rgb & B_MASK;
       Color.RGBtoHSB(r, g, b, hsb);
       result[i] = Color.HSBtoRGB(hsb[0], hsb[1], Math.min(1, hsb[2] * s));
     }
@@ -358,9 +359,9 @@ public class LXColor {
    */
   @Deprecated
   public static int scaleBrightness(int rgb, float s) {
-    int r = (rgb & RED_MASK) >> RED_SHIFT;
-    int g = (rgb & GREEN_MASK) >> GREEN_SHIFT;
-    int b = rgb & BLUE_MASK;
+    int r = (rgb & R_MASK) >> R_SHIFT;
+    int g = (rgb & G_MASK) >> G_SHIFT;
+    int b = rgb & B_MASK;
     float[] hsb = Color.RGBtoHSB(r, g, b, null);
     return Color.HSBtoRGB(hsb[0], hsb[1], Math.min(1, hsb[2] * s));
   }
@@ -374,205 +375,243 @@ public class LXColor {
    * @return Array of hsb values, or null if hsb parameter was provided
    */
   public static float[] RGBtoHSB(int rgb, float[] hsb) {
-    int r = (rgb & RED_MASK) >> RED_SHIFT;
-    int g = (rgb & GREEN_MASK) >> GREEN_SHIFT;
-    int b = rgb & BLUE_MASK;
+    int r = (rgb & R_MASK) >> R_SHIFT;
+    int g = (rgb & G_MASK) >> G_SHIFT;
+    int b = rgb & B_MASK;
     return Color.RGBtoHSB(r, g, b, hsb);
   }
 
   /**
    * Blends the two colors using specified blend based on the alpha channel of c2
    *
-   * @param c1 First color
-   * @param c2 Second color to be blended
+   * @param dst Background color
+   * @param src Overlay color to be blended
    * @param blendMode Type of blending
    * @return Blended color
    */
-  public static int blend(int c1, int c2, Blend blendMode) {
+  public static int blend(int dst, int src, Blend blendMode) {
     switch (blendMode) {
     case ADD:
-      return add(c1, c2);
+      return add(dst, src);
     case SUBTRACT:
-      return subtract(c1, c2);
+      return subtract(dst, src);
     case MULTIPLY:
-      return multiply(c1, c2);
+      return multiply(dst, src);
     case SCREEN:
-      return screen(c1, c2);
+      return screen(dst, src);
     case LIGHTEST:
-      return lightest(c1, c2);
+      return lightest(dst, src);
     case DARKEST:
-      return darkest(c1, c2);
+      return darkest(dst, src);
     case LERP:
-      return lerp(c1, c2);
+      return lerp(dst, src);
     }
-    throw new RuntimeException("Unimplemented blend mode: " + blendMode);
+    throw new IllegalArgumentException("Unimplemented blend mode: " + blendMode);
   }
 
-  /**
-   * Interpolates each of the RGB channels between c1 and c2
-   *
-   * @param c1 First color
-   * @param c2 Second color
-   * @return Interpolated color based on alpha of c2
-   */
-  public static int lerp(int c1, int c2) {
-    return lerp(c1, c2, (c2 & ALPHA_MASK) >>> ALPHA_SHIFT);
+  public static int lerp(int dst, int src) {
+    return add(dst, src, 0x100);
   }
 
-  /**
-   * Interpolates each of the RGB channels between c1 and c2 and specified amount
-   *
-   * @param c1 First color
-   * @param c2 Second color
-   * @param amount Float from 0-1 for amount of interpolation
-   * @return Interpolated color
-   */
-  public static int lerp(int c1, int c2, float amount) {
-    return lerp(c1, c2, (int) (amount * 0xff));
+  public static int lerp(int dst, int src, double alpha) {
+    return lerp(dst, src, (int) (alpha * 0x100));
   }
 
-  /**
-   * Interpolates each of the RGB channels between c1 and c2 and specified amount
-   *
-   * @param c1 First color
-   * @param c2 Second color
-   * @param amount Double from 0-1 for amount of interpolation
-   * @return Interpolated color
-   */
-  public static int lerp(int c1, int c2, double amount) {
-    return lerp(c1, c2, (int) (amount * 0xff));
-  }
-
-  /**
-   * Interpolates each of the RGB channels between c1 and c2 and specified alpha
-   *
-   * @param c1 First color
-   * @param c2 Second color
-   * @param alpha Single byte (0-255) alpha channel
-   * @return Interpolated color
-   */
-  public static int lerp(int c1, int c2, int alpha) {
-    int c1a = (c1 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c2a = (c2 & ALPHA_MASK) >>> ALPHA_SHIFT;
+  public static int lerp(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
     return
-      (min(0xff, c1a + c2a) << ALPHA_SHIFT) |
-      lerp(c1, c2, alpha, RED_MASK) |
-      lerp(c1, c2, alpha, GREEN_MASK) |
-      lerp(c1, c2, alpha, BLUE_MASK);
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      ((dst & RB_MASK) * dstAlpha + (src & RB_MASK) * srcAlpha) >>> 8 & RB_MASK |
+      ((dst & G_MASK) * dstAlpha + (src & G_MASK) * srcAlpha) >>> 8 & G_MASK;
   }
 
   /**
    * Adds the specified colors
    *
-   * @param c1 First color
-   * @param c2 Second color
+   * @param dst Background color
+   * @param src Overlay color
    * @return Summed RGB channels with 255 clip
    */
-  public static int add(int c1, int c2) {
-    int c1a = (c1 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c2a = (c2 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    return
-      (min(0xff, c1a + c2a) << ALPHA_SHIFT) |
-      (min(RED_MASK, (c1 & RED_MASK) + (((c2 & RED_MASK) * (c2a + 1)) >>> 8)) & RED_MASK) |
-      (min(GREEN_MASK, (c1 & GREEN_MASK) + (((c2 & GREEN_MASK) * (c2a + 1)) >>> 8)) & GREEN_MASK) |
-      min(BLUE_MASK, (c1 & BLUE_MASK) + (((c2 & BLUE_MASK) * (c2a + 1)) >>> 8));
+  public static int add(int dst, int src) {
+    return add(dst, src, 0x100);
   }
 
   /**
-   * Subtracts the specified colors
+   * Adds the specified colors
    *
-   * @param c1 First color
-   * @param c2 Second color
-   * @return Color that is [c1 - c2] per RGB with 0-clip
+   * @param dst Background color
+   * @param src Overlay color
+   * @param alpha Level of blending from 0-1
+   * @return Summed RGB channels with 255 clip
    */
-  public static int subtract(int c1, int c2) {
-    int c1a = (c1 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c2a = (c2 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    return
-      (min(0xff, c1a + c2a) << ALPHA_SHIFT) |
-      (max(GREEN_MASK, (c1 & RED_MASK) - (((c2 & RED_MASK) * (c2a + 1)) >>> 8)) & RED_MASK) |
-      (max(BLUE_MASK, (c1 & GREEN_MASK) - (((c2 & GREEN_MASK) * (c2a + 1)) >>> 8)) & GREEN_MASK) |
-      max(0, (c1 & BLUE_MASK) - (((c2 & BLUE_MASK) * (c2a + 1)) >>> 8));
+  public static int add(int dst, int src, double alpha) {
+    return add(dst, src, (int) (alpha * 0x100));
   }
 
   /**
-   * Multiplies the specified colors
+   * Adds the specified colors
    *
-   * @param c1 First color
-   * @param c2 Second color
-   * @return RGB channels multiplied with 255 clip
+   * @param dst Background color
+   * @param src Overlay color
+   * @param alpha Alpha adjustment (from 0x00 - 0x100)
+   * @return Summed RGB channels with 255 clip
    */
-  public static int multiply(int c1, int c2) {
-    int c1a = (c1 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c2a = (c2 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c1r = (c1 & RED_MASK) >> RED_SHIFT;
-    int c2r = (c2 & RED_MASK) >> RED_SHIFT;
-    int c1g = (c1 & GREEN_MASK) >> GREEN_SHIFT;
-    int c2g = (c2 & GREEN_MASK) >> GREEN_SHIFT;
-    int c1b = c1 & BLUE_MASK;
-    int c2b = c2 & BLUE_MASK;
+  public static int add(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int rb = (dst & RB_MASK) + ((src & RB_MASK) * srcAlpha >>> 8 & RB_MASK);
+    int gn = (dst & G_MASK) + ((src & G_MASK) * srcAlpha >>> 8);
     return
-      (min(0xff, c1a + c2a) << ALPHA_SHIFT) |
-      lerp(c1, (c1r * (c2r+1)) << 8, c2a, RED_MASK) |
-      lerp(c1, (c1g * (c2g+1)), c2a, GREEN_MASK) |
-      lerp(c1, (c1b * (c2b+1)) >> 8, c2a, BLUE_MASK);
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min(rb & 0xffff0000, R_MASK) |
+      min(gn & 0x00ffff00, G_MASK) |
+      min(rb & 0x0000ffff, B_MASK);
   }
 
-  /**
-   * Inverse multiplies the specified colors
-   *
-   * @param c1 First color
-   * @param c2 Second color
-   * @return RGB channels multiplied as 255 - [255-c1]*[255-c2] with clip
-   */
-  public static int screen(int c1, int c2) {
-    int c1a = (c1 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c2a = (c2 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c1r = (c1 & RED_MASK) >> RED_SHIFT;
-    int c2r = (c2 & RED_MASK) >> RED_SHIFT;
-    int c1g = (c1 & GREEN_MASK) >> GREEN_SHIFT;
-    int c2g = (c2 & GREEN_MASK) >> GREEN_SHIFT;
-    int c1b = c1 & BLUE_MASK;
-    int c2b = c2 & BLUE_MASK;
-    return
-      (min(0xff, c1a + c2a) << ALPHA_SHIFT) |
-      lerp(c1, RED_MASK - ((0xff - c1r) * (0xff - c2r + 1) << 8), c2a, RED_MASK) |
-      lerp(c1, GREEN_MASK - ((0xff - c1g) * (0xff - c2g + 1)), c2a, GREEN_MASK) |
-      lerp(c1, BLUE_MASK - (((0xff - c1b) * (0xff - c2b + 1)) >> 8), c2a, BLUE_MASK);
+  public static int subtract(int dst, int src) {
+    return subtract(dst, src, 0x100);
   }
 
-  /**
-   * Returns the lightest color by RGB channel
-   *
-   * @param c1 First color
-   * @param c2 Second color
-   * @return Lightest of each RGB channel
-   */
-  public static int lightest(int c1, int c2) {
-    int c1a = (c1 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c2a = (c2 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    return
-      (min(0xff, c1a + c2a) << ALPHA_SHIFT) |
-      (max(c1 & RED_MASK, (((c2 & RED_MASK) * (c2a + 1)) >>> 8)) & RED_MASK) |
-      (max(c1 & GREEN_MASK, (((c2 & GREEN_MASK) * (c2a + 1)) >>> 8)) & GREEN_MASK) |
-      max(c1 & BLUE_MASK, (((c2 & BLUE_MASK) * (c2a + 1)) >>> 8));
+  public static int subtract(int dst, int src, double alpha) {
+    return subtract(dst, src, (int) (alpha * 0x100));
   }
 
-  /**
-   * Returns the darkest color by RGB channel
-   *
-   * @param c1 First color
-   * @param c2 Second color
-   * @return Darkest of each RGB channel
-   */
-  public static int darkest(int c1, int c2) {
-    int c1a = (c1 & ALPHA_MASK) >>> ALPHA_SHIFT;
-    int c2a = (c2 & ALPHA_MASK) >>> ALPHA_SHIFT;
+  public static int subtract(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int rb = (src & RB_MASK) * srcAlpha >>> 8;
+    int gn = (src & G_MASK) * srcAlpha >>> 8;
     return
-      (min(0xff, c1a + c2a) << ALPHA_SHIFT) |
-      lerp(c1, min(c1 & RED_MASK, c2 & RED_MASK), c2a, RED_MASK) |
-      lerp(c1, min(c1 & GREEN_MASK, c2 & GREEN_MASK), c2a, GREEN_MASK) |
-      lerp(c1, min(c1 & BLUE_MASK, c2 & BLUE_MASK), c2a, BLUE_MASK);
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      max((dst & R_MASK) - (rb & R_MASK), 0) |
+      max((dst & G_MASK) - (gn & G_MASK), 0) |
+      max((dst & B_MASK) - (rb & B_MASK), 0);
+  }
+
+  public static int multiply(int dst, int src) {
+    return multiply(dst, src, 0x100);
+  }
+
+  public static int multiply(int dst, int src, double alpha) {
+    return multiply(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int multiply(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
+
+    int dstG = (dst & G_MASK);
+    int dstR = (dst & R_MASK) >> R_SHIFT;
+    int dstB = (dst & B_MASK);
+
+    int rb = ((src & R_MASK) * (dstR + 1) | (src & B_MASK) * (dstB + 1)) >>> 8 & RB_MASK;
+    int g = (src & G_MASK) * (dstG + 0x100) >>> 16 & G_MASK;
+
+    return
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
+      (dstG * dstAlpha + g * srcAlpha) >>> 8 & G_MASK;
+  }
+
+  public static int screen(int dst, int src) {
+    return screen(dst, src, 0x100);
+  }
+
+  public static int screen(int dst, int src, double alpha) {
+    return screen(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int screen(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
+
+    int dstRb = dst & RB_MASK;
+    int dstGn = dst & G_MASK;
+    int srcGn = src & G_MASK;
+    int dstR = (dst & R_MASK) >> R_SHIFT;
+    int dstB = dst & B_MASK;
+
+    int rbSub = (
+        (src & R_MASK) * (dstR + 1) |
+        (src & B_MASK) * (dstB + 1)
+      ) >>> 8 & RB_MASK;
+    int gnSub = srcGn * (dstGn + 0x100) >> 16 & G_MASK;
+
+    return
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      (dstRb * dstAlpha + (dstRb + (src & RB_MASK) - rbSub) * srcAlpha) >>> 8 & RB_MASK |
+      (dstGn * dstAlpha + (dstGn + srcGn - gnSub) * srcAlpha) >>> 8 & G_MASK;
+  }
+
+  public static int lightest(int dst, int src) {
+    return lightest(dst, src, 0x100);
+  }
+
+  public static int lightest(int dst, int src, double alpha) {
+    return lightest(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int lightest(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
+    int rb =
+      max(src & R_MASK, dst & R_MASK) |
+      max(src & B_MASK, dst & B_MASK);
+    int gn = max(src & G_MASK, dst & G_MASK);
+    return
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      (((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8) & RB_MASK |
+      (((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8) & G_MASK;
+  }
+
+  public static int darkest(int dst, int src) {
+    return darkest(dst, src, 0x100);
+  }
+
+  public static int darkest(int dst, int src, double alpha) {
+    return darkest(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int darkest(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
+    int rb =
+      min(src & R_MASK, dst & R_MASK) |
+      min(src & B_MASK, dst & B_MASK);
+    int gn = min(src & G_MASK, dst & G_MASK);
+    return
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      (((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8) & RB_MASK |
+      (((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8) & G_MASK;
+  }
+
+  public static int difference(int dst, int src) {
+    return difference(dst, src, 0x100);
+  }
+
+  public static int difference(int dst, int src, double alpha) {
+    return difference(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int difference(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
+    int r = (dst & R_MASK) - (src & R_MASK);
+    int g = (dst & G_MASK) - (src & G_MASK);
+    int b = (dst & B_MASK) - (src & B_MASK);
+    int rb = (r < 0 ? -r : r) | (b < 0 ? -b : b);
+    int gn = g < 0 ? -g : g;
+    return
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
+      ((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8 & G_MASK;
   }
 
   private static int min(int a, int b) {
@@ -581,11 +620,6 @@ public class LXColor {
 
   private static int max(int a, int b) {
     return (a > b) ? a : b;
-  }
-
-  private static int lerp(int a, int b, int alpha, int mask) {
-    int am = a & mask, bm = b & mask;
-    return (am + (((alpha+1)*(bm-am)) >>> 8)) & mask;
   }
 
 }
