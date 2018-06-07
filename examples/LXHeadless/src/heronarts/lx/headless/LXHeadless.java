@@ -41,8 +41,8 @@ public class LXHeadless {
       new LXDatagramOutput(lx).addDatagram(
         new ArtNetDatagram(lx.model, 512, 0)
         .setAddress("localhost")
-      )
-    );
+          )
+  );
   }
 
   public static void addFadeCandyOutput(LX lx) throws Exception {
@@ -74,7 +74,6 @@ public class LXHeadless {
     );
   }
 
-
   public static void main(String[] args) {
     try {
       LXModel model = buildModel();
@@ -96,8 +95,8 @@ public class LXHeadless {
       }
 
       // TODO: add your own output code here
-      // addArtNetOutput(lx);
-      // addFadecandyOutput(lx);
+//       addArtNetOutput(lx);
+//       addFadecandyOutput(lx);
       addOPCOutput(lx);
 
       // On the CLI you may specify an argument with an .lxp file
