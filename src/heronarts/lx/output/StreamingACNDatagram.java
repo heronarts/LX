@@ -76,7 +76,22 @@ public class StreamingACNDatagram extends LXDatagram {
    * @param pointIndices List of point indices to encode in packet
    */
   public StreamingACNDatagram(int universeNumber, int[] pointIndices) {
-    super(DMX_DATA_POSITION + pointIndices.length * 3);
+    this(universeNumber, pointIndices.length * 3, pointIndices);
+  }
+
+  /**
+   * Subclasses may override for a custom payload with fixed size, not necessarily
+   * based upon an array of point indices - such as custom DMX data
+   *
+   * @param universeNumber Universe number
+   * @param dataSize Data payload size
+   */
+  protected StreamingACNDatagram(int universeNumber, int dataSize) {
+    this(universeNumber, dataSize, null);
+  }
+
+  private StreamingACNDatagram(int universeNumber, int dataSize, int[] pointIndices) {
+    super(DMX_DATA_POSITION + dataSize);
     setPort(DEFAULT_PORT);
     setUniverseNumber(universeNumber);
     this.pointIndices = pointIndices;
@@ -175,7 +190,7 @@ public class StreamingACNDatagram extends LXDatagram {
     this.buffer[122] = 0x01;
 
     // Property value count
-    int numProperties = 1 + this.pointIndices.length * 3;
+    int numProperties = 1 + dataSize;
     this.buffer[123] = (byte) ((numProperties >> 8) & 0xff);
     this.buffer[124] = (byte) (numProperties & 0xff);
 
