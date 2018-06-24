@@ -216,7 +216,7 @@ public class StreamingACNDatagram extends LXDatagram {
   }
   
   public void writeDmxData(byte data, int channel) {
-    // TODO: bounds checking? Should channel < 0 be allowed?
+    // TODO: bounds checking? Should channel < 0 be allowed? Maybe throw an OutOfBoundsException
     this.buffer[DMX_DATA_POSITION + channel] = data;
   }
   
