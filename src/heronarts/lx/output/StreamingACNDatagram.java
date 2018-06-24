@@ -216,6 +216,7 @@ public class StreamingACNDatagram extends LXDatagram {
   }
   
   public void writeDmxData(byte data, int position) {
+    // TODO: bounds checking? Should position < 0 be allowed?
     this.buffer[DMX_DATA_POSITION + position] = data;
   }
   
