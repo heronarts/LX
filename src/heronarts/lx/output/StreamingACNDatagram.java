@@ -221,7 +221,7 @@ public class StreamingACNDatagram extends LXDatagram {
   }
   
   public void writeDmxData(byte[] data, int position) {
-    for (byte b : data) writeDmxData(d, position++);
+    for (byte d : data) writeDmxData(d, position++);
   }
   
   protected void advanceFrame() {
