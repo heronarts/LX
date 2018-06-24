@@ -215,13 +215,13 @@ public class StreamingACNDatagram extends LXDatagram {
     return this.universeNumber;
   }
   
-  public void writeDmxData(byte data, int position) {
-    // TODO: bounds checking? Should position < 0 be allowed?
-    this.buffer[DMX_DATA_POSITION + position] = data;
+  public void writeDmxData(byte data, int channel) {
+    // TODO: bounds checking? Should channel < 0 be allowed?
+    this.buffer[DMX_DATA_POSITION + channel] = data;
   }
   
-  public void writeDmxData(byte[] data, int position) {
-    for (byte d : data) writeDmxData(d, position++);
+  public void writeDmxData(byte[] data, int channel) {
+    for (byte d : data) writeDmxData(d, channel++);
   }
   
   protected void advanceFrame() {
