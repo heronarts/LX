@@ -29,11 +29,11 @@ import heronarts.lx.model.LXFixture;
  */
 public class StreamingACNDatagram extends LXDatagram {
 
-  private final static int DMX_DATA_POSITION = 126;
+  protected final static int DMX_DATA_POSITION = 126;
 
-  private final static int SEQUENCE_NUMBER_POSITION = 111;
+  protected final static int SEQUENCE_NUMBER_POSITION = 111;
 
-  private final static int UNIVERSE_NUMBER_POSITION = 113;
+  protected final static int UNIVERSE_NUMBER_POSITION = 113;
 
   private final static int DEFAULT_PORT = 5568;
 
