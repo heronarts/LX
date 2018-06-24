@@ -227,11 +227,14 @@ public class StreamingACNDatagram extends LXDatagram {
   public void writeDmxData(byte[] data, int position) {
     for (byte b : data) writeDmxData(d, position++);
   }
+  
+  protected void advanceFrame() {
+    this.buffer[SEQUENCE_NUMBER_POSITION] = ++this.sequenceNumber;
+  }
 
   @Override
   public void onSend(int[] colors) {
-    ++this.sequenceNumber;
-    this.buffer[SEQUENCE_NUMBER_POSITION] = this.sequenceNumber;
+    advanceFrame();
     copyPoints(colors, this.pointIndices, DMX_DATA_POSITION);
   }
 }
