@@ -46,11 +46,6 @@ public class StreamingACNDatagram extends LXDatagram {
    */
   private int universeNumber;
 
-  /**
-   * Sequence number
-   */
-  private byte sequenceNumber = 0;
-
   public StreamingACNDatagram(LXFixture fixture) {
     this(DEFAULT_UNIVERSE_NUMBER, fixture);
   }
@@ -229,7 +224,7 @@ public class StreamingACNDatagram extends LXDatagram {
   }
   
   protected void advanceFrame() {
-    this.buffer[SEQUENCE_NUMBER_POSITION] = ++this.sequenceNumber;
+    this.buffer[SEQUENCE_NUMBER_POSITION]++;
   }
 
   @Override
