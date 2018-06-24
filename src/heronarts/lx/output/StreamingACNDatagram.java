@@ -219,6 +219,14 @@ public class StreamingACNDatagram extends LXDatagram {
   public int getUniverseNumber() {
     return this.universeNumber;
   }
+  
+  public void writeDmxData(byte data, int position) {
+    this.buffer[DMX_DATA_POSITION + position] = data;
+  }
+  
+  public void writeDmxData(byte[] data, int position) {
+    for (byte b : data) writeDmxData(d, position++);
+  }
 
   @Override
   public void onSend(int[] colors) {
