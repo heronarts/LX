@@ -214,16 +214,21 @@ public class StreamingACNDatagram extends LXDatagram {
   public int getUniverseNumber() {
     return this.universeNumber;
   }
-  
-  public void writeDmxData(byte data, int channel) {
-    // TODO: bounds checking? Should channel < 0 be allowed? Maybe throw an OutOfBoundsException
+
+  public void setDmxData(byte data, int channel) {
+    if (channel < 0 || channel >= this.buffer.length - DMX_DATA_POSITION) {
+      throw new IndexOutOfBoundsException("Channel is greater than DMX data length");
+    }
     this.buffer[DMX_DATA_POSITION + channel] = data;
   }
-  
-  public void writeDmxData(byte[] data, int channel) {
-    for (byte d : data) writeDmxData(d, channel++);
+
+  public void setDmxData(byte[] data, int channel) {
+    if (channel < 0 || channel > this.buffer.length - DMX_DATA_POSITION - data.length) {
+      throw new IndexOutOfBoundsException("Channel is greater than DMX data length");
+    }
+    System.arraycopy(data, 0, this.buffer, DMX_DATA_POSITION, data.length);
   }
-  
+
   protected void advanceFrame() {
     this.buffer[SEQUENCE_NUMBER_POSITION]++;
   }
