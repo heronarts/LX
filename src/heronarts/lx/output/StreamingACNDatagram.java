@@ -29,11 +29,11 @@ import heronarts.lx.model.LXFixture;
  */
 public class StreamingACNDatagram extends LXDatagram {
 
-  private final static int DMX_DATA_POSITION = 126;
+  protected final static int DMX_DATA_POSITION = 126;
 
-  private final static int SEQUENCE_NUMBER_POSITION = 111;
+  protected final static int SEQUENCE_NUMBER_POSITION = 111;
 
-  private final static int UNIVERSE_NUMBER_POSITION = 113;
+  protected final static int UNIVERSE_NUMBER_POSITION = 113;
 
   private final static int DEFAULT_PORT = 5568;
 
@@ -45,11 +45,6 @@ public class StreamingACNDatagram extends LXDatagram {
    * The universe number that this packet sends to.
    */
   private int universeNumber;
-
-  /**
-   * Sequence number
-   */
-  private byte sequenceNumber = 0;
 
   public StreamingACNDatagram(LXFixture fixture) {
     this(DEFAULT_UNIVERSE_NUMBER, fixture);
@@ -219,11 +214,23 @@ public class StreamingACNDatagram extends LXDatagram {
   public int getUniverseNumber() {
     return this.universeNumber;
   }
+  
+  public void writeDmxData(byte data, int channel) {
+    // TODO: bounds checking? Should channel < 0 be allowed? Maybe throw an OutOfBoundsException
+    this.buffer[DMX_DATA_POSITION + channel] = data;
+  }
+  
+  public void writeDmxData(byte[] data, int channel) {
+    for (byte d : data) writeDmxData(d, channel++);
+  }
+  
+  protected void advanceFrame() {
+    this.buffer[SEQUENCE_NUMBER_POSITION]++;
+  }
 
   @Override
   public void onSend(int[] colors) {
-    ++this.sequenceNumber;
-    this.buffer[SEQUENCE_NUMBER_POSITION] = this.sequenceNumber;
+    advanceFrame();
     copyPoints(colors, this.pointIndices, DMX_DATA_POSITION);
   }
 }
