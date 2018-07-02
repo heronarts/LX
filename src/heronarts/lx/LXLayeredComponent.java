@@ -95,6 +95,8 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     return this;
   }
 
+  private LXLayer loopingLayer = null;
+
   @Override
   public void loop(double deltaMs) {
     long loopStart = System.nanoTime();
@@ -108,6 +110,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     super.loop(deltaMs);
     onLoop(deltaMs);
     for (LXLayer layer : this.mutableLayers) {
+      this.loopingLayer = layer;
       layer.setBuffer(this.buffer);
 
       // TODO(mcslee): is this best here or should it be in addLayer?
@@ -115,6 +118,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
 
       layer.loop(deltaMs);
     }
+    this.loopingLayer = null;
     afterLayers(deltaMs);
 
     this.timer.loopNanos = System.nanoTime() - loopStart;
@@ -124,9 +128,24 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
 
   protected /* abstract */ void afterLayers(double deltaMs) {}
 
+  private void checkForReentrancy(LXLayer target, String operation) {
+    if (this.loopingLayer != null) {
+      throw new IllegalStateException(
+        "LXLayeredComponent may not modify layers while looping," +
+        " component: " + toString() +
+        " looping: " + this.loopingLayer.toString(this) +
+        " " + operation + ": " + (target != null ? target.toString() : "null")
+      );
+    }
+  }
+
   protected final LXLayer addLayer(LXLayer layer) {
+    if (layer == null) {
+      throw new IllegalArgumentException("Cannot add null layer");
+    }
+    checkForReentrancy(layer, "add");
     if (this.mutableLayers.contains(layer)) {
-      throw new IllegalStateException("Cannot add same layer twice: " + this + " " + layer);
+      throw new IllegalStateException("Cannot add layer twice: " + this + " " + layer);
     }
     layer.setParent(this);
     this.mutableLayers.add(layer);
@@ -134,6 +153,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   }
 
   protected final LXLayer removeLayer(LXLayer layer) {
+    checkForReentrancy(layer, "remove");
     this.mutableLayers.remove(layer);
     layer.dispose();
     return layer;
@@ -145,6 +165,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
 
   @Override
   public void dispose() {
+    checkForReentrancy(null, "dispose");
     for (LXLayer layer : this.mutableLayers) {
       layer.dispose();
     }

@@ -51,6 +51,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     if (modulator == null) {
       throw new IllegalArgumentException("Cannot add null modulator");
     }
+    checkForReentrancy(modulator, "add");
     if (this.mutableModulators.contains(modulator)) {
       throw new IllegalStateException("Cannot add modulator twice: " + modulator);
     }
@@ -66,6 +67,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
   }
 
   public LXModulator removeModulator(LXModulator modulator) {
+    checkForReentrancy(modulator, "remove");
     this.mutableModulators.remove(modulator);
     modulator.dispose();
     return modulator;
@@ -86,6 +88,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
 
   @Override
   public void dispose() {
+    checkForReentrancy(null, "dispose");
     for (LXModulator modulator : this.mutableModulators) {
       modulator.dispose();
     }
@@ -93,11 +96,26 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     super.dispose();
   }
 
+  private void checkForReentrancy(LXModulator target, String operation) {
+    if (this.loopingModulator != null) {
+      throw new IllegalStateException(
+        "LXModulatorComponent may not modify modulators while looping," +
+        " component: " + toString() +
+        " looping: " + this.loopingModulator.toString(this) +
+        " " + operation + ": " + (target != null ? target.toString() : "null")
+      );
+    }
+  }
+
+  private LXModulator loopingModulator = null;
+
   @Override
   public void loop(double deltaMs) {
     for (LXModulator modulator : this.mutableModulators) {
+      this.loopingModulator = modulator;
       modulator.loop(deltaMs);
     }
+    this.loopingModulator = null;
   }
 
 }

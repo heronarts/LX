@@ -239,6 +239,10 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     return getClass().getSimpleName() + "[" + getCanonicalPath() + "]";
   }
 
+  public String toString(LXComponent root) {
+    return getClass().getSimpleName() + "[" + getCanonicalPath(root) + "]";
+  }
+
   public void dispose() {
     if (this.lx == null) {
       throw new IllegalStateException("LXComponent never had lx reference set: " + this);
