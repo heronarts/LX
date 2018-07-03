@@ -200,9 +200,9 @@ public class LXPoint {
   }
 
   void normalize(LXModel model) {
-    this.xn = (this.x - model.xMin) / model.xRange;
-    this.yn = (this.y - model.yMin) / model.yRange;
-    this.zn = (this.z - model.zMin) / model.zRange;
-    this.rn = this.r / model.rRange;
+    this.xn = (model.xRange == 0) ? .5f : (this.x - model.xMin) / model.xRange;
+    this.yn = (model.yRange == 0) ? .5f : (this.y - model.yMin) / model.yRange;
+    this.zn = (model.zRange == 0) ? .5f : (this.z - model.zMin) / model.zRange;
+    this.rn = (model.rRange == 0) ? 0f : this.r / model.rRange;
   }
 }
