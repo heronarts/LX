@@ -766,7 +766,7 @@ public class LX {
         }
       }
     } catch (Exception x) {
-      System.err.println("Exception in loadProject: " + x.getLocalizedMessage());
+      System.err.println("Exception in openProject: " + x.getLocalizedMessage());
       x.printStackTrace(System.err);
     }
   }
