@@ -365,31 +365,51 @@ public class LXOscEngine extends LXComponent {
         registerComponent(modulator);
       }
       lx.engine.modulation.addListener(this);
-      registerComponent(lx.engine.masterChannel);
+      registerChannel(lx.engine.masterChannel);
       for (LXChannelBus channel : lx.engine.channels) {
         registerChannel(channel);
       }
       lx.engine.addListener(this);
     }
 
-    private void registerChannel(LXChannelBus channel) {
+    private void registerChannel(LXBus channel) {
       registerComponent(channel);
       if (channel instanceof LXChannel) {
         for (LXPattern p : ((LXChannel)channel).patterns) {
           registerComponent(p);
         }
       }
-      channel.addListener(this);
+      for (LXEffect effect : channel.effects) {
+        registerComponent(effect);
+      }
+      // Ensure listener is registered at most specific type
+      if (channel instanceof LXChannel) {
+        ((LXChannel) channel).addListener(this);
+      } else if (channel instanceof LXChannelBus) {
+        ((LXChannelBus) channel).addListener(this);
+      } else {
+        channel.addListener(this);
+      }
     }
 
-    private void unregisterChannel(LXChannelBus channel) {
+    private void unregisterChannel(LXBus channel) {
       unregisterComponent(channel);
       if (channel instanceof LXChannel) {
         for (LXPattern p : ((LXChannel)channel).patterns) {
           unregisterComponent(p);
         }
       }
-      channel.removeListener(this);
+      for (LXEffect effect : channel.effects) {
+        unregisterComponent(effect);
+      }
+      // Ensure listener is registered at most specific type
+      if (channel instanceof LXChannel) {
+        ((LXChannel) channel).removeListener(this);
+      } else if (channel instanceof LXChannelBus) {
+        ((LXChannelBus) channel).removeListener(this);
+      } else {
+        channel.removeListener(this);
+      }
     }
 
     private void registerComponent(LXComponent component) {
@@ -493,9 +513,7 @@ public class LXOscEngine extends LXComponent {
     }
 
     @Override
-    public void patternMoved(LXChannel channel, LXPattern pattern) {
-
-    }
+    public void patternMoved(LXChannel channel, LXPattern pattern) {}
 
     @Override
     public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
