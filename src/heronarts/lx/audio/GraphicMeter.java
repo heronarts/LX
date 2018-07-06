@@ -56,7 +56,7 @@ public class GraphicMeter extends DecibelMeter {
 
   public final FourierTransform fft;
 
-  private final float[] fftBuffer;
+  private final float[] sampleBuffer;
 
   public final NormalizedParameter[] bands;
 
@@ -103,7 +103,7 @@ public class GraphicMeter extends DecibelMeter {
   public GraphicMeter(String label, LXAudioBuffer buffer, int numBands) {
     super(label, buffer);
     addParameter("slope", this.slope);
-    this.fftBuffer = new float[buffer.bufferSize()];
+    this.sampleBuffer = new float[buffer.bufferSize()];
     this.fft = new FourierTransform(buffer.bufferSize(), buffer.sampleRate());
     this.fft.setNumBands(this.numBands = numBands);
     this.impl = new LXMeterImpl(this.numBands, this.fft.getBandOctaveRatio());
@@ -116,8 +116,8 @@ public class GraphicMeter extends DecibelMeter {
   @Override
   protected double computeValue(double deltaMs) {
     double result = super.computeValue(deltaMs);
-    this.buffer.getSamples(this.fftBuffer);
-    this.fft.compute(this.fftBuffer);
+    this.buffer.getSamples(this.sampleBuffer);
+    this.fft.compute(this.sampleBuffer);
 
     this.impl.compute(
       this.fft,
@@ -129,6 +129,17 @@ public class GraphicMeter extends DecibelMeter {
     );
 
     return result;
+  }
+
+  /**
+   * Returns a snapshot of the last raw audio sample buffer frame that was used to compute
+   * this meter. Note that this is copy of the audio buffer local to the LX thread and this particular
+   * meter. The buffer is only updated when the meter is running, once per LX engine loop.
+   *
+   * @return Raw audio sample buffer used to compute this meter
+   */
+  public float[] getSamples() {
+    return this.sampleBuffer;
   }
 
   /**
