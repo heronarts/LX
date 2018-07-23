@@ -20,14 +20,7 @@ package heronarts.lx;
 
 import heronarts.lx.audio.LXAudioEngine;
 import heronarts.lx.blend.AddBlend;
-import heronarts.lx.blend.DarkestBlend;
-import heronarts.lx.blend.DifferenceBlend;
-import heronarts.lx.blend.DissolveBlend;
 import heronarts.lx.blend.LXBlend;
-import heronarts.lx.blend.LightestBlend;
-import heronarts.lx.blend.MultiplyBlend;
-import heronarts.lx.blend.NormalBlend;
-import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.midi.LXMidiEngine;
@@ -120,7 +113,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     new BoundedParameter("FPS", 60, 0, 300)
     .setDescription("Number of frames per second the engine runs at");
 
-  LXBlend[] channelBlends;
   private final AddBlend addBlend;
 
   public final CompoundParameter crossfader = (CompoundParameter)
@@ -128,8 +120,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     .setDescription("Applies blending between output groups A and B")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  final LXBlend[] crossfaderBlends;
   public final ObjectParameter<LXBlend> crossfaderBlendMode;
+  private LXBlend currentCrossfaderBlendMode;
 
   public final BooleanParameter cueA =
     new BooleanParameter("Cue-A", false)
@@ -338,26 +330,22 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
     LX.initTimer.log("Engine: Buffers");
 
-    // Channel blend modes
-    this.channelBlends = new LXBlend[] {
-      this.addBlend = new AddBlend(lx),
-      new MultiplyBlend(lx),
-      new SubtractBlend(lx),
-      new DifferenceBlend(lx),
-      new NormalBlend(lx)
-    };
-    // Crossfader blend mode
-    this.crossfaderBlends = new LXBlend[] {
-      new DissolveBlend(lx),
-      new AddBlend(lx),
-      new MultiplyBlend(lx),
-      new LightestBlend(lx),
-      new DarkestBlend(lx),
-      new DifferenceBlend(lx)
-    };
+    this.addBlend = new AddBlend(lx);
+    this.addBlend.onActive();
+
+    // Master crossfader blend modes
     this.crossfaderBlendMode =
-      new ObjectParameter<LXBlend>("Crossfader Blend", this.crossfaderBlends)
+      new ObjectParameter<LXBlend>("Crossfader Blend", lx.getCrossfaderBlendSet())
       .setDescription("Sets the blend mode used for the master crossfader");
+    this.currentCrossfaderBlendMode = this.crossfaderBlendMode.getObject();
+    this.currentCrossfaderBlendMode.onActive();
+    this.crossfaderBlendMode.addListener(new LXParameterListener() {
+      public void onParameterChanged(LXParameter p) {
+        currentCrossfaderBlendMode.onInactive();
+        currentCrossfaderBlendMode = crossfaderBlendMode.getObject();
+        currentCrossfaderBlendMode.onActive();
+      }
+    });
     LX.initTimer.log("Engine: Blends");
 
     // Modulation matrix
@@ -486,6 +474,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * @param channelBlends List of available blend operators
    * @return this
    */
+  /* JKB to mcslee: Is this method necessary?  Can we remove it?
   public LXEngine setChannelBlends(LXBlend[] channelBlends) {
     if (this.hasStarted) {
       throw new UnsupportedOperationException("setChannelBlends() may only be invoked before engine has started");
@@ -496,6 +485,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
     return this;
   }
+  */
 
   /**
    * Gets the active frame rate of the engine when in threaded mode

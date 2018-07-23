@@ -211,7 +211,7 @@ public class LXChannel extends LXChannelBus {
       new DiscreteParameter("Focused Pattern", 0, patterns.length)
       .setDescription("Which pattern has focus in the UI");
 
-    this.transitionBlendMode = new ObjectParameter<LXBlend>("Transition Blend", lx.engine.crossfaderBlends)
+    this.transitionBlendMode = new ObjectParameter<LXBlend>("Transition Blend", lx.getCrossfaderBlendSet())
       .setDescription("Specifies the blending function used for transitions between patterns on the channel");
 
     this.transitionMillis = lx.engine.nowMillis;
@@ -607,7 +607,9 @@ public class LXChannel extends LXChannelBus {
       listener.patternWillChange(this, activePattern, nextPattern);
     }
     if (this.transitionEnabled.isOn()) {
-      this.transition = lx.engine.crossfaderBlends[this.transitionBlendMode.getValuei()];
+      //this.transition = lx.engine.crossfaderBlends[this.transitionBlendMode.getValuei()];
+      this.transition = this.transitionBlendMode.getObject();
+      this.transition.onActive();
       nextPattern.onTransitionStart();
       this.transitionMillis = this.lx.engine.nowMillis;
     } else {
@@ -621,6 +623,7 @@ public class LXChannel extends LXChannelBus {
     LXPattern activePattern = getActivePattern();
     if (this.transition != null) {
       activePattern.onTransitionEnd();
+      this.transition.onInactive();
     }
     this.transition = null;
     this.transitionMillis = this.lx.engine.nowMillis;

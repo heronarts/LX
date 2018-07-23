@@ -110,6 +110,7 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     .setDescription("Sets the alpha level of the output of this channel");
 
   public final ObjectParameter<LXBlend> blendMode;
+  private LXBlend currentBlendMode;
 
   ChannelThread thread = new ChannelThread();
 
@@ -163,8 +164,10 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     this.blendBuffer = new ModelBuffer(lx);
     this.colors = this.blendBuffer.getArray();
 
-    this.blendMode = new ObjectParameter<LXBlend>("Blend", lx.engine.channelBlends)
+    this.blendMode = new ObjectParameter<LXBlend>("Blend", lx.getChannelBlendSet())
       .setDescription("Specifies the blending function used for the channel fader");
+    this.currentBlendMode = this.blendMode.getObject();
+    this.currentBlendMode.onActive();
 
     addParameter("enabled", this.enabled);
     addParameter("cue", this.cueActive);
@@ -185,6 +188,10 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
         this.lx.engine.cueA.setValue(false);
         this.lx.engine.cueB.setValue(false);
       }
+    } else if (p == this.blendMode) {
+      currentBlendMode.onInactive();
+      currentBlendMode = this.blendMode.getObject();
+      currentBlendMode.onActive();
     }
   }
 
