@@ -31,6 +31,9 @@ public class DDPDatagram extends LXDatagram {
   private static final int HEADER_LENGTH = 10;
   private static final int DEFAULT_PORT = 4048;
 
+  private static final int FLAGS_INDEX = 0;
+  private static final int DATA_OFFSET_INDEX = 4;
+
   private final int[] pointIndices;
 
   public DDPDatagram(LXFixture fixture) {
@@ -64,6 +67,35 @@ public class DDPDatagram extends LXDatagram {
     // Data length
     this.buffer[8] = (byte) (0xff & (dataLen >> 8));
     this.buffer[9] = (byte) (0xff & dataLen);
+  }
+
+  /**
+   * Sets whether the push flag is set on this datagram.
+   *
+   * @param push Whether push flag is true
+   * @return this
+   */
+  public DDPDatagram setPushFlag(boolean push) {
+    if (push) {
+      this.buffer[FLAGS_INDEX] |= 0x01;
+    } else {
+      this.buffer[FLAGS_INDEX] &= ~0x01;
+    }
+    return this;
+  }
+
+  /**
+   * Sets the data offset for this packet
+   *
+   * @param offset Offset into the remote data buffer
+   * @return
+   */
+  public DDPDatagram setDataOffset(int offset) {
+    this.buffer[DATA_OFFSET_INDEX] = (byte) (0xff & (offset >>> 24));
+    this.buffer[DATA_OFFSET_INDEX + 1] = (byte) (0xff & (offset >>> 16));
+    this.buffer[DATA_OFFSET_INDEX + 2] = (byte) (0xff & (offset >>> 8));
+    this.buffer[DATA_OFFSET_INDEX + 3] = (byte) (0xff & offset);
+    return this;
   }
 
   @Override
