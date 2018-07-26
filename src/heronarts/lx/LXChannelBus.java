@@ -110,7 +110,8 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     .setDescription("Sets the alpha level of the output of this channel");
 
   public final ObjectParameter<LXBlend> blendMode;
-  private LXBlend currentBlendMode;
+
+  private LXBlend activeBlend;
 
   ChannelThread thread = new ChannelThread();
 
@@ -164,16 +165,21 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     this.blendBuffer = new ModelBuffer(lx);
     this.colors = this.blendBuffer.getArray();
 
-    this.blendMode = new ObjectParameter<LXBlend>("Blend", lx.getChannelBlendSet())
+    this.blendMode = new ObjectParameter<LXBlend>("Blend", new LXBlend[1])
       .setDescription("Specifies the blending function used for the channel fader");
-    this.currentBlendMode = this.blendMode.getObject();
-    this.currentBlendMode.onActive();
+    updateChannelBlendOptions();
 
     addParameter("enabled", this.enabled);
     addParameter("cue", this.cueActive);
     addParameter("fader", this.fader);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
+  }
+
+  void updateChannelBlendOptions() {
+    this.blendMode.setObjects(lx.instantiateChannelBlends());
+    this.activeBlend = this.blendMode.getObject();
+    this.activeBlend.onActive();
   }
 
   public String getOscAddress() {
@@ -189,9 +195,9 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
         this.lx.engine.cueB.setValue(false);
       }
     } else if (p == this.blendMode) {
-      currentBlendMode.onInactive();
-      currentBlendMode = this.blendMode.getObject();
-      currentBlendMode.onActive();
+      this.activeBlend.onInactive();
+      this.activeBlend = this.blendMode.getObject();
+      this.activeBlend.onActive();
     }
   }
 

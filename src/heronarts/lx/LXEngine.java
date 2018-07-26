@@ -121,7 +121,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final ObjectParameter<LXBlend> crossfaderBlendMode;
-  private LXBlend currentCrossfaderBlendMode;
+  private LXBlend activeCrossfaderBlend;
 
   public final BooleanParameter cueA =
     new BooleanParameter("Cue-A", false)
@@ -298,7 +298,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private EngineThread engineThread = null;
 
-  private boolean hasStarted = false;
+  boolean hasStarted = false;
 
   private boolean paused = false;
 
@@ -335,15 +335,14 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Master crossfader blend modes
     this.crossfaderBlendMode =
-      new ObjectParameter<LXBlend>("Crossfader Blend", lx.getCrossfaderBlendSet())
+      new ObjectParameter<LXBlend>("Crossfader Blend", new LXBlend[1])
       .setDescription("Sets the blend mode used for the master crossfader");
-    this.currentCrossfaderBlendMode = this.crossfaderBlendMode.getObject();
-    this.currentCrossfaderBlendMode.onActive();
+    updateCrossfaderBlendOptions();
     this.crossfaderBlendMode.addListener(new LXParameterListener() {
       public void onParameterChanged(LXParameter p) {
-        currentCrossfaderBlendMode.onInactive();
-        currentCrossfaderBlendMode = crossfaderBlendMode.getObject();
-        currentCrossfaderBlendMode.onActive();
+        activeCrossfaderBlend.onInactive();
+        activeCrossfaderBlend = crossfaderBlendMode.getObject();
+        activeCrossfaderBlend.onActive();
       }
     });
     LX.initTimer.log("Engine: Blends");
@@ -452,6 +451,21 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this;
   }
 
+  void updateCrossfaderBlendOptions() {
+    this.crossfaderBlendMode.setObjects(this.lx.instantiateCrossfaderBlends());
+    this.activeCrossfaderBlend = this.crossfaderBlendMode.getObject();
+    this.activeCrossfaderBlend.onActive();
+  }
+
+  void updateChannelBlendOptions() {
+    for (LXChannelBus channel : this.channels) {
+      channel.updateChannelBlendOptions();
+      if (channel instanceof LXChannel) {
+        ((LXChannel) channel).updateTransitionBlendOptions();
+      }
+    }
+  }
+
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
@@ -467,25 +481,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     }
   }
-
-  /**
-   * Sets the blend modes available to the channel mixer
-   *
-   * @param channelBlends List of available blend operators
-   * @return this
-   */
-  /* JKB to mcslee: Is this method necessary?  Can we remove it?
-  public LXEngine setChannelBlends(LXBlend[] channelBlends) {
-    if (this.hasStarted) {
-      throw new UnsupportedOperationException("setChannelBlends() may only be invoked before engine has started");
-    }
-    this.channelBlends = channelBlends;
-    for (LXChannelBus channel : this.mutableChannels) {
-      channel.blendMode.setObjects(channelBlends);
-    }
-    return this;
-  }
-  */
 
   /**
    * Gets the active frame rate of the engine when in threaded mode
@@ -1221,6 +1216,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private final BlendStack blendStackRight = new BlendStack();
 
   public void run() {
+
     this.hasStarted = true;
 
     long runStart = System.nanoTime();

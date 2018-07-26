@@ -48,7 +48,7 @@ public class ObjectParameter<T> extends DiscreteParameter {
     this.objects = objects;
     String[] options = new String[objects.length];
     for (int i = 0; i < objects.length; ++i) {
-      options[i] = objects[i].toString();
+      options[i] = (objects[i] == null) ? "null" : objects[i].toString();
     }
     setOptions(options);
     return this;

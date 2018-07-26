@@ -127,17 +127,19 @@ public abstract class LXBlend extends LXModulatorComponent {
 
   /**
    * Subclasses may override this method. It will be invoked when the blend is
-   * about to become active. Blends may take care of any initialization needed
-   * or reset parameters if desired.
+   * about to become active for a transition. Blends may take care of any
+   * initialization needed or reset parameters if desired. Note that a blend used on
+   * a channel fader or crossfader will only receive this message once.
    */
-  public/* abstract */void onActive() {
+  public /* abstract */ void onActive() {
   }
 
   /**
-   * Subclasses may override this method. It will be invoked when the blend is
-   * no longer active. Resources may be freed if desired.
+   * Subclasses may override this method. It will be invoked when the transition is
+   * no longer active. Resources may be freed if desired. Note that this method will
+   * only be received once blends used on channel faders or crossfaders.
    */
-  public/* abstract */void onInactive() {
+  public /* abstract */ void onInactive() {
   }
 
 }
