@@ -452,6 +452,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   void updateCrossfaderBlendOptions() {
+    for (LXBlend blend : this.crossfaderBlendMode.getObjects()) {
+      if (blend != null) {
+        blend.dispose();
+      }
+    }
     this.crossfaderBlendMode.setObjects(this.lx.instantiateCrossfaderBlends());
     this.activeCrossfaderBlend = this.crossfaderBlendMode.getObject();
     this.activeCrossfaderBlend.onActive();

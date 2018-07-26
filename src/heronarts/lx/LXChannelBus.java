@@ -177,6 +177,11 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
   }
 
   void updateChannelBlendOptions() {
+    for (LXBlend blend : this.blendMode.getObjects()) {
+      if (blend != null) {
+        blend.dispose();
+      }
+    }
     this.blendMode.setObjects(lx.instantiateChannelBlends());
     this.activeBlend = this.blendMode.getObject();
     this.activeBlend.onActive();

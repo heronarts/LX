@@ -232,6 +232,11 @@ public class LXChannel extends LXChannelBus {
   }
 
   void updateTransitionBlendOptions() {
+    for (LXBlend blend : this.transitionBlendMode.getObjects()) {
+      if (blend != null) {
+        blend.dispose();
+      }
+    }
     this.transitionBlendMode.setObjects(this.lx.instantiateChannelBlends());
   }
 
