@@ -124,4 +124,20 @@ public abstract class LXBlend extends LXModulatorComponent {
    * @param output Output buffer, which may be the same as src or dst
    */
   public abstract void blend(int[] dst, int[] src, double alpha, int[] output);
+
+  /**
+   * Subclasses may override this method. It will be invoked when the blend is
+   * about to become active. Blends may take care of any initialization needed
+   * or reset parameters if desired.
+   */
+  public/* abstract */void onActive() {
+  }
+
+  /**
+   * Subclasses may override this method. It will be invoked when the blend is
+   * no longer active. Resources may be freed if desired.
+   */
+  public/* abstract */void onInactive() {
+  }
+
 }
