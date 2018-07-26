@@ -40,6 +40,12 @@ public abstract class LXParameterModulation extends LXComponent {
     .setDescription("Whether this modulation is enabled");
 
   protected LXParameterModulation(LXParameter source, LXParameter target) {
+    if (source == null) {
+      throw new IllegalArgumentException("LXParameterModulation source may not be null");
+    }
+    if (target == null) {
+      throw new IllegalArgumentException("LXParameterdModulation target may not be null");
+    }
     this.source = source;
     this.target = target;
     LXComponent component = source.getComponent();

@@ -46,12 +46,6 @@ public class LXCompoundModulation extends LXParameterModulation {
 
   public LXCompoundModulation(LXNormalizedParameter source, CompoundParameter target) {
     super(source, target);
-    if (source == null) {
-      throw new IllegalArgumentException("LXCompoundModulation source may not be null");
-    }
-    if (target == null) {
-      throw new IllegalArgumentException("LXCompoundModulation target may not be null");
-    }
     this.source = source;
     this.target = target;
     this.polarity.setValue(source.getPolarity());
