@@ -22,9 +22,10 @@ import heronarts.lx.model.LXFixture;
 
 public class ArtNetDatagram extends LXDatagram {
 
+  public final static int ARTNET_PORT = 6454;
+
   private final static int DEFAULT_UNIVERSE = 0;
   private final static int ARTNET_HEADER_LENGTH = 18;
-  private final static int ARTNET_PORT = 6454;
   private final static int SEQUENCE_INDEX = 12;
 
   private final int[] pointIndices;
@@ -69,8 +70,8 @@ public class ArtNetDatagram extends LXDatagram {
     this.buffer[7] = 0;
     this.buffer[8] = 0x00; // ArtDMX opcode
     this.buffer[9] = 0x50; // ArtDMX opcode
-    this.buffer[10] = 0; // Protcol version
-    this.buffer[11] = 14; // Protcol version
+    this.buffer[10] = 0; // Protocol version
+    this.buffer[11] = 14; // Protocol version
     this.buffer[12] = 0; // Sequence
     this.buffer[13] = 0; // Physical
     this.buffer[14] = (byte) (universeNumber & 0xff); // Universe LSB
