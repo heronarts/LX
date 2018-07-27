@@ -46,6 +46,13 @@ public abstract class LXParameterModulation extends LXComponent {
     if (target == null) {
       throw new IllegalArgumentException("LXParameterdModulation target may not be null");
     }
+    if (source.getComponent() == null && !(source instanceof LXComponent)) {
+      throw new IllegalStateException("May not create parameter modulation from source registered to no component: " + source.toString());
+    }
+    if (target.getComponent() == null) {
+      throw new IllegalStateException("May not create parameter modulation to target registered to no component: " + target.toString());
+    }
+
     this.source = source;
     this.target = target;
     LXComponent component = source.getComponent();
