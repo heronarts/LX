@@ -24,7 +24,7 @@
 
 package heronarts.lx.audio;
 
-import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.NormalizedParameter;
 
@@ -44,8 +44,8 @@ public class GraphicMeter extends DecibelMeter {
   /**
    * dB/octave slope applied to the equalizer
    */
-  public final BoundedParameter slope = (BoundedParameter)
-    new BoundedParameter("Slope", 4.5, -3, 12)
+  public final CompoundParameter slope = (CompoundParameter)
+    new CompoundParameter("Slope", 4.5, -3, 12)
     .setDescription("Sets the slope of the meter in dB per octave")
     .setUnits(LXParameter.Units.DECIBELS);
 
