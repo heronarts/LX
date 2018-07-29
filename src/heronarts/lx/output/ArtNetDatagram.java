@@ -34,6 +34,10 @@ public class ArtNetDatagram extends LXDatagram {
 
   private byte sequence = 1;
 
+  private final int dataLength;
+
+  private int universeNumber;
+
   public ArtNetDatagram(LXFixture fixture) {
     this(fixture, DEFAULT_UNIVERSE);
   }
@@ -57,6 +61,8 @@ public class ArtNetDatagram extends LXDatagram {
   public ArtNetDatagram(int[] indices, int dataLength, int universeNumber) {
     super(ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2));
 
+    this.dataLength = dataLength + (dataLength % 2);
+
     this.pointIndices = indices;
     setPort(ARTNET_PORT);
 
@@ -74,15 +80,31 @@ public class ArtNetDatagram extends LXDatagram {
     this.buffer[11] = 14; // Protocol version
     this.buffer[12] = 0; // Sequence
     this.buffer[13] = 0; // Physical
-    this.buffer[14] = (byte) (universeNumber & 0xff); // Universe LSB
-    this.buffer[15] = (byte) ((universeNumber >>> 8) & 0xff); // Universe MSB
-    this.buffer[16] = (byte) ((dataLength >>> 8) & 0xff);
-    this.buffer[17] = (byte) (dataLength & 0xff);
+
+    setUniverseNumber(universeNumber);
+
+    this.buffer[16] = (byte) ((this.dataLength >>> 8) & 0xff);
+    this.buffer[17] = (byte) (this.dataLength & 0xff);
 
     // Ensure zero rest of buffer
     for (int i = ARTNET_HEADER_LENGTH; i < this.buffer.length; ++i) {
      this.buffer[i] = 0;
     }
+  }
+
+  public ArtNetDatagram setUniverseNumber(int universeNumber) {
+    this.universeNumber = universeNumber;
+    this.buffer[14] = (byte) (universeNumber & 0xff); // Universe LSB
+    this.buffer[15] = (byte) ((universeNumber >>> 8) & 0xff); // Universe MSB
+    return this;
+  }
+
+  public int getUniverseNumber() {
+    return this.universeNumber;
+  }
+
+  public int getDataLength() {
+    return this.dataLength;
   }
 
   /**
