@@ -28,6 +28,13 @@ public interface LXFixture {
   public List<LXPoint> getPoints();
 
   public static class Utils {
+
+    /**
+     * Returns an array of raw integer point indices for all the points in this fixture.
+     *
+     * @param fixture Fixture
+     * @return Integer array of points indices in the fixture
+     */
     public static int[] getIndices(LXFixture fixture) {
       List<LXPoint> points = fixture.getPoints();
       int[] indices = new int[points.size()];
@@ -36,6 +43,30 @@ public interface LXFixture {
         indices[i++] = p.index;
       }
       return indices;
+    }
+
+    /**
+     * Returns an array of arrays of raw integer point indices for all the points in
+     * this fixture, with no array being longer than the specificed chunk size.
+     *
+     * @param fixture Fixture
+     * @param chunkSize Maximum chunk size for any set of points
+     * @return Two-dimensional array of chunks of points indices
+     */
+    public static int[][] getIndices(LXFixture fixture, int chunkSize) {
+      List<LXPoint> points = fixture.getPoints();
+      int numPoints = points.size();
+      int numChunks = (numPoints - 1 + chunkSize) / chunkSize;
+      int[][] chunks = new int[numChunks][];
+      for (int i = 0; i < numChunks; ++i) {
+        chunks[i] = new int[(i == numChunks - 1) ? (numPoints % chunkSize) : chunkSize];
+      }
+      int i = 0;
+      for (LXPoint p : points) {
+        chunks[i / chunkSize][i % chunkSize] = p.index;
+        ++i;
+      }
+      return chunks;
     }
   }
 }
