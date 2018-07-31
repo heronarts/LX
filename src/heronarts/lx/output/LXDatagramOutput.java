@@ -22,7 +22,9 @@ import heronarts.lx.LX;
 
 import java.io.IOException;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,14 +34,23 @@ import java.util.List;
  */
 public class LXDatagramOutput extends LXOutput {
 
+  private static DatagramSocket defaultSocket = null;
+
+  private static DatagramSocket getDefaultSocket() throws SocketException {
+    if (defaultSocket == null) {
+      defaultSocket = new DatagramSocket();
+    }
+    return defaultSocket;
+  }
+
   private final DatagramSocket socket;
 
-  private final List<LXDatagram> datagrams = new ArrayList<LXDatagram>();
+  protected final List<LXDatagram> datagrams = new ArrayList<LXDatagram>();
 
   private final SimpleDateFormat date = new SimpleDateFormat("[HH:mm:ss]");
 
   public LXDatagramOutput(LX lx) throws SocketException {
-    this(lx, new DatagramSocket());
+    this(lx, getDefaultSocket());
   }
 
   public LXDatagramOutput(LX lx, DatagramSocket socket) {
@@ -55,6 +66,44 @@ public class LXDatagramOutput extends LXOutput {
   public LXDatagramOutput addDatagrams(LXDatagram[] datagrams) {
     for (LXDatagram datagram : datagrams) {
       addDatagram(datagram);
+    }
+    return this;
+  }
+
+  /**
+   * Sets the destination address of all datagrams on this output
+   *
+   * @param ipAddress IP address or hostname as string
+   * @return this
+   * @throws UnknownHostException Bad address
+   */
+  public LXDatagramOutput setAddress(String ipAddress) throws UnknownHostException {
+    setAddress(InetAddress.getByName(ipAddress));
+    return this;
+  }
+
+  /**
+   * Sets the destination address of all datagrams on this output
+   *
+   * @param address Destination address
+   * @return this
+   */
+  public LXDatagramOutput setAddress(InetAddress address) {
+    for (LXDatagram datagram : this.datagrams) {
+      datagram.setAddress(address);
+    }
+    return this;
+  }
+
+  /**
+   * Sets the port number for all datagrams on this output
+   *
+   * @param port UDP port number
+   * @return this
+   */
+  public LXDatagramOutput setPort(int port) {
+    for (LXDatagram datagram : this.datagrams) {
+      datagram.setPort(port);
     }
     return this;
   }
