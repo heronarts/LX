@@ -1199,6 +1199,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.hasOutput = true;
     }
 
+    void blendFullRange(LXBlend blend, int[] src, double alphaFull) {
+      blend.blendFullRange(this.destination.getArray(), src, alphaFull, this.output.getArray());
+      this.destination = this.output;
+      this.hasOutput = true;
+    }
+
     void copyFrom(BlendStack that) {
       System.arraycopy(that.destination.getArray(), 0, this.output.getArray(), 0, that.destination.getArray().length);
       this.destination = this.output;
@@ -1427,15 +1433,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     if (leftContent && rightContent) {
       // There are left and right channels assigned!
-      BlendStack crossfadeBlend;
       LXBlend blend = this.crossfaderBlendMode.getObject();
-      if (crossfadeValue <= 0.5) {
-        crossfadeBlend = blendStackLeft;
-        this.blendStackLeft.blend(blend, blendStackRight.destination.getArray(), Math.min(1, 2. * crossfadeValue));
-      } else {
-        crossfadeBlend = blendStackRight;
-        this.blendStackRight.blend(blend, blendStackLeft.destination.getArray(), Math.min(1, 2. * (1-crossfadeValue)));
-      }
+      BlendStack crossfadeBlend = blendStackLeft;
+      crossfadeBlend.blendFullRange(blend, blendStackRight.destination.getArray(), crossfadeValue);
       // Add the crossfaded groups to the main buffer
       this.blendStackMain.blend(this.addBlend, crossfadeBlend, 1.);
     } else if (leftContent) {

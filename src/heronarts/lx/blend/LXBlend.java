@@ -126,6 +126,27 @@ public abstract class LXBlend extends LXModulatorComponent {
   public abstract void blend(int[] dst, int[] src, double alpha, int[] output);
 
   /**
+   * Blends the src buffer onto the destination buffer.
+   * With this method, alpha=.5 will be a 50/50 blend.
+   *
+   * Asymmetrical blends will want to override this method.
+   *
+   * @param dst Destination buffer (lower layer)
+   * @param src Source buffer (top layer)
+   * @param alpha Alpha blend, from 0-1
+   * @param output Output buffer, which may be the same as src or dst
+   */
+  public void blendFullRange(int[] dst, int[] src, double alphaFull, int[] output) {
+    if (alphaFull < .5) {
+      double alpha = Math.min(1, alphaFull*2.);
+      blend(dst, src, alpha, output);
+    } else {
+      double alpha = Math.max(0, (1-alphaFull)*2.);
+      blend(src, dst, alpha, output);
+    }
+  }
+
+  /**
    * Subclasses may override this method. It will be invoked when the blend is
    * about to become active for a transition. Blends may take care of any
    * initialization needed or reset parameters if desired. Note that a blend used on
