@@ -237,7 +237,7 @@ public class LXChannel extends LXChannelBus {
         blend.dispose();
       }
     }
-    this.transitionBlendMode.setObjects(this.lx.instantiateChannelBlends());
+    this.transitionBlendMode.setObjects(this.lx.instantiateTransitionBlends());
   }
 
   @Override
@@ -694,7 +694,7 @@ public class LXChannel extends LXChannelBus {
       getNextPattern().loop(deltaMs);
       this.transition.loop(deltaMs);
       colors = this.blendBuffer.getArray();
-      this.transition.blendFullRange(
+      this.transition.lerp(
         getActivePattern().getColors(),
         getNextPattern().getColors(),
         this.transitionProgress,

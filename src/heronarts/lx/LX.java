@@ -198,7 +198,7 @@ public class LX {
     new ArrayList<Class<? extends LXEffect>>();
 
   @SuppressWarnings("unchecked")
-  private static Class<LXBlend>[] DEFAULT_CHANNEL_BLENDS = new Class[] {
+  private static final Class<LXBlend>[] DEFAULT_CHANNEL_BLENDS = new Class[] {
     AddBlend.class,
     MultiplyBlend.class,
     SubtractBlend.class,
@@ -207,7 +207,7 @@ public class LX {
   };
 
   @SuppressWarnings("unchecked")
-  private static Class<LXBlend>[] DEFAULT_CROSSFADER_BLENDS = new Class[] {
+  private static final Class<LXBlend>[] DEFAULT_TRANSITION_BLENDS = new Class[] {
     DissolveBlend.class,
     AddBlend.class,
     MultiplyBlend.class,
@@ -216,11 +216,19 @@ public class LX {
     DifferenceBlend.class
   };
 
+  private static final Class<LXBlend>[] DEFAULT_CROSSFADER_BLENDS = DEFAULT_TRANSITION_BLENDS;
+
   /**
    * The list of globally registered channel blend classes
    */
   private final List<Class<? extends LXBlend>> registeredChannelBlends =
     new ArrayList<Class<? extends LXBlend>>(Arrays.asList(DEFAULT_CHANNEL_BLENDS));
+
+  /**
+   * The list of globally registered transition blend classes
+   */
+  private final List<Class<? extends LXBlend>> registeredTransitionBlends =
+    new ArrayList<Class<? extends LXBlend>>(Arrays.asList(DEFAULT_TRANSITION_BLENDS));
 
   /**
    * The list of globally registered crossfader blend classes
@@ -713,6 +721,7 @@ public class LX {
   public LX registerBlend(Class<? extends LXBlend> blend) {
     checkRegistration();
     registerChannelBlend(blend);
+    registerTransitionBlend(blend);
     registerCrossfaderBlend(blend);
     return this;
   }
@@ -726,6 +735,7 @@ public class LX {
   public LX registerBlends(Class<LXBlend>[] blends) {
     checkRegistration();
     registerChannelBlends(blends);
+    registerTransitionBlends(blends);
     registerCrossfaderBlends(blends);
     return this;
   }
@@ -744,6 +754,19 @@ public class LX {
   }
 
   /**
+   * Register a transition blend class with the engine
+   *
+   * @param blend Blend class
+   * @return this
+   */
+  public LX registerTransitionBlend(Class<? extends LXBlend> blend) {
+    checkRegistration();
+    this.registeredTransitionBlends.add(blend);
+    this.engine.updateTransitionBlendOptions();
+    return this;
+  }
+
+  /**
    * Register multiple channel blend classes with the engine
    *
    * @param blends List of blend classes
@@ -755,6 +778,21 @@ public class LX {
       this.registeredChannelBlends.add(blend);
     }
     this.engine.updateChannelBlendOptions();
+    return this;
+  }
+
+  /**
+   * Register multiple channel blend classes with the engine
+   *
+   * @param blends List of blend classes
+   * @return this
+   */
+  public LX registerTransitionBlends(Class<LXBlend>[] blends) {
+    checkRegistration();
+    for (Class<LXBlend> blend : blends) {
+      this.registeredTransitionBlends.add(blend);
+    }
+    this.engine.updateTransitionBlendOptions();
     return this;
   }
 
@@ -804,22 +842,25 @@ public class LX {
     return this.registeredCrossfaderBlends;
   }
 
-  protected LXBlend[] instantiateChannelBlends() {
-    LXBlend[] blends = new LXBlend[this.registeredChannelBlends.size()];
+  private LXBlend[] instantiateBlends(List<Class<? extends LXBlend>> blendTypes) {
+    LXBlend[] blends = new LXBlend[blendTypes.size()];
     int i = 0;
-    for (Class<? extends LXBlend> blend : this.registeredChannelBlends) {
+    for (Class<? extends LXBlend> blend : blendTypes) {
       blends[i++] = instantiateBlend(blend);
     }
     return blends;
   }
 
+  protected LXBlend[] instantiateChannelBlends() {
+    return instantiateBlends(this.registeredChannelBlends);
+  }
+
+  protected LXBlend[] instantiateTransitionBlends() {
+    return instantiateBlends(this.registeredTransitionBlends);
+  }
+
   protected LXBlend[] instantiateCrossfaderBlends() {
-    LXBlend[] blends = new LXBlend[this.registeredCrossfaderBlends.size()];
-    int i = 0;
-    for (Class<? extends LXBlend> blend : this.registeredCrossfaderBlends) {
-      blends[i++] = instantiateBlend(blend);
-    }
-    return blends;
+    return instantiateBlends(this.registeredCrossfaderBlends);
   }
 
   private final Map<String, LXSerializable> externals = new HashMap<String, LXSerializable>();

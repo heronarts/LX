@@ -126,24 +126,30 @@ public abstract class LXBlend extends LXModulatorComponent {
   public abstract void blend(int[] dst, int[] src, double alpha, int[] output);
 
   /**
-   * Blends the src buffer onto the destination buffer.
-   * With this method, alpha=.5 will be a 50/50 blend.
+   * Transitions from one buffer to another. By default, this is used by first
+   * blending from->to with alpha 0->1, then blending to->from with
+   * alpha 1->0. Blends which are asymmetrical may override this method for
+   * custom functionality. This method is used by pattern transitions on
+   * channels as well as the crossfader.
    *
-   * Asymmetrical blends will want to override this method.
-   *
-   * @param dst Destination buffer (lower layer)
-   * @param src Source buffer (top layer)
-   * @param alpha Alpha blend, from 0-1
-   * @param output Output buffer, which may be the same as src or dst
+   * @param from First buffer
+   * @param to Second buffer
+   * @param amt Interpolation from->to (0-1)
+   * @param output Output buffer, which may be the same as from or to
    */
-  public void blendFullRange(int[] dst, int[] src, double alphaFull, int[] output) {
-    if (alphaFull < .5) {
-      double alpha = Math.min(1, alphaFull*2.);
-      blend(dst, src, alpha, output);
+  public void lerp(int[] from, int[] to, double amt, int[] output) {
+    int[] dst, src;
+    double alpha;
+    if (amt <= 0.5) {
+      dst = from;
+      src = to;
+      alpha = amt * 2.;
     } else {
-      double alpha = Math.max(0, (1-alphaFull)*2.);
-      blend(src, dst, alpha, output);
+      dst = to;
+      src = from;
+      alpha = (1-amt) * 2.;
     }
+    blend(dst, src, alpha, output);
   }
 
   /**

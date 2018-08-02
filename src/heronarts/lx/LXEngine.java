@@ -465,6 +465,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   void updateChannelBlendOptions() {
     for (LXChannelBus channel : this.channels) {
       channel.updateChannelBlendOptions();
+    }
+  }
+
+  void updateTransitionBlendOptions() {
+    for (LXChannelBus channel : this.channels) {
       if (channel instanceof LXChannel) {
         ((LXChannel) channel).updateTransitionBlendOptions();
       }
@@ -1199,8 +1204,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.hasOutput = true;
     }
 
-    void blendFullRange(LXBlend blend, int[] src, double alphaFull) {
-      blend.blendFullRange(this.destination.getArray(), src, alphaFull, this.output.getArray());
+    void transition(LXBlend blend, int[] src, double lerp) {
+      blend.lerp(this.destination.getArray(), src, lerp, this.output.getArray());
       this.destination = this.output;
       this.hasOutput = true;
     }
@@ -1434,10 +1439,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     if (leftContent && rightContent) {
       // There are left and right channels assigned!
       LXBlend blend = this.crossfaderBlendMode.getObject();
-      BlendStack crossfadeBlend = blendStackLeft;
-      crossfadeBlend.blendFullRange(blend, blendStackRight.destination.getArray(), crossfadeValue);
+      blendStackLeft.transition(blend, blendStackRight.destination.getArray(), crossfadeValue);
       // Add the crossfaded groups to the main buffer
-      this.blendStackMain.blend(this.addBlend, crossfadeBlend, 1.);
+      this.blendStackMain.blend(this.addBlend, blendStackLeft, 1.);
     } else if (leftContent) {
       // Add the left group to the main buffer
       this.blendStackMain.blend(this.addBlend, this.blendStackLeft, Math.min(1, 2. * (1-crossfadeValue)));
