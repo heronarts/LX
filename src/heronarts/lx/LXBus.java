@@ -305,14 +305,18 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
       removeEffect(this.mutableEffects.get(i));
     }
+
     // Add the effects
-    JsonArray effectsArray = obj.getAsJsonArray(KEY_EFFECTS);
-    for (JsonElement effectElement : effectsArray) {
-      JsonObject effectObj = (JsonObject) effectElement;
-      LXEffect effect = this.lx.instantiateEffect(effectObj.get("class").getAsString());
-      effect.load(lx, effectObj);
-      addEffect(effect);
+    if (obj.has(KEY_EFFECTS)) {
+      JsonArray effectsArray = obj.getAsJsonArray(KEY_EFFECTS);
+      for (JsonElement effectElement : effectsArray) {
+        JsonObject effectObj = (JsonObject) effectElement;
+        LXEffect effect = this.lx.instantiateEffect(effectObj.get("class").getAsString());
+        effect.load(lx, effectObj);
+        addEffect(effect);
+      }
     }
+
     // Add the new clips
     if (obj.has(KEY_CLIPS)) {
       JsonArray clipsArr = obj.get(KEY_CLIPS).getAsJsonArray();

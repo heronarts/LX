@@ -1636,6 +1636,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       removeChannel(this.mutableChannels.get(i));
     }
 
+    // Master channel settings
+    this.masterChannel.load(lx, obj.has(KEY_MASTER) ? obj.getAsJsonObject(KEY_MASTER) : new JsonObject());
+
     // Add the new channels
     if (obj.has(KEY_CHANNELS)) {
       JsonArray channelsArray = obj.getAsJsonArray(KEY_CHANNELS);
@@ -1652,11 +1655,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     } else {
       addChannel().fader.setValue(1);
-    }
-
-    // Master channel settings
-    if (obj.has(KEY_MASTER)) {
-      this.masterChannel.load(lx, obj.getAsJsonObject(KEY_MASTER));
     }
 
     // Palette
