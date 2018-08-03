@@ -57,11 +57,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   protected LXPattern(LX lx) {
     super(lx);
     this.label.setDescription("The name of this pattern");
-    String simple = getClass().getSimpleName();
-    if (simple.endsWith("Pattern")) {
-      simple = simple.substring(0, simple.length() - "Pattern".length());
-    }
-    this.label.setValue(simple);
+    this.label.setValue(LXUtils.getComponentName(this, "Pattern"));
   }
 
   public String getOscAddress() {

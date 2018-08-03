@@ -58,11 +58,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   protected LXEffect(LX lx) {
     super(lx);
     this.label.setDescription("The name of this effect");
-    String simple = getClass().getSimpleName();
-    if (simple.endsWith("Effect")) {
-      simple = simple.substring(0, simple.length() - "Effect".length());
-    }
-    this.label.setValue(simple);
+    this.label.setValue(LXUtils.getComponentName(this, "Effect"));
 
     this.enabled.addListener(new LXParameterListener() {
       public void onParameterChanged(LXParameter parameter) {
