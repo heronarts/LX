@@ -24,23 +24,23 @@
 
 package heronarts.lx.modulator;
 
-import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.CompoundParameter;
 
 public class MacroKnobs extends LXModulator {
 
-  public final BoundedParameter macro1 = new BoundedParameter("M1")
+  public final CompoundParameter macro1 = new CompoundParameter("M1")
     .setDescription("Macro control parameter");
 
-  public final BoundedParameter macro2 = new BoundedParameter("M2")
+  public final CompoundParameter macro2 = new CompoundParameter("M2")
     .setDescription("Macro control parameter");
 
-  public final BoundedParameter macro3 = new BoundedParameter("M3")
+  public final CompoundParameter macro3 = new CompoundParameter("M3")
     .setDescription("Macro control parameter");
 
-  public final BoundedParameter macro4 = new BoundedParameter("M4")
+  public final CompoundParameter macro4 = new CompoundParameter("M4")
     .setDescription("Macro control parameter");
 
-  public final BoundedParameter macro5 = new BoundedParameter("M5")
+  public final CompoundParameter macro5 = new CompoundParameter("M5")
     .setDescription("Macro control parameter");
 
   public MacroKnobs() {
