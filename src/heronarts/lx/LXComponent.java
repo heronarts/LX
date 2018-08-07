@@ -31,6 +31,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
@@ -402,6 +403,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
             // Do nothing, it's stored in hue/sat/bright
           } else if (parameter instanceof CompoundParameter) {
             parameter.setValue(value.getAsDouble());
+          } else if (parameter instanceof FunctionalParameter) {
+            //Do nothing
           } else {
             parameter.setValue(value.getAsDouble());
           }
