@@ -365,6 +365,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
         // Do nothing, see ColorParameter.setComponent which adds its sub-parameters
       } else if (parameter instanceof CompoundParameter) {
         parameters.addProperty(path, ((CompoundParameter) parameter).getBaseValue());
+      } else if (parameter instanceof FunctionalParameter) {
+        // Do not write FunctionalParamters into saved files
       } else {
         parameters.addProperty(path, parameter.getValue());
       }
@@ -404,7 +406,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
           } else if (parameter instanceof CompoundParameter) {
             parameter.setValue(value.getAsDouble());
           } else if (parameter instanceof FunctionalParameter) {
-            //Do nothing
+            // Do nothing
           } else {
             parameter.setValue(value.getAsDouble());
           }
