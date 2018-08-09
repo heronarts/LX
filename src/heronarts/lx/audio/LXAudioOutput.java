@@ -173,12 +173,16 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
     }
   }
 
+  public String getMediaPath() {
+    return this.mediaPath;
+  }
+
   public LXAudioOutput setMediaPath(String mediaPath) {
     this.mediaPath = mediaPath;
     return this;
   }
 
-  private void setInputStream(File file) {
+  public void setInputStream(File file) {
     try {
       setInputStream(new FileInputStream(file));
     } catch (FileNotFoundException fnfx) {
@@ -186,7 +190,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
     }
   }
 
-  private boolean setInputStream(InputStream inputStream) {
+  public boolean setInputStream(InputStream inputStream) {
     if (!inputStream.markSupported()) {
       inputStream = new BufferedInputStream(inputStream);
     }
@@ -201,7 +205,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
     return false;
   }
 
-  private boolean setAudioInputStream(AudioInputStream inputStream) {
+  public boolean setAudioInputStream(AudioInputStream inputStream) {
     AudioFormat format = inputStream.getFormat();
 
     // Decode MP3 formats or whatever-or-other we got
