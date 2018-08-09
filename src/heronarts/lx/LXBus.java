@@ -124,8 +124,40 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     return this;
   }
 
+  /**
+   * Returns the group that this channel belongs to
+   *
+   * @return Group that this channel belongs to, or null
+   */
   public LXGroup getGroup() {
     return null;
+  }
+
+  /**
+   * Returns true if this is a group channel
+   *
+   * @return True if this is a group channel
+   */
+  public boolean isGroup() {
+    return this instanceof LXGroup;
+  }
+
+  /**
+   * Returns true if this is a basic channel
+   *
+   * @return True if this is a basic channel
+   */
+  public boolean isChannel() {
+    return this instanceof LXChannel;
+  }
+
+  /**
+   * Returns true if this channel belongs to a group
+   *
+   * @return True if this channel is part of a group
+   */
+  public boolean isInGroup() {
+    return getGroup() != null;
   }
 
   public final LXBus addEffect(LXEffect effect) {

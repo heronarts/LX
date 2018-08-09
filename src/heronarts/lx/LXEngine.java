@@ -855,7 +855,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     List<LXChannel> groupChannels = new ArrayList<LXChannel>();
     int groupIndex = -1;
     for (LXChannelBus channel : this.channels) {
-      if (channel instanceof LXChannel && channel.selected.isOn() && channel.getGroup() == null) {
+      if (channel.isChannel() && channel.selected.isOn() && !channel.isInGroup()) {
         if (groupIndex < 0) {
           groupIndex = channel.index;
         }
@@ -896,11 +896,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private void _addChannel(LXChannelBus channel, int index) {
     channel.setParent(this);
     this.mutableChannels.add(index, channel);
-    _reindexChannels();
     this.focusedChannel.setRange(this.mutableChannels.size() + 1);
     for (Listener listener : this.listeners) {
       listener.channelAdded(this, channel);
     }
+    _reindexChannels();
   }
 
   private void _reindexChannels() {
