@@ -119,6 +119,26 @@ public class LXVector {
     return this;
   }
 
+  public LXVector sub(float x, float y) {
+    this.x -= x;
+    this.y -= y;
+    return this;
+  }
+
+  public LXVector sub(float x, float y, float z) {
+    this.x -= x;
+    this.y -= y;
+    this.z -= z;
+    return this;
+  }
+
+  public LXVector sub(LXVector that) {
+    this.x -= that.x;
+    this.y -= that.y;
+    this.z -= that.z;
+    return this;
+  }
+
   public LXVector mult(float n) {
     this.x *= n;
     this.y *= n;
