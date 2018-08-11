@@ -1,3 +1,21 @@
+/**
+ * Copyright 2018- Heron Arts LLC
+ *
+ * This file is part of the LX Studio software library. By using
+ * LX, you agree to the terms of the LX Studio Software License
+ * and Distribution Agreement, available at: http://lx.studio/license
+ *
+ * Please note that the LX license is not open-source. The license
+ * allows for free, non-commercial use.
+ *
+ * HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR
+ * OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF
+ * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
+ * PURPOSE, WITH RESPECT TO THE SOFTWARE.
+ *
+ * @author Justin K. Belcher <jkbelcher@gmail.com>
+ */
+
 package heronarts.lx.parameter;
 
 import heronarts.lx.parameter.BoundedParameter.Range;
@@ -42,7 +60,7 @@ public abstract class BoundedFunctionalParameter extends FunctionalParameter imp
    */
   protected BoundedFunctionalParameter(String label, double v0, double v1) {
     super(label);
-    this.range = new Range(v0, v1, this);
+    this.range = new Range(v0, v1);
   }
 
   /**
@@ -62,12 +80,11 @@ public abstract class BoundedFunctionalParameter extends FunctionalParameter imp
    *
    * @return Parameter value
    */
-  protected abstract double getValueInternal();
+  protected abstract double computeValue();
 
   @Override
   public final double getValue() {
-    double value = this.getValueInternal();
-    return this.range.constrain(value);
+    return this.range.constrain(computeValue());
   }
 
   @Override
@@ -92,7 +109,7 @@ public abstract class BoundedFunctionalParameter extends FunctionalParameter imp
    * @return Normalized value, from 0 to 1
    */
   public double getNormalized() {
-    return this.range.getNormalized(getValue());
+    return this.range.getNormalized(getValue(), this.exponent);
   }
 
   /**

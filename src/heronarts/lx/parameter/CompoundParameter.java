@@ -129,7 +129,7 @@ public class CompoundParameter extends BoundedParameter {
   }
 
   public double getBaseNormalized() {
-    return super.range.getNormalized(getBaseValue());
+    return this.range.getNormalized(getBaseValue(), getExponent());
   }
 
   public float getBaseNormalizedf() {
@@ -138,7 +138,7 @@ public class CompoundParameter extends BoundedParameter {
 
   @Override
   public double getNormalized() {
-    double normalized = super.range.getNormalized(getBaseValue());
+    double normalized = this.range.getNormalized(getBaseValue(), getExponent());
     for (LXCompoundModulation modulation : this.mutableModulations) {
       if (modulation.enabled.isOn()) {
         if (modulation.getPolarity() == Polarity.UNIPOLAR) {
@@ -156,7 +156,7 @@ public class CompoundParameter extends BoundedParameter {
     if (this.mutableModulations.size() == 0) {
       return super.getValue();
     }
-    return super.range.normalizedToValue(getNormalized());
+    return this.range.normalizedToValue(getNormalized(), getExponent());
   }
 
 }

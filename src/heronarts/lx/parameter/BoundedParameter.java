@@ -18,6 +18,8 @@
 
 package heronarts.lx.parameter;
 
+import heronarts.lx.LXUtils;
+
 /**
  * Simple parameter class with a double value.
  */
@@ -32,13 +34,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     public final double vRange;
     public final double range;
 
-    LXNormalizedParameter exponentObj;
-
     public Range(double v0, double v1) {
-      this (v0, v1, null);
-    }
-
-    public Range(double v0, double v1, LXNormalizedParameter exponentObj) {
       this.v0 = v0;
       this.v1 = v1;
       if (v0 < v1) {
@@ -53,39 +49,40 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     }
 
     public double constrain(double value) {
-      return Math.min(Math.max(this.min, value), this.max);
+      return LXUtils.constrain(value, this.min, this.max);
     }
 
     public double getNormalized(double value) {
+      return getNormalized(value, 1.);
+    }
+
+    public double getNormalized(double value, double exponent) {
       if (this.v0 == this.v1) {
         return 0;
       }
-      value = this.constrain(value);
+      value = constrain(value);
       double normalized = (value - this.v0) / this.vRange;
-      if (exponentObj != null) {
-        double exponent = exponentObj.getExponent();
-        if (exponent != 1) {
-          normalized = Math.pow(normalized, 1 / exponent);
-        }
+      if (exponent != 1) {
+        normalized = Math.pow(normalized, 1 / exponent);
       }
       return normalized;
     }
 
     protected double normalizedToValue(double normalized) {
+      return normalizedToValue(normalized, 1.);
+    }
+
+    protected double normalizedToValue(double normalized, double exponent) {
       if (normalized < 0) {
         normalized = 0;
       } else if (normalized > 1) {
         normalized = 1;
       }
-      if (exponentObj != null) {
-        double exponent = exponentObj.getExponent();
-        if (exponent != 1) {
-          normalized = Math.pow(normalized, exponent);
-        }
+      if (exponent != 1) {
+        normalized = Math.pow(normalized, exponent);
       }
       return this.v0 + (this.vRange * normalized);
     }
-
   }
 
   /**
@@ -160,7 +157,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   protected BoundedParameter(String label, double value, double v0, double v1, LXListenableParameter underlying) {
     super(label, (value < Math.min(v0, v1)) ? Math.min(v0, v1) : ((value > Math
         .max(v0, v1)) ? Math.max(v0, v1) : value));
-    this.range = new Range(v0, v1, this);
+    this.range = new Range(v0, v1);
     this.underlying = underlying;
     if (this.underlying != null) {
       this.underlying.addListener(new LXParameterListener() {
@@ -202,7 +199,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    * @return this, for method chaining
    */
   public BoundedParameter setNormalized(double normalized) {
-    setValue(this.range.normalizedToValue(normalized));
+    setValue(this.range.normalizedToValue(normalized, getExponent()));
     return this;
   }
 
