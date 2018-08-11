@@ -188,7 +188,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
         newValue = this.range.min + ((newValue - this.range.max) % this.range.range);
       } else if (newValue < this.range.min) {
         while (newValue < this.range.min) {
-          newValue += (this.range.range);
+          newValue += this.range.range;
         }
       }
     }
