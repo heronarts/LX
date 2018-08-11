@@ -785,7 +785,6 @@ public class LXChannel extends LXChannelBus {
       }
     }
     LXPattern activePattern = getActivePattern();
-    activePattern.onActive();
     for (Listener listener : listeners) {
       listener.patternDidChange(this, activePattern);
     }

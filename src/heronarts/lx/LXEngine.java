@@ -1700,6 +1700,13 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Parameters etc.
     super.load(lx, obj);
+
+    // Notify all the active patterns
+    for (LXChannelBus channel : this.channels) {
+      if (channel instanceof LXChannel) {
+        ((LXChannel) channel).getActivePattern().onActive();
+      }
+    }
   }
 
 }
