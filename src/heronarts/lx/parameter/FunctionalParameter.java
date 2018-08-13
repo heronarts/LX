@@ -27,6 +27,7 @@ import heronarts.lx.LXComponent;
 public abstract class FunctionalParameter implements LXParameter {
 
   private final String label;
+  protected String description = null;
 
   private LXComponent component;
   private String path;
@@ -39,8 +40,14 @@ public abstract class FunctionalParameter implements LXParameter {
     this.label = label;
   }
 
+  @Override
   public String getDescription() {
-    return null;
+    return this.description;
+  }
+
+  public FunctionalParameter setDescription(String description) {
+    this.description = description;
+    return this;
   }
 
   @Override

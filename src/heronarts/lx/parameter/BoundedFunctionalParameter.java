@@ -31,8 +31,6 @@ public abstract class BoundedFunctionalParameter extends FunctionalParameter imp
    */
   public final Range range;
 
-  protected String description = null;
-
   /**
    * A bounded functional parameter with a range of 0-1
    *
@@ -65,14 +63,10 @@ public abstract class BoundedFunctionalParameter extends FunctionalParameter imp
     this.range = new Range(v0, v1);
   }
 
-  public BoundedFunctionalParameter setDescription(String description) {
-    this.description = description;
-    return this;
-  }
-
   @Override
-  public String getDescription() {
-    return this.description;
+  public BoundedFunctionalParameter setDescription(String description) {
+    super.setDescription(description);
+    return this;
   }
 
   /**
