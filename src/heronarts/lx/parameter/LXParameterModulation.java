@@ -18,6 +18,11 @@
 
 package heronarts.lx.parameter;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -26,6 +31,12 @@ import heronarts.lx.LXModulationEngine;
 import heronarts.lx.color.ColorParameter;
 
 public abstract class LXParameterModulation extends LXComponent {
+
+  public static class CircularDependencyException extends IllegalStateException {
+    CircularDependencyException(String message) {
+      super(message);
+    };
+  }
 
   private final LXParameter source;
   private final LXParameter target;
@@ -38,6 +49,35 @@ public abstract class LXParameterModulation extends LXComponent {
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled", true)
     .setDescription("Whether this modulation is enabled");
+
+  private static Map<LXParameter, List<LXParameter>> modulationGraph = new HashMap<LXParameter, List<LXParameter>>();
+
+  private static void checkForCycles(LXParameter source, LXParameter target, List<LXParameter> targets) {
+    if (targets == null) {
+      return;
+    }
+    // Perform depth-first-search of all the dependencies of each target... if any of them wind up
+    // back at source, then we've got issues...
+    for (LXParameter target2 : targets) {
+      if (target2 == source) {
+        throw new CircularDependencyException("Mapping from " + source.getLabel() + " to " + target.getLabel() + " not allowed due to circular dependency.");
+      }
+      checkForCycles(source, target, modulationGraph.get(target2));
+    }
+  }
+
+  private static void registerModulation(LXParameter source, LXParameter target) {
+    checkForCycles(source, target, modulationGraph.get(target));
+    if (!modulationGraph.containsKey(source)) {
+      modulationGraph.put(source, new ArrayList<LXParameter>());
+    }
+    modulationGraph.get(source).add(target);
+  }
+
+  private static void unregisterModulation(LXParameter source, LXParameter target) {
+    // Note: there may be multiple instances of target, this only removes one
+    modulationGraph.get(source).remove(target);
+  }
 
   protected LXParameterModulation(LXParameter source, LXParameter target) {
     if (source == null) {
@@ -52,7 +92,7 @@ public abstract class LXParameterModulation extends LXComponent {
     if (target.getComponent() == null) {
       throw new IllegalStateException("May not create parameter modulation to target registered to no component: " + target.toString());
     }
-
+    registerModulation(source, target);
     this.source = source;
     this.target = target;
     LXComponent component = source.getComponent();
@@ -80,6 +120,12 @@ public abstract class LXParameterModulation extends LXComponent {
     LXComponent component = lx.getProjectComponent(obj.get(KEY_COMPONENT_ID).getAsInt());
     String path = obj.get(KEY_PARAMETER_PATH).getAsString();
     return component.getParameter(path);
+  }
+
+  @Override
+  public void dispose() {
+    unregisterModulation(this.source, this.target);
+    super.dispose();
   }
 
   @Override
