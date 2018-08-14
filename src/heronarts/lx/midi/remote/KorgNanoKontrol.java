@@ -21,6 +21,7 @@ package heronarts.lx.midi.remote;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.parameter.LXParameter;
 
+@Deprecated
 public class KorgNanoKontrol extends LXMidiRemote {
 
   public static final int SLIDER_1 = 2;

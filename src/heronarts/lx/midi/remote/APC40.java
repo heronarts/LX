@@ -31,6 +31,7 @@ import heronarts.lx.parameter.LXParameterListener;
 /**
  * Note and CC constants for all the APC40 controls
  */
+@Deprecated
 public class APC40 extends LXMidiRemote {
 
   // CC numbers

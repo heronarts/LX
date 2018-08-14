@@ -35,8 +35,11 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
-// TODO(mcslee): this class is poorly named and should be
-// replaced by generic Midi Mapping stuff...
+/**
+ * This has been subsumed by the LXMidiSurface system. It's being left here
+ * for reference only.
+ */
+@Deprecated
 public class LXMidiRemote implements LXMidiListener {
 
   public enum TakeoverMode {
