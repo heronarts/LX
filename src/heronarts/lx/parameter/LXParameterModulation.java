@@ -33,6 +33,9 @@ import heronarts.lx.color.ColorParameter;
 public abstract class LXParameterModulation extends LXComponent {
 
   public static class CircularDependencyException extends IllegalStateException {
+
+    private static final long serialVersionUID = 1L;
+
     CircularDependencyException(String message) {
       super(message);
     };
@@ -103,6 +106,10 @@ public abstract class LXParameterModulation extends LXComponent {
     }
     this.clr = this.color;
     addParameter("enabled", this.enabled);
+  }
+
+  public LXParameter getTarget() {
+    return this.target;
   }
 
   @Override
