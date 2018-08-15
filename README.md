@@ -1,13 +1,10 @@
-LX
-==
-
 **BY DOWNLOADING OR USING THE LX SOFTWARE OR ANY PART THEREOF, YOU AGREE TO THE TERMS AND CONDITIONS OF THE [LX STUDIO SOFTWARE LICENSE AND DISTRIBUTION AGREEMENT](http://lx.studio/license).**
 
 Please note that LX is not open-source software. The license grants permission to use this software freely in non-commercial applications. Commercial use is subject to a total annual revenue limit of $25K on any and all projects associated with the software. If this licensing is obstructive to your needs or you are unclear as to whether your desired use case is compliant, contact me to discuss proprietary licensing: mark@heronarts.com
 
 ---
 
-### Overview ###
+### LX Overview ###
 
 LX is a software library for real-time procedural animation, primarily designed for pixel-based LED lighting systems. It is the foundation of the [LX Studio](http://lx.studio) application.
 
