@@ -88,7 +88,7 @@ public class DDPDatagram extends LXDatagram {
    * Sets the data offset for this packet
    *
    * @param offset Offset into the remote data buffer
-   * @return
+   * @return this
    */
   public DDPDatagram setDataOffset(int offset) {
     this.buffer[DATA_OFFSET_INDEX] = (byte) (0xff & (offset >>> 24));

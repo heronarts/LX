@@ -54,7 +54,7 @@ public class DDPOutput extends LXDatagramOutput {
    * @param lx LX instance
    * @param pointIndices All of the points to send
    * @param chunkSize Number of points to chunk per packet
-   * @throws SocketException
+   * @throws SocketException if a DatagramSocket coul dnot be created
    */
   public DDPOutput(LX lx, int[] pointIndices, int chunkSize) throws SocketException {
     super(lx);

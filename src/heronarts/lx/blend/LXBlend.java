@@ -124,14 +124,14 @@ public abstract class LXBlend extends LXModulatorComponent {
 
   /**
    * Transitions from one buffer to another. By default, this is used by first
-   * blending from->to with alpha 0->1, then blending to->from with
-   * alpha 1->0. Blends which are asymmetrical may override this method for
+   * blending from-to with alpha 0-1, then blending to-from with
+   * alpha 1-0. Blends which are asymmetrical may override this method for
    * custom functionality. This method is used by pattern transitions on
    * channels as well as the crossfader.
    *
    * @param from First buffer
    * @param to Second buffer
-   * @param amt Interpolation from->to (0-1)
+   * @param amt Interpolation from-to (0-1)
    * @param output Output buffer, which may be the same as from or to
    */
   public void lerp(int[] from, int[] to, double amt, int[] output) {
