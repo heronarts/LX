@@ -1,0 +1,7 @@
+0.1.1
+August 15, 2018
+Dropping alpha tag, updating release packaging with VERSION and LICENSE files.
+
+0.1.0-alpha
+August 13, 2018
+Initial release cut for tracking versioned changes across the LX repositories.

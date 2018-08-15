@@ -39,6 +39,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -77,6 +78,17 @@ import com.google.gson.stream.JsonWriter;
  * from 0-100.
  */
 public class LX {
+
+  public static final String VERSION = "0.1.1";
+
+  /**
+   * Returns the version of the library.
+   *
+   * @return String
+   */
+  public static String version() {
+    return VERSION;
+  }
 
   public static final double HALF_PI = Math.PI / 2.;
   public static final double TWO_PI = Math.PI * 2.;
@@ -197,26 +209,31 @@ public class LX {
   private final List<Class<? extends LXEffect>> registeredEffects =
     new ArrayList<Class<? extends LXEffect>>();
 
-  @SuppressWarnings("unchecked")
-  private static final Class<LXBlend>[] DEFAULT_CHANNEL_BLENDS = new Class[] {
-    AddBlend.class,
-    MultiplyBlend.class,
-    SubtractBlend.class,
-    DifferenceBlend.class,
-    NormalBlend.class
-  };
+  private static final Class<? extends LXBlend>[] DEFAULT_CHANNEL_BLENDS;
+  private static final Class<? extends LXBlend>[] DEFAULT_TRANSITION_BLENDS;
+  private static final Class<? extends LXBlend>[] DEFAULT_CROSSFADER_BLENDS;
 
-  @SuppressWarnings("unchecked")
-  private static final Class<LXBlend>[] DEFAULT_TRANSITION_BLENDS = new Class[] {
-    DissolveBlend.class,
-    AddBlend.class,
-    MultiplyBlend.class,
-    LightestBlend.class,
-    DarkestBlend.class,
-    DifferenceBlend.class
-  };
+  static {
+    @SuppressWarnings("unchecked")
+    Class<? extends LXBlend>[] type = (Class<? extends LXBlend>[]) Array.newInstance(LXBlend.class, 0);
 
-  private static final Class<LXBlend>[] DEFAULT_CROSSFADER_BLENDS = DEFAULT_TRANSITION_BLENDS;
+    List<Class<? extends LXBlend>> channelBlends = new ArrayList<Class<? extends LXBlend>>();
+    channelBlends.add(AddBlend.class);
+    channelBlends.add(MultiplyBlend.class);
+    channelBlends.add(SubtractBlend.class);
+    channelBlends.add(DifferenceBlend.class);
+    channelBlends.add(NormalBlend.class);
+    DEFAULT_CHANNEL_BLENDS = channelBlends.toArray(type);
+
+    List<Class<? extends LXBlend>> transitionBlends = new ArrayList<Class<? extends LXBlend>>();
+    transitionBlends.add(DissolveBlend.class);
+    transitionBlends.add(AddBlend.class);
+    transitionBlends.add(MultiplyBlend.class);
+    transitionBlends.add(LightestBlend.class);
+    transitionBlends.add(DarkestBlend.class);
+    transitionBlends.add(DifferenceBlend.class);
+    DEFAULT_TRANSITION_BLENDS = DEFAULT_CROSSFADER_BLENDS = transitionBlends.toArray(type);
+  }
 
   /**
    * The list of globally registered channel blend classes

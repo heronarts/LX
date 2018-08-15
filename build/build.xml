@@ -1,4 +1,4 @@
-<project name="LX" default="compile">
+<project name="LX" default="jar">
   
   <property file="build.properties" />
 	
@@ -12,7 +12,7 @@
   	<mkdir dir="../doc"/>
   	<javadoc
   		bottom="LX library by Mark C. Slee. (C) 2012-" 
-  		classpath="../lib/gson-2.8.0.jar;" 
+  		classpath="../lib/gson-2.8.0.jar;../lib/coremidi4j-0.9.jar;" 
   		destdir="../doc" 
   		verbose="false" 
   		stylesheetfile="stylesheet.css" 
@@ -29,13 +29,16 @@
   	</javadoc>
   </target>
 	
-  <target name="compile" depends="clean">
+  <target name="jar" depends="clean">
     <mkdir dir="../tmp"/>
     <javac srcdir="../src" destdir="../tmp" includeAntRuntime="false">
       <classpath refid="lib.path" />
+      <compilerarg value="-Xlint" />
     </javac>
+  	<copy file="../VERSION" todir="../tmp" />
+  	<copy file="../LICENSE" todir="../tmp" />
     <mkdir dir="../bin"/>
-  	<jar destfile="../bin/LX.jar" basedir="../tmp" includes="**/*.class">
+  	<jar destfile="../bin/LX.jar" basedir="../tmp" includes="LICENSE VERSION **/*.class">
   		<zipgroupfileset dir="../lib" includes="coremidi4j-0.9.jar" />
   		<zipgroupfileset dir="../lib" includes="gson-2.8.0.jar" />
     </jar>
