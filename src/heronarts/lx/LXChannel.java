@@ -381,12 +381,18 @@ public class LXChannel extends LXChannelBus {
     int index = this.mutablePatterns.indexOf(pattern);
     if (index >= 0) {
       boolean wasActive = (this.activePatternIndex == index);
+      boolean wasNext = (this.transition != null) && (this.nextPatternIndex == index);
+      boolean activateNext = false;
       int focusedPatternIndex = this.focusedPattern.getValuei();
-      if ((this.transition != null) && (
-          (this.activePatternIndex == index) ||
-          (this.nextPatternIndex == index)
-         )) {
-        finishTransition();
+      if (this.transition != null) {
+        if (wasNext) {
+          cancelTransition();
+        } else if (wasActive) {
+          finishTransition();
+        }
+      } else if (wasActive) {
+        pattern.onInactive();
+        activateNext = true;
       }
       this.mutablePatterns.remove(index);
       for (int i = index; i < this.mutablePatterns.size(); ++i) {
@@ -424,7 +430,7 @@ public class LXChannel extends LXChannelBus {
       for (Listener listener : this.listenerSnapshot) {
         listener.patternRemoved(this, pattern);
       }
-      if (wasActive && (this.mutablePatterns.size() > 0)) {
+      if (activateNext && (this.mutablePatterns.size() > 0)) {
         LXPattern newActive = getActivePattern();
         newActive.onActive();
         for (Listener listener : this.listeners) {
@@ -623,6 +629,21 @@ public class LXChannel extends LXChannelBus {
       this.transitionMillis = this.lx.engine.nowMillis;
     } else {
       finishTransition();
+    }
+  }
+
+  private void cancelTransition() {
+    if (this.transition != null) {
+      LXPattern nextPattern = getNextPattern();
+      nextPattern.onTransitionEnd();
+      nextPattern.onInactive();
+      this.transition.onInactive();
+      this.transition = null;
+      this.transitionMillis = this.lx.engine.nowMillis;
+      LXPattern activePattern = getActivePattern();
+      for (Listener listener : listeners) {
+        listener.patternDidChange(this, activePattern);
+      }
     }
   }
 
