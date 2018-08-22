@@ -68,11 +68,11 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
       return normalized;
     }
 
-    protected double normalizedToValue(double normalized) {
+    public double normalizedToValue(double normalized) {
       return normalizedToValue(normalized, 1.);
     }
 
-    protected double normalizedToValue(double normalized, double exponent) {
+    public double normalizedToValue(double normalized, double exponent) {
       if (normalized < 0) {
         normalized = 0;
       } else if (normalized > 1) {
