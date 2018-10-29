@@ -28,6 +28,7 @@ import heronarts.lx.parameter.EnumParameter;
 
 import java.awt.Color;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -37,7 +38,9 @@ import java.util.List;
  */
 public abstract class LXOutput extends LXComponent {
 
-  private final List<LXOutput> children = new ArrayList<LXOutput>();
+  private final List<LXOutput> mutableChildren = new ArrayList<LXOutput>();
+
+  public final List<LXOutput> children = Collections.unmodifiableList(this.mutableChildren);
 
   /**
    * Buffer with colors for this output, gamma-corrected
@@ -128,7 +131,7 @@ public abstract class LXOutput extends LXComponent {
    */
   public LXOutput addChild(LXOutput child) {
     // TODO(mcslee): need to setParent() on the LXComponent...
-    this.children.add(child);
+    this.mutableChildren.add(child);
     return this;
   }
 
@@ -139,7 +142,7 @@ public abstract class LXOutput extends LXComponent {
    * @return this
    */
   public LXOutput removeChild(LXOutput child) {
-    this.children.remove(child);
+    this.mutableChildren.remove(child);
     return this;
   }
 
@@ -202,7 +205,7 @@ public abstract class LXOutput extends LXComponent {
 
       this.onSend(colorsToSend);
 
-      for (LXOutput child : this.children) {
+      for (LXOutput child : this.mutableChildren) {
         child.send(colorsToSend);
       }
       this.lastFrameMillis = now;
