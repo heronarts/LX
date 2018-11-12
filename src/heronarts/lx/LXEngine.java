@@ -278,7 +278,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private final EngineBuffer buffer;
 
-  final ModelBuffer background;
+  final ModelBuffer backgroundBlack;
+  final ModelBuffer backgroundTransparent;
   private final ModelBuffer blendBufferLeft;
   private final ModelBuffer blendBufferRight;
 
@@ -316,20 +317,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Background and blending buffers
     this.buffer = new EngineBuffer(lx);
-    this.background = new ModelBuffer(lx);
+    this.backgroundBlack = new ModelBuffer(lx, LXColor.BLACK);
+    this.backgroundTransparent = new ModelBuffer(lx, 0);
     this.blendBufferLeft = new ModelBuffer(lx);
     this.blendBufferRight = new ModelBuffer(lx);
+    LX.initTimer.log("Engine: Buffers");
 
     // Initialize network thread (don't start it yet)
     this.network = new NetworkThread(lx);
 
-    // Initialize UI and background to black
-    int[] backgroundArray = this.background.getArray();
-    for (int i = 0; i < backgroundArray.length; ++i) {
-      backgroundArray[i] = LXColor.BLACK;
-    }
-    LX.initTimer.log("Engine: Buffers");
-
+    // Set up global add blend
     this.addBlend = new AddBlend(lx);
     this.addBlend.onActive();
 
@@ -1313,10 +1310,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     long channelStart = System.nanoTime();
 
     // Initialize blend stacks
-    this.blendStackMain.initialize(this.background, this.buffer.main.render);
-    this.blendStackCue.initialize(this.background, this.buffer.cue.render);
-    this.blendStackLeft.initialize(this.background, this.blendBufferLeft);
-    this.blendStackRight.initialize(this.background, this.blendBufferRight);
+    this.blendStackMain.initialize(this.backgroundBlack, this.buffer.main.render);
+    this.blendStackCue.initialize(this.backgroundBlack, this.buffer.cue.render);
+    this.blendStackLeft.initialize(this.backgroundBlack, this.blendBufferLeft);
+    this.blendStackRight.initialize(this.backgroundBlack, this.blendBufferRight);
 
     double crossfadeValue = this.crossfader.getValue();
 

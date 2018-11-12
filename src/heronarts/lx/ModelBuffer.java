@@ -23,8 +23,14 @@ import heronarts.lx.model.LXModel;
 public class ModelBuffer implements LXBuffer {
 
   private int[] array;
+  private final int defaultColor;
 
   public ModelBuffer(LX lx) {
+    this(lx, 0);
+  }
+
+  public ModelBuffer(LX lx, int defaultColor) {
+    this.defaultColor = defaultColor;
     initArray(lx.model);
 
     lx.addListener(new LX.Listener() {
@@ -38,7 +44,7 @@ public class ModelBuffer implements LXBuffer {
   private void initArray(LXModel model) {
     this.array = new int[model.size];
     for (int i = 0; i < this.array.length; ++i) {
-      this.array[i] = 0;
+      this.array[i] = this.defaultColor;
     }
   }
 

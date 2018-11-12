@@ -90,7 +90,7 @@ public class LXGroup extends LXChannelBus {
   void afterLoop(double deltaMs) {
     // Composite all the channels in this group
     long compositeStart = System.nanoTime();
-    int[] blendDestination = this.lx.engine.background.getArray();
+    int[] blendDestination = this.lx.engine.backgroundTransparent.getArray();
     int[] blendOutput = this.blendBuffer.getArray();
     for (LXChannel channel : this.channels) {
       if (channel.enabled.isOn()) {
