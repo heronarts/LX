@@ -88,7 +88,6 @@ public class LifePattern extends LXPattern {
     return 0;
   }
 
-  @SuppressWarnings("fallthrough")
   private void transition() {
     for (int i = 0; i < state.length; ++i) {
       int nA = neighborsAlive(i);
