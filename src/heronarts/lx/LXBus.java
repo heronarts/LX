@@ -143,6 +143,15 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   /**
+   * Returns true if this is an empty group with no channels
+   *
+   * @return true if this is a group with no subchannels
+   */
+  public boolean isEmptyGroup() {
+    return isGroup() && (((LXGroup) this).channels.size() == 0);
+  }
+
+  /**
    * Returns true if this is a basic channel
    *
    * @return True if this is a basic channel

@@ -68,6 +68,15 @@ public class LXGroup extends LXChannelBus {
     return this;
   }
 
+  /**
+   * Get the last channel in this group
+   *
+   * @return The last channel in this group
+   */
+  public LXChannel getLastChannel() {
+    return this.channels.get(this.channels.size() - 1);
+  }
+
   public void ungroup() {
     // Remove all our channels
     for (int i = this.channels.size() - 1; i >= 0; --i) {
@@ -81,8 +90,10 @@ public class LXGroup extends LXChannelBus {
   public void onParameterChanged(LXParameter parameter) {
     super.onParameterChanged(parameter);
     if (parameter == this.selected) {
-      for (LXChannel channel : this.channels) {
-        channel.selected.setValue(this.selected.isOn());
+      if (this.selected.isOn()) {
+        for (LXChannel channel : this.channels) {
+          channel.selected.setValue(false);
+        }
       }
     }
   }

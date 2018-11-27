@@ -733,6 +733,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return null;
   }
 
+  public LXChannelBus getLastChannel() {
+    return this.channels.get(this.channels.size() - 1);
+  }
+
   public LXChannelBus getChannel(int channelIndex) {
     return this.mutableChannels.get(channelIndex);
   }
@@ -790,7 +794,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       !this.masterChannel.selected.isOn();
     if (!multipleSelection) {
       for (LXChannelBus channel : this.channels) {
-        if (channel != bus && channel.getGroup() != bus) {
+        if (channel != bus) {
           channel.selected.setValue(false);
         }
       }
@@ -807,6 +811,40 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     }
     bus.selected.setValue(true);
+    return this;
+  }
+
+  public LXEngine selectChannelRange(LXBus destination) {
+    LXGroup selectedGroup = null;
+    int minIndex = -1, maxIndex = -1;
+    int selectIndex = destination.getIndex();
+
+    for (LXChannelBus bus : this.channels) {
+      if (bus.selected.isOn()) {
+        selectedGroup = bus.getGroup();
+        if (minIndex == -1) {
+          minIndex = bus.getIndex();
+        }
+        maxIndex = bus.getIndex();
+      }
+    }
+
+    if (selectIndex < minIndex) {
+      maxIndex = minIndex;
+      minIndex = selectIndex;
+    } else {
+      minIndex = maxIndex;
+      maxIndex = selectIndex;
+    }
+
+    for (LXChannelBus bus : this.channels) {
+      int busIndex = bus.getIndex();
+      boolean selected = (bus.getGroup() == selectedGroup) && (busIndex >= minIndex) && (busIndex <= maxIndex);
+      bus.selected.setValue(selected);
+    }
+
+    this.masterChannel.selected.setValue(false);
+
     return this;
   }
 
