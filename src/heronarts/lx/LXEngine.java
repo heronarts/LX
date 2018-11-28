@@ -948,7 +948,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public void removeSelectedChannels() {
     List<LXChannelBus> toRemove = new ArrayList<LXChannelBus>();
     for (LXChannelBus channel : this.mutableChannels) {
-      if (channel.selected.isOn() && (channel.getGroup() == null || (channel instanceof LXGroup))) {
+      if (channel.selected.isOn() && !toRemove.contains(channel.getGroup())) {
         toRemove.add(channel);
       }
     }
