@@ -53,7 +53,9 @@ public interface LXParameter {
     MILLISECONDS,
     DECIBELS,
     HERTZ,
-    MIDI_NOTE;
+    MIDI_NOTE,
+    DEGREES,
+    RADIANS;
 
     @Override
     public String format(double value) {
@@ -98,7 +100,10 @@ public interface LXParameter {
         return String.format("%.1fdB", value);
       case MIDI_NOTE:
         return MidiNote.getPitchString((int) value);
+      case DEGREES:
+        return String.format("%d", (int) value);
       default:
+      case RADIANS:
       case NONE:
         return String.format("%.2f", value);
       }
