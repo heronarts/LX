@@ -218,7 +218,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    * @return Normalized value, from 0 to 1
    */
   public double getNormalized() {
-    return this.range.getNormalized(getValue());
+    return this.range.getNormalized(getValue(), getExponent());
   }
 
   /**
