@@ -60,6 +60,7 @@ public interface LXParameter {
       return Units.format(this, value);
     }
 
+    @SuppressWarnings("fallthrough")
     public static String format(Units units, double value) {
       switch (units) {
       case INTEGER:
