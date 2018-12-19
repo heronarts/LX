@@ -199,20 +199,6 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     return "Mod";
   }
 
-  protected LXModulator instantiateModulator(String className) {
-    try {
-      Class<? extends LXModulator> cls = Class.forName(className).asSubclass(LXModulator.class);
-      try {
-        return cls.getConstructor(LX.class).newInstance(this.lx);
-      } catch (NoSuchMethodException nsmx) {
-        return cls.getConstructor().newInstance();
-      }
-    } catch (Exception x) {
-      System.err.println("Exception in instantiateModulator: " + x.getLocalizedMessage());
-    }
-    return null;
-  }
-
   private static final String KEY_MODULATORS = "modulators";
   private static final String KEY_MODULATIONS = "modulations";
   private static final String KEY_TRIGGERS = "triggers";
@@ -246,7 +232,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
       for (JsonElement modulatorElement : modulatorArr) {
         JsonObject modulatorObj = modulatorElement.getAsJsonObject();
         String modulatorClass = modulatorObj.get(KEY_CLASS).getAsString();
-        LXModulator modulator = instantiateModulator(modulatorClass);
+        LXModulator modulator = this.lx.instantiateModulator(modulatorClass);
         if (modulator == null) {
           System.err.println("Could not instantiate modulator: " + modulatorClass);
         } else {

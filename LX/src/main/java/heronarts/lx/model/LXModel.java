@@ -187,6 +187,7 @@ public class LXModel implements LXFixture {
     this.points = _points.toArray(new LXPoint[0]);
     this.fixtures = Collections.unmodifiableList(_fixtures);
     average();
+    normalize();
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -327,6 +328,8 @@ public class LXModel implements LXFixture {
    * relative to this model's absolute bounds.
    */
   public void normalize() {
+    // TODO(mcslee): correct when to call this... since submodels may normalize
+    // points differently... we only want it relative to top-level model
     for (LXPoint p : this.points) {
       p.normalize(this);
     }

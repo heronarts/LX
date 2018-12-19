@@ -41,14 +41,14 @@ public class LXHeadless {
   public static void addArtNetOutput(LX lx) throws Exception {
     lx.engine.addOutput(
       new LXDatagramOutput(lx).addDatagram(
-        new ArtNetDatagram(lx.model, 512, 0)
+        new ArtNetDatagram(lx.getModel(), 512, 0)
         .setAddress("localhost")
       )
     );
   }
 
   public static void addFadeCandyOutput(LX lx) throws Exception {
-    lx.engine.addOutput(new FadecandyOutput(lx, "localhost", 9090, lx.model));
+    lx.engine.addOutput(new FadecandyOutput(lx, "localhost", 9090, lx.getModel()));
   }
 
   public static void addOPCOutput(LX lx) throws Exception {

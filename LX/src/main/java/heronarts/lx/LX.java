@@ -32,9 +32,11 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXPalette;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.pattern.IteratorPattern;
-
+import heronarts.lx.structure.LXFixture;
+import heronarts.lx.structure.LXStructure;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -158,17 +160,24 @@ public class LX {
   /**
    * The midpoint of the x-space.
    */
+  @Deprecated
   public final float cx;
 
   /**
    * This midpoint of the y-space.
    */
+  @Deprecated
   public final float cy;
+
+  /**
+   * The lighting system structure
+   */
+  public final LXStructure structure;
 
   /**
    * The pixel model.
    */
-  public final LXModel model;
+  protected LXModel model;
 
   /**
    * The total number of pixels in the grid, immutable.
@@ -265,11 +274,14 @@ public class LX {
   protected LX(LXModel model, boolean isP3LX) {
     LX.initTimer.init();
     this.isP3LX = isP3LX;
-    this.model = model;
+    this.structure = new LXStructure(this);
     if (model == null) {
       this.total = this.width = this.height = 0;
+      this.model = new LXModel();
       this.cx = this.cy = 0;
     } else {
+      this.model = model;
+      this.structure.setStaticModel(this.model);
       this.total = model.points.length;
       this.cx = model.cx;
       this.cy = model.cy;
@@ -281,7 +293,6 @@ public class LX {
         this.width = this.height = 0;
       }
     }
-    model.normalize();
     LX.initTimer.log("Model");
 
     // Color palette
@@ -349,6 +360,29 @@ public class LX {
   }
 
   /**
+   * Returns the model in use
+   *
+   * @return model
+   */
+  public LXModel getModel() {
+    return this.model;
+  }
+
+  /**
+   * Updates the geometric model that is being rendered to
+   *
+   * @param model
+   * @return this
+   */
+  public LX setModel(LXModel model) {
+    this.model = model;
+    for (Listener listener : this.listeners) {
+      listener.modelChanged(this, model);
+    }
+    return this;
+  }
+
+  /**
    * Shut down resources of the LX instance.
    */
   public void dispose() {
@@ -361,6 +395,7 @@ public class LX {
    * @param i Index into colors array
    * @return Which row this index is in
    */
+  @Deprecated
   public int row(int i) {
     return (this.width == 0) ? 0 : (i / this.width);
   }
@@ -371,6 +406,7 @@ public class LX {
    * @param i Index into colors array
    * @return Which column this index is in
    */
+  @Deprecated
   public int column(int i) {
     return (this.width == 0) ? 0 : (i % this.width);
   }
@@ -381,6 +417,7 @@ public class LX {
    * @param i Node index
    * @return x coordinate
    */
+  @Deprecated
   public int x(int i) {
     return (this.width == 0) ? 0 : (i % this.width);
   }
@@ -392,6 +429,7 @@ public class LX {
    * @param i Node index
    * @return Position of this node in x space, from 0 to 1
    */
+  @Deprecated
   public double xn(int i) {
     return (this.width == 0) ? 0 : ((i % this.width) / (double) (this.width - 1));
   }
@@ -403,6 +441,7 @@ public class LX {
    * @param i Node index
    * @return Position of this node in x space, from 0 to 1
    */
+  @Deprecated
   public float xnf(int i) {
     return (float) this.xn(i);
   }
@@ -413,6 +452,7 @@ public class LX {
    * @param i Node index
    * @return y coordinate
    */
+  @Deprecated
   public int y(int i) {
     return (this.width == 0) ? 0 : (i / this.width);
   }
@@ -424,6 +464,7 @@ public class LX {
    * @param i Node index
    * @return Position of this node in y space, from 0 to 1
    */
+  @Deprecated
   public double yn(int i) {
     return (this.width == 0) ? 0 : ((i / this.width) / (double) (this.height - 1));
   }
@@ -435,6 +476,7 @@ public class LX {
    * @param i Node index
    * @return Position of this node in y space, from 0 to 1
    */
+  @Deprecated
   public float ynf(int i) {
     return (float) this.yn(i);
   }
@@ -876,6 +918,7 @@ public class LX {
 
   private final static String KEY_VERSION = "version";
   private final static String KEY_TIMESTAMP = "timestamp";
+  private final static String KEY_MODEL = "model";
   private final static String KEY_ENGINE = "engine";
   private final static String KEY_EXTERNALS = "externals";
 
@@ -902,6 +945,7 @@ public class LX {
     JsonObject obj = new JsonObject();
     obj.addProperty(KEY_VERSION, "0.1");
     obj.addProperty(KEY_TIMESTAMP, System.currentTimeMillis());
+    obj.add(KEY_MODEL, LXSerializable.Utils.toObject(this, this.structure));
     obj.add(KEY_ENGINE, LXSerializable.Utils.toObject(this, this.engine));
     JsonObject externalsObj = new JsonObject();
     for (String key : this.externals.keySet()) {
@@ -963,6 +1007,7 @@ public class LX {
         JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
         this.componentRegistry.resetProject();
         this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
+        LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL);
         this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
         if (obj.has(KEY_EXTERNALS)) {
           JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
@@ -995,17 +1040,39 @@ public class LX {
       return instantiateComponent(cls, type);
     } catch (Exception x) {
       System.err.println("Exception in instantiateComponent: " + x.getLocalizedMessage());
+      x.printStackTrace();
     }
     return null;
   }
 
   protected <T extends LXComponent> T instantiateComponent(Class<? extends T> cls, Class<T> type) {
     try {
-      return cls.getConstructor(LX.class).newInstance(this);
+      try {
+        return cls.getConstructor(LX.class).newInstance(this);
+      } catch (NoSuchMethodException nsmx) {
+        return cls.getConstructor().newInstance();
+      }
     } catch (Exception x) {
       System.err.println("Exception in instantiateComponent: " + x.getLocalizedMessage());
+      x.printStackTrace();
     }
     return null;
+  }
+
+  public LXFixture instantiateFixture(String className) {
+    return instantiateComponent(className, LXFixture.class);
+  }
+
+  public LXFixture instantiateFixture(Class<? extends LXFixture> cls) {
+    return instantiateComponent(cls, LXFixture.class);
+  }
+
+  public LXModulator instantiateModulator(String className) {
+    return instantiateComponent(className, LXModulator.class);
+  }
+
+  public LXModulator instantiateModulator(Class<? extends LXModulator> cls) {
+    return instantiateComponent(cls, LXModulator.class);
   }
 
   protected LXPattern instantiatePattern(String className) {
