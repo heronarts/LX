@@ -37,10 +37,10 @@ public class IteratorPattern extends LXPattern {
     new CompoundParameter("Speed", 10, 1, 100)
     .setDescription("Iteration speed through points in the model");
 
-  private final LXModulator index = startModulator(new SawLFO(0, lx.total, new FunctionalParameter() {
+  private final LXModulator index = startModulator(new SawLFO(0, 1, new FunctionalParameter() {
     @Override
     public double getValue() {
-      return (1000 / speed.getValue()) * lx.total;
+      return (1000 / speed.getValue()) * model.size;
     }
   }));
 
@@ -52,7 +52,7 @@ public class IteratorPattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    int active = (int) this.index.getValue();
+    int active = (int) (this.index.getValue() * model.size);
     for (int i = 0; i < colors.length; ++i) {
       this.colors[i] = (i == active) ? 0xFFFFFFFF : 0xFF000000;
     }
