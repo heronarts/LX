@@ -191,4 +191,24 @@ public class LXTransform {
     return this;
   }
 
+  /**
+   * Reset this transform to the given matrix
+   * @param matrix Transform matrix
+   * @return this
+   */
+  public LXTransform reset(LXMatrix matrix) {
+    this.matrices.clear();
+    this.matrices.push(new LXMatrix(matrix));
+    return this;
+  }
+
+  /**
+   * Resets this transform to a single identity matrix
+   *
+   * @return this
+   */
+  public LXTransform reset() {
+    return reset(new LXMatrix());
+  }
+
 }
