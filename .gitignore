@@ -2,4 +2,7 @@
 /bin
 /doc
 .DS_Store
-/examples/LXHeadless/bin
+target/
+*.iml
+.idea/
+/*/bin/

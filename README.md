@@ -38,9 +38,15 @@ A companion library, [P3LX](https://github.com/heronarts/P3LX), makes it simple 
 LX may be run in headless mode on any Java-enabled device (such as a Raspberry Pi).
 
 ```
-cd examples/LXHeadless
+cd example-headless
 ant
 ./LXHeadless
+```
+
+or via maven:
+```
+mvn package
+java -jar example-headless/target/headless.jar
 ```
 
 By default, the provided headless example outputs OPC formatted data via TCP on `localhost:7890`. This data can be viewed using the emulator that comes with [openpixelcontrol](https://github.com/zestyping/openpixelcontrol) as follows...
@@ -60,3 +66,24 @@ Building a big cool project? I'm probably interested in hearing about it! Want t
 ---
 
 HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR PURPOSE, WITH RESPECT TO THE SOFTWARE.
+
+### Building with Maven ###
+Install Maven for your platform. Google is your friend.
+
+To compile, package, and make available via local Maven repository:
+```
+mvn install
+```
+
+`mvn install` creates the following artifacts:
+
+in `core/target`:
+1. fat jar (with dependencies): `LX.jar`
+1. thin jar for distribution via maven repository publishing
+1. source jar for distribution via maven repository publishing
+1. javadoc jar for distribution via maven repository publishing
+1. javadoc html files for publishing to web: `apidocs`
+
+
+in `example-headless/target`:
+1. jar with dependencies (see example above): `headless.jar`
