@@ -98,7 +98,7 @@ public class LXPoint {
   /**
    * Index of this point in the colors array
    */
-  public final int index;
+  public int index;
 
   /**
    * Construct a point in 2-d space, z-val is 0
@@ -122,7 +122,14 @@ public class LXPoint {
     this.y = y;
     this.z = z;
     this.index = counter++;
-    update();
+    set();
+  }
+
+  public LXPoint(LXPoint that) {
+    this.x = that.x;
+    this.y = that.y;
+    this.z = that.z;
+    this.index = that.index;
   }
 
   /**
@@ -162,26 +169,26 @@ public class LXPoint {
    * @param z Z-position
    * @return this
    */
-  public LXPoint update(float x, float y, float z) {
+  public LXPoint set(float x, float y, float z) {
     this.x = x;
     this.y = y;
     this.z = z;
-    return update();
+    return set();
   }
 
-  public LXPoint updateX(float x) {
+  public LXPoint setX(float x) {
     this.x = x;
-    return update();
+    return set();
   }
 
-  public LXPoint updateY(float y) {
+  public LXPoint setY(float y) {
     this.y = y;
-    return update();
+    return set();
   }
 
-  public LXPoint updateZ(float z) {
+  public LXPoint setZ(float z) {
     this.z = z;
-    return update();
+    return set();
   }
 
   /**
@@ -189,7 +196,7 @@ public class LXPoint {
    *
    * @return this
    */
-  public LXPoint update() {
+  public LXPoint set() {
     this.r = (float) Math.sqrt(x * x + y * y + z * z);
     this.rxy = (float) Math.sqrt(x * x + y * y);
     this.rxz = (float) Math.sqrt(x * x + z * z);
