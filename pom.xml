@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>heronarts</groupId>
-    <artifactId>LX</artifactId>
+    <artifactId>LX-parent</artifactId>
     <version>0.1.3-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
-        <module>core</module>
-        <module>example-headless</module>
+        <module>LX</module>
+        <module>LX-example-headless</module>
     </modules>
 
     <properties>
