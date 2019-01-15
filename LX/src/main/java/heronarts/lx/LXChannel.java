@@ -449,10 +449,11 @@ public class LXChannel extends LXChannelBus {
     if (patterns.length == 0) {
       throw new IllegalArgumentException("LXChannel must have at least one pattern");
     }
-    for (LXPattern pattern : this.mutablePatterns) {
-      pattern.dispose();
+    // Remove all existing patterns
+    for (int i = this.mutablePatterns.size() - 1; i >= 0; --i) {
+      removePattern(this.mutablePatterns.get(i), false);
     }
-    this.mutablePatterns.clear();
+    // Add new patterns
     for (LXPattern pattern : patterns) {
       if (pattern == null) {
         throw new IllegalArgumentException("Pattern array may not include null elements");
