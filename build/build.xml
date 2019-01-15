@@ -31,10 +31,10 @@
 	
   <target name="jar" depends="clean">
     <mkdir dir="../tmp"/>
-		<javac srcdir="../LX/src" destdir="../tmp" includeAntRuntime="false">
-      <classpath refid="lib.path" />
-      <compilerarg value="-Xlint" />
-    </javac>
+	<javac srcdir="../LX/src" destdir="../tmp" includeAntRuntime="false" source="1.8" target="1.8">
+		<classpath refid="lib.path" />
+		<compilerarg value="-Xlint" />
+	</javac>
   	<copy file="../VERSION" todir="../tmp" />
   	<copy file="../LICENSE" todir="../tmp" />
     <mkdir dir="../bin"/>
