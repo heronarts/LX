@@ -45,7 +45,10 @@ public class LXStructure extends LXComponent {
   public final List<LXFixture> fixtures = Collections.unmodifiableList(this.mutableFixtures);
 
   private final LX lx;
+
   private LXModel model = new LXModel();
+
+  private LXModel staticModel = null;
 
   public LXStructure(LX lx) {
     super(lx);
@@ -69,7 +72,14 @@ public class LXStructure extends LXComponent {
     return this;
   }
 
+  private void checkStaticModel(boolean isStatic, String error) {
+    if ((this.staticModel != null) != isStatic) {
+      throw new IllegalStateException(error);
+    }
+  }
+
   public LXStructure addFixture(LXFixture fixture) {
+    checkStaticModel(false, "Cannot invoke addFixture when static model is in use");
     if (this.mutableFixtures.contains(fixture)) {
       throw new IllegalStateException("LXStructure may not contain two copies of same fixture");
     }
@@ -83,16 +93,8 @@ public class LXStructure extends LXComponent {
     return this;
   }
 
-  public LXStructure setStaticModel(LXModel model) {
-    StaticModel staticModel = new StaticModel(this.lx, model);
-    this.mutableFixtures.add(staticModel);
-    for (Listener l : this.listeners) {
-      l.fixtureAdded(staticModel);
-    }
-    return this;
-  }
-
   public LXStructure setFixtureIndex(LXFixture fixture, int index) {
+    checkStaticModel(false, "Cannot invoke setFixtureIndex when static model is in use");
     if (!this.mutableFixtures.contains(fixture)) {
       throw new IllegalStateException("Cannot set index on fixture not in structure: " + fixture);
     }
@@ -102,6 +104,7 @@ public class LXStructure extends LXComponent {
   }
 
   public LXStructure removeFixture(LXFixture fixture) {
+    checkStaticModel(false, "Cannot invoke removeFixture when static model is in use");
     if (!this.mutableFixtures.contains(fixture)) {
       throw new IllegalStateException("LXStructure does not contain fixture: " + fixture);
     }
@@ -111,6 +114,19 @@ public class LXStructure extends LXComponent {
     }
     fixture.dispose();
     regenerateModel();
+    return this;
+  }
+
+  private void removeAllFixtures() {
+    // Remove all fixtures
+    for (int i = this.mutableFixtures.size() - 1; i >= 0; --i) {
+      removeFixture(this.mutableFixtures.get(i));
+    }
+  }
+
+  public LXStructure setStaticModel(LXModel model) {
+    removeAllFixtures();
+    this.lx.setModel(this.model = this.staticModel = model);
     return this;
   }
 
@@ -138,8 +154,9 @@ public class LXStructure extends LXComponent {
   @Override
   public void load(LX lx, JsonObject obj) {
     this.isLoading = true;
+    removeAllFixtures();
     super.load(lx, obj);
-    if (obj.has(KEY_FIXTURES)) {
+    if ((this.staticModel == null) && obj.has(KEY_FIXTURES)) {
       JsonArray fixturesArr = obj.getAsJsonArray(KEY_FIXTURES);
       for (JsonElement fixtureElement : fixturesArr) {
         JsonObject fixtureObj = fixtureElement.getAsJsonObject();
@@ -150,7 +167,6 @@ public class LXStructure extends LXComponent {
         }
       }
     }
-
     this.isLoading = false;
     if (this.needsRegenerate) {
       this.needsRegenerate = false;
