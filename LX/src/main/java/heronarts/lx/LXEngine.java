@@ -1354,6 +1354,18 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.timer.inputNanos = System.nanoTime() - inputStart;
     }
 
+    // Run-once scheduled tasks
+    if (this.threadSafeTaskQueue.size() > 0) {
+      this.engineThreadTaskQueue.clear();
+      synchronized (this.threadSafeTaskQueue) {
+        this.engineThreadTaskQueue.addAll(this.threadSafeTaskQueue);
+        this.threadSafeTaskQueue.clear();
+      }
+      for (Runnable runnable : this.engineThreadTaskQueue) {
+        runnable.run();
+      }
+    }
+
     // Initialize the model context for this render frame
     this.buffer.render.setModel(this.lx.model);
 
@@ -1373,18 +1385,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Run top-level loop tasks
     for (LXLoopTask loopTask : this.loopTasks) {
       loopTask.loop(deltaMs);
-    }
-
-    // Run once-tasks
-    if (this.threadSafeTaskQueue.size() > 0) {
-      this.engineThreadTaskQueue.clear();
-      synchronized (this.threadSafeTaskQueue) {
-        this.engineThreadTaskQueue.addAll(this.threadSafeTaskQueue);
-        this.threadSafeTaskQueue.clear();
-      }
-      for (Runnable runnable : this.engineThreadTaskQueue) {
-        runnable.run();
-      }
     }
 
     // Okay, time for the real work, to run and blend all of our channels
