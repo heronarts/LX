@@ -26,6 +26,7 @@ import java.util.Set;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.clipboard.LXClipboardItem;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -34,7 +35,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
-public abstract class LXFixture extends LXComponent implements LXComponent.Renamable {
+public abstract class LXFixture extends LXComponent implements LXComponent.Renamable, LXClipboardItem {
 
   public enum Protocol {
     NONE("None"),
@@ -171,5 +172,18 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   }
 
   protected abstract void generatePoints(LXTransform transform);
+
+  @Override
+  public LXClipboardItem duplicate() {
+    LXFixture copy = null;
+    try {
+      copy = this.lx.instantiateFixture(getClass());
+      copy.copyParameters(this);
+    } catch (Exception x) {
+      System.err.println("Exception in LXFixture.copy: " + x.getLocalizedMessage());
+    }
+    return copy;
+
+  }
 
 }
