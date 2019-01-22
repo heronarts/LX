@@ -48,7 +48,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
    */
   public interface Renamable {}
 
-  private LX lx;
+  protected LX lx;
 
   public final StringParameter label =
     new StringParameter("Label")
@@ -324,8 +324,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   public void onParameterChanged(LXParameter parameter) {}
 
   protected LXComponent copyParameters(LXComponent that) {
-    if (getClass() != that.getClass()) {
-      throw new IllegalArgumentException("Cannot copy parameters from different class: " + that.getClass() + " -> " + getClass());
+    if (!that.getClass().isInstance(this)) {
+      throw new IllegalArgumentException("Cannot copy parameters from non-assignable class: " + that.getClass() + " -> " + getClass());
     }
     for (Map.Entry<String, LXParameter> entry: this.parameters.entrySet()) {
       LXParameter thisParameter = entry.getValue();
