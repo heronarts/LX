@@ -20,6 +20,7 @@ package heronarts.lx.output;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.ModelBuffer;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.BooleanParameter;
@@ -45,7 +46,11 @@ public abstract class LXOutput extends LXComponent {
   /**
    * Buffer with colors for this output, gamma-corrected
    */
-  private final int[] outputColors;
+  private final ModelBuffer outputColors = new ModelBuffer(lx);
+
+  private final ModelBuffer allWhite = new ModelBuffer(lx, LXColor.WHITE);
+
+  private final ModelBuffer allOff = new ModelBuffer(lx, LXColor.BLACK);
 
   /**
    * Local array for color-conversions
@@ -99,23 +104,12 @@ public abstract class LXOutput extends LXComponent {
    */
   private long lastFrameMillis = 0;
 
-  private final int[] allWhite;
-
-  private final int[] allOff;
-
   protected LXOutput(LX lx) {
     this(lx, "Output");
   }
 
   protected LXOutput(LX lx, String label) {
     super(lx, label);
-    this.outputColors = new int[lx.total];
-    this.allWhite = new int[lx.total];
-    this.allOff = new int[lx.total];
-    for (int i = 0; i < lx.total; ++i) {
-      this.allWhite[i] = LXColor.WHITE;
-      this.allOff[i] = LXColor.BLACK;
-    }
     addParameter("enabled", this.enabled);
     addParameter("mode", this.mode);
     addParameter("fps", this.framesPerSecond);
@@ -164,14 +158,15 @@ public abstract class LXOutput extends LXComponent {
       switch (this.mode.getEnum()) {
       case WHITE:
         int white = LXColor.hsb(0, 0, 100 * this.brightness.getValuef());
-        for (int i = 0; i < this.allWhite.length; ++i) {
-          this.allWhite[i] = white;
+        int[] allWhite = this.allWhite.getArray();
+        for (int i = 0; i < allWhite.length; ++i) {
+          allWhite[i] = white;
         }
-        colorsToSend = this.allWhite;
+        colorsToSend = allWhite;
         break;
 
       case OFF:
-        colorsToSend = this.allOff;
+        colorsToSend = this.allOff.getArray();
         break;
 
       case RAW:
@@ -184,9 +179,10 @@ public abstract class LXOutput extends LXComponent {
         int gamma = this.gammaCorrection.getValuei();
         double brt = this.brightness.getValuef();
         if (gamma > 0 || brt < 1) {
+          colorsToSend = this.outputColors.getArray();
           int r, g, b, rgb;
-          for (int i = 0; i < colorsToSend.length; ++i) {
-            rgb = colorsToSend[i];
+          for (int i = 0; i < colors.length; ++i) {
+            rgb = colors[i];
             r = (rgb >> 16) & 0xff;
             g = (rgb >> 8) & 0xff;
             b = rgb & 0xff;
@@ -196,9 +192,8 @@ public abstract class LXOutput extends LXComponent {
               scaleBrightness *= this.hsb[2];
             }
             scaleBrightness *= brt;
-            this.outputColors[i] = Color.HSBtoRGB(hsb[0], hsb[1], scaleBrightness);
+            colorsToSend[i] = Color.HSBtoRGB(hsb[0], hsb[1], scaleBrightness);
           }
-          colorsToSend = this.outputColors;
         }
         break;
       }
