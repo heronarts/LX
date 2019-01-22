@@ -261,7 +261,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   @Override
-  public LXPattern copy() {
+  public LXPattern duplicate() {
     LXPattern copy = null;
     try {
       copy = this.lx.instantiatePattern(getClass());

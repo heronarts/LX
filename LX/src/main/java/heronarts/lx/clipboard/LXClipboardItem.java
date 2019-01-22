@@ -19,5 +19,5 @@
 package heronarts.lx.clipboard;
 
 public interface LXClipboardItem {
-  public LXClipboardItem copy();
+  public LXClipboardItem duplicate();
 }
