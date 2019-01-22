@@ -87,6 +87,7 @@ public class LX {
      * any dependency upon P3LX.
      */
     public boolean isP3LX = false;
+    public boolean staticModel = false;
   }
 
   /**
@@ -285,6 +286,7 @@ public class LX {
   protected LX(Flags flags, LXModel model) {
     LX.initTimer.init();
     this.flags = flags;
+    this.flags.staticModel = (model != null);
     this.structure = new LXStructure(this);
     if (model == null) {
       this.total = this.width = this.height = 0;
