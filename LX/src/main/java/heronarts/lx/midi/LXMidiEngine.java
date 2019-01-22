@@ -151,14 +151,17 @@ public class LXMidiEngine implements LXSerializable {
           }
         }
 
+        // Notify anything blocked on waitUntilReady()
+        synchronized (initializationLock) {
+          initializationLock.ready = true;
+          initializationLock.notifyAll();
+        }
+
+        // Schedule engine thread to perform any blocked whenReady tasks
         lx.engine.addTask(new Runnable() {
           public void run() {
-            synchronized (initializationLock) {
-              initializationLock.ready = true;
-              for (Runnable runnable : initializationLock.listeners) {
-                runnable.run();
-              }
-              initializationLock.notifyAll();
+            for (Runnable runnable : initializationLock.listeners) {
+              runnable.run();
             }
           }
         });
