@@ -81,6 +81,14 @@ public class LX {
 
   public static final String VERSION = "0.1.1";
 
+  public static class Flags {
+    /**
+     * Sometimes we need to know if we are P3LX, but we don't want LX library to have
+     * any dependency upon P3LX.
+     */
+    public boolean isP3LX = false;
+  }
+
   /**
    * Returns the version of the library.
    *
@@ -142,10 +150,9 @@ public class LX {
   final LXComponent.Registry componentRegistry = new LXComponent.Registry();
 
   /**
-   * Sometimes we need to know if we are P3LX, but we don't want LX library to have
-   * any dependency upon P3LX.
+   * Configuration flags
    */
-  final boolean isP3LX;
+  public final Flags flags;
 
   /**
    * The width of the grid, immutable.
@@ -238,7 +245,7 @@ public class LX {
    * Creates an LX instance with no nodes.
    */
   public LX() {
-    this(null);
+    this(new Flags());
   }
 
   /**
@@ -268,20 +275,23 @@ public class LX {
    * @param model Pixel model
    */
   public LX(LXModel model) {
-    this(model, false);
+    this(new Flags(), model);
   }
 
-  protected LX(LXModel model, boolean isP3LX) {
+  public LX(Flags flags) {
+    this(flags, null);
+  }
+
+  protected LX(Flags flags, LXModel model) {
     LX.initTimer.init();
-    this.isP3LX = isP3LX;
+    this.flags = flags;
     this.structure = new LXStructure(this);
     if (model == null) {
       this.total = this.width = this.height = 0;
       this.model = new LXModel();
       this.cx = this.cy = 0;
     } else {
-      this.model = model;
-      this.structure.setStaticModel(this.model);
+      this.structure.setStaticModel(this.model = model);
       this.total = model.points.length;
       this.cx = model.cx;
       this.cy = model.cy;
