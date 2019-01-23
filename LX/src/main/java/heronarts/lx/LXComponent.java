@@ -26,6 +26,7 @@ import java.util.Map;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import heronarts.lx.clipboard.LXClipboardItem;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.parameter.BooleanParameter;
@@ -41,7 +42,7 @@ import heronarts.lx.parameter.StringParameter;
 /**
  * Utility base class for objects that have parameters.
  */
-public abstract class LXComponent implements LXParameterListener, LXSerializable {
+public abstract class LXComponent implements LXParameterListener, LXSerializable, LXClipboardItem {
 
   /**
    * Marker interface for components which can have their label changed
@@ -349,6 +350,20 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   private final static String KEY_PARAMETERS = "parameters";
   public static final String KEY_COMPONENT_ID = "componentId";
   public static final String KEY_PARAMETER_PATH = "parameterPath";
+
+  @Override
+  public LXComponent duplicate() {
+    LXComponent copy = null;
+    try {
+      // TODO(mcslee): Consider deep-copying LXModulator components, or with layers, etc...
+      // maybe another way to go is to save/load them?
+      copy = this.lx.instantiateComponent(getClass(), LXComponent.class);
+      copy.copyParameters(this);
+    } catch (Exception x) {
+      System.err.println("Exception in LXComponent.duplicate: " + x.getLocalizedMessage());
+    }
+    return copy;
+  }
 
   @Override
   public void save(LX lx, JsonObject obj) {

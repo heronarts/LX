@@ -23,7 +23,6 @@ import heronarts.lx.midi.MidiControlChange;
 
 import com.google.gson.JsonObject;
 
-import heronarts.lx.clipboard.LXClipboardItem;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
@@ -36,7 +35,7 @@ import heronarts.lx.parameter.BooleanParameter;
  * A pattern is the core object that the animation engine uses to generate
  * colors for all the points.
  */
-public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXLayeredComponent.Buffered, LXMidiListener, LXOscComponent, LXClipboardItem {
+public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXLayeredComponent.Buffered, LXMidiListener, LXOscComponent {
 
   private int index = -1;
 
@@ -258,18 +257,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   @Override
   public void aftertouchReceived(MidiAftertouch aftertouch) {
 
-  }
-
-  @Override
-  public LXPattern duplicate() {
-    LXPattern copy = null;
-    try {
-      copy = this.lx.instantiatePattern(getClass());
-      copy.copyParameters(this);
-    } catch (Exception x) {
-      System.err.println("Exception in LXPattern.copy: " + x.getLocalizedMessage());
-    }
-    return copy;
   }
 
   private static final String KEY_AUTO_CYCLE = "autoCycleEnabled";
