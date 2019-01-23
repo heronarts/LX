@@ -28,12 +28,8 @@ public class LXNormalizedValue implements LXClipboardItem {
 
   public final double value;
 
-  public LXNormalizedValue(CompoundParameter p) {
-    this(p.getBaseNormalized());
-  }
-
   public LXNormalizedValue(LXNormalizedParameter p) {
-    this(p.getNormalized());
+    this((p instanceof CompoundParameter) ? ((CompoundParameter)p).getBaseNormalized() : p.getNormalized());
   }
 
   public LXNormalizedValue(double value) {
