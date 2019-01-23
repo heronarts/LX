@@ -111,7 +111,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     addGeometryParameter("pitch", this.pitch);
     addGeometryParameter("roll", this.roll);
     addParameter("protocol", this.protocol);
-    addParameter("idenfity", this.identify);
+    addParameter("identify", this.identify);
   }
 
   protected LXFixture addGeometryParameter(String path, LXParameter parameter) {
