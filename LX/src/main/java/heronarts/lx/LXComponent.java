@@ -18,13 +18,19 @@
 
 package heronarts.lx;
 
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.io.StringWriter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.clipboard.LXClipboardItem;
 import heronarts.lx.color.ColorParameter;
@@ -364,6 +370,24 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
       System.err.println("Exception in LXComponent.duplicate: " + x.getLocalizedMessage());
     }
     return copy;
+  }
+
+  @Override
+  public Transferable getSystemClipboardItem() {
+    try {
+      JsonObject obj = new JsonObject();
+      save(this.lx, obj);
+      StringWriter io = new StringWriter();
+      JsonWriter writer = new JsonWriter(io);
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      writer.close();
+      return new StringSelection(io.toString());
+    } catch (Exception x) {
+      System.err.println("Error serializing LXComponent for system clipboard");
+      x.printStackTrace();
+    }
+    return null;
   }
 
   @Override

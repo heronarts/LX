@@ -18,6 +18,9 @@
 
 package heronarts.lx.clipboard;
 
+import java.awt.Toolkit;
+import java.awt.datatransfer.Transferable;
+
 public class LXClipboard {
 
   private LXClipboardItem item;
@@ -26,6 +29,17 @@ public class LXClipboard {
 
   public LXClipboard setItem(LXClipboardItem item) {
     this.item = item;
+    if (this.item != null) {
+      Transferable transferable = item.getSystemClipboardItem();
+      if (transferable != null) {
+        try {
+          Toolkit.getDefaultToolkit().getSystemClipboard().setContents(transferable, null);
+        } catch (Exception x) {
+          System.err.println("Exception setting system clipboard");
+          x.printStackTrace();
+        }
+      }
+    }
     return this;
   }
 

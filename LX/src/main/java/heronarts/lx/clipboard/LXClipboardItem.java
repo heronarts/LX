@@ -18,6 +18,11 @@
 
 package heronarts.lx.clipboard;
 
+import java.awt.datatransfer.Transferable;
+
 public interface LXClipboardItem {
+
   public LXClipboardItem duplicate();
+
+  public Transferable getSystemClipboardItem();
 }

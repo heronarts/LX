@@ -18,6 +18,9 @@
 
 package heronarts.lx.clipboard;
 
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 
@@ -44,5 +47,10 @@ public class LXNormalizedValue implements LXClipboardItem {
   @Override
   public LXClipboardItem duplicate() {
     return new LXNormalizedValue(this.value);
+  }
+
+  @Override
+  public Transferable getSystemClipboardItem() {
+    return new StringSelection(String.valueOf(this.value));
   }
 }
