@@ -32,4 +32,11 @@ public class LXClipboard {
   public LXClipboardItem getItem() {
     return this.item;
   }
+
+  public LXClipboard clearItem(LXClipboardItem item) {
+    if (this.item == item) {
+      this.item = null;
+    }
+    return this;
+  }
 }

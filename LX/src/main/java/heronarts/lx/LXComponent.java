@@ -249,6 +249,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     if (this.lx == null) {
       throw new IllegalStateException("LXComponent never had lx reference set: " + this);
     }
+    this.lx.clipboard.clearItem(this);
     if (this instanceof LXModulationComponent) {
       ((LXModulationComponent) this).getModulation().dispose();
     }
