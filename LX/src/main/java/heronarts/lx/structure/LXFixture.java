@@ -135,7 +135,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   public void onParameterChanged(LXParameter p) {
     if (this.geometryParameters.contains(p)) {
       regenerate();
-      getLX().structure.regenerateModel();
+      this.lx.structure.regenerateModel();
     }
   }
 
@@ -154,7 +154,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   }
 
   public LXFixture setOrder(int index) {
-    getLX().structure.setFixtureIndex(this, index);
+    this.lx.structure.setFixtureIndex(this, index);
     return this;
   }
 

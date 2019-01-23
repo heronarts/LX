@@ -306,7 +306,7 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
     boolean triggered = !this.waitingForFloor && (thresholdValue > 0) && (averageNorm >= thresholdValue);
     if (triggered) {
       if (this.teachTempo.isOn()) {
-        getLX().tempo.tap();
+        this.lx.tempo.tap();
         if (++this.tapCount >= 4) {
           this.teachTempo.setValue(false);
         }
