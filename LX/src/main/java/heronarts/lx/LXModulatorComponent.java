@@ -57,7 +57,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     }
     this.mutableModulators.add(modulator);
     modulator.setComponent(this, null);
-    ((LXComponent) modulator).setParent(this);
+    modulator.setParent(this);
     return modulator;
   }
 
