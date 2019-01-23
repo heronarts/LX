@@ -60,7 +60,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     this.input = new LXAudioInput(lx);
     this.output = new LXAudioOutput(lx);
 
-    this.meter = new GraphicMeter("Meter", this.input.mix);
+    this.meter = new GraphicMeter("meter", this.input.mix);
     addModulator(this.meter);
   }
 
