@@ -39,8 +39,6 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
    */
   public interface Buffered {}
 
-  protected final LX lx;
-
   private LXBuffer buffer = null;
 
   protected int[] colors = null;
@@ -66,7 +64,6 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       }
       buffer = new ModelBuffer(lx);
     }
-    this.lx = lx;
     this.palette = lx.palette;
     if (buffer != null) {
       this.buffer = buffer;

@@ -44,15 +44,12 @@ public class LXStructure extends LXComponent {
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
   public final List<LXFixture> fixtures = Collections.unmodifiableList(this.mutableFixtures);
 
-  private final LX lx;
-
   private LXModel model = new LXModel();
 
   private LXModel staticModel = null;
 
   public LXStructure(LX lx) {
     super(lx);
-    this.lx = lx;
   }
 
   public LXModel getModel() {

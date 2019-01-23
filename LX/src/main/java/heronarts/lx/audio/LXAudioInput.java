@@ -39,8 +39,6 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
 
   private AudioFormat format = STEREO;
 
-  private final LX lx;
-
   private TargetDataLine line;
 
   public final ObjectParameter<Device> device;
@@ -131,7 +129,6 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
 
   LXAudioInput(LX lx) {
     super(lx, "Audio Input");
-    this.lx = lx;
 
     // Find system input devices...
     List<Device> devices = new ArrayList<Device>();

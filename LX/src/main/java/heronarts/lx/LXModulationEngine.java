@@ -41,9 +41,6 @@ import heronarts.lx.parameter.LXTriggerModulation;
 
 public class LXModulationEngine extends LXModulatorComponent implements LXOscComponent {
 
-  private final LX lx;
-  private final LXComponent component;
-
   public interface Listener {
     public void modulatorAdded(LXModulationEngine engine, LXModulator modulator);
     public void modulatorRemoved(LXModulationEngine engine, LXModulator modulator);
@@ -63,29 +60,28 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   private final List<LXTriggerModulation> mutableTriggers = new ArrayList<LXTriggerModulation>();
   public final List<LXTriggerModulation> triggers = Collections.unmodifiableList(this.mutableTriggers);
 
-  public LXModulationEngine(LX lx, LXComponent component) {
+  public LXModulationEngine(LX lx, LXComponent parent) {
     super(lx);
-    this.lx = lx;
-    this.component = component;
-    setParent(component);
+    setParent(parent);
   }
 
   public boolean isValidTarget(CompoundParameter target) {
-    if (this.component instanceof LXEngine) {
+    LXComponent parent = getParent();
+    if (parent instanceof LXEngine) {
       return true;
     }
-    LXComponent parent = target.getComponent();
-    while (parent != null) {
-      if (parent == this.component) {
+    LXComponent targetComponent = target.getComponent();
+    while (targetComponent != null) {
+      if (targetComponent == parent) {
         return true;
       }
-      parent = parent.getParent();
+      targetComponent = targetComponent.getParent();
     }
     return false;
   }
 
   public String getOscAddress() {
-    return ((LXOscComponent) this.component).getOscAddress() + "/modulation";
+    return ((LXOscComponent) getParent()).getOscAddress() + "/modulation";
   }
 
   public LXModulationEngine addListener(Listener listener) {

@@ -79,8 +79,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private static final int MAX_SCENES = 5;
 
-  private final LX lx;
-
   public final LXMidiEngine midi;
 
   public final LXAudioEngine audio;
@@ -348,7 +346,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   LXEngine(final LX lx) {
     super(lx, LXComponent.ID_ENGINE, "Engine");
     LX.initTimer.log("Engine: Init");
-    this.lx = lx;
 
     // Background and blending buffers
     this.buffer = new DoubleBuffer(lx);

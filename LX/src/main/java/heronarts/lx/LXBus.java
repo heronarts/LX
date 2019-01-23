@@ -75,8 +75,6 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     new BooleanParameter("Selected")
     .setDescription("Whether the channel is selected");
 
-  protected final LX lx;
-
   protected final List<LXEffect> mutableEffects = new ArrayList<LXEffect>();
   public final List<LXEffect> effects = Collections.unmodifiableList(mutableEffects);
 
@@ -92,7 +90,6 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
 
   LXBus(LX lx, String label) {
     super(lx, label);
-    this.lx = lx;
     addParameter("arm", this.arm);
     addParameter("selected", this.selected);
   }

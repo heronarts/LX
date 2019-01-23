@@ -127,11 +127,8 @@ public class LXOscEngine extends LXComponent {
 
   private EngineTransmitter engineTransmitter;
 
-  private final LX lx;
-
   public LXOscEngine(LX lx) {
     super(lx, "OSC");
-    this.lx = lx;
     addParameter("receiveHost", this.receiveHost);
     addParameter("receivePort", this.receivePort);
     addParameter("receiveActive", this.receiveActive);
