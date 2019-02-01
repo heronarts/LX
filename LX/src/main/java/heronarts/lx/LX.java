@@ -29,6 +29,7 @@ import heronarts.lx.blend.NormalBlend;
 import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.clipboard.LXClipboard;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.command.LXCommandEngine;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
@@ -202,6 +203,12 @@ public class LX {
   public final LXEngine engine;
 
   /**
+   * Command engine, utilized by higher-level UIs to manage
+   * engine state and undo operations.
+   */
+  public final LXCommandEngine command;
+
+  /**
    * The list of globally registered pattern classes
    */
   private final List<Class<? extends LXPattern>> registeredPatterns =
@@ -301,6 +308,7 @@ public class LX {
 
     // Construct the engine
     this.engine = new LXEngine(this);
+    this.command = new LXCommandEngine(this);
     LX.initTimer.log("Engine");
 
     // Midi
@@ -1068,27 +1076,27 @@ public class LX {
     return instantiateComponent(cls, LXModulator.class);
   }
 
-  protected LXPattern instantiatePattern(String className) {
+  public LXPattern instantiatePattern(String className) {
     return instantiateComponent(className, LXPattern.class);
   }
 
-  protected LXPattern instantiatePattern(Class<? extends LXPattern> cls) {
+  public LXPattern instantiatePattern(Class<? extends LXPattern> cls) {
     return instantiateComponent(cls, LXPattern.class);
   }
 
-  protected LXEffect instantiateEffect(String className) {
+  public LXEffect instantiateEffect(String className) {
     return instantiateComponent(className, LXEffect.class);
   }
 
-  protected LXEffect instantiateEffect(Class<? extends LXEffect> cls) {
+  public LXEffect instantiateEffect(Class<? extends LXEffect> cls) {
     return instantiateComponent(cls, LXEffect.class);
   }
 
-  protected LXBlend instantiateBlend(String className) {
+  public LXBlend instantiateBlend(String className) {
     return instantiateComponent(className, LXBlend.class);
   }
 
-  protected LXBlend instantiateBlend(Class<? extends LXBlend> cls) {
+  public LXBlend instantiateBlend(Class<? extends LXBlend> cls) {
     return instantiateComponent(cls, LXBlend.class);
   }
 

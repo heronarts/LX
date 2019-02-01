@@ -933,12 +933,26 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   public LXChannel addChannel() {
-    return addChannel(new LXPattern[] { new IteratorPattern(this.lx) });
+    return addChannel(-1);
+  }
+
+  public LXChannel addChannel(int index) {
+    return addChannel(index, new LXPattern[] { new IteratorPattern(this.lx) });
   }
 
   public LXChannel addChannel(LXPattern[] patterns) {
-    LXChannel channel = new LXChannel(this.lx, this.mutableChannels.size(), patterns);
-    _addChannel(channel);
+    return addChannel(-1, patterns);
+  }
+
+  public LXChannel addChannel(int index, LXPattern[] patterns) {
+    if (index > this.mutableChannels.size()) {
+      throw new IllegalArgumentException("Invalid channel index: " + index);
+    }
+    if (index < 0) {
+      index = this.mutableChannels.size();
+    }
+    LXChannel channel = new LXChannel(this.lx, index, patterns);
+    _addChannel(channel, index);
     return channel;
   }
 
@@ -965,8 +979,18 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   private LXGroup addGroup(boolean fromSelection) {
+    return addGroup(-1, fromSelection);
+  }
+
+  private LXGroup addGroup(int index, boolean fromSelection) {
+    if (index > this.mutableChannels.size()) {
+      throw new IllegalArgumentException("Invalid group index: " + index);
+    }
+    if (index < 0) {
+      index = this.mutableChannels.size();
+    }
     if (!fromSelection) {
-      LXGroup group = new LXGroup(this.lx, this.mutableChannels.size());
+      LXGroup group = new LXGroup(this.lx, index);
       _addChannel(group, group.getIndex());
       return group;
     }
@@ -1006,10 +1030,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
 
     return null;
-  }
-
-  private void _addChannel(LXChannelBus channel) {
-    _addChannel(channel, this.mutableChannels.size());
   }
 
   private void _addChannel(LXChannelBus channel, int index) {
@@ -1737,15 +1757,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     if (obj.has(KEY_CHANNELS)) {
       JsonArray channelsArray = obj.getAsJsonArray(KEY_CHANNELS);
       for (JsonElement channelElement : channelsArray) {
-        String channelClass = channelElement.getAsJsonObject().get(KEY_CLASS).getAsString();
-        LXChannelBus channel;
-        if (channelClass.equals("heronarts.lx.LXGroup")) {
-          channel = addGroup(false);
-        } else {
-          // TODO(mcslee): improve efficiency, allow no-patterns in a channel?
-          channel = addChannel();
-        }
-        channel.load(lx, (JsonObject) channelElement);
+        loadChannel(channelElement.getAsJsonObject());
       }
     } else {
       addChannel().fader.setValue(1);
@@ -1760,6 +1772,22 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         ((LXChannel) channel).getActivePattern().onActive();
       }
     }
+  }
+
+  public void loadChannel(JsonObject channelObj) {
+    loadChannel(channelObj, -1);
+  }
+
+  public void loadChannel(JsonObject channelObj, int index) {
+    String channelClass = channelObj.get(KEY_CLASS).getAsString();
+    LXChannelBus channel;
+    if (channelClass.equals("heronarts.lx.LXGroup")) {
+      channel = addGroup(index, false);
+    } else {
+      // TODO(mcslee): improve efficiency, allow no-patterns in a channel?
+      channel = addChannel(index);
+    }
+    channel.load(this.lx, channelObj);
   }
 
 }

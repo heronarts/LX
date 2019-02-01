@@ -391,11 +391,47 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXChannel addPattern(LXPattern pattern) {
+    return addPattern(pattern, -1);
+  }
+
+  public final LXChannel addPattern(LXPattern pattern, int index) {
+    if (index > this.mutablePatterns.size()) {
+      throw new IllegalArgumentException("Invalid pattern index: " + index);
+    }
     pattern.setChannel(this);
     pattern.setModel(this.model);
-    pattern.setIndex(this.mutablePatterns.size());
-    this.mutablePatterns.add(pattern);
+
+    // Make sure focused pattern doesn't change
+    LXPattern focusedPattern = getFocusedPattern();
+
+    if (index < 0) {
+      pattern.setIndex(this.mutablePatterns.size());
+      this.mutablePatterns.add(pattern);
+    } else {
+      pattern.setIndex(index);
+
+      LXPattern activePattern = getActivePattern();
+      LXPattern nextPattern = getNextPattern();
+
+      this.mutablePatterns.add(index, pattern);
+      for (int i = index + 1; i < this.mutablePatterns.size(); ++i) {
+        this.mutablePatterns.get(i).setIndex(i);
+      }
+
+      if (activePattern != null) {
+        this.activePatternIndex = activePattern.getIndex();
+      }
+      if (nextPattern != null) {
+        this.nextPatternIndex = nextPattern.getIndex();
+      }
+    }
+
+    // Retain focused pattern index
     this.focusedPattern.setRange(this.mutablePatterns.size());
+    if (focusedPattern != null) {
+      this.focusedPattern.setValue(focusedPattern.getIndex());
+    }
+
     this.listenerSnapshot.clear();
     this.listenerSnapshot.addAll(this.listeners);
     for (Listener listener : this.listenerSnapshot) {
@@ -527,6 +563,9 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXPattern getFocusedPattern() {
+    if (this.mutablePatterns.isEmpty()) {
+      return null;
+    }
     return this.mutablePatterns.get(this.focusedPattern.getValuei());
   }
 

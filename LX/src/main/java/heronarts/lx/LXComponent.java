@@ -460,8 +460,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     return this;
   }
 
-  protected final static String KEY_ID = "id";
-  protected final static String KEY_CLASS = "class";
+  public final static String KEY_ID = "id";
+  public final static String KEY_CLASS = "class";
   protected final static String KEY_MODULATION_COLOR = "modulationColor";
   private final static String KEY_PARAMETERS = "parameters";
   private final static String KEY_CHILDREN = "children";

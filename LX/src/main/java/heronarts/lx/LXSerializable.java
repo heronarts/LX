@@ -67,6 +67,10 @@ public interface LXSerializable {
       }
     }
 
+    public static JsonObject toObject(LXComponent component) {
+      return toObject(component.getLX(), component);
+    }
+
     public static JsonObject toObject(LX lx, LXSerializable serializable) {
       JsonObject obj = new JsonObject();
       serializable.save(lx,  obj);
