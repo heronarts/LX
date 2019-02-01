@@ -318,6 +318,8 @@ public abstract class LXCommand {
           channel = lx.engine.addChannel();
         }
         this.channel = new ComponentReference<LXChannel>(channel);
+        lx.engine.setFocusedChannel(channel);
+        lx.engine.selectChannel(channel);
       }
 
       @Override
