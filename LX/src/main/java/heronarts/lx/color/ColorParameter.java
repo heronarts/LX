@@ -12,6 +12,10 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
   public final CompoundParameter saturation;
   public final CompoundParameter brightness;
 
+  public static final String PATH_HUE = "hue";
+  public static final String PATH_SATURATION = "saturation";
+  public static final String PATH_BRIGHTNESS = "brightness";
+
   private int color;
   private boolean internalValueUpdate = false;
   private boolean internalHsbUpdate = false;
@@ -43,9 +47,10 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
   @Override
   public LXParameter setComponent(LXComponent component, String path) {
     super.setComponent(component, path);
-    component.addParameter(path + "/brightness", this.brightness);
-    component.addParameter(path + "/saturation", this.saturation);
-    component.addParameter(path + "/hue", this.hue);
+    // NOTE: order is important, brightness should be loaded first
+    component.addParameter(path + "/" + PATH_BRIGHTNESS, this.brightness);
+    component.addParameter(path + "/" + PATH_SATURATION, this.saturation);
+    component.addParameter(path + "/" + PATH_HUE, this.hue);
     return this;
   }
 

@@ -18,21 +18,23 @@
 
 package heronarts.lx;
 
-import com.google.gson.JsonObject;
-
 import heronarts.lx.osc.LXOscComponent;
 
 /**
  * A component which may have its own scoped user-level modulators. The concrete subclasses
  * of this are Patterns and Effects.
  */
-public abstract class LXDeviceComponent extends LXLayeredComponent implements LXModulationComponent, LXOscComponent {
+public abstract class LXDeviceComponent extends LXLayeredComponent implements LXModulationContainer, LXOscComponent {
 
   public final LXModulationEngine modulation;
 
   protected LXDeviceComponent(LX lx) {
-    super(lx);
-    this.modulation = new LXModulationEngine(lx, this);
+    this(lx, null);
+  }
+
+  protected LXDeviceComponent(LX lx, String label) {
+    super(lx, label);
+    addChild("modulation", this.modulation = new LXModulationEngine(lx));
   }
 
   @Override
@@ -41,24 +43,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     this.modulation.loop(deltaMs);
   }
 
-  public LXModulationEngine getModulation() {
+  public LXModulationEngine getModulationEngine() {
     return this.modulation;
-  }
-
-  private static final String KEY_MODULATION = "modulation";
-
-  @Override
-  public void save(LX lx, JsonObject obj) {
-    super.save(lx, obj);
-    obj.add(KEY_MODULATION, LXSerializable.Utils.toObject(lx, this.modulation));
-  }
-
-  @Override
-  public void load(LX lx, JsonObject obj) {
-    super.load(lx, obj);
-    if (obj.has(KEY_MODULATION)) {
-      this.modulation.load(lx,  obj.getAsJsonObject(KEY_MODULATION));
-    }
   }
 
 }

@@ -221,16 +221,9 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
 
   @Override
   public void load(LX lx, JsonObject object) {
-    if (object.has(KEY_CHANNEL)) {
-      this.channelEnabled.setValue(object.get(KEY_CHANNEL).getAsBoolean());
-    }
-    if (object.has(KEY_CONTROL)) {
-      this.controlEnabled.setValue(object.get(KEY_CONTROL).getAsBoolean());
-    }
-    if (object.has(KEY_SYNC)) {
-      this.syncEnabled.setValue(object.get(KEY_SYNC).getAsBoolean());
-    }
-
+    LXSerializable.Utils.loadBoolean(this.channelEnabled, object, KEY_CHANNEL);
+    LXSerializable.Utils.loadBoolean(this.controlEnabled, object, KEY_CONTROL);
+    LXSerializable.Utils.loadBoolean(this.syncEnabled, object, KEY_SYNC);
   }
 
 }

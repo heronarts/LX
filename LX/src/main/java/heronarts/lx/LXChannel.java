@@ -24,6 +24,7 @@ import heronarts.lx.clip.LXClip;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -278,6 +279,42 @@ public class LXChannel extends LXChannelBus {
     return this;
   }
 
+  public static final String PATH_PATTERN = "pattern";
+  public static final String PATH_ACTIVE = "active";
+  public static final String PATH_ACTIVE_PATTERN = "activePattern";
+  public static final String PATH_NEXT_PATTERN = "nextPattern";
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals(PATH_PATTERN)) {
+      String patternId = parts[index+1];
+      LXPattern pattern = null;
+      if (patternId.equals(PATH_ACTIVE)) {
+        pattern = getActivePattern();
+      } else if (patternId.matches("\\d+")) {
+        pattern = this.patterns.get(Integer.parseInt(patternId) - 1);
+      } else {
+        for (LXPattern p : this.patterns) {
+          if (p.getOscLabel().equals(patternId)) {
+            pattern = p;
+            break;
+          }
+        }
+      }
+      if (pattern == null) {
+        System.err.println("[OSC] Channel " + getLabel() + " has no pattern at path: " + patternId);
+        return false;
+      } else {
+        return pattern.handleOscMessage(message, parts, index + 2);
+      }
+    } else if (path.equals(PATH_ACTIVE_PATTERN) || path.equals(PATH_NEXT_PATTERN)) {
+      goIndex(message.getInt());
+      return true;
+    }
+    return super.handleOscMessage(message, parts, index);
+  }
+
   public void midiMessage(LXShortMessage message) {
     for (MidiListener listener : this.midiListeners) {
       listener.midiReceived(this, message);
@@ -436,6 +473,7 @@ public class LXChannel extends LXChannelBus {
         for (Listener listener : this.listeners) {
           listener.patternDidChange(this, newActive);
         }
+        this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, newActive.getIndex());
       }
       pattern.dispose();
     }
@@ -623,6 +661,7 @@ public class LXChannel extends LXChannelBus {
     for (Listener listener : this.listeners) {
       listener.patternWillChange(this, activePattern, nextPattern);
     }
+    this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, nextPattern.getIndex());
     if (this.transitionEnabled.isOn()) {
       this.transition = this.transitionBlendMode.getObject();
       this.transition.onActive();
@@ -645,6 +684,8 @@ public class LXChannel extends LXChannelBus {
       for (Listener listener : listeners) {
         listener.patternDidChange(this, activePattern);
       }
+      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
+      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, -1);
     }
   }
 
@@ -661,6 +702,8 @@ public class LXChannel extends LXChannelBus {
     for (Listener listener : listeners) {
       listener.patternDidChange(this, activePattern);
     }
+    this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
+    this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, -1);
   }
 
   @Override
@@ -794,7 +837,7 @@ public class LXChannel extends LXChannelBus {
         addPattern(pattern);
       }
     }
-    if (this.patterns.size() == 0) {
+    if (this.patterns.isEmpty()) {
       addPattern(new IteratorPattern(lx));
     }
 
@@ -810,6 +853,7 @@ public class LXChannel extends LXChannelBus {
     for (Listener listener : listeners) {
       listener.patternDidChange(this, activePattern);
     }
+    this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
 
     // Set the focused pattern to the active one
     this.focusedPattern.setValue(this.activePatternIndex);

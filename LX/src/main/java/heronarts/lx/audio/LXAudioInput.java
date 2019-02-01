@@ -128,7 +128,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
   }
 
   LXAudioInput(LX lx) {
-    super(lx, "Audio Input");
+    super(lx, "Input");
 
     // Find system input devices...
     List<Device> devices = new ArrayList<Device>();
@@ -150,10 +150,6 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
     this.device = new ObjectParameter<Device>("Device", devices.toArray(new Device[] {}));
     addParameter("device", this.device);
 
-  }
-
-  public String getOscAddress() {
-    return "/lx/audio/input";
   }
 
   @Override

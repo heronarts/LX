@@ -49,22 +49,30 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   protected final LXPalette palette;
 
   protected LXLayeredComponent(LX lx) {
-    this(lx, (LXBuffer) null);
+    this(lx, null, (LXBuffer) null);
+  }
+
+  protected LXLayeredComponent(LX lx, String label) {
+    this(lx, label, (LXBuffer) null);
   }
 
   protected LXLayeredComponent(LX lx, LXDeviceComponent component) {
-    this(lx, component.getBuffer());
+    this(lx, null, component.getBuffer());
   }
 
   protected LXLayeredComponent(LX lx, LXBuffer buffer) {
-    super(lx);
+    this(lx, null, buffer);
+  }
+
+  protected LXLayeredComponent(LX lx, String label, LXBuffer buffer) {
+    super(lx, label);
     if (this instanceof Buffered) {
       if (buffer != null) {
         throw new IllegalArgumentException("Cannot pass existing buffer to LXLayeredComponent.Buffered, has its own");
       }
       buffer = new ModelBuffer(lx);
     }
-    this.palette = lx.palette;
+    this.palette = lx.engine.palette;
     if (buffer != null) {
       this.buffer = buffer;
       this.colors = buffer.getArray();

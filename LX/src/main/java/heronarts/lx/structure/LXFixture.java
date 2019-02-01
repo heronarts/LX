@@ -103,7 +103,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
 
   protected LXFixture(LX lx) {
     super(lx);
-    this.label.setValue(getClass().getSimpleName());
+    setParent(lx.structure);
     addGeometryParameter("x", this.x);
     addGeometryParameter("y", this.y);
     addGeometryParameter("z", this.z);

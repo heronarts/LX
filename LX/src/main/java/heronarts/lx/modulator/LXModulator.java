@@ -28,7 +28,7 @@ import heronarts.lx.parameter.LXParameter;
  * time, such as an envelope or a low frequency oscillator. Some modulators run
  * continuously, others may halt after they reach a certain value.
  */
-public abstract class LXModulator extends LXRunnableComponent implements LXComponent.Renamable, LXParameter, LXOscComponent {
+public abstract class LXModulator extends LXRunnableComponent implements LXComponent.Renamable, LXParameter {
 
   private LXComponent component;
 
@@ -51,12 +51,23 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    * @param label Label
    */
   protected LXModulator(String label) {
-    this.label.setValue((label == null) ? getClass().getSimpleName() : label);
+    super(label);
   }
 
+  @Override
+  public String getOscPath() {
+    String path = super.getOscPath();
+    if (path != null) {
+      return path;
+    }
+    return getOscLabel();
+  }
+
+  @Override
   public String getOscAddress() {
-    if (getParent() instanceof LXOscComponent) {
-      return ((LXOscComponent) getParent()).getOscAddress() + "/" + getLabel();
+    LXComponent parent = getParent();
+    if (parent instanceof LXOscComponent) {
+      return parent.getOscAddress() + "/" + getOscPath();
     }
     return null;
   }

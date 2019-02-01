@@ -190,8 +190,9 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     this.activeBlend.onActive();
   }
 
-  public String getOscAddress() {
-    return "/lx/channel/" + (this.index+1);
+  @Override
+  public String getPath() {
+    return LXEngine.PATH_CHANNEL + "/" + (this.index+1);
   }
 
   @Override

@@ -24,9 +24,10 @@
 
 package heronarts.lx.modulator;
 
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.CompoundParameter;
 
-public class MacroKnobs extends LXModulator {
+public class MacroKnobs extends LXModulator implements LXOscComponent {
 
   public final CompoundParameter macro1 = new CompoundParameter("M1")
     .setDescription("Macro control parameter");

@@ -30,61 +30,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.sound.midi.InvalidMidiDataException;
 import heronarts.lx.LX;
-import heronarts.lx.LXBus;
-import heronarts.lx.LXChannel;
-import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXEffect;
-import heronarts.lx.LXEngine;
-import heronarts.lx.LXGroup;
-import heronarts.lx.LXModulationComponent;
-import heronarts.lx.LXModulationEngine;
-import heronarts.lx.LXPattern;
-import heronarts.lx.Tempo;
 import heronarts.lx.color.ColorParameter;
-import heronarts.lx.midi.MidiControlChange;
-import heronarts.lx.midi.MidiNoteOn;
-import heronarts.lx.midi.MidiPitchBend;
-import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
-import heronarts.lx.parameter.LXTriggerModulation;
-import heronarts.lx.parameter.LXCompoundModulation;
 import heronarts.lx.parameter.StringParameter;
 
 public class LXOscEngine extends LXComponent {
-
-  private static final String ROUTE_LX = "lx";
-  private static final String ROUTE_ENGINE = "engine";
-  private static final String ROUTE_INPUT = "input";
-  private static final String ROUTE_OUTPUT = "output";
-  private static final String ROUTE_PALETTE = "palette";
-  private static final String ROUTE_MODULATION = "modulation";
-  private static final String ROUTE_AUDIO = "audio";
-  private static final String ROUTE_TEMPO = "tempo";
-  private static final String ROUTE_BEAT = "beat";
-  private static final String ROUTE_METER = "meter";
-  private static final String ROUTE_MIDI = "midi";
-  private static final String ROUTE_NOTE = "note";
-  private static final String ROUTE_CC = "cc";
-  private static final String ROUTE_PITCHBEND = "pitchbend";
-  private static final String ROUTE_MASTER = "master";
-  private static final String ROUTE_CHANNEL = "channel";
-  private static final String ROUTE_ACTIVE_PATTERN = "activePattern";
-  private static final String ROUTE_NEXT_PATTERN = "nextPattern";
-  private static final String ROUTE_PATTERN = "pattern";
-  private static final String ROUTE_EFFECT = "effect";
-  private static final String ROUTE_FOCUSED = "focused";
-  private static final String ROUTE_ACTIVE = "active";
-  private static final String ROUTE_HUE = "hue";
-  private static final String ROUTE_SATURATION = "saturation";
-  private static final String ROUTE_BRIGHTNESS = "brightness";
 
   public final static int DEFAULT_RECEIVE_PORT = 3030;
   public final static int DEFAULT_TRANSMIT_PORT = 3131;
@@ -137,6 +93,20 @@ public class LXOscEngine extends LXComponent {
     addParameter("transmitActive", this.transmitActive);
   }
 
+  public LXOscEngine sendMessage(String path, int value) {
+    if (this.engineTransmitter != null) {
+      this.engineTransmitter.sendMessage(path, value);
+    }
+    return this;
+  }
+
+  public LXOscEngine sendParameter(LXParameter parameter) {
+    if (this.engineTransmitter != null) {
+      this.engineTransmitter.onParameterChanged(parameter);
+    }
+    return this;
+  }
+
   /**
    * Gets the OSC address pattern for a parameter
    *
@@ -146,7 +116,7 @@ public class LXOscEngine extends LXComponent {
   public static String getOscAddress(LXParameter p) {
     LXComponent component = p.getComponent();
     if (component instanceof LXOscComponent) {
-      String componentAddress = ((LXOscComponent) component).getOscAddress();
+      String componentAddress = component.getOscAddress();
       if (componentAddress != null) {
         return componentAddress + "/" + p.getPath();
       }
@@ -160,162 +130,16 @@ public class LXOscEngine extends LXComponent {
     public void oscMessage(OscMessage message) {
       try {
         String[] parts = message.getAddressPattern().getValue().split("/");
-        if (parts[1].equals(ROUTE_LX)) {
-          if (parts[2].equals(ROUTE_ENGINE)) {
-            oscComponent(message, lx.engine, parts, 3);
-          } else if (parts[2].equals(ROUTE_MIDI)) {
-            oscMidi(message, parts, 3);
-          } else if (parts[2].equals(ROUTE_TEMPO)) {
-            oscTempo(message, parts, 3);
-          } else if (parts[2].equals(ROUTE_OUTPUT)) {
-            oscComponent(message, lx.engine.output, parts, 3);
-          } else if (parts[2].equals(ROUTE_AUDIO)) {
-            oscAudio(message, parts, 3);
-          } else if (parts[2].equals(ROUTE_PALETTE)) {
-            oscComponent(message, lx.palette, parts, 3);
-          } else if (parts[2].equals(ROUTE_MASTER)) {
-            oscChannel(message, lx.engine.masterChannel, parts, 3);
-          } else if (parts[2].equals(ROUTE_CHANNEL)) {
-            if (parts[3].equals(ROUTE_FOCUSED)) {
-              oscChannel(message, lx.engine.getFocusedChannel(), parts, 4);
-            } else if (parts[3].matches("\\d+")) {
-              oscChannel(message, lx.engine.getChannel(Integer.parseInt(parts[3]) - 1), parts, 4);
-            } else {
-              oscChannel(message, lx.engine.getChannel(parts[3]), parts, 4);
-            }
-          }
+        if (parts[1].equals(lx.engine.getPath())) {
+          lx.engine.handleOscMessage(message, parts, 2);
+        } else {
+          throw new OscException();
         }
       } catch (Exception x) {
-        System.err.println("[OSC] No route for message: " + message.getAddressPattern().getValue());
+        System.err.println("[OSC] Failed to handle OSC message: " + message.getAddressPattern().getValue());
       }
     }
 
-    private void oscTempo(OscMessage message, String[] parts, int index) {
-      if (parts[index].equals(ROUTE_BEAT)) {
-        if (lx.tempo.clockSource.getObject() == Tempo.ClockSource.OSC) {
-          if (message.size() > 0) {
-            // Message specifies a beat count
-            lx.tempo.trigger(message.getInt()-1);
-          } else {
-            // Message is a raw trigger only
-            lx.tempo.trigger(false);
-          }
-        }
-      } else {
-        oscComponent(message, lx.tempo, parts, index);
-      }
-    }
-
-    private void oscAudio(OscMessage message, String[] parts, int index) {
-      if (parts[index].equals(ROUTE_INPUT)) {
-        oscComponent(message, lx.engine.audio.input, parts, index+1);
-      } else if (parts[index].equals(ROUTE_OUTPUT)) {
-        oscComponent(message, lx.engine.audio.output, parts, index+1);
-      } else if (parts[index].equals(ROUTE_METER)) {
-        oscComponent(message, lx.engine.audio.meter, parts, index+1);
-      } else {
-        oscComponent(message, lx.engine.audio, parts, index);
-      }
-    }
-
-    private void oscMidi(OscMessage message, String[] parts, int index) {
-      try {
-        if (parts[index].equals(ROUTE_NOTE)) {
-          int pitch = message.getInt();
-          int velocity = message.getInt();
-          int channel = message.getInt();
-          lx.engine.midi.dispatch(new MidiNoteOn(channel, pitch, velocity));
-        } else if (parts[index].equals(ROUTE_CC)) {
-          int value = message.getInt();
-          int cc = message.getInt();
-          int channel = message.getInt();
-          lx.engine.midi.dispatch(new MidiControlChange(channel, cc, value));
-        } else if (parts[index].equals(ROUTE_PITCHBEND)) {
-          int msb = message.getInt();
-          int channel = message.getInt();
-          lx.engine.midi.dispatch(new MidiPitchBend(channel, msb));
-        } else {
-          System.err.println("[OSC] Unrecognized MIDI message: " + message.getAddressPattern().getValue());
-        }
-      } catch (InvalidMidiDataException imdx) {
-        System.err.println("[OSC] Invalid MIDI message: " + imdx.getLocalizedMessage());
-      }
-    }
-
-    private void oscChannel(OscMessage message, LXBus channel, String[] parts, int index) {
-      if (channel instanceof LXChannel) {
-        if (parts[index].equals(ROUTE_PATTERN)) {
-          if (parts[index+1].equals(ROUTE_ACTIVE)) {
-            oscPattern(message, ((LXChannel) channel).getActivePattern(), parts, index+2);
-          } else if (parts[index+1].matches("\\d+")) {
-            oscPattern(message, ((LXChannel) channel).getPattern(Integer.parseInt(parts[index+1]) - 1), parts, index+2);
-          } else {
-            oscPattern(message, ((LXChannel) channel).getPattern(parts[index+1]), parts, index+2);
-          }
-          return;
-        } else if (parts[index].equals(ROUTE_ACTIVE_PATTERN) || parts[index].equals(ROUTE_NEXT_PATTERN)) {
-          ((LXChannel) channel).goIndex(message.getInt());
-          return;
-        }
-      }
-      if (parts[index].equals(ROUTE_EFFECT)) {
-        if (parts[index+1].matches("\\d+")) {
-          oscEffect(message, channel.getEffect(Integer.parseInt(parts[index+1]) - 1), parts, index+2);
-        } else {
-          oscEffect(message, channel.getEffect(parts[index+1]), parts, index+2);
-        }
-        return;
-      }
-      oscComponent(message, channel, parts, index);
-    }
-
-    private void oscEffect(OscMessage message, LXEffect effect, String[] parts, int index) {
-      oscComponent(message, effect, parts, index);
-    }
-
-    private void oscPattern(OscMessage message, LXPattern pattern, String[] parts, int index) {
-      oscComponent(message, pattern, parts, index);
-    }
-
-    private void oscComponent(OscMessage message, LXComponent component, String[] parts, int index) {
-      if (component instanceof LXModulationComponent && parts[index].equals(ROUTE_MODULATION)) {
-        oscComponent(message, ((LXModulationComponent) component).getModulation().getModulator(parts[index+1]), parts, index+2);
-      }
-
-      LXParameter parameter = component.getParameter(parts[index]);
-      if (parameter == null) {
-        System.err.println("[OSC] Component " + component + " does not have parameter: " + parts[index]);
-        return;
-      }
-      if (parameter instanceof BooleanParameter) {
-        ((BooleanParameter)parameter).setValue(message.getBoolean());
-      } else if (parameter instanceof StringParameter) {
-        ((StringParameter) parameter).setValue(message.getString());
-      } else if (parameter instanceof ColorParameter) {
-        if (parts.length >= index+1) {
-          if (parts[index+1].equals(ROUTE_HUE)) {
-            ((ColorParameter) parameter).hue.setNormalized(message.getFloat());
-          } else if (parts[index+1].equals(ROUTE_SATURATION)) {
-            ((ColorParameter) parameter).saturation.setNormalized(message.getFloat());
-          } else if (parts[index+1].equals(ROUTE_BRIGHTNESS)) {
-            ((ColorParameter) parameter).brightness.setNormalized(message.getFloat());
-          }
-        } else {
-          ((ColorParameter) parameter).setColor(message.getInt());
-        }
-      } else if (parameter instanceof DiscreteParameter) {
-        OscArgument arg = message.get();
-        if (arg instanceof OscInt) {
-          parameter.setValue(arg.toInt());
-        } else {
-          ((DiscreteParameter)parameter).setNormalized(arg.toFloat());
-        }
-      } else if (parameter instanceof LXNormalizedParameter) {
-        ((LXNormalizedParameter)parameter).setNormalized(message.getFloat());
-      } else {
-        parameter.setValue(message.getFloat());
-      }
-    }
   }
 
   public class Transmitter {
@@ -348,81 +172,9 @@ public class LXOscEngine extends LXComponent {
     }
   }
 
-  private class EngineTransmitter extends Transmitter implements LXParameterListener, LXChannel.Listener, LXEngine.Listener, LXModulationEngine.Listener {
+  private class EngineTransmitter extends Transmitter implements LXParameterListener {
     private EngineTransmitter(String host, int port, int bufferSize) throws SocketException, UnknownHostException {
       super(InetAddress.getByName(host), port, bufferSize);
-      registerComponent(lx.engine);
-      registerComponent(lx.palette);
-      registerComponent(lx.tempo);
-      registerComponent(lx.engine.audio);
-      registerComponent(lx.engine.audio.meter);
-      registerComponent(lx.engine.output);
-      registerComponent(lx.engine.modulation);
-      for (LXModulator modulator : lx.engine.modulation.modulators) {
-        registerComponent(modulator);
-      }
-      lx.engine.modulation.addListener(this);
-      registerChannel(lx.engine.masterChannel);
-      for (LXChannelBus channel : lx.engine.channels) {
-        registerChannel(channel);
-      }
-      lx.engine.addListener(this);
-    }
-
-    private void registerChannel(LXBus channel) {
-      registerComponent(channel);
-      if (channel instanceof LXChannel) {
-        for (LXPattern p : ((LXChannel)channel).patterns) {
-          registerComponent(p);
-        }
-      }
-      for (LXEffect effect : channel.effects) {
-        registerComponent(effect);
-      }
-      // Ensure listener is registered at most specific type
-      if (channel instanceof LXChannel) {
-        ((LXChannel) channel).addListener(this);
-      } else if (channel instanceof LXChannelBus) {
-        ((LXChannelBus) channel).addListener(this);
-      } else {
-        channel.addListener(this);
-      }
-    }
-
-    private void unregisterChannel(LXBus channel) {
-      unregisterComponent(channel);
-      if (channel instanceof LXChannel) {
-        for (LXPattern p : ((LXChannel)channel).patterns) {
-          unregisterComponent(p);
-        }
-      }
-      for (LXEffect effect : channel.effects) {
-        unregisterComponent(effect);
-      }
-      // Ensure listener is registered at most specific type
-      if (channel instanceof LXChannel) {
-        ((LXChannel) channel).removeListener(this);
-      } else if (channel instanceof LXChannelBus) {
-        ((LXChannelBus) channel).removeListener(this);
-      } else {
-        channel.removeListener(this);
-      }
-    }
-
-    private void registerComponent(LXComponent component) {
-      for (LXParameter p : component.getParameters()) {
-        if (p instanceof LXListenableParameter) {
-          ((LXListenableParameter) p).addListener(this);
-        }
-      }
-    }
-
-    private void unregisterComponent(LXComponent component) {
-      for (LXParameter p : component.getParameters()) {
-        if (p instanceof LXListenableParameter) {
-          ((LXListenableParameter) p).removeListener(this);
-        }
-      }
     }
 
     private final OscMessage oscMessage = new OscMessage("");
@@ -479,94 +231,6 @@ public class LXOscEngine extends LXComponent {
         System.err.println("[OSC] Failed to transmit: " + iox.getLocalizedMessage());
       }
     }
-
-    @Override
-    public void effectAdded(LXBus channel, LXEffect effect) {
-      registerComponent(effect);
-    }
-
-    @Override
-    public void effectRemoved(LXBus channel, LXEffect effect) {
-      unregisterComponent(effect);
-    }
-
-    @Override
-    public void effectMoved(LXBus channel, LXEffect effect) {}
-
-    @Override
-    public void indexChanged(LXChannelBus channel) {}
-
-    @Override
-    public void groupChanged(LXChannel channel, LXGroup group) {}
-
-    @Override
-    public void patternAdded(LXChannel channel, LXPattern pattern) {
-      registerComponent(pattern);
-    }
-
-    @Override
-    public void patternRemoved(LXChannel channel, LXPattern pattern) {
-      unregisterComponent(pattern);
-    }
-
-    @Override
-    public void patternMoved(LXChannel channel, LXPattern pattern) {}
-
-    @Override
-    public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
-      sendMessage(channel.getOscAddress() + "/" + ROUTE_NEXT_PATTERN, nextPattern.getIndex());
-    }
-
-    @Override
-    public void patternDidChange(LXChannel channel, LXPattern pattern) {
-      sendMessage(channel.getOscAddress() + "/" + ROUTE_ACTIVE_PATTERN, pattern.getIndex());
-      sendMessage(channel.getOscAddress() + "/" + ROUTE_NEXT_PATTERN, -1);
-    }
-
-    @Override
-    public void channelAdded(LXEngine engine, LXChannelBus channel) {
-      registerChannel(channel);
-    }
-
-    @Override
-    public void channelRemoved(LXEngine engine, LXChannelBus channel) {
-      unregisterChannel(channel);
-    }
-
-    @Override
-    public void channelMoved(LXEngine engine, LXChannelBus channel) {}
-
-    @Override
-    public void modulatorAdded(LXModulationEngine engine, LXModulator modulator) {
-      registerComponent(modulator);
-    }
-
-    @Override
-    public void modulatorRemoved(LXModulationEngine engine, LXModulator modulator) {
-      unregisterComponent(modulator);
-    }
-
-    @Override
-    public void modulationAdded(LXModulationEngine engine, LXCompoundModulation modulation) {
-      // TODO(mcslee): should probably OSC-map these...
-    }
-
-    @Override
-    public void modulationRemoved(LXModulationEngine engine, LXCompoundModulation modulation) {
-      // TODO(mcslee): should probably OSC-map these...
-    }
-
-    @Override
-    public void triggerAdded(LXModulationEngine engine, LXTriggerModulation trigger) {
-      // TODO(mcslee): should probably OSC-map these...
-    }
-
-    @Override
-    public void triggerRemoved(LXModulationEngine engine, LXTriggerModulation trigger) {
-      // TODO(mcslee): should probably OSC-map these...
-    }
-
-
   }
 
   public class Receiver {

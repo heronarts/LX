@@ -29,12 +29,13 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.LXUtils;
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXParameter;
 
-public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape {
+public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape, LXOscComponent {
 
   public class Stage implements LXSerializable {
     private double basis;

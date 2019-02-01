@@ -23,6 +23,7 @@ import java.util.List;
 
 import heronarts.lx.modulator.Click;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -153,8 +154,23 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     startModulator(this.click);
   }
 
-  public String getOscAddress() {
-    return "/lx/tempo";
+  private static final String PATH_BEAT = "beat";
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    if (parts[index].equals(PATH_BEAT)) {
+      if (this.clockSource.getObject() == Tempo.ClockSource.OSC) {
+        if (message.size() > 0) {
+          // Message specifies a beat count
+          trigger(message.getInt()-1);
+        } else {
+          // Message is a raw trigger only
+          trigger(false);
+        }
+      }
+      return true;
+    }
+    return super.handleOscMessage(message, parts, index);
   }
 
   @Override
@@ -164,6 +180,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   @Override
   public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
     if (p == this.period) {
       if (!this.parameterUpdate) {
         this.parameterUpdate = true;

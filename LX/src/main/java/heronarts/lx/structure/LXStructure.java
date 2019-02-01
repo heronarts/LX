@@ -81,7 +81,6 @@ public class LXStructure extends LXComponent {
       throw new IllegalStateException("LXStructure may not contain two copies of same fixture");
     }
     this.mutableFixtures.add(fixture);
-    addSubcomponent(fixture);
     fixture.regenerate();
     regenerateModel();
     for (Listener l : this.listeners) {

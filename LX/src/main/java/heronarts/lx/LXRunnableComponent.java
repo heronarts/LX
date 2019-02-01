@@ -55,9 +55,9 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
     addParameter("trigger", this.trigger);
   }
 
-
   @Override
   public void onParameterChanged(LXParameter parameter) {
+    super.onParameterChanged(parameter);
     if (parameter == this.running) {
       if (this.running.isOn()) {
         onStart();

@@ -66,7 +66,7 @@ public class FlashEffect extends LXEffect {
   protected void run(double deltaMs, double amount) {
     float flashValue = (float) (amount * this.intensity.getValuef());
     double satValue = this.sat.getValue() * 100.;
-    double hueValue = this.lx.palette.getHue();
+    double hueValue = this.lx.engine.palette.getHue();
     if (flashValue > 0) {
       for (int i = 0; i < this.colors.length; ++i) {
         this.colors[i] = LXColor.lerp(this.colors[i], LXColor.hsb(hueValue, satValue, 100.), flashValue);

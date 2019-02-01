@@ -125,14 +125,14 @@ public class LifePattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    if (this.lx.tempo.beat()) {
+    if (this.lx.engine.tempo.beat()) {
       if ((this.spawnCounter > 0) && (--this.spawnCounter == 0)) {
         this.spawn();
       } else {
         this.transition();
       }
     }
-    double ramp = this.lx.tempo.ramp();
+    double ramp = this.lx.engine.tempo.ramp();
     for (int i = 0; i < lx.total; ++i) {
       double b = 0;
       switch (this.state[i]) {

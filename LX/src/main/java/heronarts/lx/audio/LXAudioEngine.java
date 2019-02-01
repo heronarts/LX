@@ -22,7 +22,6 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXModulatorComponent;
-import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -59,13 +58,11 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
     this.input = new LXAudioInput(lx);
     this.output = new LXAudioOutput(lx);
+    this.meter = new GraphicMeter("Meter", this.input.mix);
 
-    this.meter = new GraphicMeter("meter", this.input.mix);
-    addModulator(this.meter);
-  }
-
-  public String getOscAddress() {
-    return "/lx/audio";
+    addChild("input", this.input);
+    addChild("output", this.output);
+    addModulator("meter", this.meter);
   }
 
   @Override
@@ -103,30 +100,9 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     super.dispose();
   }
 
-  private static final String KEY_METER = "meter";
-  private static final String KEY_INPUT = "input";
-  private static final String KEY_OUTPUT = "output";
-
-  @Override
-  public void save(LX lx, JsonObject obj) {
-    super.save(lx, obj);
-    obj.add(KEY_METER, LXSerializable.Utils.toObject(lx, this.meter));
-    obj.add(KEY_INPUT, LXSerializable.Utils.toObject(lx, this.input));
-    obj.add(KEY_OUTPUT, LXSerializable.Utils.toObject(lx, this.output));
-  }
-
   @Override
   public void load(LX lx, JsonObject obj) {
     this.output.reset();
-    if (obj.has(KEY_METER)) {
-      this.meter.load(lx, obj.getAsJsonObject(KEY_METER));
-    }
-    if (obj.has(KEY_INPUT)) {
-      this.input.load(lx, obj.getAsJsonObject(KEY_INPUT));
-    }
-    if (obj.has(KEY_OUTPUT)) {
-      this.output.load(lx, obj.getAsJsonObject(KEY_OUTPUT));
-    }
     super.load(lx, obj);
   }
 

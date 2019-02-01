@@ -47,7 +47,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     super(lx, label);
   }
 
-  public LXModulator addModulator(LXModulator modulator) {
+  private void _addModulator(LXModulator modulator) {
     if (modulator == null) {
       throw new IllegalArgumentException("Cannot add null modulator");
     }
@@ -55,8 +55,18 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     if (this.mutableModulators.contains(modulator)) {
       throw new IllegalStateException("Cannot add modulator twice: " + modulator);
     }
-    this.mutableModulators.add(modulator);
     modulator.setComponent(this, null);
+    this.mutableModulators.add(modulator);
+  }
+
+  public LXModulator addModulator(String path, LXModulator modulator) {
+    _addModulator(modulator);
+    addChild(path, modulator);
+    return modulator;
+  }
+
+  public LXModulator addModulator(LXModulator modulator) {
+    _addModulator(modulator);
     modulator.setParent(this);
     return modulator;
   }

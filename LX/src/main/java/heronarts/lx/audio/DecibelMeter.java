@@ -20,6 +20,7 @@ package heronarts.lx.audio;
 
 import heronarts.lx.LXUtils;
 import heronarts.lx.modulator.LXModulator;
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -29,7 +30,7 @@ import heronarts.lx.parameter.LXParameter;
  * may be applied to the signal. A decibel range is given in which values are
  * normalized from 0 to 1. Raw decibel values can be accessed if desired.
  */
-public class DecibelMeter extends LXModulator implements LXNormalizedParameter {
+public class DecibelMeter extends LXModulator implements LXNormalizedParameter, LXOscComponent {
 
   protected static final double LOG_10 = Math.log(10);
 

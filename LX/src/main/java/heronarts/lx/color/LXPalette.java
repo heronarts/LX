@@ -94,10 +94,6 @@ public class LXPalette extends LXModulatorComponent implements LXOscComponent {
     addModulator(this.hueOscillate);
   }
 
-  public String getOscAddress() {
-    return "/lx/palette";
-  }
-
   @Override
   public String getLabel() {
     return "Palette";

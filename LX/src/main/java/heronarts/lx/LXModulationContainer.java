@@ -18,6 +18,6 @@
 
 package heronarts.lx;
 
-public interface LXModulationComponent {
-  public LXModulationEngine getModulation();
+public interface LXModulationContainer {
+  public LXModulationEngine getModulationEngine();
 }

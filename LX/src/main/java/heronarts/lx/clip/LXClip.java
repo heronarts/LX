@@ -104,6 +104,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXComponent.
   }
 
   @Override
+  public String getPath() {
+    return "clip" + (index + 1);
+  }
+
+  @Override
   public void dispose() {
     for (LXEffect effect : bus.effects) {
       unregisterComponent(effect);

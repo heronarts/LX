@@ -20,4 +20,5 @@ package heronarts.lx.osc;
 
 public interface LXOscComponent {
   public String getOscAddress();
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index);
 }

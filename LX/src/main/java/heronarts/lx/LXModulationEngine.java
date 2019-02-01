@@ -35,6 +35,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXCompoundModulation;
 import heronarts.lx.parameter.LXTriggerModulation;
@@ -60,9 +61,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   private final List<LXTriggerModulation> mutableTriggers = new ArrayList<LXTriggerModulation>();
   public final List<LXTriggerModulation> triggers = Collections.unmodifiableList(this.mutableTriggers);
 
-  public LXModulationEngine(LX lx, LXComponent parent) {
-    super(lx);
-    setParent(parent);
+  public LXModulationEngine(LX lx) {
+    super(lx, "Modulation");
   }
 
   public boolean isValidTarget(CompoundParameter target) {
@@ -80,8 +80,15 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     return false;
   }
 
-  public String getOscAddress() {
-    return ((LXOscComponent) getParent()).getOscAddress() + "/modulation";
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    for (LXModulator modulator : this.modulators) {
+      if (path.equals(modulator.getOscPath())) {
+        return modulator.handleOscMessage(message, parts, index+1);
+      }
+    }
+    return false;
   }
 
   public LXModulationEngine addListener(Listener listener) {
@@ -192,7 +199,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   @Override
   public String getLabel() {
-    return "Mod";
+    return "Modulation";
   }
 
   private static final String KEY_MODULATORS = "modulators";
@@ -201,6 +208,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   @Override
   public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
     obj.add(KEY_MODULATORS, LXSerializable.Utils.toArray(lx, this.modulators));
     obj.add(KEY_MODULATIONS, LXSerializable.Utils.toArray(lx, this.modulations));
     obj.add(KEY_TRIGGERS, LXSerializable.Utils.toArray(lx, this.triggers));
@@ -222,6 +230,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   public void load(LX lx, JsonObject obj) {
     // Remove everything first
     clear();
+
+    super.load(lx, obj);
 
     if (obj.has(KEY_MODULATORS)) {
       JsonArray modulatorArr = obj.getAsJsonArray(KEY_MODULATORS);

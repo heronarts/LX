@@ -29,7 +29,6 @@ import heronarts.lx.blend.NormalBlend;
 import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.clipboard.LXClipboard;
 import heronarts.lx.color.LXColor;
-import heronarts.lx.color.LXPalette;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
@@ -198,19 +197,9 @@ public class LX {
   public final LXClipboard clipboard = new LXClipboard();
 
   /**
-   * The default palette.
-   */
-  public final LXPalette palette;
-
-  /**
    * The animation engine.
    */
   public final LXEngine engine;
-
-  /**
-   * The global tempo object.
-   */
-  public final Tempo tempo;
 
   /**
    * The list of globally registered pattern classes
@@ -307,10 +296,6 @@ public class LX {
     }
     LX.initTimer.log("Model");
 
-    // Color palette
-    this.palette = new LXPalette(this);
-    LX.initTimer.log("Palette");
-
     // Default blends
     registerDefaultBlends();
 
@@ -320,10 +305,6 @@ public class LX {
 
     // Midi
     this.engine.midi.initialize();
-
-    // Tempo
-    this.tempo = new Tempo(this);
-    LX.initTimer.log("Tempo");
 
     // Add a default channel
     this.engine.addChannel(new LXPattern[] { new IteratorPattern(this) }).fader.setValue(1);

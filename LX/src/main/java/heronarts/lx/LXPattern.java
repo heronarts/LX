@@ -56,15 +56,11 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   protected LXPattern(LX lx) {
     super(lx);
     this.label.setDescription("The name of this pattern");
-    this.label.setValue(LXUtils.getComponentName(this, "Pattern"));
   }
 
-  public String getOscAddress() {
-    LXChannel channel = getChannel();
-    if (channel != null) {
-      return channel.getOscAddress() + "/pattern/" + (this.index + 1);
-    }
-    return null;
+  @Override
+  public String getPath() {
+    return LXChannel.PATH_PATTERN + "/" + (this.index + 1);
   }
 
   void setIndex(int index) {
@@ -270,8 +266,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   @Override
   public void load(LX lx, JsonObject obj) {
     super.load(lx, obj);
-    if (obj.has(KEY_AUTO_CYCLE)) {
-      this.autoCycleEligible.setValue(obj.get(KEY_AUTO_CYCLE).getAsBoolean());
-    }
+    LXSerializable.Utils.loadBoolean(this.autoCycleEligible, obj, KEY_AUTO_CYCLE);
   }
 }

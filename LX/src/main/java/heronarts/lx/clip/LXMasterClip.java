@@ -30,6 +30,6 @@ public class LXMasterClip extends LXClip {
   public LXMasterClip(LX lx, int index) {
     super(lx, lx.engine.masterChannel, index);
     lx.engine.crossfader.addListener(this.parameterRecorder);
-    registerComponent(lx.palette);
+    registerComponent(lx.engine.palette);
   }
 }

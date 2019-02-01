@@ -58,7 +58,6 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   protected LXEffect(LX lx) {
     super(lx);
     this.label.setDescription("The name of this effect");
-    this.label.setValue(LXUtils.getComponentName(this, "Effect"));
 
     this.enabled.addListener(new LXParameterListener() {
       public void onParameterChanged(LXParameter parameter) {
@@ -76,12 +75,9 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     addModulator(this.enabledDamped);
   }
 
-  public String getOscAddress() {
-    LXBus bus = getBus();
-    if (bus != null) {
-      return bus.getOscAddress() + "/effect/" + (this.index+1);
-    }
-    return null;
+  @Override
+  public String getPath() {
+    return "effect/" + (this.index+1);
   }
 
   /**
@@ -105,7 +101,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     return this.index;
   }
 
-  public LXEffect setBus(LXBus bus) {
+  final LXEffect setBus(LXBus bus) {
     setParent(bus);
     return this;
   }

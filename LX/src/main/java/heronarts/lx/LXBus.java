@@ -21,6 +21,7 @@ package heronarts.lx;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 
 import java.util.ArrayList;
@@ -119,6 +120,28 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   public LXBus removeClipListener(ClipListener listener) {
     this.clipListeners.remove(listener);
     return this;
+  }
+
+  public static final String PATH_EFFECT = "effect";
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals(PATH_EFFECT)) {
+      String effectId = parts[index+1];
+      if (effectId.matches("\\d+")) {
+        return this.effects.get(Integer.parseInt(effectId) - 1).handleOscMessage(message, parts, index+2);
+      }
+      for (LXEffect effect : this.effects) {
+        if (effect.getOscLabel().equals(effectId)) {
+          return effect.handleOscMessage(message, parts, index+2);
+        }
+      }
+      System.err.println("[OSC] Channel " + getLabel() + " does not have effect at path: " + effectId);
+      return false;
+    }
+    return super.handleOscMessage(message, parts, index);
+
   }
 
   /**

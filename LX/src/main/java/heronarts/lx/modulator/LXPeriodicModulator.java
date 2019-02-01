@@ -285,7 +285,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     double periodv = this.period.getValue();
     if (this.tempoSync.isOn()) {
       if (this.tempoLock.isOn()) {
-        double basis = this.lx.tempo.compositeBasis() * this.tempoMultiplier.getEnum().multiplier;
+        double basis = this.lx.engine.tempo.compositeBasis() * this.tempoMultiplier.getEnum().multiplier;
         this.basis = basis % 1.;
         int measure = (int) basis;
         if (this.restarted) {
@@ -296,7 +296,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
         }
         this.startMeasure = measure;
       } else {
-        this.basis += deltaMs / this.lx.tempo.period.getValue() * this.tempoMultiplier.getEnum().multiplier;
+        this.basis += deltaMs / this.lx.engine.tempo.period.getValue() * this.tempoMultiplier.getEnum().multiplier;
       }
     } else if (periodv == 0) {
       this.basis = 1;

@@ -668,12 +668,12 @@ public class APC40Mk2 extends LXMidiSurface {
     });
     sendNoteOn(0, DETAIL_VIEW, lx.engine.cueB.isOn() ? 1 : 0);
 
-    this.lx.tempo.enabled.addListener(new LXParameterListener() {
+    this.lx.engine.tempo.enabled.addListener(new LXParameterListener() {
       public void onParameterChanged(LXParameter parameter) {
-        sendNoteOn(0, METRONOME, lx.tempo.enabled.isOn() ? LED_ON : LED_OFF);
+        sendNoteOn(0, METRONOME, lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
       }
     });
-    sendNoteOn(0, METRONOME, lx.tempo.enabled.isOn() ? LED_ON : LED_OFF);
+    sendNoteOn(0, METRONOME, lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
 
   }
 
@@ -717,17 +717,17 @@ public class APC40Mk2 extends LXMidiSurface {
       return;
     case METRONOME:
       if (on) {
-        lx.tempo.enabled.toggle();
+        lx.engine.tempo.enabled.toggle();
       }
       return;
     case TAP_TEMPO:
-      lx.tempo.tap.setValue(on);
+      lx.engine.tempo.tap.setValue(on);
       return;
     case NUDGE_MINUS:
-      lx.tempo.nudgeDown.setValue(on);
+      lx.engine.tempo.nudgeDown.setValue(on);
       return;
     case NUDGE_PLUS:
-      lx.tempo.nudgeUp.setValue(on);
+      lx.engine.tempo.nudgeUp.setValue(on);
       return;
     }
 
@@ -892,16 +892,16 @@ public class APC40Mk2 extends LXMidiSurface {
     switch (number) {
     case TEMPO:
       if (this.shiftOn) {
-        this.lx.tempo.adjustBpm(.1 * cc.getRelative());
+        this.lx.engine.tempo.adjustBpm(.1 * cc.getRelative());
       } else {
-        this.lx.tempo.adjustBpm(cc.getRelative());
+        this.lx.engine.tempo.adjustBpm(cc.getRelative());
       }
       return;
     case CUE_LEVEL:
       if (this.shiftOn) {
-        this.lx.palette.color.saturation.incrementValue(cc.getRelative());
+        this.lx.engine.palette.color.saturation.incrementValue(cc.getRelative());
       } else {
-        this.lx.palette.color.hue.incrementValue(cc.getRelative(), true);
+        this.lx.engine.palette.color.hue.incrementValue(cc.getRelative(), true);
       }
       return;
     case CHANNEL_FADER:

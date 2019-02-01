@@ -26,6 +26,8 @@ import heronarts.lx.LXMappingEngine;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.midi.surface.LXMidiSurface;
+import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
@@ -35,6 +37,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiDevice;
 import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
@@ -44,7 +47,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
-public class LXMidiEngine implements LXSerializable {
+public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   public enum Channel {
     CH_1, CH_2, CH_3, CH_4, CH_5, CH_6, CH_7, CH_8, CH_9, CH_10, CH_11, CH_12, CH_13, CH_14, CH_15, CH_16, OMNI;
@@ -101,8 +104,6 @@ public class LXMidiEngine implements LXSerializable {
   private final List<LXMidiMapping> mutableMappings = new ArrayList<LXMidiMapping>();
   public final List<LXMidiMapping> mappings = Collections.unmodifiableList(this.mutableMappings);
 
-  private final LX lx;
-
   private class InitializationLock {
     private final List<Runnable> listeners = new ArrayList<Runnable>();
     private boolean ready = false;
@@ -115,7 +116,7 @@ public class LXMidiEngine implements LXSerializable {
     .setDescription("Whether the computer keyboard plays notes to MIDI tracks");
 
   public LXMidiEngine(LX lx) {
-    this.lx = lx;
+    addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
   }
 
   public void initialize() {
@@ -251,6 +252,41 @@ public class LXMidiEngine implements LXSerializable {
     this.threadSafeInputQueue.add(message);
   }
 
+  private static final String PATH_NOTE = "note";
+  private static final String PATH_CC = "cc";
+  private static final String PATH_PITCHBEND = "pitchbend";
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    try {
+      String path = parts[index];
+      if (path.equals(PATH_NOTE)) {
+        int pitch = message.getInt();
+        int velocity = message.getInt();
+        int channel = message.getInt();
+        dispatch(new MidiNoteOn(channel, pitch, velocity));
+        return true;
+      }
+      if (path.equals(PATH_CC)) {
+        int value = message.getInt();
+        int cc = message.getInt();
+        int channel = message.getInt();
+        dispatch(new MidiControlChange(channel, cc, value));
+        return true;
+      }
+      if (parts[index].equals(PATH_PITCHBEND)) {
+        int msb = message.getInt();
+        int channel = message.getInt();
+        dispatch(new MidiPitchBend(channel, msb));
+        return true;
+      }
+    } catch (InvalidMidiDataException imdx) {
+      System.err.println("[OSC] Invalid MIDI message: " + imdx.getLocalizedMessage());
+      return false;
+    }
+    return super.handleOscMessage(message, parts, index);
+  }
+
   private void createMapping(LXShortMessage message) {
     // Is there a control parameter selected?
     LXParameter parameter = lx.engine.mapping.getControlTarget();
@@ -363,12 +399,12 @@ public class LXMidiEngine implements LXSerializable {
       // Handle tempo sync messages
       if (message instanceof MidiBeat &&
           input.syncEnabled.isOn() &&
-          this.lx.tempo.clockSource.getObject() == Tempo.ClockSource.MIDI) {
+          this.lx.engine.tempo.clockSource.getObject() == Tempo.ClockSource.MIDI) {
         MidiBeat beat = (MidiBeat) message;
-        this.lx.tempo.trigger(((MidiBeat) message).getBeat());
+        this.lx.engine.tempo.trigger(((MidiBeat) message).getBeat());
         double period = beat.getPeriod();
         if (period != MidiBeat.PERIOD_UNKNOWN) {
-          this.lx.tempo.setPeriod(period);
+          this.lx.engine.tempo.setPeriod(period);
         }
       }
     }
@@ -392,7 +428,6 @@ public class LXMidiEngine implements LXSerializable {
   private static final String KEY_INPUTS = "inputs";
   private static final String KEY_SURFACES = "surfaces";
   private static final String KEY_MAPPINGS = "mapping";
-  private static final String KEY_COMPUTER_KEYBOARD = "keyboard";
 
   private final List<JsonObject> rememberMidiInputs = new ArrayList<JsonObject>();
   private final List<JsonObject> rememberMidiSurfaces = new ArrayList<JsonObject>();
@@ -400,6 +435,7 @@ public class LXMidiEngine implements LXSerializable {
   @Override
   public void save(LX lx, JsonObject object) {
     waitUntilReady();
+    super.save(lx, object);
     JsonArray inputs = new JsonArray();
     for (LXMidiInput input : this.mutableInputs) {
       if (input.enabled.isOn()) {
@@ -422,15 +458,15 @@ public class LXMidiEngine implements LXSerializable {
     object.add(KEY_INPUTS, inputs);
     object.add(KEY_SURFACES, surfaces);
     object.add(KEY_MAPPINGS, LXSerializable.Utils.toArray(lx, this.mutableMappings));
-    object.addProperty(KEY_COMPUTER_KEYBOARD, this.computerKeyboardEnabled.isOn());
   }
 
   @Override
   public void load(final LX lx, final JsonObject object) {
-    LXSerializable.Utils.loadBoolean(this.computerKeyboardEnabled, object, KEY_COMPUTER_KEYBOARD);
     this.rememberMidiInputs.clear();
     this.rememberMidiSurfaces.clear();
     this.mutableMappings.clear();
+    super.load(lx, object);
+
     if (object.has(KEY_MAPPINGS)) {
       JsonArray mappings = object.getAsJsonArray(KEY_MAPPINGS);
       for (JsonElement element : mappings) {

@@ -23,11 +23,13 @@ import heronarts.lx.blend.AddBlend;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.color.LXPalette;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutputGroup;
 import heronarts.lx.parameter.BooleanParameter;
@@ -44,10 +46,7 @@ import heronarts.lx.structure.LXFixture;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -75,9 +74,13 @@ import com.google.gson.JsonObject;
  *
  * The result of all this generates a display buffer of node values.
  */
-public class LXEngine extends LXComponent implements LXOscComponent, LXModulationComponent {
+public class LXEngine extends LXComponent implements LXOscComponent, LXModulationContainer {
 
   private static final int MAX_SCENES = 5;
+
+  public final LXPalette palette;
+
+  public final Tempo tempo;
 
   public final LXMidiEngine midi;
 
@@ -94,7 +97,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private final List<LXLoopTask> loopTasks = new ArrayList<LXLoopTask>();
   private final List<Runnable> threadSafeTaskQueue = Collections.synchronizedList(new ArrayList<Runnable>());
   private final List<Runnable> engineThreadTaskQueue = new ArrayList<Runnable>();
-  private final Map<String, LXComponent> components = new HashMap<String, LXComponent>();
 
   private final List<LXChannelBus> mutableChannels = new ArrayList<LXChannelBus>();
   public final List<LXChannelBus> channels = Collections.unmodifiableList(this.mutableChannels);
@@ -171,10 +173,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public class Output extends LXOutputGroup implements LXOscComponent {
     Output(LX lx) {
       super(lx);
-    }
-
-    public String getOscAddress() {
-      return "/lx/output";
     }
   }
 
@@ -376,12 +374,20 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     });
     LX.initTimer.log("Engine: Blends");
 
+    // Color palette
+    addChild("palette", this.palette = new LXPalette(lx));
+    LX.initTimer.log("Engine: Palette");
+
+    // Tempo engine
+    addChild("tempo", this.tempo = new Tempo(lx));
+    LX.initTimer.log("Engine: Tempo");
+
     // Modulation matrix
-    this.modulation = new LXModulationEngine(lx, this);
+    addChild("modulation", this.modulation = new LXModulationEngine(lx));
     LX.initTimer.log("Engine: Modulation");
 
     // Master channel
-    this.masterChannel = new LXMasterChannel(lx);
+    addChild("master", this.masterChannel = new LXMasterChannel(lx));
     LX.initTimer.log("Engine: Master Channel");
 
     // Cue setup
@@ -424,18 +430,19 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
 
     // Master output
-    this.output = new Output(lx);
+    addChild("output", this.output = new Output(lx));
     LX.initTimer.log("Engine: Output");
 
     // Midi engine
-    this.midi = new LXMidiEngine(lx);
+    addChild("midi", this.midi = new LXMidiEngine(lx));
     LX.initTimer.log("Engine: Midi");
 
-    this.audio = new LXAudioEngine(lx);
+    // Audio engine
+    addChild("audio", this.audio = new LXAudioEngine(lx));
     LX.initTimer.log("Engine: Audio");
 
     // OSC engine
-    this.osc = new LXOscEngine(lx);
+    addChild("osc", this.osc = new LXOscEngine(lx));
     LX.initTimer.log("Engine: Osc");
 
     // Script engine
@@ -480,8 +487,46 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   @Override
-  public String getOscAddress() {
-    return "/lx/engine";
+  public String getPath() {
+    return "lx";
+  }
+
+  public static final String PATH_CHANNEL = "channel";
+  public static final String PATH_FOCUSED = "focused";
+  public static final String PATH_MASTER = "master";
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals(PATH_CHANNEL)) {
+      String channelIndex = parts[index+1];
+      LXBus channel = null;
+      if (channelIndex.equals(PATH_FOCUSED)) {
+        channel = getFocusedChannel();
+      } else if (channelIndex.equals(PATH_MASTER)) {
+        channel = this.masterChannel;
+      } else if (channelIndex.matches("\\d+")) {
+        channel = this.channels.get(Integer.parseInt(channelIndex) - 1);
+      } else {
+        for (LXChannelBus bus : this.channels) {
+          if (bus.getOscLabel().equals(channelIndex)) {
+            channel = bus;
+            break;
+          }
+        }
+      }
+      if (channel == null) {
+        System.err.println("[OSC] Engine has no channel at path: " + channelIndex);
+        return false;
+      } else {
+        if (channel instanceof LXChannel) {
+          return ((LXChannel)channel).handleOscMessage(message, parts, index+2);
+        } else {
+          return channel.handleOscMessage(message, parts, index+2);
+        }
+      }
+    }
+    return super.handleOscMessage(message, parts, index);
   }
 
   public LXEngine setInputDispatch(Dispatch inputDispatch) {
@@ -703,12 +748,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * Register a component with the engine. It will be saved and loaded.
    *
-   * @param key Unique path key for saving and loading component
+   * @param path Unique path key for saving and loading component
    * @param component Component
    * @return this
    */
-  public LXEngine registerComponent(String key, LXComponent component) {
-    this.components.put(key, component);
+  public LXEngine registerComponent(String path, LXComponent component) {
+    addChild(path, component);
     return this;
   }
 
@@ -1252,7 +1297,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   @Override
-  public LXModulationEngine getModulation() {
+  public LXModulationEngine getModulationEngine() {
     return this.modulation;
   }
 
@@ -1367,7 +1412,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.buffer.render.setModel(this.lx.model);
 
     // Run tempo and audio, always using real-time
-    this.lx.tempo.loop(deltaMs);
+    this.lx.engine.tempo.loop(deltaMs);
     this.audio.loop(deltaMs);
 
     // Mutate by master speed for everything else
@@ -1377,7 +1422,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.modulation.loop(deltaMs);
 
     // Run the color control
-    this.lx.palette.loop(deltaMs);
+    this.lx.engine.palette.loop(deltaMs);
 
     // Run top-level loop tasks
     for (LXLoopTask loopTask : this.loopTasks) {
@@ -1667,31 +1712,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     frame.copyFrom(this.buffer.render);
   }
 
-  private static final String KEY_PALETTE = "palette";
   private static final String KEY_CHANNELS = "channels";
-  private static final String KEY_MASTER = "master";
-  private static final String KEY_TEMPO = "tempo";
-  private static final String KEY_AUDIO = "audio";
-  private static final String KEY_COMPONENTS = "components";
-  private static final String KEY_OUTPUT = "output";
-  private static final String KEY_MODULATION = "modulation";
-  private static final String KEY_OSC = "osc";
-  private static final String KEY_MIDI = "midi";
-
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    obj.add(KEY_PALETTE, LXSerializable.Utils.toObject(lx, this.lx.palette));
     obj.add(KEY_CHANNELS, LXSerializable.Utils.toArray(lx, this.mutableChannels));
-    obj.add(KEY_MASTER, LXSerializable.Utils.toObject(lx, this.masterChannel));
-    obj.add(KEY_TEMPO, LXSerializable.Utils.toObject(lx, this.lx.tempo));
-    obj.add(KEY_AUDIO, LXSerializable.Utils.toObject(lx, this.audio));
-    obj.add(KEY_OUTPUT, LXSerializable.Utils.toObject(lx, this.output));
-    obj.add(KEY_COMPONENTS, LXSerializable.Utils.toObject(lx, this.components));
-    obj.add(KEY_MODULATION, LXSerializable.Utils.toObject(lx, this.modulation));
-    obj.add(KEY_OSC, LXSerializable.Utils.toObject(lx, this.osc));
-    obj.add(KEY_MIDI, LXSerializable.Utils.toObject(lx, this.midi));
   }
 
   @Override
@@ -1706,9 +1732,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     for (int i = this.mutableChannels.size() - 1; i >= 0; --i) {
       removeChannel(this.mutableChannels.get(i));
     }
-
-    // Master channel settings
-    this.masterChannel.load(lx, obj.has(KEY_MASTER) ? obj.getAsJsonObject(KEY_MASTER) : new JsonObject());
 
     // Add the new channels
     if (obj.has(KEY_CHANNELS)) {
@@ -1728,48 +1751,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       addChannel().fader.setValue(1);
     }
 
-    // Palette
-    if (obj.has(KEY_PALETTE)) {
-      lx.palette.load(lx, obj.getAsJsonObject(KEY_PALETTE));
-    }
-
-    // Tempo
-    if (obj.has(KEY_TEMPO)) {
-      lx.tempo.load(lx, obj.getAsJsonObject(KEY_TEMPO));
-    }
-
-    // Audio setup
-    if (obj.has(KEY_AUDIO)) {
-      this.audio.load(lx, obj.getAsJsonObject(KEY_AUDIO));
-    }
-
-    // Generic components
-    if (obj.has(KEY_COMPONENTS)) {
-      JsonObject componentsObj = obj.getAsJsonObject(KEY_COMPONENTS);
-      for (String key : this.components.keySet()) {
-        if (componentsObj.has(key)) {
-          this.components.get(key).load(lx, componentsObj.getAsJsonObject(key));
-        }
-      }
-    }
-
-    // Output setup
-    if (obj.has(KEY_OUTPUT)) {
-      this.output.load(lx, obj.getAsJsonObject(KEY_OUTPUT));
-    }
-
-    // Modulation matrix
-    this.modulation.load(lx, obj.has(KEY_MODULATION) ? obj.getAsJsonObject(KEY_MODULATION) : new JsonObject());
-
-    // OSC
-    if (obj.has(KEY_OSC)) {
-      this.osc.load(lx, obj.getAsJsonObject(KEY_OSC));
-    }
-
-    // Midi
-    this.midi.load(lx, obj.has(KEY_MIDI) ? obj.getAsJsonObject(KEY_MIDI) : new JsonObject());
-
-    // Parameters etc.
+    // Load all components
     super.load(lx, obj);
 
     // Notify all the active patterns
