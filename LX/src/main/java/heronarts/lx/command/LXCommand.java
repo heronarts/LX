@@ -403,6 +403,125 @@ public abstract class LXCommand {
 
     }
 
+    public static class RemoveSelectedChannels extends LXCommand {
+
+      private final List<RemoveChannel> removedChannels =
+        new ArrayList<RemoveChannel>();
+
+      @Override
+      public String getDescription() {
+        return "Delete Channels";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        // Serialize a list of all the channels that will end up removed, so we can undo properly
+        List<LXChannelBus> removeChannels = new ArrayList<LXChannelBus>();
+        for (LXChannelBus channel : lx.engine.channels) {
+          if (channel.selected.isOn() && !removeChannels.contains(channel.getGroup())) {
+            removeChannels.add(channel);
+          }
+        }
+        for (LXChannelBus removeChannel : removeChannels) {
+          this.removedChannels.add(new RemoveChannel(removeChannel));
+        }
+        lx.engine.removeSelectedChannels();
+      }
+
+      @Override
+      public void undo(LX lx) {
+        for (RemoveChannel removedChannel : this.removedChannels) {
+          removedChannel.undo(lx);
+        }
+      }
+
+    }
+
+    public static class Ungroup extends LXCommand {
+      private final ComponentReference<LXGroup> group;
+      private final int index;
+
+      private final List<ComponentReference<LXChannel>> groupChannels =
+        new ArrayList<ComponentReference<LXChannel>>();
+
+      public Ungroup(LXGroup group) {
+        this.group = new ComponentReference<LXGroup>(group);
+        this.index = group.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Ungroup Channels";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        for (LXChannel channel : this.group.get().channels) {
+          this.groupChannels.add(new ComponentReference<LXChannel>(channel));
+        }
+        this.group.get().ungroup();
+      }
+
+      @Override
+      public void undo(LX lx) {
+        LXGroup group = lx.engine.addGroup(this.index, false);
+        for (ComponentReference<LXChannel> channel : this.groupChannels) {
+          group.addChannel(channel.get());
+        }
+      }
+    }
+
+    public static class UngroupChannel extends LXCommand {
+
+      private final ComponentReference<LXGroup> group;
+      private final ComponentReference<LXChannel> channel;
+      private final int index;
+
+      public UngroupChannel(LXChannel channel) {
+        this.group = new ComponentReference<LXGroup>(channel.getGroup());
+        this.channel = new ComponentReference<LXChannel>(channel);
+        this.index = channel.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Ungroup Channel";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        lx.engine.ungroup(this.channel.get());
+
+      }
+
+      @Override
+      public void undo(LX lx) {
+        lx.engine.group(this.group.get(), this.channel.get(), this.index);
+      }
+
+    }
+
+    public static class GroupSelectedChannels extends LXCommand {
+
+      private ComponentReference<LXGroup> group;
+
+      @Override
+      public String getDescription() {
+        return "Add Group";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.group = new ComponentReference<LXGroup>(lx.engine.addGroup());
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.group.get().ungroup();
+      }
+
+    }
+
   }
 
 

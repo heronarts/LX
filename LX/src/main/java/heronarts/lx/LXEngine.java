@@ -956,6 +956,23 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return channel;
   }
 
+  public LXEngine group(LXGroup group, LXChannel channel, int index) {
+    if (channel.getGroup() != null) {
+      throw new IllegalStateException("Cannot group channel that is already in another group");
+    }
+    if (index <= group.getIndex() || (index > group.getIndex() + group.channels.size() + 1)) {
+      throw new IllegalArgumentException("Invalid index specified to group channel: " + index);
+    }
+    this.mutableChannels.remove(channel);
+    this.mutableChannels.add(index, channel);
+    _reindexChannels();
+    group.addChannel(channel);
+    for (Listener listener : this.listeners) {
+      listener.channelMoved(this, channel);
+    }
+    return this;
+  }
+
   public LXEngine ungroup(LXChannel channel) {
     boolean focused = this.focusedChannel.getValuei() == channel.index;
     LXGroup group = channel.getGroup();
@@ -978,11 +995,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return addGroup(true);
   }
 
-  private LXGroup addGroup(boolean fromSelection) {
+  public LXGroup addGroup(boolean fromSelection) {
     return addGroup(-1, fromSelection);
   }
 
-  private LXGroup addGroup(int index, boolean fromSelection) {
+  public LXGroup addGroup(int index, boolean fromSelection) {
     if (index > this.mutableChannels.size()) {
       throw new IllegalArgumentException("Invalid group index: " + index);
     }
