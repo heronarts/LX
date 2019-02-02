@@ -115,17 +115,17 @@ public class LXUtils {
     return simple;
   }
 
-  public static String getComponentName(LXComponent component) {
-    Class<? extends LXComponent> cls = component.getClass().getSuperclass().asSubclass(LXComponent.class);
+  public static String getComponentName(Class<? extends LXComponent> cls) {
     String suffix = "";
-    while (cls != null) {
-      if (cls.getSimpleName().startsWith("LX")) {
-        suffix = cls.getSimpleName().substring(2);
+    Class<? extends LXComponent> generic = cls;
+    while (generic != null) {
+      if (generic.getSimpleName().startsWith("LX")) {
+        suffix = generic.getSimpleName().substring(2);
         break;
       }
-      cls = cls.getSuperclass().asSubclass(LXComponent.class);
+      generic = generic.getSuperclass().asSubclass(LXComponent.class);
     }
-    return getComponentName(component, suffix);
+    return getComponentName(cls, suffix);
   }
 
   public static String getComponentName(LXComponent component, String suffix) {

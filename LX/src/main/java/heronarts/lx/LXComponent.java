@@ -176,7 +176,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     if (lx != null) {
       lx.componentRegistry.register(this);
     }
-    this.label.setValue((label != null) ? label : LXUtils.getComponentName(this));
+    this.label.setValue((label != null) ? label : LXUtils.getComponentName(getClass()));
     addParameter("label", this.label);
   }
 
