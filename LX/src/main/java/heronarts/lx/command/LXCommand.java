@@ -77,17 +77,30 @@ public abstract class LXCommand {
 
   protected static class ParameterReference<T extends LXParameter> {
 
+    private final T rawParameter;
     private final ComponentReference<LXComponent> component;
     private final String parameterPath;
 
-    protected ParameterReference(LXParameter parameter) {
-      this.component = new ComponentReference<LXComponent>(parameter.getComponent());
-      this.parameterPath = parameter.getPath();
+    protected ParameterReference(T parameter) {
+      LXComponent component = parameter.getComponent();
+      if (component != null) {
+        // If a parameter is registered to a component, then we keep its location
+        // by reference. This way, if a series of other undo or redo actions destroys
+        // and restores the object, we'll still point to the correct place
+        this.component = new ComponentReference<LXComponent>(component);
+        this.parameterPath = parameter.getPath();
+        this.rawParameter = null;
+      } else {
+        // For unregistered parameters, store a raw handle
+        this.rawParameter = parameter;
+        this.component = null;
+        this.parameterPath = null;
+      }
     }
 
     @SuppressWarnings("unchecked")
     public T get() {
-      return (T) this.component.get().getParameter(this.parameterPath);
+      return (this.rawParameter != null) ? this.rawParameter : (T) this.component.get().getParameter(this.parameterPath);
     }
   }
 
@@ -119,34 +132,22 @@ public abstract class LXCommand {
 
     public static class SetNormalized extends LXCommand {
 
-      private final LXNormalizedParameter rawParameter;
       private final ParameterReference<LXNormalizedParameter> parameter;
       private final LXNormalizedValue value;
 
       public SetNormalized(LXNormalizedParameter parameter) {
-        if (parameter.getComponent() != null) {
-          this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
-          this.rawParameter = null;
-        } else {
-          // It's nice for unregistered parameters in the UI to still be operated on...
-          this.rawParameter = parameter;
-          this.parameter = null;
-        }
+        this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
         this.value = new LXNormalizedValue(parameter);
-      }
-
-      private LXNormalizedParameter getParameter() {
-        return (this.rawParameter != null) ? this.rawParameter : this.parameter.get();
       }
 
       @Override
       public void undo(LX lx) {
-        getParameter().setNormalized(this.value.getValue());
+        this.parameter.get().setNormalized(this.value.getValue());
       }
 
       @Override
       public String getDescription() {
-        return "Change " + getParameter().getLabel();
+        return "Change " + this.parameter.get().getLabel();
       }
 
       @Override
