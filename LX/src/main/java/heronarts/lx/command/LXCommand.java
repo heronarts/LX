@@ -119,22 +119,34 @@ public abstract class LXCommand {
 
     public static class SetNormalized extends LXCommand {
 
+      private final LXNormalizedParameter rawParameter;
       private final ParameterReference<LXNormalizedParameter> parameter;
       private final LXNormalizedValue value;
 
       public SetNormalized(LXNormalizedParameter parameter) {
-        this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
+        if (parameter.getComponent() != null) {
+          this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
+          this.rawParameter = null;
+        } else {
+          // It's nice for unregistered parameters in the UI to still be operated on...
+          this.rawParameter = parameter;
+          this.parameter = null;
+        }
         this.value = new LXNormalizedValue(parameter);
+      }
+
+      private LXNormalizedParameter getParameter() {
+        return (this.rawParameter != null) ? this.rawParameter : this.parameter.get();
       }
 
       @Override
       public void undo(LX lx) {
-        this.parameter.get().setNormalized(this.value.getValue());
+        getParameter().setNormalized(this.value.getValue());
       }
 
       @Override
       public String getDescription() {
-        return "Change " + this.parameter.get().getLabel();
+        return "Change " + getParameter().getLabel();
       }
 
       @Override
