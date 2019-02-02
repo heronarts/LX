@@ -30,9 +30,11 @@ import java.util.List;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXBus;
 import heronarts.lx.LXChannel;
 import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXEffect;
 import heronarts.lx.LXGroup;
 import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
@@ -294,8 +296,108 @@ public abstract class LXCommand {
       public void undo(LX lx) {
         this.channel.get().movePattern(this.pattern.get(), this.fromIndex);
       }
-
     }
+
+    public static class AddEffect extends LXCommand {
+
+      private final ComponentReference<LXBus> channel;
+      private final Class<? extends LXEffect> effectClass;
+      private ComponentReference<LXEffect> effect = null;
+
+      public AddEffect(LXBus channel, Class<? extends LXEffect> effectClass) {
+        this.channel = new ComponentReference<LXBus>(channel);
+        this.effectClass = effectClass;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Effect";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        LXEffect instance = lx.instantiateEffect(this.effectClass);
+        if (instance != null) {
+          this.channel.get().addEffect(instance);
+          this.effect = new ComponentReference<LXEffect>(instance);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) {
+        if (this.effect== null) {
+          throw new IllegalStateException("Effect was not successfully added, cannot undo");
+        }
+        this.channel.get().removeEffect(this.effect.get());
+      }
+    }
+
+    public static class RemoveEffect extends LXCommand {
+
+      private final ComponentReference<LXBus> channel;
+      private final ComponentReference<LXEffect> effect;
+      private final JsonObject effectObj;
+      private final int effectIndex;
+
+      public RemoveEffect(LXBus channel, LXEffect effect) {
+        this.channel = new ComponentReference<LXBus>(channel);
+        this.effect = new ComponentReference<LXEffect>(effect);
+        this.effectObj = LXSerializable.Utils.toObject(effect);
+        this.effectIndex = effect.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Effect";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.channel.get().removeEffect(this.effect.get());
+      }
+
+      @Override
+      public void undo(LX lx) {
+        LXBus channel = this.channel.get();
+        LXEffect effect = lx.instantiateEffect(this.effectObj.get(LXComponent.KEY_CLASS).getAsString());
+        if (effect != null) {
+          effect.load(lx, effectObj);
+          channel.addEffect(effect, this.effectIndex);
+        }
+      }
+    }
+
+    public static class MoveEffect extends LXCommand {
+
+      private final ComponentReference<LXBus> channel;
+      private final ComponentReference<LXEffect> effect;
+      private final int fromIndex;
+      private final int toIndex;
+
+      public MoveEffect(LXBus channel, LXEffect effect, int toIndex) {
+        this.channel = new ComponentReference<LXBus>(channel);
+        this.effect = new ComponentReference<LXEffect>(effect);
+        this.fromIndex = effect.getIndex();
+        this.toIndex = toIndex;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Effect";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.channel.get().moveEffect(this.effect.get(), this.toIndex);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.channel.get().moveEffect(this.effect.get(), this.fromIndex);
+      }
+    }
+
+
   }
 
   public static class Mixer {

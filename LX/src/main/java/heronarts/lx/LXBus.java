@@ -190,9 +190,19 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   public final LXBus addEffect(LXEffect effect) {
-    this.mutableEffects.add(effect);
+    return addEffect(effect, -1);
+  }
+
+  public final LXBus addEffect(LXEffect effect, int index) {
+    if (index > this.mutableEffects.size()) {
+      throw new IllegalArgumentException("Illegal effect index: " + index);
+    }
+    if (index < 0) {
+      index = this.mutableEffects.size();
+    }
+    this.mutableEffects.add(index, effect);
     effect.setBus(this);
-    effect.setIndex(this.mutableEffects.size() - 1);
+    _reindexEffects();
     for (Listener listener : this.listeners) {
       listener.effectAdded(this, effect);
     }
@@ -216,13 +226,20 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     return this;
   }
 
-  public LXBus moveEffect(LXEffect effect, int index) {
-    this.mutableEffects.remove(effect);
-    this.mutableEffects.add(index, effect);
+  private void _reindexEffects() {
     int i = 0;
     for (LXEffect e : this.mutableEffects) {
       e.setIndex(i++);
     }
+  }
+
+  public LXBus moveEffect(LXEffect effect, int index) {
+    if (index < 0 || index >= this.mutableEffects.size()) {
+      throw new IllegalArgumentException("Cannot move effect to invalid index: " + index);
+    }
+    this.mutableEffects.remove(effect);
+    this.mutableEffects.add(index, effect);
+    _reindexEffects();
     for (Listener listener : this.listeners) {
       listener.effectMoved(this, effect);
     }
