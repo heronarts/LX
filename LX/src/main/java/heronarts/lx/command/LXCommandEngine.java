@@ -78,6 +78,14 @@ public class LXCommandEngine {
     return this.redoStack.empty() ? null : this.redoStack.peek();
   }
 
+  public LXCommandEngine clear() {
+    this.undoStack.clear();
+    this.redoStack.clear();
+    this.undoChanged.bang();
+    this.redoChanged.bang();
+    return this;
+  }
+
   /**
    * Undoes the last command on the undo stack, if there is any. If the
    * undo stack is empty then this is a no-op.
@@ -90,14 +98,13 @@ public class LXCommandEngine {
       try {
         command.undo(this.lx);
         this.redoStack.push(command);
+        this.undoChanged.bang();
+        this.redoChanged.bang();
       } catch (Exception x) {
         System.err.println("Unhandled exception on undo, bad internal state?");
         x.printStackTrace();
-        this.undoStack.clear();
-        this.redoStack.clear();
+        clear();
       }
-      this.undoChanged.bang();
-      this.redoChanged.bang();
     }
     return this;
   }
@@ -113,14 +120,13 @@ public class LXCommandEngine {
       try {
         command.perform(this.lx);
         this.undoStack.push(command);
+        this.undoChanged.bang();
+        this.redoChanged.bang();
       } catch (Exception x) {
         System.err.println("Unhandled exception on redo, bad internal state?");
         x.printStackTrace();
-        this.undoStack.clear();
-        this.redoStack.clear();
+        clear();
       }
-      this.undoChanged.bang();
-      this.redoChanged.bang();
     }
     return this;
   }

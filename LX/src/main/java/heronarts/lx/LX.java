@@ -966,12 +966,6 @@ public class LX {
     }
   }
 
-  public void newProject() {
-    this.componentRegistry.resetProject();
-    this.engine.load(this, new JsonObject());
-    setProject(null, ProjectListener.Change.NEW);
-  }
-
   public LX registerExternal(String key, LXSerializable serializable) {
     if (this.externals.containsKey(key)) {
       throw new IllegalStateException("Duplicate external for key: " + key + " (already: " + serializable + ")");
@@ -1000,13 +994,24 @@ public class LX {
     return max;
   }
 
+  private void closeProject() {
+    this.command.clear();
+    this.componentRegistry.resetProject();
+  }
+
+  public void newProject() {
+    closeProject();
+    this.engine.load(this, new JsonObject());
+    setProject(null, ProjectListener.Change.NEW);
+  }
+
   public void openProject(File file) {
     try {
       FileReader fr = null;
       try {
         fr = new FileReader(file);
         JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
-        this.componentRegistry.resetProject();
+        closeProject();
         this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
         LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL);
         this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
