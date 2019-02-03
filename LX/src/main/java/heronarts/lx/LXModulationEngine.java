@@ -276,7 +276,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
           addModulation(modulation);
           modulation.load(lx, modulationObj);
         } catch (Exception x) {
-          System.err.println(x.getLocalizedMessage());
+          System.err.println("Could to load modulation");
+          x.printStackTrace();
         }
       }
     }
@@ -289,7 +290,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
           addTrigger(trigger);
           trigger.load(lx, triggerObj);
         } catch (Exception x) {
-          System.err.println(x.getLocalizedMessage());
+          System.err.println("Could to load trigger mapping");
+          x.printStackTrace();
         }
       }
     }
