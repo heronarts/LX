@@ -174,7 +174,7 @@ public abstract class LXCommand {
 
       private final ParameterReference<LXParameter> genericParameter;
       private final double originalGenericValue;
-      private final double newGenericValue;
+      private double newGenericValue;
 
       public SetValue(DiscreteParameter parameter, int value) {
         this.isDiscrete = true;
@@ -211,6 +211,14 @@ public abstract class LXCommand {
 
       private LXParameter getParameter() {
         return this.isDiscrete ? this.discreteParameter.get() : this.genericParameter.get();
+      }
+
+      public SetValue update(double value) {
+        if (this.isDiscrete) {
+          throw new IllegalStateException("Cannot update discrete parameter with double value");
+        }
+        this.newGenericValue = value;
+        return this;
       }
 
       @Override
