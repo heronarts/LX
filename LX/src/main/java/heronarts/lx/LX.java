@@ -1012,6 +1012,7 @@ public class LX {
         fr = new FileReader(file);
         JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
         closeProject();
+        this.componentRegistry.loading = true;
         this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
         LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL);
         this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
@@ -1023,6 +1024,7 @@ public class LX {
             }
           }
         }
+        this.componentRegistry.loading = false;
         setProject(file, ProjectListener.Change.OPEN);
         System.out.println("Project loaded successfully from " + file.toString());
       } catch (IOException iox) {
@@ -1040,7 +1042,7 @@ public class LX {
     }
   }
 
-  protected <T extends LXComponent> T instantiateComponent(String className, Class<T> type) {
+  public <T extends LXComponent> T instantiateComponent(String className, Class<T> type) {
     try {
       Class<? extends T> cls = Class.forName(className).asSubclass(type);
       return instantiateComponent(cls, type);
@@ -1051,7 +1053,7 @@ public class LX {
     return null;
   }
 
-  protected <T extends LXComponent> T instantiateComponent(Class<? extends T> cls, Class<T> type) {
+  public <T extends LXComponent> T instantiateComponent(Class<? extends T> cls, Class<T> type) {
     try {
       try {
         return cls.getConstructor(LX.class).newInstance(this);

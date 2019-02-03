@@ -18,21 +18,14 @@
 
 package heronarts.lx;
 
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.Transferable;
-import java.io.StringWriter;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.stream.JsonWriter;
-
-import heronarts.lx.clipboard.LXClipboardItem;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.osc.LXOscComponent;
@@ -53,7 +46,7 @@ import heronarts.lx.parameter.StringParameter;
 /**
  * Utility base class for objects that have parameters.
  */
-public abstract class LXComponent implements LXParameterListener, LXSerializable, LXClipboardItem {
+public abstract class LXComponent implements LXParameterListener, LXSerializable {
 
   /**
    * Marker interface for components which can have their label changed
@@ -88,6 +81,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
 
   static class Registry {
     private int idCounter = ID_ENGINE+1;
+    boolean loading = false;
     private final Map<Integer, LXComponent> components = new HashMap<Integer, LXComponent>();
     private final Map<Integer, LXComponent> projectIdMap = new HashMap<Integer, LXComponent>();
 
@@ -133,6 +127,9 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
         return;
       }
       if (this.components.containsKey(id)) {
+        if (!this.loading) {
+          throw new IllegalStateException("ID collision outside of project load: " + component + " trying to clobber " + this.components.get(id));
+        }
         // Check for an ID collision, which can happen if the engine
         // has new components, for instance. In that case record in a map
         // what the IDs in the project file refer to.
@@ -323,6 +320,10 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     return this.label.getString();
   }
 
+  public static String getCanonicalPath(LXParameter p) {
+    return p.getComponent().getCanonicalPath() + "/" + p.getPath();
+  }
+
   public static String getCanonicalLabel(LXParameter p, LXComponent root) {
     LXComponent component = p.getComponent();
     if (component != null && component != root) {
@@ -341,18 +342,25 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
 
   @Override
   public String toString() {
-    return getClass().getSimpleName() + "[" + getCanonicalPath() + "]";
+    String path = "";
+    try {
+      path = "[" + getCanonicalPath() + "]";
+    } catch (Exception x) {}
+    return getClass().getSimpleName() + path;
   }
 
   public String toString(LXComponent root) {
-    return getClass().getSimpleName() + "[" + getCanonicalPath(root) + "]";
+    String path = "";
+    try {
+      path = "[" + getCanonicalPath() + "]";
+    } catch (Exception x) {}
+    return getClass().getSimpleName() + path;
   }
 
   public void dispose() {
     if (this.lx == null) {
       throw new IllegalStateException("LXComponent never had lx reference set: " + this);
     }
-    this.lx.clipboard.clearItem(this);
     // TODO(mcslee): dispose of all children?? remove LXModulationContainer??
     if (this instanceof LXModulationContainer) {
       ((LXModulationContainer) this).getModulationEngine().dispose();
@@ -467,38 +475,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   private final static String KEY_CHILDREN = "children";
   public static final String KEY_COMPONENT_ID = "componentId";
   public static final String KEY_PARAMETER_PATH = "parameterPath";
-
-  @Override
-  public LXComponent duplicate() {
-    LXComponent copy = null;
-    try {
-      // TODO(mcslee): Consider deep-copying LXModulator components, or with layers, etc...
-      // maybe another way to go is to save/load them?
-      copy = this.lx.instantiateComponent(getClass(), LXComponent.class);
-      copy.copyParameters(this);
-    } catch (Exception x) {
-      System.err.println("Exception in LXComponent.duplicate: " + x.getLocalizedMessage());
-    }
-    return copy;
-  }
-
-  @Override
-  public Transferable getSystemClipboardItem() {
-    try {
-      JsonObject obj = new JsonObject();
-      save(this.lx, obj);
-      StringWriter io = new StringWriter();
-      JsonWriter writer = new JsonWriter(io);
-      writer.setIndent("  ");
-      new GsonBuilder().create().toJson(obj, writer);
-      writer.close();
-      return new StringSelection(io.toString());
-    } catch (Exception x) {
-      System.err.println("Error serializing LXComponent for system clipboard");
-      x.printStackTrace();
-    }
-    return null;
-  }
+  public static final String KEY_PATH = "path";
 
   @Override
   public void save(LX lx, JsonObject obj) {
@@ -525,7 +502,6 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
 
     // Serialize children
     JsonObject children = LXSerializable.Utils.toObject(lx, this.children);
-
     obj.addProperty(KEY_ID, this.id);
     obj.addProperty(KEY_CLASS, getClass().getName());
     obj.addProperty(KEY_MODULATION_COLOR, this.modulationColor.getColor());
