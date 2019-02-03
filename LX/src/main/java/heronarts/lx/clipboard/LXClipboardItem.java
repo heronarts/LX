@@ -22,7 +22,8 @@ import java.awt.datatransfer.Transferable;
 
 public interface LXClipboardItem {
 
-  public LXClipboardItem duplicate();
+  public Class<?> getComponentClass();
 
   public Transferable getSystemClipboardItem();
+
 }

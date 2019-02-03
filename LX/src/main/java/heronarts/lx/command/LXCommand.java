@@ -415,10 +415,16 @@ public abstract class LXCommand {
       private final ComponentReference<LXChannel> channel;
       private final Class<? extends LXPattern> patternClass;
       private ComponentReference<LXPattern> pattern = null;
+      private final JsonObject patternObject;
 
       public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass) {
+        this(channel, patternClass, null);
+      }
+
+      public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
         this.channel = new ComponentReference<LXChannel>(channel);
         this.patternClass = patternClass;
+        this.patternObject = patternObject;
       }
 
       @Override
@@ -430,6 +436,9 @@ public abstract class LXCommand {
       public void perform(LX lx) {
         LXPattern instance = lx.instantiatePattern(this.patternClass);
         if (instance != null) {
+          if (this.patternObject != null) {
+            instance.load(lx, this.patternObject);
+          }
           this.channel.get().addPattern(instance);
           this.pattern = new ComponentReference<LXPattern>(instance);
         }
@@ -870,11 +879,17 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXModulationEngine> modulation;
       private final Class<? extends LXModulator> modulatorClass;
+      private final JsonObject modulatorObj;
       private ComponentReference<LXModulator> modulator;
 
       public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass) {
+        this(modulation, modulatorClass, null);
+      }
+
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, JsonObject modulatorObj) {
         this.modulation = new ComponentReference<LXModulationEngine>(modulation);
         this.modulatorClass = modulatorClass;
+        this.modulatorObj = modulatorObj;
       }
 
       @Override
@@ -885,18 +900,25 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         LXModulator instance = lx.instantiateModulator(this.modulatorClass);
-        int count = this.modulation.get().getModulatorCount(this.modulatorClass);
-        if (count > 0) {
-          instance.label.setValue(instance.getLabel() + " " + (count + 1));
+        if (instance != null) {
+          if (this.modulatorObj != null) {
+            instance.load(lx, this.modulatorObj);
+          }
+          int count = this.modulation.get().getModulatorCount(this.modulatorClass);
+          if (count > 0) {
+            instance.label.setValue(instance.getLabel() + " " + (count + 1));
+          }
+          this.modulation.get().addModulator(instance);
+          instance.start();
+          this.modulator = new ComponentReference<LXModulator>(instance);
         }
-        this.modulation.get().addModulator(instance);
-        instance.start();
-        this.modulator = new ComponentReference<LXModulator>(instance);
       }
 
       @Override
       public void undo(LX lx) {
-        this.modulation.get().removeModulator(this.modulator.get());
+        if (this.modulator != null) {
+          this.modulation.get().removeModulator(this.modulator.get());
+        }
       }
     }
 

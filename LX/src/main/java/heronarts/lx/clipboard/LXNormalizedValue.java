@@ -41,12 +41,12 @@ public class LXNormalizedValue implements LXClipboardItem {
   }
 
   @Override
-  public LXClipboardItem duplicate() {
-    return new LXNormalizedValue(this.value);
+  public Transferable getSystemClipboardItem() {
+    return new StringSelection(String.valueOf(this.value));
   }
 
   @Override
-  public Transferable getSystemClipboardItem() {
-    return new StringSelection(String.valueOf(this.value));
+  public Class<?> getComponentClass() {
+    return LXNormalizedValue.class;
   }
 }

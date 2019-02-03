@@ -126,7 +126,7 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
 
   @Override
   public String getPath() {
-    throw new UnsupportedOperationException("getPath() not supported for LXModulator");
+    return "modulator/" + (this.index + 1);
   }
 
   public LXModulator setFormatter(Formatter formatter) {
