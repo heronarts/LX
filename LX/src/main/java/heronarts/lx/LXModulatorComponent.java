@@ -47,27 +47,56 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     super(lx, label);
   }
 
-  private void _addModulator(LXModulator modulator) {
+  private void _addModulator(LXModulator modulator, int index) {
     if (modulator == null) {
       throw new IllegalArgumentException("Cannot add null modulator");
+    }
+    if (index > this.mutableModulators.size()) {
+      throw new IllegalArgumentException("Invalid modulator index: " + index);
+    }
+    if (index < 0) {
+      index = this.mutableModulators.size();
     }
     checkForReentrancy(modulator, "add");
     if (this.mutableModulators.contains(modulator)) {
       throw new IllegalStateException("Cannot add modulator twice: " + modulator);
     }
+    modulator.setIndex(index);
     modulator.setComponent(this, null);
-    this.mutableModulators.add(modulator);
+    this.mutableModulators.add(index, modulator);
+    _reindexModulators();
+  }
+
+  private void _reindexModulators() {
+    int i = 0;
+    for (LXModulator modulator : this.modulators) {
+      modulator.setIndex(i++);
+    }
   }
 
   public LXModulator addModulator(String path, LXModulator modulator) {
-    _addModulator(modulator);
+    _addModulator(modulator, -1);
     addChild(path, modulator);
     return modulator;
   }
 
-  public LXModulator addModulator(LXModulator modulator) {
-    _addModulator(modulator);
+  public final LXModulator addModulator(LXModulator modulator) {
+    return addModulator(modulator, -1);
+  }
+
+  public LXModulator addModulator(LXModulator modulator, int index) {
+    _addModulator(modulator, index);
     modulator.setParent(this);
+    return modulator;
+  }
+
+  public LXModulator moveModulator(LXModulator modulator, int index) {
+    if (!this.modulators.contains(modulator)) {
+      throw new IllegalArgumentException("Cannot move modulator not in component: " + modulator);
+    }
+    this.mutableModulators.remove(modulator);
+    this.mutableModulators.add(index, modulator);
+    _reindexModulators();
     return modulator;
   }
 
@@ -80,6 +109,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     checkForReentrancy(modulator, "remove");
     this.mutableModulators.remove(modulator);
     modulator.dispose();
+    _reindexModulators();
     return modulator;
   }
 

@@ -45,6 +45,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   public interface Listener {
     public void modulatorAdded(LXModulationEngine engine, LXModulator modulator);
     public void modulatorRemoved(LXModulationEngine engine, LXModulator modulator);
+    public void modulatorMoved(LXModulationEngine engine, LXModulator modulator);
 
     public void modulationAdded(LXModulationEngine engine, LXCompoundModulation modulation);
     public void modulationRemoved(LXModulationEngine engine, LXCompoundModulation modulation);
@@ -170,8 +171,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   @Override
-  public LXModulator addModulator(LXModulator modulator) {
-    super.addModulator(modulator);
+  public LXModulator addModulator(LXModulator modulator, int index) {
+    super.addModulator(modulator, index);
     for (Listener listener : this.listeners) {
       listener.modulatorAdded(this, modulator);
     }
@@ -184,6 +185,15 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     super.removeModulator(modulator);
     for (Listener listener : this.listeners) {
       listener.modulatorRemoved(this, modulator);
+    }
+    return modulator;
+  }
+
+  @Override
+  public LXModulator moveModulator(LXModulator modulator, int index) {
+    super.moveModulator(modulator, index);
+    for (Listener listener : this.listeners) {
+      listener.modulatorMoved(this, modulator);
     }
     return modulator;
   }

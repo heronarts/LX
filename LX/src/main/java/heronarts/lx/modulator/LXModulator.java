@@ -40,6 +40,8 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
 
   private String description = null;
 
+  private int index = 0;
+
   /**
    * The current computed value of this modulator.
    */
@@ -52,6 +54,26 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    */
   protected LXModulator(String label) {
     super(label);
+  }
+
+  /**
+   * Sets the index of this modulator in its parent list
+   *
+   * @param index Modulator index
+   * @return this
+   */
+  public LXModulator setIndex(int index) {
+    this.index = index;
+    return this;
+  }
+
+  /**
+   * Returns the ordering index of this modulator in its parent
+   *
+   * @return Modulator index
+   */
+  public int getIndex() {
+    return this.index;
   }
 
   @Override
