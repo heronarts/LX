@@ -27,6 +27,7 @@ package heronarts.lx.command;
 import java.util.Stack;
 
 import heronarts.lx.LX;
+import heronarts.lx.parameter.MutableParameter;
 
 /**
  * The LX command engine keeps track of high-level UI commands that have been
@@ -40,8 +41,10 @@ public class LXCommandEngine {
     this.lx = lx;
   }
 
-  private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
+  public final MutableParameter undoChanged = new MutableParameter("Undo");
+  public final MutableParameter redoChanged = new MutableParameter("Redo");
 
+  private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
   private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
 
   /**
@@ -57,12 +60,22 @@ public class LXCommandEngine {
     // and is not re-pushed after it is performed again
     if (this.undoStack.isEmpty() || (this.undoStack.peek() != command)) {
       this.undoStack.push(command);
+      this.undoChanged.bang();
     }
 
     // A new action has occurred, we've branched and redo is done
     this.redoStack.clear();
+    this.redoChanged.bang();
 
     return this;
+  }
+
+  public LXCommand getUndoCommand() {
+    return this.undoStack.empty() ? null : this.undoStack.peek();
+  }
+
+  public LXCommand getRedoCommand() {
+    return this.redoStack.empty() ? null : this.redoStack.peek();
   }
 
   /**
@@ -74,17 +87,17 @@ public class LXCommandEngine {
   public LXCommandEngine undo() {
     if (!this.undoStack.empty()) {
       LXCommand command = this.undoStack.pop();
-      if (command != null) {
-        try {
-          command.undo(this.lx);
-          this.redoStack.push(command);
-        } catch (Exception x) {
-          System.err.println("Unhandled exception on undo, bad internal state?");
-          x.printStackTrace();
-          this.undoStack.clear();
-          this.redoStack.clear();
-        }
+      try {
+        command.undo(this.lx);
+        this.redoStack.push(command);
+      } catch (Exception x) {
+        System.err.println("Unhandled exception on undo, bad internal state?");
+        x.printStackTrace();
+        this.undoStack.clear();
+        this.redoStack.clear();
       }
+      this.undoChanged.bang();
+      this.redoChanged.bang();
     }
     return this;
   }
@@ -97,16 +110,17 @@ public class LXCommandEngine {
   public LXCommandEngine redo() {
     if (!this.redoStack.empty()) {
       LXCommand command = this.redoStack.pop();
-      if (command != null) {
-        try {
-          command.perform(this.lx);
-        } catch (Exception x) {
-          System.err.println("Unhandled exception on redo, bad internal state?");
-          x.printStackTrace();
-          this.undoStack.clear();
-          this.redoStack.clear();
-        }
+      try {
+        command.perform(this.lx);
+        this.undoStack.push(command);
+      } catch (Exception x) {
+        System.err.println("Unhandled exception on redo, bad internal state?");
+        x.printStackTrace();
+        this.undoStack.clear();
+        this.redoStack.clear();
       }
+      this.undoChanged.bang();
+      this.redoChanged.bang();
     }
     return this;
   }
