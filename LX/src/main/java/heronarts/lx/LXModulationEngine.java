@@ -198,6 +198,16 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     return modulator;
   }
 
+  public int getModulatorCount(Class<? extends LXModulator> cls) {
+    int count = 0;
+    for (LXModulator modulator : this.modulators) {
+      if (cls.isAssignableFrom(modulator.getClass())) {
+        ++count;
+      }
+    }
+    return count;
+  }
+
   @Override
   public void dispose() {
     for (LXCompoundModulation modulation : this.mutableModulations) {

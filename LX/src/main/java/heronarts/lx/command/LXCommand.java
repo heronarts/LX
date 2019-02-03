@@ -36,9 +36,12 @@ import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXEffect;
 import heronarts.lx.LXGroup;
+import heronarts.lx.LXModulationEngine;
 import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.LXUtils;
 import heronarts.lx.clipboard.LXNormalizedValue;
+import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -850,5 +853,104 @@ public abstract class LXCommand {
 
   }
 
+  public static class Modulation {
+
+    public static class AddModulator extends LXCommand {
+
+      private final ComponentReference<LXModulationEngine> modulation;
+      private final Class<? extends LXModulator> modulatorClass;
+      private ComponentReference<LXModulator> modulator;
+
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass) {
+        this.modulation = new ComponentReference<LXModulationEngine>(modulation);
+        this.modulatorClass = modulatorClass;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add " + LXUtils.getComponentName(this.modulatorClass);
+      }
+
+      @Override
+      public void perform(LX lx) {
+        LXModulator instance = lx.instantiateModulator(this.modulatorClass);
+        int count = this.modulation.get().getModulatorCount(this.modulatorClass);
+        if (count > 0) {
+          instance.label.setValue(instance.getLabel() + " " + (count + 1));
+        }
+        this.modulation.get().addModulator(instance);
+        instance.start();
+        this.modulator = new ComponentReference<LXModulator>(instance);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.modulation.get().removeModulator(this.modulator.get());
+      }
+    }
+
+    public static class MoveModulator extends LXCommand {
+
+      private final ComponentReference<LXModulationEngine> modulation;
+      private final ComponentReference<LXModulator> modulator;
+      private final int fromIndex;
+      private final int toIndex;
+
+      public MoveModulator(LXModulationEngine modulation, LXModulator modulator, int index) {
+        this.modulation = new ComponentReference<LXModulationEngine>(modulation);
+        this.modulator = new ComponentReference<LXModulator>(modulator);
+        this.fromIndex = modulator.getIndex();
+        this.toIndex = index;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Modulator";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.modulation.get().moveModulator(this.modulator.get(), this.toIndex);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.modulation.get().moveModulator(this.modulator.get(), this.fromIndex);
+      }
+    }
+
+    public static class RemoveModulator extends LXCommand {
+
+      private final ComponentReference<LXModulationEngine> modulation;
+      private final ComponentReference<LXModulator> modulator;
+      private final JsonObject modulatorObj;
+      private final int index;
+
+      public RemoveModulator(LXModulationEngine modulation, LXModulator modulator) {
+        this.modulation = new ComponentReference<LXModulationEngine>(modulation);
+        this.modulator = new ComponentReference<LXModulator>(modulator);
+        this.index = modulator.getIndex();
+        this.modulatorObj = LXSerializable.Utils.toObject(modulator);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Modulator";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.modulation.get().removeModulator(this.modulator.get());
+      }
+
+      @Override
+      public void undo(LX lx) {
+        LXModulator instance = lx.instantiateModulator(this.modulatorObj.get(LXComponent.KEY_CLASS).getAsString());
+        this.modulation.get().addModulator(instance, this.index);
+        instance.load(lx, this.modulatorObj);
+        instance.start();
+      }
+    }
+  }
 
 }
