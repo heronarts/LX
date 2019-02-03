@@ -136,12 +136,13 @@ public abstract class LXCommand {
   public static class Parameter {
 
     public static class Reset extends LXCommand {
-      private final ParameterReference<LXNormalizedParameter> parameter;
-      private final LXNormalizedValue originalValue;
+      private final ParameterReference<LXParameter> parameter;
+      private final double originalValue;
 
-      public Reset(LXNormalizedParameter parameter) {
-        this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
-        this.originalValue = new LXNormalizedValue(parameter);
+      public Reset(LXParameter parameter) {
+        this.parameter = new ParameterReference<LXParameter>(parameter);
+        this.originalValue = (parameter instanceof CompoundParameter) ?
+          ((CompoundParameter) parameter).getBaseValue() : parameter.getValue();
       }
 
       @Override
@@ -156,7 +157,7 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) {
-        this.parameter.get().setNormalized(this.originalValue.getValue());
+        this.parameter.get().setValue(this.originalValue);
       }
     }
 
