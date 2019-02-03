@@ -39,6 +39,9 @@ import heronarts.lx.LXGroup;
 import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clipboard.LXNormalizedValue;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
@@ -132,19 +135,119 @@ public abstract class LXCommand {
    */
   public static class Parameter {
 
-    public static class SetNormalized extends LXCommand {
-
+    public static class Reset extends LXCommand {
       private final ParameterReference<LXNormalizedParameter> parameter;
-      private final LXNormalizedValue value;
+      private final LXNormalizedValue originalValue;
 
-      public SetNormalized(LXNormalizedParameter parameter) {
+      public Reset(LXNormalizedParameter parameter) {
         this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
-        this.value = new LXNormalizedValue(parameter);
+        this.originalValue = new LXNormalizedValue(parameter);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Reset " + this.parameter.get().getLabel();
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.parameter.get().reset();
       }
 
       @Override
       public void undo(LX lx) {
-        this.parameter.get().setNormalized(this.value.getValue());
+        this.parameter.get().setNormalized(this.originalValue.getValue());
+      }
+    }
+
+    public static class SetValue extends LXCommand {
+
+      private final boolean isDiscrete;
+
+      private final ParameterReference<DiscreteParameter> discreteParameter;
+      private final int originalDiscreteValue;
+      private final int newDiscreteValue;
+
+      private final ParameterReference<LXParameter> genericParameter;
+      private final double originalGenericValue;
+      private final double newGenericValue;
+
+      public SetValue(DiscreteParameter parameter, int value) {
+        this.isDiscrete = true;
+        this.discreteParameter = new ParameterReference<DiscreteParameter>(parameter);
+        this.originalDiscreteValue = parameter.getValuei();
+        this.newDiscreteValue = value;
+
+        this.genericParameter = null;
+        this.originalGenericValue = 0;
+        this.newGenericValue = 0;
+      }
+
+      public SetValue(LXParameter parameter, double value) {
+        if (parameter instanceof DiscreteParameter) {
+          this.isDiscrete = true;
+          this.discreteParameter = new ParameterReference<DiscreteParameter>((DiscreteParameter) parameter);
+          this.originalDiscreteValue = ((DiscreteParameter) parameter).getValuei();
+          this.newDiscreteValue = (int) value;
+          this.genericParameter = null;
+          this.originalGenericValue = 0;
+          this.newGenericValue = 0;
+        } else {
+          this.isDiscrete = false;
+          this.genericParameter = new ParameterReference<LXParameter>(parameter);
+          this.originalGenericValue =
+            (parameter instanceof CompoundParameter) ?
+              ((CompoundParameter) parameter).getBaseValue() : parameter.getValue();
+          this.newGenericValue = value;
+          this.discreteParameter = null;
+          this.originalDiscreteValue = 0;
+          this.newDiscreteValue = 0;
+        }
+      }
+
+      private LXParameter getParameter() {
+        return this.isDiscrete ? this.discreteParameter.get() : this.genericParameter.get();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Change " + getParameter().getLabel();
+      }
+
+      @Override
+      public void perform(LX lx) {
+        if (this.isDiscrete) {
+          this.discreteParameter.get().setValue(this.newDiscreteValue);
+        } else {
+          this.genericParameter.get().setValue(this.newGenericValue);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) {
+        if (this.isDiscrete) {
+          this.discreteParameter.get().setValue(this.originalDiscreteValue);
+        } else {
+          this.genericParameter.get().setValue(this.originalGenericValue);
+        }
+      }
+
+    }
+
+    public static class Increment extends LXCommand {
+
+      private final ParameterReference<DiscreteParameter> parameter;
+      private final int originalValue;
+      private final int amount;
+
+      public Increment(DiscreteParameter parameter) {
+        this(parameter, 1);
+      }
+
+      public Increment(DiscreteParameter parameter, int amount) {
+        this.parameter = new ParameterReference<DiscreteParameter>(parameter);
+        this.originalValue = parameter.getValuei();
+        this.amount = amount;
       }
 
       @Override
@@ -154,7 +257,114 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        throw new IllegalStateException("Cannot re-perform SetNormalized operations yet...");
+        this.parameter.get().increment(this.amount);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.parameter.get().setValue(this.originalValue);
+      }
+
+    }
+
+    public static class Decrement extends LXCommand {
+
+      private final ParameterReference<DiscreteParameter> parameter;
+      private final int originalValue;
+      private final int amount;
+
+      public Decrement(DiscreteParameter parameter) {
+        this(parameter, 1);
+      }
+
+      public Decrement(DiscreteParameter parameter, int amount) {
+        this.parameter = new ParameterReference<DiscreteParameter>(parameter);
+        this.originalValue = parameter.getValuei();
+        this.amount = amount;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Change " + this.parameter.get().getLabel();
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.parameter.get().decrement(this.amount);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.parameter.get().setValue(this.originalValue);
+      }
+
+    }
+
+    public static class Toggle extends LXCommand {
+
+      private final ParameterReference<BooleanParameter> parameter;
+      private final boolean originalValue;
+
+      public Toggle(BooleanParameter parameter) {
+        this.parameter = new ParameterReference<BooleanParameter>(parameter);
+        this.originalValue = parameter.isOn();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Toggle " + this.parameter.get().getLabel();
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.parameter.get().toggle();
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.parameter.get().setValue(this.originalValue);
+      }
+
+    }
+
+    public static class SetNormalized extends LXCommand {
+
+      private final ParameterReference<LXNormalizedParameter> parameter;
+      private final LXNormalizedValue originalValue;
+      private double newValue;
+
+      public SetNormalized(LXNormalizedParameter parameter) {
+        this(parameter, new LXNormalizedValue(parameter).getValue());
+      }
+
+      public SetNormalized(BooleanParameter parameter, boolean value) {
+        this(parameter, value ? 1 : 0);
+      }
+
+      public SetNormalized(LXNormalizedParameter parameter, double newValue) {
+        this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
+        this.originalValue = new LXNormalizedValue(parameter);
+        this.newValue = newValue;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Change " + this.parameter.get().getLabel();
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.parameter.get().setNormalized(this.originalValue.getValue());
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.parameter.get().setNormalized(this.newValue);
+      }
+
+      public SetNormalized update(double newValue) {
+        this.newValue = newValue;
+        return this;
       }
     }
 

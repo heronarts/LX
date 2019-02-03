@@ -42,29 +42,26 @@ public class LXCommandEngine {
 
   private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
 
-  /**
-   * Pushes a command onto the undo stack. This method does *not* perform
-   * the operation. This is useful for situations in which the command
-   * action has already taken place, or happens via a different mechanism,
-   * and only undo behavior is desired.
-   *
-   * @param command Command to push onto the undo stack
-   * @return this
-   */
-  public LXCommandEngine push(LXCommand command) {
-    this.undoStack.push(command);
-    return this;
-  }
+  private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
 
   /**
-   * Peforms a command and pushes it onto the undo stack.
+   * Performs a command and pushes it onto the undo stack.
    *
    * @param command Command to perform and push onto the undo stack
    * @return this
    */
   public LXCommandEngine perform(LXCommand command) {
     command.perform(this.lx);
-    push(command);
+
+    // If the event it already at the top of the pack, it has been updated
+    // and is not re-pushed after it is performed again
+    if (this.undoStack.isEmpty() || (this.undoStack.peek() != command)) {
+      this.undoStack.push(command);
+    }
+
+    // A new action has occurred, we've branched and redo is done
+    this.redoStack.clear();
+
     return this;
   }
 
@@ -80,9 +77,34 @@ public class LXCommandEngine {
       if (command != null) {
         try {
           command.undo(this.lx);
+          this.redoStack.push(command);
         } catch (Exception x) {
           System.err.println("Unhandled exception on undo, bad internal state?");
           x.printStackTrace();
+          this.undoStack.clear();
+          this.redoStack.clear();
+        }
+      }
+    }
+    return this;
+  }
+
+  /**
+   * When possible, re-does an operation that has been undone.
+   *
+   * @return this
+   */
+  public LXCommandEngine redo() {
+    if (!this.redoStack.empty()) {
+      LXCommand command = this.redoStack.pop();
+      if (command != null) {
+        try {
+          command.perform(this.lx);
+        } catch (Exception x) {
+          System.err.println("Unhandled exception on redo, bad internal state?");
+          x.printStackTrace();
+          this.undoStack.clear();
+          this.redoStack.clear();
         }
       }
     }
