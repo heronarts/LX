@@ -768,6 +768,7 @@ public abstract class LXCommand {
 
     public static class Ungroup extends LXCommand {
       private final ComponentReference<LXGroup> group;
+      private final JsonObject groupObj;
       private final int index;
 
       private final List<ComponentReference<LXChannel>> groupChannels =
@@ -775,6 +776,7 @@ public abstract class LXCommand {
 
       public Ungroup(LXGroup group) {
         this.group = new ComponentReference<LXGroup>(group);
+        this.groupObj = LXSerializable.Utils.toObject(group);
         this.index = group.getIndex();
       }
 
@@ -794,6 +796,7 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) {
         LXGroup group = lx.engine.addGroup(this.index, false);
+        group.load(lx, this.groupObj);
         for (ComponentReference<LXChannel> channel : this.groupChannels) {
           group.addChannel(channel.get());
         }
