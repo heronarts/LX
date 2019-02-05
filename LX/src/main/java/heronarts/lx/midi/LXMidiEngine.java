@@ -35,7 +35,6 @@ import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.sound.midi.InvalidMidiDataException;
@@ -345,6 +344,19 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return this;
   }
 
+  public List<LXMidiMapping> findMappings(LXComponent component) {
+    List<LXMidiMapping> found = null;
+    for (LXMidiMapping mapping : this.mappings) {
+      if (component.contains(mapping.parameter)) {
+        if (found == null) {
+          found = new ArrayList<LXMidiMapping>();
+        }
+        found.add(mapping);
+      }
+    }
+    return found;
+  }
+
   /**
    * Called when a component is disposed. Remove any midi mappings
    * pointing to the now-nonexistent component.
@@ -353,14 +365,10 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
    * @return this
    */
   public LXMidiEngine removeMappings(LXComponent component) {
-    Iterator<LXMidiMapping> iterator = this.mutableMappings.iterator();
-    while (iterator.hasNext()) {
-      LXMidiMapping mapping = iterator.next();
-      if (mapping.parameter.getParent() == component) {
-        iterator.remove();
-        for (MappingListener mappingListener : this.mappingListeners) {
-          mappingListener.mappingRemoved(this, mapping);
-        }
+    List<LXMidiMapping> remove = findMappings(component);
+    if (remove != null) {
+      for (LXMidiMapping mapping : remove) {
+        removeMapping(mapping);
       }
     }
     return this;

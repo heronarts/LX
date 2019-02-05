@@ -41,6 +41,7 @@ import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.LXUtils;
 import heronarts.lx.clipboard.LXNormalizedValue;
+import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiMapping;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.modulator.LXModulator;
@@ -167,6 +168,7 @@ public abstract class LXCommand {
 
     private final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
     private final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
+    private final List<Midi.RemoveMapping> removeMidiMappings = new ArrayList<Midi.RemoveMapping>();
 
     private void _removeModulations(LXModulationEngine modulation, LXComponent component) {
       List<LXCompoundModulation> compounds = modulation.findModulations(component, modulation.modulations);
@@ -186,6 +188,15 @@ public abstract class LXCommand {
       }
     }
 
+    private void removeMidiMappings(LXMidiEngine midi, LXComponent component) {
+      List<LXMidiMapping> mappings = midi.findMappings(component);
+      if (mappings  != null) {
+        for (LXMidiMapping mapping : mappings) {
+          this.removeMidiMappings.add(new Midi.RemoveMapping(midi.getLX(), mapping));
+        }
+      }
+    }
+
     protected void removeMappings(LXModulationEngine modulation, LXComponent component) {
       _removeModulations(modulation, component);
       _removeTriggers(modulation, component);
@@ -194,6 +205,7 @@ public abstract class LXCommand {
     protected RemoveComponent(LXComponent component) {
       // Tally up all the modulations and triggers that relate to this component and must be restored!
       removeMappings(component.getLX().engine.modulation, component);
+      removeMidiMappings(component.getLX().engine.midi, component);
     }
 
     @Override
@@ -203,6 +215,9 @@ public abstract class LXCommand {
       }
       for (Modulation.RemoveTrigger trigger : this.removeTriggers) {
         trigger.undo(lx);
+      }
+      for (Midi.RemoveMapping mapping : this.removeMidiMappings) {
+        mapping.undo(lx);
       }
     }
   }
@@ -566,7 +581,6 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        System.out.println("Removing pattern " + this.pattern.get().getId());
         this.channel.get().removePattern(this.pattern.get());
       }
 
@@ -577,7 +591,6 @@ public abstract class LXCommand {
           this.patternObj.get(LXComponent.KEY_CLASS).getAsString());
         if (pattern != null) {
           pattern.load(lx, this.patternObj);
-          System.out.println("Pattern restored ID is: " + pattern.getId());
           channel.addPattern(pattern, this.patternIndex);
           if (this.isActive) {
             channel.goPattern(pattern);
