@@ -497,15 +497,13 @@ public abstract class LXCommand {
       private final ComponentReference<LXChannel> channel;
       private final Class<? extends LXPattern> patternClass;
       private ComponentReference<LXPattern> pattern = null;
-      private final JsonObject patternObject;
+      private JsonObject patternObject;
 
-      public AddPattern(LXChannel channel,
-        Class<? extends LXPattern> patternClass) {
+      public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass) {
         this(channel, patternClass, null);
       }
 
-      public AddPattern(LXChannel channel,
-        Class<? extends LXPattern> patternClass, JsonObject patternObject) {
+      public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
         this.channel = new ComponentReference<LXChannel>(channel);
         this.patternClass = patternClass;
         this.patternObject = patternObject;
@@ -522,6 +520,9 @@ public abstract class LXCommand {
         if (instance != null) {
           if (this.patternObject != null) {
             instance.load(lx, this.patternObject);
+          } else {
+            // New pattern, we need to store its ID for future redo operations...
+            this.patternObject = LXSerializable.Utils.toObject(instance);
           }
           this.channel.get().addPattern(instance);
           this.pattern = new ComponentReference<LXPattern>(instance);
@@ -565,6 +566,7 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
+        System.out.println("Removing pattern " + this.pattern.get().getId());
         this.channel.get().removePattern(this.pattern.get());
       }
 
@@ -574,7 +576,8 @@ public abstract class LXCommand {
         LXPattern pattern = lx.instantiatePattern(
           this.patternObj.get(LXComponent.KEY_CLASS).getAsString());
         if (pattern != null) {
-          pattern.load(lx, patternObj);
+          pattern.load(lx, this.patternObj);
+          System.out.println("Pattern restored ID is: " + pattern.getId());
           channel.addPattern(pattern, this.patternIndex);
           if (this.isActive) {
             channel.goPattern(pattern);
@@ -622,6 +625,7 @@ public abstract class LXCommand {
       private final ComponentReference<LXBus> channel;
       private final Class<? extends LXEffect> effectClass;
       private ComponentReference<LXEffect> effect = null;
+      private JsonObject effectObj = null;
 
       public AddEffect(LXBus channel, Class<? extends LXEffect> effectClass) {
         this.channel = new ComponentReference<LXBus>(channel);
@@ -637,6 +641,11 @@ public abstract class LXCommand {
       public void perform(LX lx) {
         LXEffect instance = lx.instantiateEffect(this.effectClass);
         if (instance != null) {
+          if (this.effectObj != null) {
+            instance.load(lx, this.effectObj);
+          } else {
+            this.effectObj = LXSerializable.Utils.toObject(instance);
+          }
           this.channel.get().addEffect(instance);
           this.effect = new ComponentReference<LXEffect>(instance);
         }
@@ -645,8 +654,7 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) {
         if (this.effect == null) {
-          throw new IllegalStateException(
-            "Effect was not successfully added, cannot undo");
+          throw new IllegalStateException("Effect was not successfully added, cannot undo");
         }
         this.channel.get().removeEffect(this.effect.get());
       }
@@ -728,6 +736,7 @@ public abstract class LXCommand {
 
       private final Class<? extends LXPattern> patternClass;
       private ComponentReference<LXChannel> channel;
+      private JsonObject channelObj = null;
 
       public AddChannel() {
         this(null);
@@ -750,10 +759,14 @@ public abstract class LXCommand {
       public void perform(LX lx) {
         LXChannel channel;
         if (this.patternClass != null) {
-          channel = lx.engine.addChannel(
-            new LXPattern[] { lx.instantiatePattern(this.patternClass) });
+          channel = lx.engine.addChannel(new LXPattern[] { lx.instantiatePattern(this.patternClass) });
         } else {
           channel = lx.engine.addChannel();
+        }
+        if (this.channelObj != null) {
+          channel.load(lx, this.channelObj);
+        } else {
+          this.channelObj = LXSerializable.Utils.toObject(channel);
         }
         this.channel = new ComponentReference<LXChannel>(channel);
         lx.engine.setFocusedChannel(channel);
@@ -986,18 +999,15 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXModulationEngine> modulation;
       private final Class<? extends LXModulator> modulatorClass;
-      private final JsonObject modulatorObj;
+      private JsonObject modulatorObj;
       private ComponentReference<LXModulator> modulator;
 
-      public AddModulator(LXModulationEngine modulation,
-        Class<? extends LXModulator> modulatorClass) {
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass) {
         this(modulation, modulatorClass, null);
       }
 
-      public AddModulator(LXModulationEngine modulation,
-        Class<? extends LXModulator> modulatorClass, JsonObject modulatorObj) {
-        this.modulation = new ComponentReference<LXModulationEngine>(
-          modulation);
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, JsonObject modulatorObj) {
+        this.modulation = new ComponentReference<LXModulationEngine>(modulation);
         this.modulatorClass = modulatorClass;
         this.modulatorObj = modulatorObj;
       }
@@ -1013,6 +1023,8 @@ public abstract class LXCommand {
         if (instance != null) {
           if (this.modulatorObj != null) {
             instance.load(lx, this.modulatorObj);
+          } else {
+            this.modulatorObj = LXSerializable.Utils.toObject(instance);
           }
           int count = this.modulation.get().getModulatorCount(this.modulatorClass);
           if (count > 0) {
