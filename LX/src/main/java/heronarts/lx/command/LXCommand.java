@@ -160,6 +160,51 @@ public abstract class LXCommand {
    */
   public abstract void undo(LX lx) throws InvalidCommandException;
 
+
+  private static abstract class RemoveComponent extends LXCommand {
+
+    private final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
+    private final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
+
+    private void _removeModulations(LXModulationEngine modulation, LXComponent component) {
+      List<LXCompoundModulation> compounds = modulation.findModulations(component, modulation.modulations);
+      if (compounds != null) {
+        for (LXCompoundModulation compound : compounds) {
+          this.removeModulations.add(new Modulation.RemoveModulation(modulation, compound));
+        }
+      }
+    }
+
+    private void _removeTriggers(LXModulationEngine modulation, LXComponent component) {
+      List<LXTriggerModulation> triggers = modulation.findModulations(component, modulation.triggers);
+      if (triggers != null) {
+        for (LXTriggerModulation trigger : triggers) {
+          this.removeTriggers.add(new Modulation.RemoveTrigger(modulation, trigger));
+        }
+      }
+    }
+
+    protected void removeMappings(LXModulationEngine modulation, LXComponent component) {
+      _removeModulations(modulation, component);
+      _removeTriggers(modulation, component);
+    }
+
+    protected RemoveComponent(LXComponent component) {
+      // Tally up all the modulations and triggers that relate to this component and must be restored!
+      removeMappings(component.getLX().engine.modulation, component);
+    }
+
+    @Override
+    public void undo(LX lx) throws InvalidCommandException {
+      for (Modulation.RemoveModulation modulation : this.removeModulations) {
+        modulation.undo(lx);
+      }
+      for (Modulation.RemoveTrigger trigger : this.removeTriggers) {
+        trigger.undo(lx);
+      }
+    }
+  }
+
   /**
    * Name space for parameter commands
    */
@@ -492,7 +537,7 @@ public abstract class LXCommand {
 
     }
 
-    public static class RemovePattern extends LXCommand {
+    public static class RemovePattern extends RemoveComponent {
 
       private final ComponentReference<LXChannel> channel;
       private final ComponentReference<LXPattern> pattern;
@@ -502,6 +547,7 @@ public abstract class LXCommand {
       private final boolean isFocused;
 
       public RemovePattern(LXChannel channel, LXPattern pattern) {
+        super(pattern);
         this.channel = new ComponentReference<LXChannel>(channel);
         this.pattern = new ComponentReference<LXPattern>(pattern);
         this.patternObj = LXSerializable.Utils.toObject(pattern);
@@ -521,7 +567,7 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void undo(LX lx) {
+      public void undo(LX lx) throws InvalidCommandException {
         LXChannel channel = this.channel.get();
         LXPattern pattern = lx.instantiatePattern(
           this.patternObj.get(LXComponent.KEY_CLASS).getAsString());
@@ -534,6 +580,7 @@ public abstract class LXCommand {
           if (this.isFocused) {
             channel.focusedPattern.setValue(pattern.getIndex());
           }
+          super.undo(lx);
         }
       }
     }
@@ -603,7 +650,7 @@ public abstract class LXCommand {
       }
     }
 
-    public static class RemoveEffect extends LXCommand {
+    public static class RemoveEffect extends RemoveComponent {
 
       private final ComponentReference<LXBus> channel;
       private final ComponentReference<LXEffect> effect;
@@ -611,6 +658,7 @@ public abstract class LXCommand {
       private final int effectIndex;
 
       public RemoveEffect(LXBus channel, LXEffect effect) {
+        super(effect);
         this.channel = new ComponentReference<LXBus>(channel);
         this.effect = new ComponentReference<LXEffect>(effect);
         this.effectObj = LXSerializable.Utils.toObject(effect);
@@ -628,13 +676,14 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void undo(LX lx) {
+      public void undo(LX lx) throws InvalidCommandException {
         LXBus channel = this.channel.get();
         LXEffect effect = lx.instantiateEffect(
           this.effectObj.get(LXComponent.KEY_CLASS).getAsString());
         if (effect != null) {
           effect.load(lx, effectObj);
           channel.addEffect(effect, this.effectIndex);
+          super.undo(lx);
         }
       }
     }
@@ -747,7 +796,7 @@ public abstract class LXCommand {
 
     }
 
-    public static class RemoveChannel extends LXCommand {
+    public static class RemoveChannel extends RemoveComponent {
       private final ComponentReference<LXChannelBus> channel;
       private final JsonObject channelObj;
       private final int index;
@@ -755,6 +804,7 @@ public abstract class LXCommand {
       private final List<RemoveChannel> groupChildren = new ArrayList<RemoveChannel>();
 
       public RemoveChannel(LXChannelBus channel) {
+        super(channel);
         this.channel = new ComponentReference<LXChannelBus>(channel);
         this.channelObj = LXSerializable.Utils.toObject(channel);
         this.index = channel.getIndex();
@@ -763,6 +813,17 @@ public abstract class LXCommand {
         if (channel instanceof LXGroup) {
           for (LXChannel child : ((LXGroup) channel).channels) {
             this.groupChildren.add(new RemoveChannel(child));
+          }
+        }
+
+        LXModulationEngine modulation = channel.getLX().engine.modulation;
+        for (LXEffect effect : channel.effects) {
+          removeMappings(modulation, effect);
+        }
+
+        if (channel instanceof LXChannel) {
+          for (LXPattern pattern : ((LXChannel)channel).patterns) {
+            removeMappings(modulation, pattern);
           }
         }
       }
@@ -779,13 +840,16 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void undo(LX lx) {
+      public void undo(LX lx) throws InvalidCommandException {
         lx.engine.loadChannel(this.channelObj, this.index);
 
         // Restore all the group children
         for (RemoveChannel child : this.groupChildren) {
           child.undo(lx);
         }
+
+        // Bring back modulations on all patterns and effects
+        super.undo(lx);
       }
 
     }
@@ -817,7 +881,7 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void undo(LX lx) {
+      public void undo(LX lx) throws InvalidCommandException {
         for (RemoveChannel removedChannel : this.removedChannels) {
           removedChannel.undo(lx);
         }
@@ -948,8 +1012,7 @@ public abstract class LXCommand {
           if (this.modulatorObj != null) {
             instance.load(lx, this.modulatorObj);
           }
-          int count = this.modulation.get()
-            .getModulatorCount(this.modulatorClass);
+          int count = this.modulation.get().getModulatorCount(this.modulatorClass);
           if (count > 0) {
             instance.label.setValue(instance.getLabel() + " " + (count + 1));
           }
@@ -998,20 +1061,24 @@ public abstract class LXCommand {
       }
     }
 
-    public static class RemoveModulator extends LXCommand {
+    public static class RemoveModulator extends RemoveComponent {
 
       private final ComponentReference<LXModulationEngine> modulation;
       private final ComponentReference<LXModulator> modulator;
       private final JsonObject modulatorObj;
       private final int index;
 
-      public RemoveModulator(LXModulationEngine modulation,
-        LXModulator modulator) {
-        this.modulation = new ComponentReference<LXModulationEngine>(
-          modulation);
+      public RemoveModulator(LXModulationEngine modulation, LXModulator modulator) {
+        super(modulator);
+        this.modulation = new ComponentReference<LXModulationEngine>(modulation);
         this.modulator = new ComponentReference<LXModulator>(modulator);
         this.index = modulator.getIndex();
         this.modulatorObj = LXSerializable.Utils.toObject(modulator);
+
+        // Not the global modulation engine? Remove from ours as well!
+        if (modulation != modulator.getLX().engine.modulation) {
+          removeMappings(modulation, modulator);
+        }
       }
 
       @Override
@@ -1025,12 +1092,14 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void undo(LX lx) {
-        LXModulator instance = lx.instantiateModulator(
-          this.modulatorObj.get(LXComponent.KEY_CLASS).getAsString());
+      public void undo(LX lx) throws InvalidCommandException {
+        LXModulator instance = lx.instantiateModulator(this.modulatorObj.get(LXComponent.KEY_CLASS).getAsString());
         this.modulation.get().addModulator(instance, this.index);
         instance.load(lx, this.modulatorObj);
         instance.start();
+
+        // Restore all the modulations...
+        super.undo(lx);
       }
     }
 
@@ -1045,14 +1114,12 @@ public abstract class LXCommand {
         public ModulationSourceReference(LXNormalizedParameter source) {
           if (source instanceof LXComponent) {
             this.isComponent = true;
-            this.component = new ComponentReference<LXComponent>(
-              (LXComponent) source);
+            this.component = new ComponentReference<LXComponent>((LXComponent) source);
             this.parameter = null;
           } else {
             this.isComponent = false;
             this.component = null;
-            this.parameter = new ParameterReference<LXNormalizedParameter>(
-              source);
+            this.parameter = new ParameterReference<LXNormalizedParameter>(source);
           }
         }
 

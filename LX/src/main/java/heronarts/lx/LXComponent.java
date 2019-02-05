@@ -258,6 +258,16 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     return this.path;
   }
 
+  public final boolean contains(LXPath that) {
+    while (that != null) {
+      if (that == this) {
+        return true;
+      }
+      that = that.getParent();
+    }
+    return false;
+  }
+
   public String getOscLabel() {
     return getLabel().trim().replaceAll("[\\s#*,/\\\\?\\[\\]{}]+", "-");
   }

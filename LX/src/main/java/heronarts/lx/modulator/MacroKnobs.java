@@ -45,7 +45,7 @@ public class MacroKnobs extends LXModulator implements LXOscComponent {
     .setDescription("Macro control parameter");
 
   public MacroKnobs() {
-    this("MACRO");
+    this("Macro");
   }
 
   public MacroKnobs(String label) {

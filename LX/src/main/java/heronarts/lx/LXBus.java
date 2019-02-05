@@ -91,6 +91,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
 
   LXBus(LX lx, String label) {
     super(lx, label);
+    addArray("effect", this.effects);
     addParameter("arm", this.arm);
     addParameter("selected", this.selected);
   }

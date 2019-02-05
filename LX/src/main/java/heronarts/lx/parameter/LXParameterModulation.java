@@ -63,8 +63,8 @@ public abstract class LXParameterModulation extends LXComponent {
   protected int index = -1;
 
   private final LXModulationEngine scope;
-  private final LXParameter source;
-  private final LXParameter target;
+  public final LXParameter source;
+  public final LXParameter target;
 
   public final ColorParameter color;
 
@@ -166,7 +166,10 @@ public abstract class LXParameterModulation extends LXComponent {
 
   protected static LXParameter getParameter(LX lx, LXModulationEngine scope, JsonObject obj) {
     if (obj.has(KEY_PATH)) {
-      return (LXParameter) LXPath.get(scope.getParent(), obj.get(KEY_PATH).getAsString());
+      LXParameter parameter = (LXParameter) LXPath.get(scope.getParent(), obj.get(KEY_PATH).getAsString());
+      if (parameter == null) {
+        System.err.println("Failed to locate parameter at " + obj.get(KEY_PATH).getAsString() + " in scope " + scope.getParent());
+      }
     }
     if (obj.has(KEY_ID)) {
       return (LXParameter) lx.getProjectComponent(obj.get(KEY_ID).getAsInt());

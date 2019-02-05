@@ -26,7 +26,6 @@ package heronarts.lx;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 
 import com.google.gson.JsonArray;
@@ -158,27 +157,37 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     }
   }
 
-  public LXModulationEngine removeModulations(LXComponent component) {
-    Iterator<LXCompoundModulation> iterator = this.mutableModulations.iterator();
-    while (iterator.hasNext()) {
-      LXCompoundModulation modulation = iterator.next();
-      if (modulation.source == component || modulation.source.getParent() == component || modulation.target.getParent() == component) {
-        iterator.remove();
-        for (Listener listener : this.listeners) {
-          listener.modulationRemoved(this, modulation);
+  /**
+   * Compiles all modulations that act upon any parameter or subcomponent of the given
+   * component, whether as source or target.
+   *
+   * @param component Component
+   * @return All modulations acting in any way upon this component or its children
+   */
+  public <T extends LXParameterModulation> List<T> findModulations(LXComponent component, List<T> modulations) {
+    List<T> found = null;
+    for (T modulation : modulations) {
+      if (component.contains(modulation.source) || component.contains(modulation.target)) {
+        if (found == null) {
+          found = new ArrayList<T>();
         }
-        modulation.dispose();
+        found.add(modulation);
       }
     }
-    Iterator<LXTriggerModulation> triggerIterator = this.mutableTriggers.iterator();
-    while (triggerIterator.hasNext()) {
-      LXTriggerModulation trigger = triggerIterator.next();
-      if (trigger.source.getParent() == component || trigger.target.getParent() == component) {
-        triggerIterator.remove();
-        for (Listener listener : this.listeners) {
-          listener.triggerRemoved(this, trigger);
-        }
-        trigger.dispose();
+    return found;
+  }
+
+  public LXModulationEngine removeModulations(LXComponent component) {
+    List<LXCompoundModulation> compounds = findModulations(component, this.modulations);
+    if (compounds != null) {
+      for (LXCompoundModulation compound : compounds) {
+        removeModulation(compound);
+      }
+    }
+    List<LXTriggerModulation> triggers = findModulations(component, this.triggers);
+    if (triggers != null) {
+      for (LXTriggerModulation trigger : triggers) {
+        removeTrigger(trigger);
       }
     }
     return this;
