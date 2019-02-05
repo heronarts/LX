@@ -71,8 +71,12 @@ public interface LXPath {
     if (path.equals("lx")) {
       return lx.engine;
     }
-    String[] parts = path.split("/");
-    return lx.engine.path(parts, 0);
+    if (path.startsWith("lx/")) {
+      path = path.substring(3);
+      String[] parts = path.split("/");
+      return lx.engine.path(parts, 0);
+    }
+    return null;
   }
 
   public static LXPath get(LXComponent root, String path) {
