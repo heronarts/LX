@@ -349,12 +349,17 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    */
   LXPath path(String[] parts, int index) {
     if (index < 0 || index >= parts.length) {
-      throw new IllegalArgumentException("Illegal index to path method: "
-        + index + " parts.length=" + parts.length);
+      throw new IllegalArgumentException("Illegal index to path method: " + index + " parts.length=" + parts.length);
     }
     String key = parts[index];
     LXParameter parameter = this.parameters.get(key);
     if (parameter != null) {
+      if (parameter instanceof ColorParameter) {
+        if (index < parts.length - 1) {
+          String subparam = parts[index] + "/" + parts[index+1];
+          return this.parameters.get(subparam);
+        }
+      }
       return parameter;
     }
     LXComponent child = this.children.get(key);
