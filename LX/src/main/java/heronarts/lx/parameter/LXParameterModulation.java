@@ -33,12 +33,30 @@ import heronarts.lx.color.ColorParameter;
 
 public abstract class LXParameterModulation extends LXComponent {
 
-  public static class CircularDependencyException extends IllegalStateException {
+  public static class ModulationException extends Exception {
 
     private static final long serialVersionUID = 1L;
 
-    CircularDependencyException(String message) {
+    protected ModulationException(String message) {
       super(message);
+    }
+  }
+
+  public static class CircularDependencyException extends ModulationException {
+
+    private static final long serialVersionUID = 1L;
+
+    private CircularDependencyException(String message) {
+      super(message);
+    };
+  }
+
+  public static class InvalidScopeException extends ModulationException {
+
+    private static final long serialVersionUID = 1L;
+
+    private InvalidScopeException(LXModulationEngine scope, LXParameter parameter) {
+      super("Parameter " + parameter + " is not in valid scope for modulation engine " + scope.getParent());
     };
   }
 
@@ -59,7 +77,7 @@ public abstract class LXParameterModulation extends LXComponent {
 
   private static Map<LXParameter, List<LXParameter>> modulationGraph = new HashMap<LXParameter, List<LXParameter>>();
 
-  private static void checkForCycles(LXParameter source, LXParameter target, List<LXParameter> targets) {
+  private static void checkForCycles(LXParameter source, LXParameter target, List<LXParameter> targets) throws CircularDependencyException {
     if (targets == null) {
       return;
     }
@@ -73,7 +91,7 @@ public abstract class LXParameterModulation extends LXComponent {
     }
   }
 
-  private static void registerModulation(LXParameter source, LXParameter target) {
+  private static void registerModulation(LXParameter source, LXParameter target) throws CircularDependencyException {
     checkForCycles(source, target, modulationGraph.get(target));
     if (!modulationGraph.containsKey(source)) {
       modulationGraph.put(source, new ArrayList<LXParameter>());
@@ -88,7 +106,19 @@ public abstract class LXParameterModulation extends LXComponent {
     modulationGraph.get(source).remove(target);
   }
 
-  protected LXParameterModulation(LXModulationEngine scope, LXParameter source, LXParameter target) {
+  private void checkScope(LXModulationEngine scope, LXParameter parameter) throws InvalidScopeException {
+    LXComponent domain = scope.getParent();
+    LXComponent component = parameter.getParent();
+    while (component != null) {
+      if (component == domain) {
+        return;
+      }
+      component = component.getParent();
+    }
+    throw new InvalidScopeException(scope, parameter);
+  }
+
+  protected LXParameterModulation(LXModulationEngine scope, LXParameter source, LXParameter target) throws ModulationException {
     if (source == null) {
       throw new IllegalArgumentException("LXParameterModulation source may not be null");
     }
@@ -102,8 +132,8 @@ public abstract class LXParameterModulation extends LXComponent {
       throw new IllegalStateException("May not create parameter modulation to target registered to no component: " + target.toString());
     }
     registerModulation(source, target);
-
-    // TODO(mcslee): check that source and target parameters fall within scope...
+    checkScope(scope, source);
+    checkScope(scope, target);
 
     this.scope = scope;
     this.source = source;

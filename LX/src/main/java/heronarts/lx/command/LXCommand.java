@@ -1091,8 +1091,8 @@ public abstract class LXCommand {
           this.engine.get().addModulation(modulation);
           this.modulation = new ComponentReference<LXCompoundModulation>(
             modulation);
-        } catch (LXParameterModulation.CircularDependencyException cdx) {
-          throw new InvalidCommandException(cdx.getMessage(), cdx);
+        } catch (LXParameterModulation.ModulationException mx) {
+          throw new InvalidCommandException(mx.getMessage(), mx);
         }
       }
 
@@ -1135,8 +1135,8 @@ public abstract class LXCommand {
           modulation.load(lx, this.modulationObj);
           this.modulation = new ComponentReference<LXCompoundModulation>(
             modulation);
-        } catch (LXParameterModulation.CircularDependencyException cdx) {
-          throw new InvalidCommandException(cdx.getMessage(), cdx);
+        } catch (LXParameterModulation.ModulationException mx) {
+          throw new InvalidCommandException(mx.getMessage(), mx);
         }
       }
     }
@@ -1167,8 +1167,8 @@ public abstract class LXCommand {
             this.engine.get(), this.source.get(), this.target.get());
           this.engine.get().addTrigger(trigger);
           this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
-        } catch (LXParameterModulation.CircularDependencyException cdx) {
-          throw new InvalidCommandException(cdx.getMessage(), cdx);
+        } catch (LXParameterModulation.ModulationException mx) {
+          throw new InvalidCommandException(mx.getMessage(), mx);
         }
       }
 
@@ -1209,8 +1209,8 @@ public abstract class LXCommand {
           this.engine.get().addTrigger(trigger);
           trigger.load(lx, this.triggerObj);
           this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
-        } catch (LXParameterModulation.CircularDependencyException cdx) {
-          throw new InvalidCommandException(cdx.getMessage(), cdx);
+        } catch (LXParameterModulation.ModulationException mx) {
+          throw new InvalidCommandException(mx.getMessage(), mx);
         }
       }
 

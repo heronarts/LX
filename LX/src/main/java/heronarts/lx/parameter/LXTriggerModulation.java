@@ -31,7 +31,7 @@ public class LXTriggerModulation extends LXParameterModulation {
   private final boolean sourceMomentary;
   private final boolean targetMomentary;
 
-  public LXTriggerModulation(LXModulationEngine scope, BooleanParameter source, BooleanParameter target) {
+  public LXTriggerModulation(LXModulationEngine scope, BooleanParameter source, BooleanParameter target) throws ModulationException {
     super(scope, source, target);
     this.source = source;
     this.target = target;
@@ -40,7 +40,7 @@ public class LXTriggerModulation extends LXParameterModulation {
     this.source.addListener(this);
   }
 
-  public LXTriggerModulation(LX lx, LXModulationEngine scope, JsonObject obj) {
+  public LXTriggerModulation(LX lx, LXModulationEngine scope, JsonObject obj) throws ModulationException {
     this(
       scope,
       (BooleanParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_SOURCE)),

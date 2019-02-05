@@ -38,7 +38,7 @@ public class LXCompoundModulation extends LXParameterModulation {
     .setDescription("Species the depth of this modulation, may be positive or negative")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public LXCompoundModulation(LX lx, LXModulationEngine scope, JsonObject obj) {
+  public LXCompoundModulation(LX lx, LXModulationEngine scope, JsonObject obj) throws ModulationException {
     this(
       scope,
       (LXNormalizedParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_SOURCE)),
@@ -46,7 +46,7 @@ public class LXCompoundModulation extends LXParameterModulation {
     );
   }
 
-  public LXCompoundModulation(LXModulationEngine scope, LXNormalizedParameter source, CompoundParameter target) {
+  public LXCompoundModulation(LXModulationEngine scope, LXNormalizedParameter source, CompoundParameter target) throws ModulationException {
     super(scope, source, target);
     this.source = source;
     this.target = target;
