@@ -41,6 +41,8 @@ import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.LXUtils;
 import heronarts.lx.clipboard.LXNormalizedValue;
+import heronarts.lx.midi.LXMidiMapping;
+import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -1280,7 +1282,62 @@ public abstract class LXCommand {
           throw new InvalidCommandException(mx.getMessage(), mx);
         }
       }
+    }
+  }
 
+  public static class Midi {
+
+    public static class AddMapping extends LXCommand {
+
+      private final LXShortMessage message;
+      private final ParameterReference<LXParameter> parameter;
+      private LXMidiMapping mapping;
+
+      public AddMapping(LXShortMessage message, LXParameter parameter) {
+        this.message = message;
+        this.parameter = new ParameterReference<LXParameter>(parameter);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add MIDI Mapping";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        lx.engine.midi.addMapping(this.mapping = LXMidiMapping.create(lx, message, this.parameter.get()));
+      }
+
+      @Override
+      public void undo(LX lx) {
+        lx.engine.midi.removeMapping(this.mapping);
+      }
+
+    }
+
+    public static class RemoveMapping extends LXCommand {
+      private final LXMidiMapping mapping;
+      private final JsonObject mappingObj;
+
+      public RemoveMapping(LX lx, LXMidiMapping mapping) {
+        this.mapping = mapping;
+        this.mappingObj = LXSerializable.Utils.toObject(lx, mapping);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove MIDI Mapping";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.engine.midi.removeMapping(this.mapping);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.midi.addMapping(LXMidiMapping.create(lx, this.mappingObj));
+      }
     }
   }
 }

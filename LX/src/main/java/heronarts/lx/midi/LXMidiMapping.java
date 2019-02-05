@@ -22,6 +22,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -41,7 +42,19 @@ public abstract class LXMidiMapping implements LXSerializable {
 
   public final LXParameter parameter;
 
+  private static LXParameter getParameter(LX lx, JsonObject obj) {
+    if (obj.has(LXComponent.KEY_PATH)) {
+      return (LXParameter) LXPath.get(lx, obj.get(LXComponent.KEY_PATH).getAsString());
+    }
+    return lx
+      .getProjectComponent(obj.get(LXComponent.KEY_COMPONENT_ID).getAsInt())
+      .getParameter(obj.get(LXComponent.KEY_PARAMETER_PATH).getAsString());
+  }
+
   protected LXMidiMapping(LX lx, int channel, Type type, LXParameter parameter) {
+    if (parameter == null) {
+      throw new IllegalArgumentException("Cannot map null parameter");
+    }
     if (parameter.getParent() == null) {
       throw new IllegalStateException("Cannot map parameter with no component: " + parameter);
     }
@@ -55,7 +68,7 @@ public abstract class LXMidiMapping implements LXSerializable {
       lx,
       object.get(KEY_CHANNEL).getAsInt(),
       type,
-      lx.getProjectComponent(object.get(LXComponent.KEY_COMPONENT_ID).getAsInt()).getParameter(object.get(LXComponent.KEY_PARAMETER_PATH).getAsString())
+      getParameter(lx, object)
     );
   }
 
@@ -63,7 +76,7 @@ public abstract class LXMidiMapping implements LXSerializable {
     return (message instanceof MidiNote) || (message instanceof MidiControlChange);
   }
 
-  static LXMidiMapping create(LX lx, LXShortMessage message, LXParameter parameter) {
+  public static LXMidiMapping create(LX lx, LXShortMessage message, LXParameter parameter) {
     if (message instanceof MidiNote) {
       return new Note(lx, (MidiNote) message, parameter);
     } else if (message instanceof MidiControlChange) {
@@ -72,7 +85,7 @@ public abstract class LXMidiMapping implements LXSerializable {
     throw new IllegalArgumentException("Not a valid message type for a MIDI mapping: " + message);
   }
 
-  static LXMidiMapping create(LX lx, JsonObject object) {
+  public static LXMidiMapping create(LX lx, JsonObject object) {
     Type type = Type.valueOf(object.get(KEY_TYPE).getAsString());
     switch (type) {
     case NOTE: return new Note(lx, object);
@@ -122,6 +135,7 @@ public abstract class LXMidiMapping implements LXSerializable {
   public void save(LX lx, JsonObject object) {
     object.addProperty(KEY_CHANNEL, this.channel);
     object.addProperty(KEY_TYPE, this.type.toString());
+    object.addProperty(LXComponent.KEY_PATH, LXPath.getCanonicalPath(this.parameter));
     object.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getParent().getId());
     object.addProperty(LXComponent.KEY_PARAMETER_PATH, this.parameter.getPath());
   }

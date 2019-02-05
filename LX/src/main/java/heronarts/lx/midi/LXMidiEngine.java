@@ -25,6 +25,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXMappingEngine;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -116,6 +117,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     .setDescription("Whether the computer keyboard plays notes to MIDI tracks");
 
   public LXMidiEngine(LX lx) {
+    super(lx);
     addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
   }
 
@@ -307,7 +309,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }
 
     // Bada-boom, add it!
-    addMapping(LXMidiMapping.create(this.lx, message, parameter));
+    this.lx.command.perform(new LXCommand.Midi.AddMapping(message, parameter));
   }
 
   private boolean applyMapping(LXShortMessage message) {
@@ -321,7 +323,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return applied;
   }
 
-  private LXMidiEngine addMapping(LXMidiMapping mapping) {
+  public LXMidiEngine addMapping(LXMidiMapping mapping) {
     this.mutableMappings.add(mapping);
     for (MappingListener mappingListener : this.mappingListeners) {
       mappingListener.mappingAdded(this, mapping);
