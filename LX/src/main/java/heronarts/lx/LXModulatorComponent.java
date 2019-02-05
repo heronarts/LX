@@ -40,11 +40,12 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
   public final Timer timer = constructTimer();
 
   protected LXModulatorComponent(LX lx) {
-    super(lx);
+    this(lx, null);
   }
 
   protected LXModulatorComponent(LX lx, String label) {
     super(lx, label);
+    addArray("modulator", this.modulators);
   }
 
   private void _addModulator(LXModulator modulator, int index) {
@@ -62,7 +63,6 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
       throw new IllegalStateException("Cannot add modulator twice: " + modulator);
     }
     modulator.setIndex(index);
-    modulator.setComponent(this, null);
     this.mutableModulators.add(index, modulator);
     _reindexModulators();
   }

@@ -96,7 +96,7 @@ public class LXPalette extends LXModulatorComponent implements LXOscComponent {
 
   @Override
   public String getLabel() {
-    return "Palette";
+    return "Color Palette";
   }
 
   @Override

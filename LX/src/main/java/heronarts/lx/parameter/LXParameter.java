@@ -19,6 +19,7 @@
 package heronarts.lx.parameter;
 
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXPath;
 import heronarts.lx.midi.MidiNote;
 
 /**
@@ -26,7 +27,7 @@ import heronarts.lx.midi.MidiNote;
  * parameters that can modify their operation. Any LXComponent can have
  * parameters, such as a pattern, effect, or transition.
  */
-public interface LXParameter {
+public interface LXParameter extends LXPath {
 
   public enum Polarity {
     UNIPOLAR,
@@ -124,7 +125,7 @@ public interface LXParameter {
    *
    * @return Component this parameter belongs to, may be null
    */
-  public LXComponent getComponent();
+  public LXComponent getParent();
 
   /**
    * Gets the path that this parameter is registered to in the component

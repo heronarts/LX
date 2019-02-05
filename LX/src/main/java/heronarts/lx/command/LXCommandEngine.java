@@ -27,6 +27,7 @@ package heronarts.lx.command;
 import java.util.Stack;
 
 import heronarts.lx.LX;
+import heronarts.lx.command.LXCommand.InvalidCommandException;
 import heronarts.lx.parameter.MutableParameter;
 
 /**
@@ -54,18 +55,25 @@ public class LXCommandEngine {
    * @return this
    */
   public LXCommandEngine perform(LXCommand command) {
-    command.perform(this.lx);
+    try {
 
-    // If the event it already at the top of the pack, it has been updated
-    // and is not re-pushed after it is performed again
-    if (this.undoStack.isEmpty() || (this.undoStack.peek() != command)) {
-      this.undoStack.push(command);
-      this.undoChanged.bang();
+      // Perform the command
+      command.perform(this.lx);
+
+      // If the event it already at the top of the pack, it has been updated
+      // and is not re-pushed after it is performed again
+      if (this.undoStack.isEmpty() || (this.undoStack.peek() != command)) {
+        this.undoStack.push(command);
+        this.undoChanged.bang();
+      }
+
+      // A new action has occurred, we've branched and redo is done
+      this.redoStack.clear();
+      this.redoChanged.bang();
+
+    } catch (InvalidCommandException icx) {
+      _commandException(icx);
     }
-
-    // A new action has occurred, we've branched and redo is done
-    this.redoStack.clear();
-    this.redoChanged.bang();
 
     return this;
   }
@@ -100,8 +108,10 @@ public class LXCommandEngine {
         this.redoStack.push(command);
         this.undoChanged.bang();
         this.redoChanged.bang();
+      } catch (InvalidCommandException icx) {
+        _commandException(icx);
       } catch (Exception x) {
-        System.err.println("Unhandled exception on undo, bad internal state?");
+        System.err.println("Unhandled exception on undo " + command + " - bad internal state?");
         x.printStackTrace();
         clear();
       }
@@ -122,13 +132,20 @@ public class LXCommandEngine {
         this.undoStack.push(command);
         this.undoChanged.bang();
         this.redoChanged.bang();
+      } catch (InvalidCommandException icx) {
+        _commandException(icx);
       } catch (Exception x) {
-        System.err.println("Unhandled exception on redo, bad internal state?");
+        System.err.println("Unhandled exception on redo " + command + " - bad internal state?");
         x.printStackTrace();
         clear();
       }
     }
     return this;
+  }
+
+  private void _commandException(InvalidCommandException icx) {
+    // TODO(mcslee): set an error parameter on LXCommandEngine that the UI can watch to show
+    // an error dialog of some sort.
   }
 
 }

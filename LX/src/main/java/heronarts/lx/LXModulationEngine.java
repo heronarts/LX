@@ -38,6 +38,7 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXCompoundModulation;
+import heronarts.lx.parameter.LXParameterModulation;
 import heronarts.lx.parameter.LXTriggerModulation;
 
 public class LXModulationEngine extends LXModulatorComponent implements LXOscComponent {
@@ -64,6 +65,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   public LXModulationEngine(LX lx) {
     super(lx, "Modulation");
+    addArray("modulation", this.modulations);
+    addArray("trigger", this.triggers);
   }
 
   public boolean isValidTarget(CompoundParameter target) {
@@ -71,7 +74,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     if (parent instanceof LXEngine) {
       return true;
     }
-    LXComponent targetComponent = target.getComponent();
+    LXComponent targetComponent = target.getParent();
     while (targetComponent != null) {
       if (targetComponent == parent) {
         return true;
@@ -108,6 +111,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     }
     ((LXComponent) modulation).setParent(this);
     this.mutableModulations.add(modulation);
+    _reindex(this.modulations);
     for (Listener listener : this.listeners) {
       listener.modulationAdded(this, modulation);
     }
@@ -119,6 +123,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     for (Listener listener : this.listeners) {
       listener.modulationRemoved(this, modulation);
     }
+    _reindex(this.modulations);
     modulation.dispose();
     return this;
   }
@@ -129,6 +134,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     }
     ((LXComponent) trigger).setParent(this);
     this.mutableTriggers.add(trigger);
+    _reindex(this.triggers);
     for (Listener listener : this.listeners) {
       listener.triggerAdded(this, trigger);
     }
@@ -137,6 +143,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   public LXModulationEngine removeTrigger(LXTriggerModulation trigger) {
     this.mutableTriggers.remove(trigger);
+    _reindex(this.triggers);
     for (Listener listener : this.listeners) {
       listener.triggerRemoved(this, trigger);
     }
@@ -144,11 +151,18 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     return this;
   }
 
+  private void _reindex(List<? extends LXParameterModulation> modulations) {
+    int i = 0;
+    for (LXParameterModulation modulation : modulations) {
+      modulation.setIndex(i++);
+    }
+  }
+
   public LXModulationEngine removeModulations(LXComponent component) {
     Iterator<LXCompoundModulation> iterator = this.mutableModulations.iterator();
     while (iterator.hasNext()) {
       LXCompoundModulation modulation = iterator.next();
-      if (modulation.source == component || modulation.source.getComponent() == component || modulation.target.getComponent() == component) {
+      if (modulation.source == component || modulation.source.getParent() == component || modulation.target.getParent() == component) {
         iterator.remove();
         for (Listener listener : this.listeners) {
           listener.modulationRemoved(this, modulation);
@@ -159,7 +173,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     Iterator<LXTriggerModulation> triggerIterator = this.mutableTriggers.iterator();
     while (triggerIterator.hasNext()) {
       LXTriggerModulation trigger = triggerIterator.next();
-      if (trigger.source.getComponent() == component || trigger.target.getComponent() == component) {
+      if (trigger.source.getParent() == component || trigger.target.getParent() == component) {
         triggerIterator.remove();
         for (Listener listener : this.listeners) {
           listener.triggerRemoved(this, trigger);
@@ -272,11 +286,11 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
       for (JsonElement modulationElement : modulationArr) {
         JsonObject modulationObj = modulationElement.getAsJsonObject();
         try {
-          LXCompoundModulation modulation = new LXCompoundModulation(this.lx, modulationObj);
+          LXCompoundModulation modulation = new LXCompoundModulation(this.lx, this, modulationObj);
           addModulation(modulation);
           modulation.load(lx, modulationObj);
         } catch (Exception x) {
-          System.err.println("Could to load modulation");
+          System.err.println("Could not load modulation");
           x.printStackTrace();
         }
       }
@@ -286,11 +300,11 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
       for (JsonElement triggerElement : triggerArr) {
         JsonObject triggerObj = triggerElement.getAsJsonObject();
         try {
-          LXTriggerModulation trigger = new LXTriggerModulation(this.lx, triggerObj);
+          LXTriggerModulation trigger = new LXTriggerModulation(this.lx, this, triggerObj);
           addTrigger(trigger);
           trigger.load(lx, triggerObj);
         } catch (Exception x) {
-          System.err.println("Could to load trigger mapping");
+          System.err.println("Could not load trigger mapping");
           x.printStackTrace();
         }
       }

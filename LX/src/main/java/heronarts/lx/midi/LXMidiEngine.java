@@ -354,7 +354,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     Iterator<LXMidiMapping> iterator = this.mutableMappings.iterator();
     while (iterator.hasNext()) {
       LXMidiMapping mapping = iterator.next();
-      if (mapping.parameter.getComponent() == component) {
+      if (mapping.parameter.getParent() == component) {
         iterator.remove();
         for (MappingListener mappingListener : this.mappingListeners) {
           mappingListener.mappingRemoved(this, mapping);

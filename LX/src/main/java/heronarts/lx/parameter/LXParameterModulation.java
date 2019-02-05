@@ -28,6 +28,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXModulationEngine;
+import heronarts.lx.LXPath;
 import heronarts.lx.color.ColorParameter;
 
 public abstract class LXParameterModulation extends LXComponent {
@@ -41,6 +42,9 @@ public abstract class LXParameterModulation extends LXComponent {
     };
   }
 
+  protected int index = -1;
+
+  private final LXModulationEngine scope;
   private final LXParameter source;
   private final LXParameter target;
 
@@ -78,34 +82,44 @@ public abstract class LXParameterModulation extends LXComponent {
   }
 
   private static void unregisterModulation(LXParameter source, LXParameter target) {
-    // Note: there may be multiple instances of target, this only removes one
+    // Note: there may be multiple instances of target, this only removes one.
+    // That's by design, since we do need to keep a count of the number of mappings from
+    // source->target.
     modulationGraph.get(source).remove(target);
   }
 
-  protected LXParameterModulation(LXParameter source, LXParameter target) {
+  protected LXParameterModulation(LXModulationEngine scope, LXParameter source, LXParameter target) {
     if (source == null) {
       throw new IllegalArgumentException("LXParameterModulation source may not be null");
     }
     if (target == null) {
-      throw new IllegalArgumentException("LXParameterdModulation target may not be null");
+      throw new IllegalArgumentException("LXParameterModulation target may not be null");
     }
-    if (source.getComponent() == null && !(source instanceof LXComponent)) {
+    if (source.getParent() == null && !(source instanceof LXComponent)) {
       throw new IllegalStateException("May not create parameter modulation from source registered to no component: " + source.toString());
     }
-    if (target.getComponent() == null) {
+    if (target.getParent() == null) {
       throw new IllegalStateException("May not create parameter modulation to target registered to no component: " + target.toString());
     }
     registerModulation(source, target);
+
+    // TODO(mcslee): check that source and target parameters fall within scope...
+
+    this.scope = scope;
     this.source = source;
     this.target = target;
-    LXComponent component = source.getComponent();
-    if (component instanceof LXModulationEngine) {
-      this.color = ((LXComponent) source).modulationColor;
-    } else {
-      this.color = component.modulationColor;
-    }
+    this.color = (source instanceof LXComponent) ? ((LXComponent) source).modulationColor : source.getParent().modulationColor;
     this.clr = this.color;
     addParameter("enabled", this.enabled);
+  }
+
+  public LXParameterModulation setIndex(int index) {
+    this.index = index;
+    return this;
+  }
+
+  public int getIndex() {
+    return this.index;
   }
 
   public LXParameter getTarget() {
@@ -120,7 +134,10 @@ public abstract class LXParameterModulation extends LXComponent {
   protected static final String KEY_SOURCE = "source";
   protected static final String KEY_TARGET = "target";
 
-  protected static LXParameter getParameter(LX lx, JsonObject obj) {
+  protected static LXParameter getParameter(LX lx, LXModulationEngine scope, JsonObject obj) {
+    if (obj.has(KEY_PATH)) {
+      return (LXParameter) LXPath.get(scope.getParent(), obj.get(KEY_PATH).getAsString());
+    }
     if (obj.has(KEY_ID)) {
       return (LXParameter) lx.getProjectComponent(obj.get(KEY_ID).getAsInt());
     }
@@ -142,16 +159,16 @@ public abstract class LXParameterModulation extends LXComponent {
       LXComponent sourceComponent = (LXComponent) this.source;
       sourceObj.addProperty(KEY_ID, sourceComponent.getId());
     } else {
-      sourceObj.addProperty(KEY_COMPONENT_ID, this.source.getComponent().getId());
+      sourceObj.addProperty(KEY_COMPONENT_ID, this.source.getParent().getId());
       sourceObj.addProperty(KEY_PARAMETER_PATH, this.source.getPath());
     }
-    sourceObj.addProperty(KEY_PATH, LXComponent.getCanonicalPath(this.source));
+    sourceObj.addProperty(KEY_PATH, LXPath.getCanonicalPath(this.scope.getParent(), this.source));
 
     obj.add(KEY_SOURCE, sourceObj);
     JsonObject targetObj = new JsonObject();
-    targetObj.addProperty(KEY_COMPONENT_ID, this.target.getComponent().getId());
+    targetObj.addProperty(KEY_COMPONENT_ID, this.target.getParent().getId());
     targetObj.addProperty(KEY_PARAMETER_PATH, this.target.getPath());
-    targetObj.addProperty(KEY_PATH, LXComponent.getCanonicalPath(this.target));
+    targetObj.addProperty(KEY_PATH, LXPath.getCanonicalPath(this.scope.getParent(), this.target));
     obj.add(KEY_TARGET, targetObj);
     super.save(lx, obj);
   }

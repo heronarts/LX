@@ -26,7 +26,7 @@ import heronarts.lx.LXUtils;
  */
 public class NormalizedParameter implements LXNormalizedParameter {
 
-  private LXComponent component = null;
+  private LXComponent parent = null;
   private String path = null;
   private final String label;
   private String description = null;
@@ -46,17 +46,17 @@ public class NormalizedParameter implements LXNormalizedParameter {
     if (component == null || path == null) {
       throw new IllegalArgumentException("May not set null component or path");
     }
-    if (this.component != null || this.path != null) {
+    if (this.parent != null || this.path != null) {
       throw new IllegalStateException("Component already set on this modulator: " + this);
     }
-    this.component = component;
+    this.parent = component;
     this.path = path;
     return this;
   }
 
   @Override
-  public LXComponent getComponent() {
-    return this.component;
+  public LXComponent getParent() {
+    return this.parent;
   }
 
   @Override

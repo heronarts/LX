@@ -222,6 +222,8 @@ public class LXChannel extends LXChannelBus {
 
     this.colors = this.getActivePattern().getColors();
 
+    addArray("pattern", this.patterns);
+
     addParameter("midiMonitor", this.midiMonitor);
     addParameter("midiChannel", this.midiChannel);
     addParameter("autoCycleEnabled", this.autoCycleEnabled);

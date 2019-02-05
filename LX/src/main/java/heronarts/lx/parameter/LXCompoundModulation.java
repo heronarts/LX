@@ -21,6 +21,7 @@ package heronarts.lx.parameter;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXModulationEngine;
 
 public class LXCompoundModulation extends LXParameterModulation {
 
@@ -37,20 +38,21 @@ public class LXCompoundModulation extends LXParameterModulation {
     .setDescription("Species the depth of this modulation, may be positive or negative")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public LXCompoundModulation(LX lx, JsonObject obj) {
+  public LXCompoundModulation(LX lx, LXModulationEngine scope, JsonObject obj) {
     this(
-      (LXNormalizedParameter) getParameter(lx, obj.getAsJsonObject(KEY_SOURCE)),
-      (CompoundParameter) getParameter(lx, obj.getAsJsonObject(KEY_TARGET))
+      scope,
+      (LXNormalizedParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_SOURCE)),
+      (CompoundParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_TARGET))
     );
   }
 
-  public LXCompoundModulation(LXNormalizedParameter source, CompoundParameter target) {
-    super(source, target);
+  public LXCompoundModulation(LXModulationEngine scope, LXNormalizedParameter source, CompoundParameter target) {
+    super(scope, source, target);
     this.source = source;
     this.target = target;
     this.polarity.setValue(source.getPolarity());
-    addParameter(this.polarity);
-    addParameter(this.range);
+    addParameter("Polarity", this.polarity);
+    addParameter("Range", this.range);
     target.addModulation(this);
   }
 
@@ -61,6 +63,11 @@ public class LXCompoundModulation extends LXParameterModulation {
 
   public LXParameter.Polarity getPolarity() {
     return this.polarity.getEnum();
+  }
+
+  @Override
+  public String getPath() {
+    return "modulation/" + (this.index + 1);
   }
 
   @Override

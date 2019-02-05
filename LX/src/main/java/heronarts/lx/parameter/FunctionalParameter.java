@@ -29,7 +29,7 @@ public abstract class FunctionalParameter implements LXParameter {
   private final String label;
   protected String description = null;
 
-  private LXComponent component;
+  private LXComponent parent;
   private String path;
 
   protected FunctionalParameter() {
@@ -51,21 +51,21 @@ public abstract class FunctionalParameter implements LXParameter {
   }
 
   @Override
-  public LXParameter setComponent(LXComponent component, String path) {
-    if (component == null || path == null) {
+  public LXParameter setComponent(LXComponent parent, String path) {
+    if (parent == null || path == null) {
       throw new IllegalArgumentException("May not set null component or path");
     }
-    if (this.component != null || this.path != null) {
+    if (this.parent != null || this.path != null) {
       throw new IllegalStateException("Component already set on this modulator: " + this);
     }
-    this.component = component;
+    this.parent = parent;
     this.path = path;
     return this;
   }
 
   @Override
-  public LXComponent getComponent() {
-    return this.component;
+  public LXComponent getParent() {
+    return this.parent;
   }
 
   @Override

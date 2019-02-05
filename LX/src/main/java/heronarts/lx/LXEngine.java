@@ -469,6 +469,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     });
 
+    // Register channels array
+    addArray("channel", this.channels);
+
     // Parameters
     addParameter("crossfader", this.crossfader);
     addParameter("crossfaderBlendMode", this.crossfaderBlendMode);

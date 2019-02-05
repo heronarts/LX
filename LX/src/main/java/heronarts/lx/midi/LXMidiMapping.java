@@ -42,7 +42,7 @@ public abstract class LXMidiMapping implements LXSerializable {
   public final LXParameter parameter;
 
   protected LXMidiMapping(LX lx, int channel, Type type, LXParameter parameter) {
-    if (parameter.getComponent() == null) {
+    if (parameter.getParent() == null) {
       throw new IllegalStateException("Cannot map parameter with no component: " + parameter);
     }
     this.channel = channel;
@@ -122,7 +122,7 @@ public abstract class LXMidiMapping implements LXSerializable {
   public void save(LX lx, JsonObject object) {
     object.addProperty(KEY_CHANNEL, this.channel);
     object.addProperty(KEY_TYPE, this.type.toString());
-    object.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getComponent().getId());
+    object.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getParent().getId());
     object.addProperty(LXComponent.KEY_PARAMETER_PATH, this.parameter.getPath());
   }
 

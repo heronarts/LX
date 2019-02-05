@@ -21,6 +21,7 @@ package heronarts.lx.parameter;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXModulationEngine;
 
 public class LXTriggerModulation extends LXParameterModulation {
 
@@ -30,8 +31,8 @@ public class LXTriggerModulation extends LXParameterModulation {
   private final boolean sourceMomentary;
   private final boolean targetMomentary;
 
-  public LXTriggerModulation(BooleanParameter source, BooleanParameter target) {
-    super(source, target);
+  public LXTriggerModulation(LXModulationEngine scope, BooleanParameter source, BooleanParameter target) {
+    super(scope, source, target);
     this.source = source;
     this.target = target;
     this.sourceMomentary = (source.getMode() == BooleanParameter.Mode.MOMENTARY);
@@ -39,10 +40,11 @@ public class LXTriggerModulation extends LXParameterModulation {
     this.source.addListener(this);
   }
 
-  public LXTriggerModulation(LX lx, JsonObject obj) {
+  public LXTriggerModulation(LX lx, LXModulationEngine scope, JsonObject obj) {
     this(
-      (BooleanParameter) getParameter(lx, obj.getAsJsonObject(KEY_SOURCE)),
-      (BooleanParameter) getParameter(lx, obj.getAsJsonObject(KEY_TARGET))
+      scope,
+      (BooleanParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_SOURCE)),
+      (BooleanParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_TARGET))
     );
   }
 
@@ -64,6 +66,11 @@ public class LXTriggerModulation extends LXParameterModulation {
         }
       }
     }
+  }
+
+  @Override
+  public String getPath() {
+    return "trigger/" + (this.index + 1);
   }
 
   @Override

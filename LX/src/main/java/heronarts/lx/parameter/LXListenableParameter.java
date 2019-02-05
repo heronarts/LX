@@ -38,7 +38,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   private final Set<LXParameterListener> listeners = new HashSet<LXParameterListener>();
 
-  private LXComponent component;
+  private LXComponent parent;
   private String path;
 
   private Units units = Units.NONE;
@@ -124,17 +124,17 @@ public abstract class LXListenableParameter implements LXParameter {
     if (component == null || path == null) {
       throw new IllegalArgumentException("May not set null component or path");
     }
-    if (this.component != null || this.path != null) {
+    if (this.parent != null || this.path != null) {
       throw new IllegalStateException("Component already set on this modulator: " + this);
     }
-    this.component = component;
+    this.parent = component;
     this.path = path;
     return this;
   }
 
   @Override
-  public LXComponent getComponent() {
-    return this.component;
+  public LXComponent getParent() {
+    return this.parent;
   }
 
   @Override

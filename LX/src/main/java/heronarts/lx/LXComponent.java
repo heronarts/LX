@@ -46,7 +46,7 @@ import heronarts.lx.parameter.StringParameter;
 /**
  * Utility base class for objects that have parameters.
  */
-public abstract class LXComponent implements LXParameterListener, LXSerializable {
+public abstract class LXComponent implements LXPath, LXParameterListener, LXSerializable {
 
   /**
    * Marker interface for components which can have their label changed
@@ -61,6 +61,9 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
 
   private final LinkedHashMap<String, LXComponent> children =
     new LinkedHashMap<String, LXComponent>();
+
+  private final LinkedHashMap<String, List<? extends LXComponent>> childArrays =
+    new LinkedHashMap<String, List<? extends LXComponent>>();
 
   private int id;
 
@@ -80,7 +83,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   static final int ID_ENGINE = 1;
 
   static class Registry {
-    private int idCounter = ID_ENGINE+1;
+    private int idCounter = ID_ENGINE + 1;
     boolean loading = false;
     private final Map<Integer, LXComponent> components = new HashMap<Integer, LXComponent>();
     private final Map<Integer, LXComponent> projectIdMap = new HashMap<Integer, LXComponent>();
@@ -181,13 +184,33 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     return this.lx;
   }
 
+  void _checkPath(String path, String type) {
+    if (this.parameters.containsKey(path)) {
+      throw new IllegalStateException("Cannot add " + type + " at path " + path
+        + ", parameter already exists");
+    }
+    if (this.children.containsKey(path)) {
+      throw new IllegalStateException(
+        "Cannot add " + type + " at path " + path + ", child already exists");
+    }
+    if (this.childArrays.containsKey(path)) {
+      throw new IllegalStateException(
+        "Cannot add " + type + " at path " + path + ", array already exists");
+    }
+  }
+
+  protected LXComponent addArray(String path,
+    List<? extends LXComponent> childArray) {
+    _checkPath(path, "array");
+    this.childArrays.put(path, childArray);
+    return this;
+  }
+
   protected LXComponent addChild(String path, LXComponent child) {
     if (child == null) {
       throw new IllegalStateException("Cannot add null child to component");
     }
-    if (this.children.containsKey(path)) {
-      throw new IllegalStateException("Cannot add duplicate child to component: " + getCanonicalPath() + " already has child at " + path);
-    }
+    _checkPath(path, "child");
     child.setParent(this, path);
     this.children.put(path, child);
     return this;
@@ -247,7 +270,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     String path = parts[index];
     LXComponent child = getChild(path);
     if (child != null) {
-      return child.handleOscMessage(message, parts, index+1);
+      return child.handleOscMessage(message, parts, index + 1);
     }
     LXParameter parameter = getParameter(path);
     if (parameter == null) {
@@ -255,17 +278,19 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
       return false;
     }
     if (parameter instanceof BooleanParameter) {
-      ((BooleanParameter)parameter).setValue(message.getBoolean());
+      ((BooleanParameter) parameter).setValue(message.getBoolean());
     } else if (parameter instanceof StringParameter) {
       ((StringParameter) parameter).setValue(message.getString());
     } else if (parameter instanceof ColorParameter) {
-      if (parts.length >= index+1) {
-        if (parts[index+1].equals(ColorParameter.PATH_HUE)) {
+      if (parts.length >= index + 1) {
+        if (parts[index + 1].equals(ColorParameter.PATH_HUE)) {
           ((ColorParameter) parameter).hue.setNormalized(message.getFloat());
-        } else if (parts[index+1].equals(ColorParameter.PATH_SATURATION)) {
-          ((ColorParameter) parameter).saturation.setNormalized(message.getFloat());
-        } else if (parts[index+1].equals(ColorParameter.PATH_BRIGHTNESS)) {
-          ((ColorParameter) parameter).brightness.setNormalized(message.getFloat());
+        } else if (parts[index + 1].equals(ColorParameter.PATH_SATURATION)) {
+          ((ColorParameter) parameter).saturation
+            .setNormalized(message.getFloat());
+        } else if (parts[index + 1].equals(ColorParameter.PATH_BRIGHTNESS)) {
+          ((ColorParameter) parameter).brightness
+            .setNormalized(message.getFloat());
         }
       } else {
         ((ColorParameter) parameter).setColor(message.getInt());
@@ -275,10 +300,10 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
       if (arg instanceof OscInt) {
         parameter.setValue(arg.toInt());
       } else {
-        ((DiscreteParameter)parameter).setNormalized(arg.toFloat());
+        ((DiscreteParameter) parameter).setNormalized(arg.toFloat());
       }
     } else if (parameter instanceof LXNormalizedParameter) {
-      ((LXNormalizedParameter)parameter).setNormalized(message.getFloat());
+      ((LXNormalizedParameter) parameter).setNormalized(message.getFloat());
     } else {
       parameter.setValue(message.getFloat());
     }
@@ -286,18 +311,11 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   }
 
   public String getCanonicalPath() {
-    return getCanonicalPath(this.lx.engine);
+    return LXPath.getCanonicalPath(null, this);
   }
 
   public String getCanonicalPath(LXComponent root) {
-    String path = getPath();
-    if (this == root) {
-      return "/" + path;
-    }
-    if (this.parent != null) {
-      return this.parent.getCanonicalPath(root) + "/" + path;
-    }
-    return path;
+    return LXPath.getCanonicalPath(root, this);
   }
 
   public String getCanonicalLabel() {
@@ -312,6 +330,53 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     return label;
   }
 
+  /**
+   * Finds the child parameter or component at the specified path
+   *
+   * @param parts A path, already broken into parts
+   * @param index Index to start looking at
+   * @return Child parameter, subcomponent, or subcomponent array member
+   */
+  LXPath path(String[] parts, int index) {
+    if (index < 0 || index >= parts.length) {
+      throw new IllegalArgumentException("Illegal index to path method: "
+        + index + " parts.length=" + parts.length);
+    }
+    String key = parts[index];
+    LXParameter parameter = this.parameters.get(key);
+    if (parameter != null) {
+      return parameter;
+    }
+    LXComponent child = this.children.get(key);
+    if (child != null) {
+      if (index == parts.length - 1) {
+        return child;
+      }
+      return child.path(parts, index + 1);
+    }
+    List<? extends LXComponent> array = this.childArrays.get(key);
+    if (array != null) {
+      ++index;
+      if (index < parts.length) {
+        try {
+          // NOTE: path indices are 1-indexed because they are used in OSC and shown to
+          // the end-user... correct them back to 0-indexing for us computer scientists...
+          int arrIndex = Integer.parseInt(parts[index]) - 1;
+          if (arrIndex >= 0 && arrIndex < array.size()) {
+            child = array.get(arrIndex);
+            if (index == parts.length - 1) {
+              return child;
+            }
+            return child.path(parts, index + 1);
+          }
+        } catch (NumberFormatException nfx) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
+
   public String getPath() {
     return this.path;
   }
@@ -320,12 +385,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     return this.label.getString();
   }
 
-  public static String getCanonicalPath(LXParameter p) {
-    return p.getComponent().getCanonicalPath() + "/" + p.getPath();
-  }
-
   public static String getCanonicalLabel(LXParameter p, LXComponent root) {
-    LXComponent component = p.getComponent();
+    LXComponent component = p.getParent();
     if (component != null && component != root) {
       return component.getCanonicalLabel(root) + " | " + p.getLabel();
     }
@@ -333,7 +394,7 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   }
 
   public static String getCanonicalLabel(LXParameter p) {
-    LXComponent component = p.getComponent();
+    LXComponent component = p.getParent();
     if (component != null) {
       return component.getCanonicalLabel() + " | " + p.getLabel();
     }
@@ -345,7 +406,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     String path = "";
     try {
       path = "[" + getCanonicalPath() + "]";
-    } catch (Exception x) {}
+    } catch (Exception x) {
+    }
     return getClass().getSimpleName() + path;
   }
 
@@ -353,13 +415,15 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
     String path = "";
     try {
       path = "[" + getCanonicalPath() + "]";
-    } catch (Exception x) {}
+    } catch (Exception x) {
+    }
     return getClass().getSimpleName() + path;
   }
 
   public void dispose() {
     if (this.lx == null) {
-      throw new IllegalStateException("LXComponent never had lx reference set: " + this);
+      throw new IllegalStateException(
+        "LXComponent never had lx reference set: " + this);
     }
     // TODO(mcslee): dispose of all children?? remove LXModulationContainer??
     if (this instanceof LXModulationContainer) {
@@ -382,14 +446,15 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   }
 
   public LXComponent addParameter(String path, LXParameter parameter) {
-    if (this.parameters.containsKey(path)) {
-      throw new IllegalStateException("Cannot add parameter at existing path: " + path);
-    } else if (this.parameters.containsValue(parameter)) {
-      throw new IllegalStateException("Cannot add parameter twice: " + parameter);
+    _checkPath(path, "parameter");
+    if (this.parameters.containsValue(parameter)) {
+      throw new IllegalStateException(
+        "Cannot add parameter twice: " + parameter);
     }
-    LXComponent component = parameter.getComponent();
+    LXComponent component = parameter.getParent();
     if (component != null) {
-      throw new IllegalStateException("Parameter " + parameter + " already owned by " + component);
+      throw new IllegalStateException(
+        "Parameter " + parameter + " already owned by " + component);
     }
     parameter.setComponent(this, path);
     this.parameters.put(path, parameter);
@@ -411,15 +476,16 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
 
   public LXComponent removeParameter(String path) {
     LXParameter parameter = this.parameters.get(path);
-    if (parameter ==  null) {
+    if (parameter == null) {
       throw new IllegalStateException("No parameter at path: " + path);
     }
     return removeParameter(parameter);
   }
 
   public LXComponent removeParameter(LXParameter parameter) {
-    if (parameter.getComponent() != this) {
-      throw new IllegalStateException("Cannot remove parameter not owned by component");
+    if (parameter.getParent() != this) {
+      throw new IllegalStateException(
+        "Cannot remove parameter not owned by component");
     }
     this.parameters.remove(parameter.getPath());
     parameter.dispose();
@@ -436,7 +502,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
 
   private final LXParameterListener oscListener = new LXParameterListener() {
     public void onParameterChanged(LXParameter parameter) {
-      // This check is necessary for bootstrapping, before the OSC engine is spun up
+      // This check is necessary for bootstrapping, before the OSC engine is
+      // spun up
       if (lx != null && lx.engine != null && lx.engine.osc != null) {
         lx.engine.osc.sendParameter(parameter);
       }
@@ -446,21 +513,27 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
   /**
    * Subclasses are free to override this if desired
    */
-  public void onParameterChanged(LXParameter parameter) {}
+  public void onParameterChanged(LXParameter parameter) {
+  }
 
   protected LXComponent copyParameters(LXComponent that) {
     if (!that.getClass().isInstance(this)) {
-      throw new IllegalArgumentException("Cannot copy parameters from non-assignable class: " + that.getClass() + " -> " + getClass());
+      throw new IllegalArgumentException(
+        "Cannot copy parameters from non-assignable class: " + that.getClass()
+          + " -> " + getClass());
     }
-    for (Map.Entry<String, LXParameter> entry: this.parameters.entrySet()) {
+    for (Map.Entry<String, LXParameter> entry : this.parameters.entrySet()) {
       LXParameter thisParameter = entry.getValue();
       LXParameter thatParameter = that.getParameter(entry.getKey());
       if (thisParameter instanceof StringParameter) {
-        ((StringParameter) thisParameter).setValue(((StringParameter) thatParameter).getString());
+        ((StringParameter) thisParameter)
+          .setValue(((StringParameter) thatParameter).getString());
       } else if (thisParameter instanceof ColorParameter) {
-        ((ColorParameter) thisParameter).setColor(((ColorParameter) thatParameter).getColor());
+        ((ColorParameter) thisParameter)
+          .setColor(((ColorParameter) thatParameter).getColor());
       } else if (thisParameter instanceof CompoundParameter) {
-        thisParameter.setValue(((CompoundParameter) thatParameter).getBaseValue());
+        thisParameter
+          .setValue(((CompoundParameter) thatParameter).getBaseValue());
       } else {
         thisParameter.setValue(thatParameter.getValue());
       }
@@ -488,11 +561,14 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
       } else if (parameter instanceof BooleanParameter) {
         parameters.addProperty(path, ((BooleanParameter) parameter).isOn());
       } else if (parameter instanceof DiscreteParameter) {
-        parameters.addProperty(path, ((DiscreteParameter) parameter).getValuei());
+        parameters.addProperty(path,
+          ((DiscreteParameter) parameter).getValuei());
       } else if (parameter instanceof ColorParameter) {
-        // Do nothing, see ColorParameter.setComponent which adds its sub-parameters
+        // Do nothing, see ColorParameter.setComponent which adds its
+        // sub-parameters
       } else if (parameter instanceof CompoundParameter) {
-        parameters.addProperty(path, ((CompoundParameter) parameter).getBaseValue());
+        parameters.addProperty(path,
+          ((CompoundParameter) parameter).getBaseValue());
       } else if (parameter instanceof FunctionalParameter) {
         // Do not write FunctionalParamters into saved files
       } else {
@@ -523,7 +599,8 @@ public abstract class LXComponent implements LXParameterListener, LXSerializable
       JsonObject parameters = obj.getAsJsonObject(KEY_PARAMETERS);
       for (String path : this.parameters.keySet()) {
         LXParameter parameter = this.parameters.get(path);
-        if (parameter == this.label && !(this instanceof LXComponent.Renamable)) {
+        if (parameter == this.label
+          && !(this instanceof LXComponent.Renamable)) {
           continue;
         }
         if (parameters.has(path)) {

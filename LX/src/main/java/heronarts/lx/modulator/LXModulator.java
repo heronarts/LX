@@ -30,8 +30,6 @@ import heronarts.lx.parameter.LXParameter;
  */
 public abstract class LXModulator extends LXRunnableComponent implements LXComponent.Renamable, LXParameter {
 
-  private LXComponent component;
-
   private Formatter formatter = null;
 
   private Units units = Units.NONE;
@@ -109,19 +107,8 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
     if (path != null) {
       throw new UnsupportedOperationException("setComponent() path not supported for LXModulator");
     }
-    if (this.component != null) {
-      throw new IllegalStateException("LXModulator already has component");
-    }
-    if (component == null) {
-      throw new IllegalArgumentException("Cannot setComponent() with null value");
-    }
-    this.component = component;
+    setParent(component);
     return this;
-  }
-
-  @Override
-  public LXComponent getComponent() {
-    return this.component;
   }
 
   @Override

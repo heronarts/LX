@@ -42,9 +42,9 @@ public class ParameterClipLane extends LXClipLane {
 
   @Override
   public String getLabel() {
-    LXComponent component = this.parameter.getComponent();
+    LXComponent component = this.parameter.getParent();
     if (component != this.clip.bus) {
-      return this.parameter.getComponent().getLabel() + " | " + this.parameter.getLabel();
+      return component.getLabel() + " | " + this.parameter.getLabel();
     }
     return this.parameter.getLabel();
   }
@@ -90,7 +90,7 @@ public class ParameterClipLane extends LXClipLane {
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    obj.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getComponent().getId());
+    obj.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getParent().getId());
     obj.addProperty(LXComponent.KEY_PARAMETER_PATH, this.parameter.getPath());
   }
 

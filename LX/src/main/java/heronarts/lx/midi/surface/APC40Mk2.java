@@ -374,7 +374,7 @@ public class APC40Mk2 extends LXMidiSurface {
       } else if (p == this.channel.arm) {
         sendNoteOn(index, CHANNEL_ARM, this.channel.arm.isOn() ? LED_ON : LED_OFF);
         sendChannelClips(this.channel.getIndex(), this.channel);
-      } else if (p.getComponent() instanceof LXClip) {
+      } else if (p.getParent() instanceof LXClip) {
         // TODO(mcslee): could be more efficient...
         sendChannelClips(index, this.channel);
       }
