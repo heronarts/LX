@@ -167,9 +167,10 @@ public abstract class LXParameterModulation extends LXComponent {
   protected static LXParameter getParameter(LX lx, LXModulationEngine scope, JsonObject obj) {
     if (obj.has(KEY_PATH)) {
       LXParameter parameter = (LXParameter) LXPath.get(scope.getParent(), obj.get(KEY_PATH).getAsString());
-      if (parameter == null) {
-        System.err.println("Failed to locate parameter at " + obj.get(KEY_PATH).getAsString() + " in scope " + scope.getParent());
+      if (parameter != null) {
+        return parameter;
       }
+      System.err.println("Failed to locate parameter at " + obj.get(KEY_PATH).getAsString() + " in scope " + scope.getParent());
     }
     if (obj.has(KEY_ID)) {
       return (LXParameter) lx.getProjectComponent(obj.get(KEY_ID).getAsInt());
