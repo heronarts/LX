@@ -40,7 +40,6 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
-import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.script.LXScriptEngine;
 import heronarts.lx.structure.LXFixture;
 
@@ -940,7 +939,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   public LXChannel addChannel(int index) {
-    return addChannel(index, new LXPattern[] { new IteratorPattern(this.lx) });
+    return addChannel(index, new LXPattern[0]);
   }
 
   public LXChannel addChannel(LXPattern[] patterns) {
