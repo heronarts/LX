@@ -31,7 +31,6 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
-import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.parameter.BooleanParameter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -197,19 +196,26 @@ public class LXChannel extends LXChannelBus {
 
   private double autoCycleProgress = 0;
   private double transitionProgress = 0;
-  private int activePatternIndex = 0;
-  private int nextPatternIndex = 0;
+  private int activePatternIndex = -1;
+  private int nextPatternIndex = -1;
 
+  /**
+   * Group that this channel belongs to
+   */
   private LXGroup group = null;
 
+  /**
+   * Transition that we are in the middle of executing
+   */
   private LXBlend transition = null;
+
   private long transitionMillis = 0;
 
   LXChannel(LX lx, int index, LXPattern[] patterns) {
     super(lx, index, "Channel-" + (index+1));
 
     this.focusedPattern =
-      new DiscreteParameter("Focused Pattern", 0, patterns.length)
+      new DiscreteParameter("Focused Pattern", 0, Math.max(1, patterns.length))
       .setDescription("Which pattern has focus in the UI");
 
     this.transitionBlendMode = new ObjectParameter<LXBlend>("Transition Blend", new LXBlend[1])
@@ -220,7 +226,9 @@ public class LXChannel extends LXChannelBus {
 
     _updatePatterns(patterns);
 
-    this.colors = this.getActivePattern().getColors();
+    // Initialize colors array
+    LXPattern pattern = getActivePattern();
+    this.colors = (pattern != null) ? pattern.getColors() : this.blendBuffer.getArray();
 
     addArray("pattern", this.patterns);
 
@@ -358,7 +366,7 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXPattern getPattern(int index) {
-    return this.mutablePatterns.get(index);
+    return this.patterns.get(index);
   }
 
   public final LXPattern getPattern(String label) {
@@ -380,15 +388,26 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXChannel setPatterns(LXPattern[] patterns) {
+    LXPattern active;
+
+    // Clean up any existing transition or running pattern
     if (this.transition != null) {
       finishTransition();
     } else {
-      getActivePattern().onInactive();
+      active = getActivePattern();
+      if (active != null) {
+        active.onInactive();
+      }
     }
     _updatePatterns(patterns);
-    this.activePatternIndex = this.nextPatternIndex = 0;
+    this.activePatternIndex = this.nextPatternIndex = (this.patterns.isEmpty()) ? -1 : 0;
     this.transition = null;
-    getActivePattern().onActive();
+
+    // Is there an active pattern? Notify it
+    active = getActivePattern();
+    if (active != null) {
+      active.onActive();
+    }
     return this;
   }
 
@@ -420,6 +439,7 @@ public class LXChannel extends LXChannelBus {
         this.mutablePatterns.get(i).setIndex(i);
       }
 
+      // Keep active/next as they were
       if (activePattern != null) {
         this.activePatternIndex = activePattern.getIndex();
       }
@@ -428,8 +448,8 @@ public class LXChannel extends LXChannelBus {
       }
     }
 
-    // Retain focused pattern index
-    this.focusedPattern.setRange(this.mutablePatterns.size());
+    // Retain the focused pattern index
+    this.focusedPattern.setRange(Math.max(1, this.mutablePatterns.size()));
     if (focusedPattern != null) {
       this.focusedPattern.setValue(focusedPattern.getIndex());
     }
@@ -439,82 +459,80 @@ public class LXChannel extends LXChannelBus {
     for (Listener listener : this.listenerSnapshot) {
       listener.patternAdded(this, pattern);
     }
+
+    // If this was the first pattern, focusedPattern has "changed" going from 0 -> 0
     if (this.mutablePatterns.size() == 1) {
+      this.activePatternIndex = this.nextPatternIndex = 0;
       this.focusedPattern.bang();
+      LXPattern activePattern = getActivePattern();
+      activePattern.onActive();
+      for (Listener listener : this.listeners) {
+        listener.patternDidChange(this, activePattern);
+      }
     }
     return this;
   }
 
   public final LXChannel removePattern(LXPattern pattern) {
-    return removePattern(pattern, true);
-  }
-
-  private final LXChannel removePattern(LXPattern pattern, boolean checkLast) {
-    if (checkLast && (this.mutablePatterns.size() <= 1)) {
-      throw new UnsupportedOperationException("LXChannel must have at least one pattern");
-    }
     int index = this.mutablePatterns.indexOf(pattern);
-    if (index >= 0) {
-      boolean wasActive = (this.activePatternIndex == index);
-      boolean wasNext = (this.transition != null) && (this.nextPatternIndex == index);
-      boolean activateNext = false;
-      int focusedPatternIndex = this.focusedPattern.getValuei();
-      if (this.transition != null) {
-        if (wasNext) {
-          cancelTransition();
-        } else if (wasActive) {
-          finishTransition();
-        }
-      } else if (wasActive) {
-        pattern.onInactive();
-        activateNext = true;
-      }
-      this.mutablePatterns.remove(index);
-      for (int i = index; i < this.mutablePatterns.size(); ++i) {
-        this.mutablePatterns.get(i).setIndex(i);
-      }
-      if (this.activePatternIndex > index) {
-        --this.activePatternIndex;
-      } else if (this.activePatternIndex >= this.mutablePatterns.size()) {
-        this.activePatternIndex = this.mutablePatterns.size() - 1;
-      }
-      if (this.nextPatternIndex > index) {
-        --this.nextPatternIndex;
-      } else if (this.nextPatternIndex >= this.mutablePatterns.size()) {
-        this.nextPatternIndex = this.mutablePatterns.size() - 1;
-      }
-      if (focusedPatternIndex > index) {
-        --focusedPatternIndex;
-      } else if (focusedPatternIndex >= this.mutablePatterns.size()) {
-        focusedPatternIndex = this.mutablePatterns.size() - 1;
-      }
-      if (this.activePatternIndex < 0) {
-        this.activePatternIndex = 0;
-        this.nextPatternIndex = 0;
-      }
-      if (focusedPatternIndex >= 0) {
-        if (this.focusedPattern.getValuei() != focusedPatternIndex) {
-          this.focusedPattern.setValue(focusedPatternIndex);
-        } else {
-          this.focusedPattern.bang();
-        }
-      }
-      this.focusedPattern.setRange(Math.max(1, this.mutablePatterns.size()));
-      this.listenerSnapshot.clear();
-      this.listenerSnapshot.addAll(this.listeners);
-      for (Listener listener : this.listenerSnapshot) {
-        listener.patternRemoved(this, pattern);
-      }
-      if (activateNext && (this.mutablePatterns.size() > 0)) {
-        LXPattern newActive = getActivePattern();
-        newActive.onActive();
-        for (Listener listener : this.listeners) {
-          listener.patternDidChange(this, newActive);
-        }
-        this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, newActive.getIndex());
-      }
-      pattern.dispose();
+    if (index < 0) {
+      return this;
     }
+    boolean wasActive = (this.activePatternIndex == index);
+    boolean wasNext = (this.transition != null) && (this.nextPatternIndex == index);
+    boolean activateNext = false;
+    int focusedPatternIndex = this.focusedPattern.getValuei();
+    if (this.transition != null) {
+      if (wasNext) {
+        cancelTransition();
+      } else if (wasActive) {
+        finishTransition();
+      }
+    } else if (wasActive) {
+      pattern.onInactive();
+      activateNext = true;
+    }
+    this.mutablePatterns.remove(index);
+    for (int i = index; i < this.mutablePatterns.size(); ++i) {
+      this.mutablePatterns.get(i).setIndex(i);
+    }
+    if (this.activePatternIndex > index) {
+      --this.activePatternIndex;
+    } else if (this.activePatternIndex >= this.mutablePatterns.size()) {
+      this.activePatternIndex = this.mutablePatterns.size() - 1;
+    }
+    if (this.nextPatternIndex > index) {
+      --this.nextPatternIndex;
+    } else if (this.nextPatternIndex >= this.mutablePatterns.size()) {
+      this.nextPatternIndex = this.mutablePatterns.size() - 1;
+    }
+    if (focusedPatternIndex > index) {
+      --focusedPatternIndex;
+    } else if (focusedPatternIndex >= this.mutablePatterns.size()) {
+      focusedPatternIndex = this.mutablePatterns.size() - 1;
+    }
+    if (focusedPatternIndex >= 0) {
+      if (this.focusedPattern.getValuei() != focusedPatternIndex) {
+        this.focusedPattern.setValue(focusedPatternIndex);
+      } else {
+        this.focusedPattern.bang();
+      }
+    }
+    this.focusedPattern.setRange(Math.max(1, this.mutablePatterns.size()));
+    this.listenerSnapshot.clear();
+    this.listenerSnapshot.addAll(this.listeners);
+    for (Listener listener : this.listenerSnapshot) {
+      listener.patternRemoved(this, pattern);
+    }
+    if (activateNext && !this.patterns.isEmpty()) {
+      LXPattern newActive = getActivePattern();
+      newActive.onActive();
+      for (Listener listener : this.listeners) {
+        listener.patternDidChange(this, newActive);
+      }
+      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, newActive.getIndex());
+    }
+    pattern.dispose();
     return this;
   }
 
@@ -522,12 +540,9 @@ public class LXChannel extends LXChannelBus {
     if (patterns == null) {
       throw new IllegalArgumentException("May not set null pattern array");
     }
-    if (patterns.length == 0) {
-      throw new IllegalArgumentException("LXChannel must have at least one pattern");
-    }
     // Remove all existing patterns
     for (int i = this.mutablePatterns.size() - 1; i >= 0; --i) {
-      removePattern(this.mutablePatterns.get(i), false);
+      removePattern(this.mutablePatterns.get(i));
     }
     // Add new patterns
     for (LXPattern pattern : patterns) {
@@ -565,10 +580,10 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXPattern getFocusedPattern() {
-    if (this.mutablePatterns.isEmpty()) {
+    if (this.patterns.isEmpty()) {
       return null;
     }
-    return this.mutablePatterns.get(this.focusedPattern.getValuei());
+    return this.patterns.get(this.focusedPattern.getValuei());
   }
 
   public final int getActivePatternIndex() {
@@ -576,7 +591,7 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXPattern getActivePattern() {
-    return this.mutablePatterns.get(this.activePatternIndex);
+    return (this.activePatternIndex >= 0) ? this.mutablePatterns.get(this.activePatternIndex) : null;
   }
 
   public final int getNextPatternIndex() {
@@ -584,13 +599,17 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXPattern getNextPattern() {
-    return this.mutablePatterns.get(this.nextPatternIndex);
+    return (this.nextPatternIndex >= 0) ? this.mutablePatterns.get(this.nextPatternIndex) : null;
   }
 
   public final LXChannel goPrev() {
     if (this.transition != null) {
       return this;
     }
+    if (this.patterns.size() <= 1) {
+      return this;
+    }
+
     this.nextPatternIndex = this.activePatternIndex - 1;
     if (this.nextPatternIndex < 0) {
       this.nextPatternIndex = this.mutablePatterns.size() - 1;
@@ -601,6 +620,9 @@ public class LXChannel extends LXChannelBus {
 
   public final LXChannel goNext() {
     if (this.transition != null) {
+      return this;
+    }
+    if (this.patterns.size() <= 1) {
       return this;
     }
     this.nextPatternIndex = this.activePatternIndex;
@@ -615,12 +637,9 @@ public class LXChannel extends LXChannelBus {
   }
 
   public final LXChannel goPattern(LXPattern pattern) {
-    int pi = 0;
-    for (LXPattern p : this.mutablePatterns) {
-      if (p == pattern) {
-        return goIndex(pi);
-      }
-      ++pi;
+    int index = this.patterns.indexOf(pattern);
+    if (index >= 0) {
+      goIndex(index);
     }
     return this;
   }
@@ -629,6 +648,9 @@ public class LXChannel extends LXChannelBus {
 
   public final LXChannel goRandom() {
     if (this.transition != null) {
+      return this;
+    }
+    if (this.patterns.size() <= 1) {
       return this;
     }
     LXPattern activePattern = getActivePattern();
@@ -788,10 +810,15 @@ public class LXChannel extends LXChannelBus {
       }
     }
 
+    // Initialize colors...
+    int[] colors = this.blendBuffer.getArray();
+
     // Run active pattern
     LXPattern activePattern = getActivePattern();
-    activePattern.loop(deltaMs);
-    int[] colors = activePattern.getColors();
+    if (activePattern != null) {
+      activePattern.loop(deltaMs);
+      colors = activePattern.getColors();
+    }
 
     // Run transition!
     if (this.transition != null) {
@@ -849,7 +876,7 @@ public class LXChannel extends LXChannelBus {
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     obj.addProperty(KEY_PATTERN_INDEX, this.activePatternIndex);
-    obj.add(KEY_PATTERNS, LXSerializable.Utils.toArray(lx, this.mutablePatterns));
+    obj.add(KEY_PATTERNS, LXSerializable.Utils.toArray(lx, this.patterns));
     if (this.group != null) {
       obj.addProperty(KEY_GROUP, this.group.getId());
     }
@@ -859,7 +886,7 @@ public class LXChannel extends LXChannelBus {
   public void load(LX lx, JsonObject obj) {
     // Remove patterns
     for (int i = this.mutablePatterns.size() - 1; i >= 0; --i) {
-      removePattern(this.mutablePatterns.get(i), false);
+      removePattern(this.mutablePatterns.get(i));
     }
 
     // Set appropriate group membership
@@ -878,12 +905,9 @@ public class LXChannel extends LXChannelBus {
         addPattern(pattern);
       }
     }
-    if (this.patterns.isEmpty()) {
-      addPattern(new IteratorPattern(lx));
-    }
 
     // Set the active index instantly, do not transition!
-    this.activePatternIndex = this.nextPatternIndex = 0;
+    this.activePatternIndex = this.nextPatternIndex = -1;
     if (obj.has(KEY_PATTERN_INDEX)) {
       int patternIndex = obj.get(KEY_PATTERN_INDEX).getAsInt();
       if (patternIndex < this.patterns.size()) {
@@ -891,13 +915,17 @@ public class LXChannel extends LXChannelBus {
       }
     }
     LXPattern activePattern = getActivePattern();
-    for (Listener listener : listeners) {
-      listener.patternDidChange(this, activePattern);
+    if (activePattern != null) {
+      for (Listener listener : listeners) {
+        listener.patternDidChange(this, activePattern);
+      }
+      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
     }
-    this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
 
-    // Set the focused pattern to the active one
-    this.focusedPattern.setValue(this.activePatternIndex);
+    // Set the focused pattern to the active one, if it exists
+    if (this.activePatternIndex >= 0) {
+      this.focusedPattern.setValue(this.activePatternIndex);
+    }
 
     super.load(lx, obj);
   }
