@@ -29,15 +29,53 @@ import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXChannel;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXEffect;
+import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.modulator.LXModulator;
+import heronarts.lx.structure.LXFixture;
 
 public class LXClipboardComponent<T extends LXComponent> implements LXClipboardItem {
+
+  // Helpers to make code and casting less ugly
+
+  public static class Channel extends LXClipboardComponent<LXChannel> {
+    public Channel(LXChannel channel) {
+      super(LXChannel.class, channel);
+    }
+  }
+
+  public static class Pattern extends LXClipboardComponent<LXPattern> {
+    public Pattern(LXPattern pattern) {
+      super(LXPattern.class, pattern);
+    }
+  }
+
+  public static class Effect extends LXClipboardComponent<LXEffect> {
+    public Effect(LXEffect effect) {
+      super(LXEffect.class, effect);
+    }
+  }
+
+  public static class Modulator extends LXClipboardComponent<LXModulator> {
+    public Modulator(LXModulator modulator) {
+      super(LXModulator.class, modulator);
+    }
+  }
+
+  public static class Fixture extends LXClipboardComponent<LXFixture> {
+    public Fixture(LXFixture fixture) {
+      super(LXFixture.class, fixture);
+    }
+  }
+
   private final Class<T> componentClass;
   private final Class<? extends T> instanceClass;
   private final JsonObject componentObj;
 
-  public LXClipboardComponent(Class<T> cls, T component) {
+  private LXClipboardComponent(Class<T> cls, T component) {
     this.componentClass = cls;
     this.instanceClass = component.getClass().asSubclass(cls);
     this.componentObj = LXSerializable.Utils.toObject(component);

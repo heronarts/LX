@@ -512,7 +512,7 @@ public abstract class LXCommand {
       private final ComponentReference<LXChannel> channel;
       private final Class<? extends LXPattern> patternClass;
       private ComponentReference<LXPattern> pattern = null;
-      private JsonObject patternObject;
+      private JsonObject patternObj;
 
       public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass) {
         this(channel, patternClass, null);
@@ -521,7 +521,7 @@ public abstract class LXCommand {
       public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
         this.channel = new ComponentReference<LXChannel>(channel);
         this.patternClass = patternClass;
-        this.patternObject = patternObject;
+        this.patternObj = patternObject;
       }
 
       @Override
@@ -533,12 +533,11 @@ public abstract class LXCommand {
       public void perform(LX lx) {
         LXPattern instance = lx.instantiatePattern(this.patternClass);
         if (instance != null) {
-          if (this.patternObject != null) {
-            instance.load(lx, this.patternObject);
-          } else {
-            // New pattern, we need to store its ID for future redo operations...
-            this.patternObject = LXSerializable.Utils.toObject(instance);
+          if (this.patternObj != null) {
+            instance.load(lx, this.patternObj);
           }
+          // New pattern, we need to store its ID for future redo operations...
+          this.patternObj = LXSerializable.Utils.toObject(instance);
           this.channel.get().addPattern(instance);
           this.pattern = new ComponentReference<LXPattern>(instance);
         }
@@ -547,8 +546,7 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) {
         if (this.pattern == null) {
-          throw new IllegalStateException(
-            "Pattern was not successfully added, cannot undo");
+          throw new IllegalStateException("Pattern was not successfully added, cannot undo");
         }
         this.channel.get().removePattern(this.pattern.get());
       }
@@ -656,9 +654,8 @@ public abstract class LXCommand {
         if (instance != null) {
           if (this.effectObj != null) {
             instance.load(lx, this.effectObj);
-          } else {
-            this.effectObj = LXSerializable.Utils.toObject(instance);
           }
+          this.effectObj = LXSerializable.Utils.toObject(instance);
           this.channel.get().addEffect(instance);
           this.effect = new ComponentReference<LXEffect>(instance);
         }
@@ -752,20 +749,25 @@ public abstract class LXCommand {
       private JsonObject channelObj = null;
 
       public AddChannel() {
-        this(null);
+        this(null, null);
+      }
+
+      public AddChannel(JsonObject channelObj) {
+        this(channelObj, null);
       }
 
       public AddChannel(Class<? extends LXPattern> patternClass) {
+        this(null, patternClass);
+      }
+
+      public AddChannel(JsonObject channelObj, Class<? extends LXPattern> patternClass) {
+        this.channelObj = channelObj;
         this.patternClass = patternClass;
       }
 
       @Override
       public String getDescription() {
         return "Add Channel";
-      }
-
-      public LXChannel getChannel() {
-        return (this.channel == null ? null : this.channel.get());
       }
 
       @Override
@@ -778,9 +780,8 @@ public abstract class LXCommand {
         }
         if (this.channelObj != null) {
           channel.load(lx, this.channelObj);
-        } else {
-          this.channelObj = LXSerializable.Utils.toObject(channel);
         }
+        this.channelObj = LXSerializable.Utils.toObject(channel);
         this.channel = new ComponentReference<LXChannel>(channel);
         lx.engine.setFocusedChannel(channel);
         lx.engine.selectChannel(channel);
@@ -1036,9 +1037,8 @@ public abstract class LXCommand {
         if (instance != null) {
           if (this.modulatorObj != null) {
             instance.load(lx, this.modulatorObj);
-          } else {
-            this.modulatorObj = LXSerializable.Utils.toObject(instance);
           }
+          this.modulatorObj = LXSerializable.Utils.toObject(instance);
           int count = this.modulation.get().getModulatorCount(this.modulatorClass);
           if (count > 0) {
             instance.label.setValue(instance.getLabel() + " " + (count + 1));
