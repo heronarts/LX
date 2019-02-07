@@ -202,6 +202,10 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
       if (this.cueActive.isOn()) {
         this.lx.engine.cueA.setValue(false);
         this.lx.engine.cueB.setValue(false);
+        if (this.lx.flags.focusChannelOnCue) {
+          this.lx.engine.selectChannel(this);
+          this.lx.engine.setFocusedChannel(this);
+        }
       }
     } else if (p == this.blendMode) {
       this.activeBlend.onInactive();

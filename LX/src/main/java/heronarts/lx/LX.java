@@ -88,6 +88,8 @@ public class LX {
      */
     public boolean isP3LX = false;
     public boolean staticModel = false;
+    public boolean focusChannelOnCue = false;
+    public boolean focusActivePattern = false;
   }
 
   /**

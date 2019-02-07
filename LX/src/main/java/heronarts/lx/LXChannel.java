@@ -767,6 +767,9 @@ public class LXChannel extends LXChannelBus {
     }
     this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
     this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, -1);
+    if (this.lx.flags.focusActivePattern) {
+      this.focusedPattern.setValue(this.activePatternIndex);
+    }
   }
 
   @Override
