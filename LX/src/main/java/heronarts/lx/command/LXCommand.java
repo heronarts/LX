@@ -639,8 +639,13 @@ public abstract class LXCommand {
       private JsonObject effectObj = null;
 
       public AddEffect(LXBus channel, Class<? extends LXEffect> effectClass) {
+        this(channel, effectClass, null);
+      }
+
+      public AddEffect(LXBus channel, Class<? extends LXEffect> effectClass, JsonObject effectObj) {
         this.channel = new ComponentReference<LXBus>(channel);
         this.effectClass = effectClass;
+        this.effectObj = effectObj;
       }
 
       @Override
