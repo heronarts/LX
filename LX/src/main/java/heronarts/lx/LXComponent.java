@@ -455,9 +455,27 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   protected final Map<String, LXParameter> parameters = new LinkedHashMap<String, LXParameter>();
+  protected final Map<String, LXParameter> internalParameters = new LinkedHashMap<String, LXParameter>();
 
   public final LXComponent addParameter(LXParameter parameter) {
     return addParameter(parameter.getLabel(), parameter);
+  }
+
+  /**
+   * Internal implementation parameters. These won't be automatically exposed to the UI or to OSC etc. and will
+   * not show up in getParameters() or the general parameter list. They will be saved and loaded however.
+   *
+   * @param path Path to internal parameter
+   * @param parameter Parameter
+   * @return this
+   */
+  protected LXComponent addInternalParameter(String path, LXParameter parameter) {
+    if (this.internalParameters.containsKey(path)) {
+      throw new IllegalStateException("Cannot add duplicate internal parameter at: " + path + ", component: " + this);
+    }
+    parameter.setComponent(this, "internal/" + path);
+    this.internalParameters.put(path, parameter);
+    return this;
   }
 
   public LXComponent addParameter(String path, LXParameter parameter) {
@@ -560,42 +578,76 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final static String KEY_CLASS = "class";
   protected final static String KEY_MODULATION_COLOR = "modulationColor";
   private final static String KEY_PARAMETERS = "parameters";
+  private final static String KEY_INTERNAL = "internal";
   private final static String KEY_CHILDREN = "children";
   public static final String KEY_COMPONENT_ID = "componentId";
   public static final String KEY_PARAMETER_PATH = "parameterPath";
   public static final String KEY_PATH = "path";
 
-  @Override
-  public void save(LX lx, JsonObject obj) {
-    // Serialize parameters
-    JsonObject parameters = new JsonObject();
-    for (String path : this.parameters.keySet()) {
-      LXParameter parameter = this.parameters.get(path);
+  private static void saveParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
+    for (String path : parameters.keySet()) {
+      LXParameter parameter = parameters.get(path);
       if (parameter instanceof StringParameter) {
-        parameters.addProperty(path, ((StringParameter) parameter).getString());
+        obj.addProperty(path, ((StringParameter) parameter).getString());
       } else if (parameter instanceof BooleanParameter) {
-        parameters.addProperty(path, ((BooleanParameter) parameter).isOn());
+        obj.addProperty(path, ((BooleanParameter) parameter).isOn());
       } else if (parameter instanceof DiscreteParameter) {
-        parameters.addProperty(path,
+        obj.addProperty(path,
           ((DiscreteParameter) parameter).getValuei());
       } else if (parameter instanceof ColorParameter) {
         // Do nothing, see ColorParameter.setComponent which adds its
         // sub-parameters
       } else if (parameter instanceof CompoundParameter) {
-        parameters.addProperty(path,
-          ((CompoundParameter) parameter).getBaseValue());
+        obj.addProperty(path, ((CompoundParameter) parameter).getBaseValue());
       } else if (parameter instanceof FunctionalParameter) {
         // Do not write FunctionalParamters into saved files
       } else {
-        parameters.addProperty(path, parameter.getValue());
+        obj.addProperty(path, parameter.getValue());
       }
     }
+  }
+
+  private static void loadParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
+    for (String path : parameters.keySet()) {
+      LXParameter parameter = parameters.get(path);
+      if (parameter == component.label && !(component instanceof LXComponent.Renamable)) {
+        continue;
+      }
+      if (obj.has(path)) {
+        JsonElement value = obj.get(path);
+        if (parameter instanceof StringParameter) {
+          ((StringParameter) parameter).setValue(value.getAsString());
+        } else if (parameter instanceof BooleanParameter) {
+          ((BooleanParameter) parameter).setValue(value.getAsBoolean());
+        } else if (parameter instanceof DiscreteParameter) {
+          parameter.setValue(value.getAsInt());
+        } else if (parameter instanceof ColorParameter) {
+          // Do nothing, it's stored in hue/sat/bright
+        } else if (parameter instanceof CompoundParameter) {
+          parameter.setValue(value.getAsDouble());
+        } else if (parameter instanceof FunctionalParameter) {
+          // Do nothing
+        } else {
+          parameter.setValue(value.getAsDouble());
+        }
+      }
+    }
+  }
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    // Serialize parameters
+    JsonObject internal = new JsonObject();
+    saveParameters(this, internal, this.internalParameters);
+    JsonObject parameters = new JsonObject();
+    saveParameters(this, parameters, this.parameters);
 
     // Serialize children
     JsonObject children = LXSerializable.Utils.toObject(lx, this.children);
     obj.addProperty(KEY_ID, this.id);
     obj.addProperty(KEY_CLASS, getClass().getName());
     obj.addProperty(KEY_MODULATION_COLOR, this.modulationColor.getColor());
+    obj.add(KEY_INTERNAL, internal);
     obj.add(KEY_PARAMETERS, parameters);
     obj.add(KEY_CHILDREN, children);
   }
@@ -610,33 +662,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
 
     // Load parameters
+    if (obj.has(KEY_INTERNAL)) {
+      loadParameters(this, obj.getAsJsonObject(KEY_INTERNAL), this.internalParameters);
+    }
     if (obj.has(KEY_PARAMETERS)) {
-      JsonObject parameters = obj.getAsJsonObject(KEY_PARAMETERS);
-      for (String path : this.parameters.keySet()) {
-        LXParameter parameter = this.parameters.get(path);
-        if (parameter == this.label
-          && !(this instanceof LXComponent.Renamable)) {
-          continue;
-        }
-        if (parameters.has(path)) {
-          JsonElement value = parameters.get(path);
-          if (parameter instanceof StringParameter) {
-            ((StringParameter) parameter).setValue(value.getAsString());
-          } else if (parameter instanceof BooleanParameter) {
-            ((BooleanParameter) parameter).setValue(value.getAsBoolean());
-          } else if (parameter instanceof DiscreteParameter) {
-            parameter.setValue(value.getAsInt());
-          } else if (parameter instanceof ColorParameter) {
-            // Do nothing, it's stored in hue/sat/bright
-          } else if (parameter instanceof CompoundParameter) {
-            parameter.setValue(value.getAsDouble());
-          } else if (parameter instanceof FunctionalParameter) {
-            // Do nothing
-          } else {
-            parameter.setValue(value.getAsDouble());
-          }
-        }
-      }
+      loadParameters(this, obj.getAsJsonObject(KEY_PARAMETERS), this.parameters);
     }
 
     // Load child components
