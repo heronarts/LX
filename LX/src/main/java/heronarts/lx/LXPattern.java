@@ -21,8 +21,6 @@ package heronarts.lx;
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
 
-import com.google.gson.JsonObject;
-
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
@@ -43,7 +41,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private int intervalEnd = -1;
 
-  public final BooleanParameter autoCycleEligible = new BooleanParameter("Cycle", true);
+  public final BooleanParameter autoCycleEligible =
+    new BooleanParameter("Cycle", true)
+    .setDescription("Whether the pattern is eligible for auto-cycle");
 
   protected double runMs = 0;
 
@@ -56,6 +56,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   protected LXPattern(LX lx) {
     super(lx);
     this.label.setDescription("The name of this pattern");
+    addInternalParameter("autoCycleEligible", this.autoCycleEligible);
   }
 
   @Override
@@ -255,17 +256,4 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   }
 
-  private static final String KEY_AUTO_CYCLE = "autoCycleEnabled";
-
-  @Override
-  public void save(LX lx, JsonObject obj) {
-    super.save(lx, obj);
-    obj.addProperty(KEY_AUTO_CYCLE, this.autoCycleEligible.isOn());
-  }
-
-  @Override
-  public void load(LX lx, JsonObject obj) {
-    super.load(lx, obj);
-    LXSerializable.Utils.loadBoolean(this.autoCycleEligible, obj, KEY_AUTO_CYCLE);
-  }
 }

@@ -137,6 +137,13 @@ public class LXChannel extends LXChannelBus {
   public final DiscreteParameter focusedPattern;
 
   /**
+   * Whether the channel control UI is expanded
+   */
+  public final BooleanParameter controlsExpanded =
+    new BooleanParameter("Expanded", true)
+    .setDescription("Whether the control elements for the channel device are expanded");
+
+  /**
    * Whether this channel should listen to MIDI events
    */
   public final BooleanParameter midiMonitor =
@@ -232,6 +239,7 @@ public class LXChannel extends LXChannelBus {
 
     addArray("pattern", this.patterns);
 
+    addInternalParameter("controlsExpanded", this.controlsExpanded);
     addParameter("midiMonitor", this.midiMonitor);
     addParameter("midiChannel", this.midiChannel);
     addParameter("autoCycleEnabled", this.autoCycleEnabled);

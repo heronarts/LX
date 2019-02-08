@@ -19,6 +19,7 @@
 package heronarts.lx;
 
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
 
 /**
  * A component which may have its own scoped user-level modulators. The concrete subclasses
@@ -28,6 +29,14 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
   public final LXModulationEngine modulation;
 
+  public final BooleanParameter controlsExpanded =
+    new BooleanParameter("Expanded", true)
+    .setDescription("Whether the device controls are expanded");
+
+  public final BooleanParameter modulationExpanded =
+    new BooleanParameter("Modulation Expanded", false)
+    .setDescription("Whether the device controls are expanded");
+
   protected LXDeviceComponent(LX lx) {
     this(lx, null);
   }
@@ -35,6 +44,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   protected LXDeviceComponent(LX lx, String label) {
     super(lx, label);
     addChild("modulation", this.modulation = new LXModulationEngine(lx));
+    addInternalParameter("expanded", this.controlsExpanded);
+    addInternalParameter("modulationExpanded", this.modulationExpanded);
   }
 
   @Override
