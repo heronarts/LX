@@ -34,12 +34,9 @@ import heronarts.lx.clip.LXClip;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
 import heronarts.lx.midi.LXShortMessage;
-import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
-import heronarts.lx.midi.MidiPitchBend;
-import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -48,6 +45,8 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
 public class APC40Mk2 extends LXMidiSurface {
+
+  public static final String DEVICE_NAME = "APC40 mkII";
 
   public static final byte GENERIC_MODE = 0x40;
   public static final byte ABLETON_MODE = 0x41;
@@ -929,18 +928,6 @@ public class APC40Mk2 extends LXMidiSurface {
     }
 
     // System.out.println("APC40mk2 UNMAPPED: " + cc);
-  }
-
-  @Override
-  public void programChangeReceived(MidiProgramChange pc) {
-  }
-
-  @Override
-  public void pitchBendReceived(MidiPitchBend pitchBend) {
-  }
-
-  @Override
-  public void aftertouchReceived(MidiAftertouch aftertouch) {
   }
 
 }

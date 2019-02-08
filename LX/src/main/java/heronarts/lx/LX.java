@@ -690,7 +690,7 @@ public class LX {
     return this.engine.getPatterns();
   }
 
-  private void checkRegistration() {
+  public void checkRegistration() {
     if (this.engine.hasStarted) {
       throw new IllegalStateException("May not register components outside of initialize() callback");
     }

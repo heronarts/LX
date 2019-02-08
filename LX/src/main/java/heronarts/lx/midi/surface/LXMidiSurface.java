@@ -22,34 +22,20 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXMidiOutput;
+import heronarts.lx.midi.MidiAftertouch;
+import heronarts.lx.midi.MidiControlChange;
+import heronarts.lx.midi.MidiNote;
+import heronarts.lx.midi.MidiNoteOn;
+import heronarts.lx.midi.MidiPitchBend;
+import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
 public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
-
-  public static final String APC40_MK2 = "APC40 mkII";
-
-  private static LXMidiOutput findOutput(LXMidiEngine engine, String name) {
-    for (LXMidiOutput output : engine.outputs) {
-      if (output.getName().equals(name)) {
-        return output;
-      }
-    }
-    return null;
-  }
-
-  public static LXMidiSurface get(LX lx, LXMidiEngine engine, LXMidiInput input) {
-    String name = input.getName();
-    if (name.equals(APC40_MK2)) {
-      return new APC40Mk2(lx, input, findOutput(engine, APC40_MK2));
-    }
-    return null;
-  }
 
   protected final LX lx;
   protected final LXMidiInput input;
@@ -67,7 +53,9 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
       public void onParameterChanged(LXParameter p) {
         if (enabled.isOn()) {
           input.open();
-          output.open();
+          if (output != null) {
+            output.open();
+          }
           input.addListener(LXMidiSurface.this);
         } else {
           input.removeListener(LXMidiSurface.this);
@@ -82,6 +70,19 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     return this.input.getName();
   }
 
+  public LXMidiInput getInput() {
+    return this.input;
+  }
+
+  public LXMidiOutput getOutput() {
+    return this.output;
+  }
+
+  /**
+   * Subclasses may override, invoked automatically when surface is enabled/disabled
+   *
+   * @param isOn Whether surface is enabled
+   */
   protected void onEnable(boolean isOn) {}
 
   protected void sendNoteOn(int channel, int note, int velocity) {
@@ -106,6 +107,30 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
   @Override
   public void save(LX lx, JsonObject object) {
     object.addProperty(KEY_NAME, this.input.getName());
+  }
+
+  @Override
+  public void noteOnReceived(MidiNoteOn note) {
+  }
+
+  @Override
+  public void noteOffReceived(MidiNote note) {
+  }
+
+  @Override
+  public void controlChangeReceived(MidiControlChange cc) {
+  }
+
+  @Override
+  public void programChangeReceived(MidiProgramChange pc) {
+  }
+
+  @Override
+  public void pitchBendReceived(MidiPitchBend pitchBend) {
+  }
+
+  @Override
+  public void aftertouchReceived(MidiAftertouch aftertouch) {
   }
 
 }
