@@ -450,8 +450,7 @@ public abstract class LXCommand {
       }
 
       public SetNormalized(LXNormalizedParameter parameter, double newValue) {
-        this.parameter = new ParameterReference<LXNormalizedParameter>(
-          parameter);
+        this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
         this.originalValue = new LXNormalizedValue(parameter);
         this.newValue = newValue;
       }

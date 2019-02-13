@@ -79,6 +79,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     new MutableParameter("Control-Surfaces", 0)
     .setDescription("How many control surfaces are controlling this component");
 
+  private static final String INTERNAL_PREFIX = "internal/";
+
   private static final int ID_UNASSIGNED = -1;
   static final int ID_ENGINE = 1;
 
@@ -473,7 +475,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     if (this.internalParameters.containsKey(path)) {
       throw new IllegalStateException("Cannot add duplicate internal parameter at: " + path + ", component: " + this);
     }
-    parameter.setComponent(this, "internal/" + path);
+    parameter.setComponent(this, INTERNAL_PREFIX + path);
     this.internalParameters.put(path, parameter);
     return this;
   }
@@ -530,6 +532,9 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   public final LXParameter getParameter(String path) {
+    if (path.startsWith(INTERNAL_PREFIX)) {
+      return this.internalParameters.get(path.substring(INTERNAL_PREFIX.length()));
+    }
     return this.parameters.get(path);
   }
 

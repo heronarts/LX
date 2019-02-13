@@ -602,6 +602,10 @@ public class LXChannel extends LXChannelBus {
     return (this.activePatternIndex >= 0) ? this.mutablePatterns.get(this.activePatternIndex) : null;
   }
 
+  public final LXPattern getTargetPattern() {
+    return (this.transition != null) ? getNextPattern() : getActivePattern();
+  }
+
   public final int getNextPatternIndex() {
     return this.nextPatternIndex;
   }
