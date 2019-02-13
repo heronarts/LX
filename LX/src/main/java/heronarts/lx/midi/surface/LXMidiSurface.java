@@ -32,8 +32,6 @@ import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.midi.MidiPitchBend;
 import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.LXParameterListener;
 
 public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
 
@@ -49,21 +47,18 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     this.lx = lx;
     this.input = input;
     this.output = output;
-    this.enabled.addListener(new LXParameterListener() {
-      public void onParameterChanged(LXParameter p) {
-        if (enabled.isOn()) {
-          input.open();
-          if (output != null) {
-            output.open();
-          }
-          input.addListener(LXMidiSurface.this);
-        } else {
-          input.removeListener(LXMidiSurface.this);
+    this.enabled.addListener((p) -> {
+      if (enabled.isOn()) {
+        input.open();
+        if (output != null) {
+          output.open();
         }
-        onEnable(enabled.isOn());
+        input.addListener(LXMidiSurface.this);
+      } else {
+        input.removeListener(LXMidiSurface.this);
       }
+      onEnable(enabled.isOn());
     });
-
   }
 
   public String getName() {

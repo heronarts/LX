@@ -223,7 +223,6 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
                 new Thread("LXMidiEngine System Update") {
                   @Override
                   public void run() {
-                    System.out.println("midiSystemUpdated()");
                     updateMidiDevices();
                   }
                 }.start();
@@ -343,7 +342,6 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             if (checkForSurface) {
               lx.engine.addTask(new Runnable() {
                 public void run() {
-                  // TODO(mcslee): load some project file state if there was??
                   checkForSurface(getDeviceName(deviceInfo));
                 }
               });
@@ -405,8 +403,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     if (surfaceClass == null) {
       return null;
     }
+    LXMidiSurface surface = null;
     try {
-      LXMidiSurface surface = surfaceClass.getConstructor(LX.class, LXMidiInput.class, LXMidiOutput.class).newInstance(this.lx, input, findOutput(input));
+      surface = surfaceClass.getConstructor(LX.class, LXMidiInput.class, LXMidiOutput.class).newInstance(this.lx, input, findOutput(input));
       this.mutableSurfaces.add(surface);
       for (DeviceListener listener : this.deviceListeners) {
         listener.surfaceAdded(this, surface);
@@ -415,7 +414,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       System.err.println("Could not instantiate midi surface class: " + surfaceClass);
       x.printStackTrace();
     }
-    return null;
+    return surface;
   }
 
   /**
