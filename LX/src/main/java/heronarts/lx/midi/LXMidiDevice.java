@@ -21,27 +21,46 @@ package heronarts.lx.midi;
 import javax.sound.midi.MidiDevice;
 
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.LXParameterListener;
 
 public abstract class LXMidiDevice {
 
-  private static final String COREMIDI4J_HEADER = "CoreMIDI4J - ";
-
   protected final LXMidiEngine engine;
-  protected final MidiDevice device;
+  protected MidiDevice device;
 
-  public final BooleanParameter enabled = new BooleanParameter("Enabled", false);
+  public final BooleanParameter enabled =
+    new BooleanParameter("Enabled", false);
+
+  // Helper used by LXMidiEngine to check active
+  boolean keepAlive = true;
+
+  public final BooleanParameter connected =
+    new BooleanParameter("Connected", true);
 
   protected LXMidiDevice(LXMidiEngine engine, MidiDevice device) {
     this.engine = engine;
     this.device = device;
-    this.enabled.addListener(new LXParameterListener() {
-      public void onParameterChanged(LXParameter p) {
-        onEnabled(enabled.isOn());
-      }
+    this.enabled.addListener((p) -> {
+      onEnabled(enabled.isOn());
     });
   }
+
+  void setDevice(MidiDevice device) {
+    if (device == null) {
+      throw new IllegalArgumentException("Cannot set null device on LXMidiDevice");
+    }
+    if (this.device != device) {
+      close();
+      this.device = device;
+      this.connected.setValue(true);
+      this.enabled.bang();
+    }
+  }
+
+  MidiDevice getDevice() {
+    return this.device;
+  }
+
+  protected abstract void close();
 
   /**
    * Open the device for input or output
@@ -53,18 +72,13 @@ public abstract class LXMidiDevice {
     return this;
   }
 
-
   /**
    * Get the name of the device.
    *
    * @return Device name
    */
   public String getName() {
-    String name = this.device.getDeviceInfo().getName();
-    if (name.indexOf(COREMIDI4J_HEADER) == 0) {
-      name = name.substring(COREMIDI4J_HEADER.length());
-    }
-    return name;
+    return LXMidiEngine.getDeviceName(this.device.getDeviceInfo());
   }
 
   /**

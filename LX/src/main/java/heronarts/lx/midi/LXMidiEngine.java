@@ -33,12 +33,15 @@ import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
+import uk.co.xfactorylibrarians.coremidi4j.CoreMidiException;
+import uk.co.xfactorylibrarians.coremidi4j.CoreMidiNotification;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiDevice;
@@ -51,6 +54,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 public class LXMidiEngine extends LXComponent implements LXOscComponent {
+
+  private static final String COREMIDI4J_HEADER = "CoreMIDI4J - ";
 
   public enum Channel {
     CH_1, CH_2, CH_3, CH_4, CH_5, CH_6, CH_7, CH_8, CH_9, CH_10, CH_11, CH_12, CH_13, CH_14, CH_15, CH_16, OMNI;
@@ -82,12 +87,19 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }
   }
 
+  public interface DeviceListener {
+    public void inputAdded(LXMidiEngine engine, LXMidiInput input);
+    public void outputAdded(LXMidiEngine engine, LXMidiOutput output);
+    public void surfaceAdded(LXMidiEngine engine, LXMidiSurface surface);
+  }
+
   public interface MappingListener {
     public void mappingAdded(LXMidiEngine engine, LXMidiMapping mapping);
     public void mappingRemoved(LXMidiEngine engine, LXMidiMapping mapping);
   }
 
   private final List<LXMidiListener> listeners = new ArrayList<LXMidiListener>();
+  private final List<DeviceListener> deviceListeners = new ArrayList<DeviceListener>();
   private final List<MappingListener> mappingListeners = new ArrayList<MappingListener>();
 
   private final List<LXShortMessage> threadSafeInputQueue =
@@ -96,9 +108,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   private final List<LXShortMessage> engineThreadInputQueue =
     new ArrayList<LXShortMessage>();
 
-  private final List<LXMidiInput> mutableInputs = new ArrayList<LXMidiInput>();
-  private final List<LXMidiOutput> mutableOutputs = new ArrayList<LXMidiOutput>();
-  private final List<LXMidiSurface> mutableSurfaces = new ArrayList<LXMidiSurface>();
+  private final List<LXMidiInput> mutableInputs = new CopyOnWriteArrayList<LXMidiInput>();
+  private final List<LXMidiOutput> mutableOutputs = new CopyOnWriteArrayList<LXMidiOutput>();
+  private final List<LXMidiSurface> mutableSurfaces = new CopyOnWriteArrayList<LXMidiSurface>();
 
   public final List<LXMidiInput> inputs = Collections.unmodifiableList(this.mutableInputs);
   public final List<LXMidiOutput> outputs = Collections.unmodifiableList(this.mutableOutputs);
@@ -106,6 +118,12 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   private final List<LXMidiMapping> mutableMappings = new ArrayList<LXMidiMapping>();
   public final List<LXMidiMapping> mappings = Collections.unmodifiableList(this.mutableMappings);
+
+  private final Map<MidiDevice.Info, LXMidiInput> midiInfoToInput =
+    new HashMap<MidiDevice.Info, LXMidiInput>();
+
+  private final Map<MidiDevice.Info, LXMidiOutput> midiInfoToOutput =
+    new HashMap<MidiDevice.Info, LXMidiOutput>();
 
   private final Map<String, Class<? extends LXMidiSurface>> registeredSurfaces =
     new HashMap<String, Class<? extends LXMidiSurface>>();
@@ -146,7 +164,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public void initialize() {
-    new Thread() {
+    new Thread("LXMidiEngine Initialization") {
       @Override
       public void run() {
         // NOTE(mcslee): this can sometimes hang or be slow for unclear reasons...
@@ -158,10 +176,14 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             try {
               MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
               if (device.getMaxTransmitters() != 0) {
-                mutableInputs.add(new LXMidiInput(LXMidiEngine.this, device));
+                LXMidiInput input = new LXMidiInput(LXMidiEngine.this, device);
+                mutableInputs.add(input);
+                midiInfoToInput.put(deviceInfo, input);
               }
               if (device.getMaxReceivers() != 0) {
-                mutableOutputs.add(new LXMidiOutput(LXMidiEngine.this, device));
+                LXMidiOutput output = new LXMidiOutput(LXMidiEngine.this, device);
+                mutableOutputs.add(output);
+                midiInfoToOutput.put(deviceInfo, output);
               }
             } catch (MidiUnavailableException mux) {
               mux.printStackTrace();
@@ -191,8 +213,167 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             }
           }
         });
+
+        // On MacOS - load the MIDI notification listener
+        boolean listening = false;
+        try {
+          if (CoreMidiDeviceProvider.isLibraryLoaded()) {
+            CoreMidiDeviceProvider.addNotificationListener(new CoreMidiNotification() {
+              public void midiSystemUpdated() {
+                new Thread("LXMidiEngine System Update") {
+                  @Override
+                  public void run() {
+                    System.out.println("midiSystemUpdated()");
+                    updateMidiDevices();
+                  }
+                }.start();
+              }
+            });
+            listening = true;
+          }
+
+        } catch (CoreMidiException cmx) {
+          System.out.println("Could not initialize CoreMidi notification listener: " + cmx.getMessage());
+          cmx.printStackTrace();
+        }
+
+        // Can't listen? Not on Mac. Then we'll just have to poll for changes
+        if (!listening) {
+          new Thread("LXMidiEngine Device Polling") {
+            @Override
+            public void run() {
+              while (true) {
+                try {
+                  Thread.sleep(5000);
+                } catch (InterruptedException ix) {
+                  ix.printStackTrace();
+                }
+                updateMidiDevices();
+              }
+            }
+          }.start();
+        }
       }
     }.start();
+  }
+
+  /**
+   * Note that this runs on a non-engine thread!!
+   */
+  private void updateMidiDevices() {
+    try {
+      // We'll need to check that all are alive...
+      for (LXMidiInput input : this.mutableInputs) {
+        input.keepAlive = false;
+      }
+      for (LXMidiOutput output : this.mutableOutputs) {
+        output.keepAlive = false;
+      }
+
+      for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
+        // First, check if we know this deviceInfo, they should be the same if it's the same device...
+        String deviceName = getDeviceName(deviceInfo);
+        LXMidiInput existingInput = this.midiInfoToInput.get(deviceInfo);
+        if (existingInput != null) {
+          existingInput.keepAlive = true;
+          if (!existingInput.connected.isOn()) {
+            existingInput.setDevice(MidiSystem.getMidiDevice(deviceInfo));
+          }
+        }
+        LXMidiOutput existingOutput = this.midiInfoToOutput.get(deviceInfo);
+        if (existingOutput != null) {
+          existingOutput.keepAlive = true;
+          if (!existingOutput.connected.isOn()) {
+            existingOutput.setDevice(MidiSystem.getMidiDevice(deviceInfo));
+          }
+        }
+        if (existingInput == null && existingOutput == null) {
+          try {
+            final MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
+            boolean checkForSurface = false;
+            if (device.getMaxTransmitters() != 0) {
+              LXMidiInput input = findInput(deviceName);
+              if (input != null) {
+                input.keepAlive = true;
+                input.setDevice(device);
+              } else {
+                checkForSurface = true;
+                // Add new midi input on the engine thread!
+                lx.engine.addTask(new Runnable() {
+                  public void run() {
+                    LXMidiInput input = new LXMidiInput(LXMidiEngine.this, device);
+                    mutableInputs.add(input);
+                    midiInfoToInput.put(deviceInfo, input);
+                    JsonObject unremember = null;
+                    for (JsonObject remembered : rememberMidiInputs) {
+                      if (remembered.get(LXMidiInput.KEY_NAME).getAsString().equals(input.getName())) {
+                        input.load(lx, unremember = remembered);
+                        break;
+                      }
+                    }
+                    if (unremember != null) {
+                      rememberMidiInputs.remove(unremember);
+                    }
+                    for (DeviceListener listener : deviceListeners) {
+                      listener.inputAdded(LXMidiEngine.this, input);
+                    }
+                  }
+                });
+              }
+            }
+            if (device.getMaxReceivers() != 0) {
+              LXMidiOutput output = findOutput(deviceName);
+              if (output != null) {
+                output.keepAlive = true;
+                output.setDevice(device);
+              } else {
+                // Add new midi output on the engine thread
+                lx.engine.addTask(new Runnable() {
+                  public void run() {
+                    LXMidiOutput output = new LXMidiOutput(LXMidiEngine.this, device);
+                    mutableOutputs.add(output);
+                    midiInfoToOutput.put(deviceInfo, output);
+                    for (DeviceListener listener : deviceListeners) {
+                      listener.outputAdded(LXMidiEngine.this, output);
+                    }
+                  }
+                });
+              }
+            }
+            if (checkForSurface) {
+              lx.engine.addTask(new Runnable() {
+                public void run() {
+                  // TODO(mcslee): load some project file state if there was??
+                  checkForSurface(getDeviceName(deviceInfo));
+                }
+              });
+            }
+          } catch (MidiUnavailableException mux) {
+            mux.printStackTrace();
+          }
+        }
+      }
+
+      // Did any inputs or outputs disappear??
+      for (LXMidiInput input : this.mutableInputs) {
+        input.connected.setValue(input.keepAlive);
+      }
+      for (LXMidiOutput output : this.mutableOutputs) {
+        output.connected.setValue(output.keepAlive);
+      }
+
+    } catch (Exception x) {
+      System.err.println("Unhandled exception in CoreMidi update: " + x.getMessage());
+      x.printStackTrace();
+    }
+  }
+
+  public static String getDeviceName(MidiDevice.Info deviceInfo) {
+    String name = deviceInfo.getName();
+    if (name.indexOf(COREMIDI4J_HEADER) == 0) {
+      name = name.substring(COREMIDI4J_HEADER.length());
+    }
+    return name;
   }
 
   private void checkForSurface(String deviceName) {
@@ -204,7 +385,18 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     // See if this input even exists
     LXMidiInput input = findInput(deviceName);
     if (input != null) {
-      instantiateSurface(input);
+      surface = instantiateSurface(input);
+      if (surface != null) {
+        JsonObject unremember = null;
+        for (JsonObject remember : this.rememberMidiSurfaces) {
+          if (remember.get(LXMidiSurface.KEY_NAME).getAsString().equals(surface.getName())) {
+            unremember = remember;
+            surface.enabled.setValue(true);
+            break;
+          }
+        }
+        this.rememberMidiSurfaces.remove(unremember);
+      }
     }
   }
 
@@ -216,6 +408,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     try {
       LXMidiSurface surface = surfaceClass.getConstructor(LX.class, LXMidiInput.class, LXMidiOutput.class).newInstance(this.lx, input, findOutput(input));
       this.mutableSurfaces.add(surface);
+      for (DeviceListener listener : this.deviceListeners) {
+        listener.surfaceAdded(this, surface);
+      }
     } catch (Exception x) {
       System.err.println("Could not instantiate midi surface class: " + surfaceClass);
       x.printStackTrace();
@@ -283,7 +478,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public LXMidiSurface findSurface(LXMidiInput input) {
-    for (LXMidiSurface surface : this.surfaces) {
+    for (LXMidiSurface surface : this.mutableSurfaces) {
       if (surface.getInput() == input) {
         return surface;
       }
@@ -292,7 +487,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public LXMidiSurface findSurface(String name) {
-    for (LXMidiSurface surface : this.surfaces) {
+    for (LXMidiSurface surface : this.mutableSurfaces) {
       if (surface.getName().equals(name)) {
         return surface;
       }
@@ -313,15 +508,15 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   private LXMidiOutput findOutput(LXMidiInput input) {
-    return findDevice(this.outputs, input.getName());
+    return findDevice(this.mutableOutputs, input.getName());
   }
 
   public LXMidiOutput findOutput(String name) {
-    return findDevice(this.outputs, name);
+    return findDevice(this.mutableOutputs, name);
   }
 
   public LXMidiInput findInput(String name) {
-    return findDevice(this.inputs, name);
+    return findDevice(this.mutableInputs, name);
   }
 
   private <T extends LXMidiDevice> T findDevice(List<T> devices, String name) {
@@ -340,6 +535,16 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   public LXMidiEngine removeListener(LXMidiListener listener) {
     this.listeners.remove(listener);
+    return this;
+  }
+
+  public LXMidiEngine addDeviceListener(DeviceListener listener) {
+    this.deviceListeners.add(listener);
+    return this;
+  }
+
+  public LXMidiEngine removeDeviceListener(DeviceListener listener) {
+    this.deviceListeners.remove(listener);
     return this;
   }
 

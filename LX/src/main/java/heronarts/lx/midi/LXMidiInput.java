@@ -26,6 +26,7 @@ import javax.sound.midi.MidiMessage;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.SysexMessage;
+import javax.sound.midi.Transmitter;
 
 import com.google.gson.JsonObject;
 
@@ -39,6 +40,9 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
 
   private final List<LXMidiListener> listeners = new ArrayList<LXMidiListener>();
   private boolean isOpen = false;
+  private Transmitter transmitter = null;
+
+  private final Receiver receiver = new Receiver();
 
   public final BooleanParameter channelEnabled =
     new BooleanParameter("Channel", false)
@@ -65,14 +69,14 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
     this.syncEnabled.addListener(enabledListener);
   }
 
-  /**
-   * Opens the midi input.
-   *
-   * @return this
-   */
   @Override
-  public LXMidiInput open() {
-    return (LXMidiInput) super.open();
+  protected void close() {
+    if (this.isOpen) {
+      this.transmitter.close();
+      this.transmitter = null;
+      this.device.close();
+      this.isOpen = false;
+    }
   }
 
   @Override
@@ -80,7 +84,8 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
     if (enabled && !this.isOpen) {
       try {
         this.device.open();
-        this.device.getTransmitter().setReceiver(new Receiver());
+        this.transmitter = this.device.getTransmitter();
+        this.transmitter.setReceiver(this.receiver);
         this.isOpen = true;
       } catch (MidiUnavailableException mux) {
         System.err.println(mux.getLocalizedMessage());
@@ -124,7 +129,7 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
 
     @Override
     public void close() {
-      listeners.clear();
+      // No resources owned by this receiver alone
     }
 
     @Override

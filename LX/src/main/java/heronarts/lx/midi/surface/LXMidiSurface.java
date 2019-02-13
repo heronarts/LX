@@ -38,8 +38,8 @@ import heronarts.lx.parameter.LXParameterListener;
 public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
 
   protected final LX lx;
-  protected final LXMidiInput input;
-  protected final LXMidiOutput output;
+  public final LXMidiInput input;
+  public final LXMidiOutput output;
 
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled")

@@ -37,7 +37,11 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
 
   @Override
   public void close() {
-    this.receiver.close();
+    if (this.isOpen) {
+      this.receiver.close();
+      this.receiver = null;
+      this.isOpen = false;
+    }
   }
 
   public void send(MidiMessage message) {
