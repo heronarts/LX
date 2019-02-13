@@ -1120,6 +1120,19 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     for (Listener listener : this.listeners) {
       listener.channelRemoved(this, channel);
     }
+
+    // Nothing selected? Select focused...
+    boolean selected = false;
+    for (LXChannelBus bus : this.channels) {
+      if (bus.selected.isOn()) {
+        selected = true;
+        break;
+      }
+    }
+    if (!selected) {
+      getFocusedChannel().selected.setValue(true);
+    }
+
     channel.dispose();
   }
 
