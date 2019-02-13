@@ -631,6 +631,34 @@ public abstract class LXCommand {
       }
     }
 
+    public static class GoPattern extends LXCommand {
+
+      private final ComponentReference<LXChannel> channel;
+      private final ComponentReference<LXPattern> prevPattern;
+      private final ComponentReference<LXPattern> nextPattern;
+
+      public GoPattern(LXChannel channel, LXPattern nextPattern) {
+        this.channel = new ComponentReference<LXChannel>(channel);
+        this.prevPattern = new ComponentReference<LXPattern>(channel.getActivePattern());
+        this.nextPattern = new ComponentReference<LXPattern>(nextPattern);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Change Pattern";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.channel.get().goPattern(this.nextPattern.get());
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.channel.get().goPattern(this.prevPattern.get());
+      }
+    }
+
     public static class AddEffect extends LXCommand {
 
       private final ComponentReference<LXBus> channel;
