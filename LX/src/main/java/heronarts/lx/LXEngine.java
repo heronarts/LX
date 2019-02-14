@@ -313,14 +313,21 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private final ModelBuffer blendBufferLeft;
   private final ModelBuffer blendBufferRight;
 
-  public final BooleanParameter isMultithreaded = new BooleanParameter("Threaded", false)
+  public final BooleanParameter isMultithreaded =
+    new BooleanParameter("Threaded", false)
     .setDescription("Whether the engine and UI are on separate threads");
 
-  public final BooleanParameter isChannelMultithreaded = new BooleanParameter("Channel Threaded", false)
+  public final BooleanParameter isChannelMultithreaded =
+    new BooleanParameter("Channel Threaded", false)
     .setDescription("Whether the engine is multi-threaded per channel");
 
-  public final BooleanParameter isNetworkMultithreaded = new BooleanParameter("Network Threaded", false)
+  public final BooleanParameter isNetworkMultithreaded =
+    new BooleanParameter("Network Threaded", false)
     .setDescription("Whether the network output is on a separate thread");
+
+  public final BooleanParameter mixerViewCondensed =
+    new BooleanParameter("Condensed", false)
+    .setDescription("Whether the mixer view should be condensed");
 
   private volatile boolean isEngineThreadRunning = false;
 
@@ -482,6 +489,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addParameter("channelMultithreaded", this.isChannelMultithreaded);
     addParameter("networkMultithreaded", this.isNetworkMultithreaded);
     addParameter("framesPerSecond", this.framesPerSecond);
+    addParameter("mixerViewCondensed", this.mixerViewCondensed);
   }
 
   public void logTimers() {
@@ -1801,7 +1809,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Notify all the active patterns
     for (LXChannelBus channel : this.channels) {
       if (channel instanceof LXChannel) {
-        ((LXChannel) channel).getActivePattern().onActive();
+        LXPattern pattern = ((LXChannel) channel).getActivePattern();
+        if (pattern != null) {
+          pattern.onActive();
+        }
       }
     }
   }
