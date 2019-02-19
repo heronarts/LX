@@ -72,10 +72,13 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
   @Override
   protected void close() {
     if (this.isOpen) {
-      this.transmitter.close();
-      this.transmitter = null;
-      this.device.close();
-      this.isOpen = false;
+      try {
+        this.transmitter.close();
+        this.device.close();
+      } finally {
+        this.transmitter = null;
+        this.isOpen = false;
+      }
     }
   }
 

@@ -26,6 +26,7 @@ import heronarts.lx.LXBus;
 import heronarts.lx.LXChannel;
 import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXEffect;
 import heronarts.lx.LXEngine;
 import heronarts.lx.LXGroup;
@@ -44,7 +45,7 @@ import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
-public class APC40Mk2 extends LXMidiSurface {
+public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
   public static final String DEVICE_NAME = "APC40 mkII";
 
@@ -171,6 +172,28 @@ public class APC40Mk2 extends LXMidiSurface {
       }
     }
 
+    void resend() {
+      for (int i = 0; i < this.knobs.length; ++i) {
+        LXListenableNormalizedParameter parameter = this.knobs[i];
+        if (parameter != null) {
+          sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
+          double normalized = (parameter instanceof CompoundParameter) ?
+            ((CompoundParameter) parameter).getBaseNormalized() :
+            parameter.getNormalized();
+          sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+        } else {
+          sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
+        }
+      }
+      boolean isEnabled = false;
+      if (this.effect != null) {
+        isEnabled = this.effect.enabled.isOn();
+      } else if (this.pattern != null) {
+        isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
+      }
+      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
+    }
+
     void registerChannel(LXBus channel) {
       if (this.channel != null) {
         if (this.channel instanceof LXChannel) {
@@ -212,7 +235,7 @@ public class APC40Mk2 extends LXMidiSurface {
       }
     }
 
-    void register(LXComponent device) {
+    void register(LXDeviceComponent device) {
       if (this.device != device) {
         if (this.effect != null) {
           this.effect.enabled.removeListener(this);
@@ -462,7 +485,7 @@ public class APC40Mk2 extends LXMidiSurface {
   protected void onEnable(boolean on) {
     setApcMode(on ? ABLETON_ALTERNATE_MODE : GENERIC_MODE);
     if (on) {
-      initialize();
+      initialize(false);
       register();
     } else {
       this.deviceListener.register(null);
@@ -471,6 +494,15 @@ public class APC40Mk2 extends LXMidiSurface {
           ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
         }
       }
+    }
+  }
+
+  @Override
+  protected void onReconnect() {
+    if (this.enabled.isOn()) {
+      setApcMode(ABLETON_ALTERNATE_MODE);
+      initialize(true);
+      this.deviceListener.resend();
     }
   }
 
@@ -491,16 +523,17 @@ public class APC40Mk2 extends LXMidiSurface {
     });
   }
 
-  private void initialize() {
+  private void initialize(boolean reconnect) {
     this.output.sendNoteOn(0, BANK, this.bankOn ? LED_ON : LED_OFF);
-    for (int i = 0; i < CHANNEL_KNOB_NUM; ++i) {
-      sendControlChange(0, CHANNEL_KNOB_STYLE+i, LED_STYLE_OFF);
-    }
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
       sendControlChange(0, DEVICE_KNOB_STYLE+i, LED_STYLE_OFF);
     }
     for (int i = 0; i < CHANNEL_KNOB_NUM; ++i) {
-      sendControlChange(0, CHANNEL_KNOB+i, 64);
+      if (!reconnect) {
+        // Initialize channel knobs for generic control, but don't
+        // reset them if we're in a reconnect situation
+        sendControlChange(0, CHANNEL_KNOB+i, 64);
+      }
       sendControlChange(0, CHANNEL_KNOB_STYLE+i, LED_STYLE_SINGLE);
     }
     sendChannels();
@@ -609,17 +642,7 @@ public class APC40Mk2 extends LXMidiSurface {
     sendNoteOn(0, MASTER_FOCUS, masterFocused ? LED_ON : LED_OFF);
   }
 
-  private boolean registered = false;
-
   private void register() {
-    if (this.registered) {
-      for (LXChannelBus channel : this.lx.engine.channels) {
-        if (channel instanceof LXChannel) {
-          ((LXChannel) channel).controlSurfaceFocusLength.setValue(CLIP_LAUNCH_ROWS);
-        }
-      }
-      return;
-    }
     for (LXChannelBus channel : this.lx.engine.channels) {
       registerChannel(channel);
     }

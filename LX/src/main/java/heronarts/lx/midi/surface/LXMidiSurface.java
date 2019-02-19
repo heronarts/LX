@@ -35,8 +35,25 @@ import heronarts.lx.parameter.BooleanParameter;
 
 public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
 
+  /**
+   * Marker interface for Midi Surface implementations which require an output
+   * to be functional. Many surfaces are fine with just an input for control,
+   * but those like the APC40mk2 which require 2-way communication to update
+   * LEDs etc. need this marker
+   */
+  public interface Bidirectional {}
+
   protected final LX lx;
+
+  /**
+   * The midi input device for this control surface. Never null.
+   */
   public final LXMidiInput input;
+
+  /**
+   * The midi output device for this control surface. May be null in cases where the
+   * control surface does not implement the OutputRequired interface
+   */
   public final LXMidiOutput output;
 
   public final BooleanParameter enabled =
@@ -47,8 +64,12 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     this.lx = lx;
     this.input = input;
     this.output = output;
+    if ((this instanceof Bidirectional) && (output == null)) {
+      throw new IllegalArgumentException("Surface " + getClass().getSimpleName() + " requires MIDI output");
+    }
     this.enabled.addListener((p) -> {
       if (enabled.isOn()) {
+        // Make sure I/O channels are enabled
         input.open();
         if (output != null) {
           output.open();
@@ -58,6 +79,11 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
         input.removeListener(LXMidiSurface.this);
       }
       onEnable(enabled.isOn());
+    });
+    this.output.connected.addListener((p) -> {
+      if (this.output.connected.isOn()) {
+        onReconnect();
+      }
     });
   }
 
@@ -79,6 +105,12 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
    * @param isOn Whether surface is enabled
    */
   protected void onEnable(boolean isOn) {}
+
+  /**
+   * Subclasses may override, invoked when the control surface was disconnected but
+   * has now reconnected. Re-initialization may be necessary.
+   */
+  protected void onReconnect() {}
 
   protected void sendNoteOn(int channel, int note, int velocity) {
     if (this.enabled.isOn()) {
