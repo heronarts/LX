@@ -484,12 +484,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     _checkPath(path, "parameter");
     if (this.parameters.containsValue(parameter)) {
       throw new IllegalStateException(
-        "Cannot add parameter twice: " + parameter);
+        "Cannot add parameter twice: " + path + " / " + parameter);
     }
     LXComponent component = parameter.getParent();
     if (component != null) {
       throw new IllegalStateException(
-        "Parameter " + parameter + " already owned by " + component);
+        "Parameter " + path + " / " + parameter + " already owned by " + component);
     }
     parameter.setComponent(this, path);
     this.parameters.put(path, parameter);
