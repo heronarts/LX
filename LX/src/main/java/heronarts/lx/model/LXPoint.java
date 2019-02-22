@@ -126,10 +126,7 @@ public class LXPoint {
   }
 
   public LXPoint(LXPoint that) {
-    this.x = that.x;
-    this.y = that.y;
-    this.z = that.z;
-    this.index = that.index;
+    set(that);
   }
 
   /**
@@ -174,6 +171,37 @@ public class LXPoint {
     this.y = y;
     this.z = z;
     return set();
+  }
+
+  /**
+   * Set the x, y, and z values based upon the position of the transform
+   *
+   * @param transform Transform object
+   * @return this
+   */
+  public LXPoint set(LXTransform transform) {
+    return set(transform.x(), transform.y(), transform.z());
+  }
+
+  public LXPoint set(LXPoint p) {
+    this.x = p.x;
+    this.y = p.y;
+    this.z = p.z;
+    this.index = p.index;
+
+    this.r = p.r;
+    this.rxy = p.rxy;
+    this.rxz = p.rxz;
+    this.theta = p.theta;
+    this.azimuth = p.azimuth;
+    this.elevation = p.elevation;
+
+    this.xn = p.xn;
+    this.yn = p.yn;
+    this.zn = p.zn;
+    this.rn = p.rn;
+
+    return this;
   }
 
   public LXPoint setX(float x) {

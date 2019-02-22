@@ -186,8 +186,8 @@ public class LXModel implements LXFixture {
     this.pointList = Collections.unmodifiableList(_points);
     this.points = _points.toArray(new LXPoint[0]);
     this.fixtures = Collections.unmodifiableList(_fixtures);
-    average();
-    normalize();
+    computeAverages();
+    normalizePoints();
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -242,13 +242,13 @@ public class LXModel implements LXFixture {
         if (fixture instanceof LXModel) {
           // NOTE: normals are relative to master model,
           // flip to false for sub-models
-          ((LXModel) fixture).average();
+          ((LXModel) fixture).update(false, true);
         }
       }
     }
-    average();
+    computeAverages();
     if (normalize) {
-      normalize();
+      normalizePoints();
     }
     bang();
     return this;
@@ -267,7 +267,7 @@ public class LXModel implements LXFixture {
    *
    * @return this
    */
-  public LXModel average() {
+  public LXModel computeAverages() {
     float ax = 0, ay = 0, az = 0;
     float xMin = 0, xMax = 0, yMin = 0, yMax = 0, zMin = 0, zMax = 0, rMin = 0, rMax = 0;
 
@@ -327,7 +327,7 @@ public class LXModel implements LXFixture {
    * Sets the normalized values of all the points in this model (xn, yn, zn)
    * relative to this model's absolute bounds.
    */
-  public void normalize() {
+  public void normalizePoints() {
     // TODO(mcslee): correct when to call this... since submodels may normalize
     // points differently... we only want it relative to top-level model
     for (LXPoint p : this.points) {
