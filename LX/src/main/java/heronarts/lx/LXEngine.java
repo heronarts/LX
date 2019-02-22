@@ -437,6 +437,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Master output
     addChild("output", this.output = new Output(lx));
+    if (lx.structure.output != null) {
+      this.output.addChild(lx.structure.output);
+    }
     LX.initTimer.log("Engine: Output");
 
     // Midi engine
@@ -1644,7 +1647,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     ((LXBus.Timer) this.masterChannel.timer).effectNanos = System.nanoTime() - effectStart;
 
     // Add fixture identification very last
-    int identifyColor = LXColor.hsb(0, 0, Math.abs(-100 + (effectStart / 10000000) % 200));
+    int identifyColor = LXColor.hsb(0, 100, Math.abs(-100 + (effectStart / 8000000) % 200));
     for (LXFixture fixture : this.lx.structure.fixtures) {
       if (fixture.identify.isOn()) {
         for (LXPoint p : fixture.points) {
@@ -1670,7 +1673,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     } else {
       // Or do it ourself here on the engine thread
       long outputStart = System.nanoTime();
-      this.output.send(isDoubleBuffering ? this.buffer.copy.main : this.buffer.render.main);
+      Frame sendFrame = isDoubleBuffering ? this.buffer.copy : this.buffer.render;
+      int[] sendColors = (this.lx.flags.sendCueToOutput && sendFrame.cueOn) ? sendFrame.cue : sendFrame.main;
+      this.output.send(sendColors);
+
+
       this.timer.outputNanos = System.nanoTime() - outputStart;
     }
 

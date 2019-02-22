@@ -90,6 +90,7 @@ public class LX {
     public boolean staticModel = false;
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
+    public boolean sendCueToOutput = false;
   }
 
   /**
