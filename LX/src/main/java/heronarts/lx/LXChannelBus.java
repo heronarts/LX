@@ -269,6 +269,10 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     return this.colors;
   }
 
-
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.blendBuffer.dispose();
+  }
 
 }

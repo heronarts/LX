@@ -73,6 +73,11 @@ public class BlurEffect extends LXEffect {
       // Copy colors into blur array for next frame
       System.arraycopy(this.colors, 0, blurArray, 0, this.colors.length);
     }
+  }
 
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.blurBuffer.dispose();
   }
 }

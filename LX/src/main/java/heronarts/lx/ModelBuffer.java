@@ -22,23 +22,25 @@ import heronarts.lx.model.LXModel;
 
 public class ModelBuffer implements LXBuffer {
 
+  private final LX lx;
   private int[] array;
   private final int defaultColor;
+
+  private final LX.Listener modelListener = (lx, model) -> {
+    if (this.array.length != model.size) {
+      initArray(model);
+    }
+  };
 
   public ModelBuffer(LX lx) {
     this(lx, 0);
   }
 
   public ModelBuffer(LX lx, int defaultColor) {
+    this.lx = lx;
     this.defaultColor = defaultColor;
     initArray(lx.model);
-
-    lx.addListener(new LX.Listener() {
-      @Override
-      public void modelChanged(LX lx, LXModel model) {
-        initArray(model);
-      }
-    });
+    lx.addListener(this.modelListener);
   }
 
   private void initArray(LXModel model) {
@@ -50,6 +52,10 @@ public class ModelBuffer implements LXBuffer {
 
   public int[] getArray() {
     return this.array;
+  }
+
+  public void dispose() {
+    this.lx.removeListener(this.modelListener);
   }
 
 }

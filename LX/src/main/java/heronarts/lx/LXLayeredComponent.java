@@ -40,6 +40,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   public interface Buffered {}
 
   private LXBuffer buffer = null;
+  private final ModelBuffer myBuffer;
 
   protected int[] colors = null;
 
@@ -70,7 +71,9 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       if (buffer != null) {
         throw new IllegalArgumentException("Cannot pass existing buffer to LXLayeredComponent.Buffered, has its own");
       }
-      buffer = new ModelBuffer(lx);
+      buffer = this.myBuffer = new ModelBuffer(lx);
+    } else {
+      this.myBuffer = null;
     }
     this.palette = lx.engine.palette;
     if (buffer != null) {
@@ -175,6 +178,9 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       layer.dispose();
     }
     this.mutableLayers.clear();
+    if (this.myBuffer != null) {
+      this.myBuffer.dispose();
+    }
     super.dispose();
   }
 
