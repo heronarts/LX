@@ -106,6 +106,7 @@ public abstract class LXCommand {
   protected static class ParameterReference<T extends LXParameter> {
 
     private final T rawParameter;
+    private final Class<? extends LXComponent> componentCls;
     private final ComponentReference<LXComponent> component;
     private final String parameterPath;
 
@@ -118,12 +119,14 @@ public abstract class LXCommand {
         // destroys
         // and restores the object, we'll still point to the correct place
         this.component = new ComponentReference<LXComponent>(component);
+        this.componentCls = component.getClass();
         this.parameterPath = parameter.getPath();
         this.rawParameter = null;
       } else {
         // For unregistered parameters, store a raw handle
         this.rawParameter = parameter;
         this.component = null;
+        this.componentCls = null;
         this.parameterPath = null;
       }
     }
@@ -135,7 +138,7 @@ public abstract class LXCommand {
       }
       LXComponent component = this.component.get();
       if (component == null) {
-        System.err.println("Bad internal state, component " + this.component.componentId + " does not exist, cannot get parameter: " + this.parameterPath);
+        System.err.println("Bad internal state, component " + this.component.componentId + " of type " + componentCls.getName() + " does not exist, cannot get parameter: " + this.parameterPath);
         return null;
       }
       return (T) component.getParameter(this.parameterPath);
