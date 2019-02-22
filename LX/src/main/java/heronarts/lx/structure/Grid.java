@@ -46,27 +46,33 @@ public class Grid extends LXFixture {
 
   public Grid(LX lx) {
     super(lx);
-    addGeometryParameter("numRows", this.numRows);
-    addGeometryParameter("numColumns", this.numColumns);
+    addMetricsParameter("numRows", this.numRows);
+    addMetricsParameter("numColumns", this.numColumns);
     addGeometryParameter("rowSpacing", this.rowSpacing);
     addGeometryParameter("columnSpacing", this.columnSpacing);
   }
 
   @Override
-  protected void generatePoints(LXTransform transform) {
+  protected void computePointGeometry(LXTransform transform) {
     int numRows = this.numRows.getValuei();
     int numColumns = this.numColumns.getValuei();
     float rowSpacing = this.rowSpacing.getValuef();
     float columnSpacing = this.columnSpacing.getValuef();
+    int pi = 0;
     for (int r = 0; r < numRows; ++r) {
       transform.push();
       for (int c = 0; c < numColumns; ++c) {
-        addPoint(transform);
+        this.points.get(pi++).set(transform);
         transform.translate(columnSpacing, 0);
       }
       transform.pop();
       transform.translate(0, rowSpacing);
     }
+  }
+
+  @Override
+  protected int size() {
+    return this.numRows.getValuei() * this.numColumns.getValuei();
   }
 
 }

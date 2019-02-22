@@ -18,10 +18,10 @@
 
 package heronarts.lx.structure;
 
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -31,12 +31,44 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXDatagramOutput;
 
 public class LXStructure extends LXComponent {
+
+  public class Output extends LXDatagramOutput {
+    public Output(LX lx) throws SocketException {
+      super(lx);
+    }
+
+    @Override
+    public LXDatagramOutput addDatagram(LXDatagram datagram) {
+      throw new UnsupportedOperationException("No adding custom datagrams to LXStructure output");
+    }
+
+    @Override
+    public LXDatagramOutput addDatagrams(LXDatagram[] datagram) {
+      throw new UnsupportedOperationException("No adding custom datagrams to LXStructure output");
+    }
+
+    @Override
+    protected void onSend(int[] colors, double brightness) {
+      long now = System.currentTimeMillis();
+      beforeSend(colors);
+      for (LXFixture fixture : fixtures) {
+        LXDatagram datagram = fixture.getDatagram();
+        if (datagram != null) {
+          onSendDatagram(datagram, now, colors, brightness);
+        }
+      }
+      afterSend(colors);
+    }
+  }
 
   public interface Listener {
     public void fixtureAdded(LXFixture fixture);
     public void fixtureRemoved(LXFixture fixture);
+    public void fixtureMoved(LXFixture fixture, int index);
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -48,8 +80,18 @@ public class LXStructure extends LXComponent {
 
   private LXModel staticModel = null;
 
+  public final Output output;
+
   public LXStructure(LX lx) {
     super(lx);
+    Output output = null;
+    try {
+      output = new Output(lx);
+    } catch (SocketException sx) {
+      System.err.println("Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getMessage());
+      sx.printStackTrace();
+    }
+    this.output = output;
   }
 
   public LXModel getModel() {
@@ -81,7 +123,8 @@ public class LXStructure extends LXComponent {
       throw new IllegalStateException("LXStructure may not contain two copies of same fixture");
     }
     this.mutableFixtures.add(fixture);
-    fixture.regenerate();
+    fixture.setIndex(this.fixtures.size() - 1);
+    fixture.regeneratePoints();
     regenerateModel();
     for (Listener l : this.listeners) {
       l.fixtureAdded(fixture);
@@ -89,13 +132,80 @@ public class LXStructure extends LXComponent {
     return this;
   }
 
-  public LXStructure setFixtureIndex(LXFixture fixture, int index) {
+  private void _reindexFixtures() {
+    int i = 0;
+    for (LXFixture fixture : this.fixtures) {
+      fixture.setIndex(i++);
+    }
+  }
+
+  public LXStructure moveFixture(LXFixture fixture, int index) {
     checkStaticModel(false, "Cannot invoke setFixtureIndex when static model is in use");
     if (!this.mutableFixtures.contains(fixture)) {
       throw new IllegalStateException("Cannot set index on fixture not in structure: " + fixture);
     }
     this.mutableFixtures.remove(fixture);
     this.mutableFixtures.add(index, fixture);
+    _reindexFixtures();
+    for (Listener l : this.listeners) {
+      l.fixtureMoved(fixture, index);
+    }
+
+    // The point ordering is changed - regenerate the model!
+    regenerateModel();
+    return this;
+  }
+
+  public LXStructure selectFixtureRange(LXFixture fixture) {
+    int targetIndex = fixture.getIndex();
+    int minIndex = targetIndex, maxIndex = targetIndex;
+    for (LXFixture f : this.fixtures) {
+      int index = f.getIndex();
+      if (f.selected.isOn()) {
+        if (index < minIndex) {
+          minIndex = index;
+        }
+        if (index > maxIndex) {
+          maxIndex = index;
+        }
+      }
+    }
+    fixture.selected.setValue(true);
+    for (int i = minIndex + 1; i < maxIndex; ++i) {
+      this.fixtures.get(i).selected.setValue(true);
+    }
+    return this;
+  }
+
+  public LXStructure selectAllFixtures() {
+    for (LXFixture fixture : this.fixtures) {
+      fixture.selected.setValue(true);
+    }
+    return this;
+  }
+
+  public LXStructure selectFixture(LXFixture fixture) {
+    return selectFixture(fixture, false);
+  }
+
+  public LXStructure selectFixture(LXFixture fixture, boolean isMultipleSelection) {
+    if (isMultipleSelection) {
+      fixture.selected.setValue(true);
+    } else {
+      for (LXFixture f : this.fixtures) {
+        f.selected.setValue(fixture == f);
+      }
+    }
+    return this;
+  }
+
+  public LXStructure removeSelectedFixtures() {
+    for (int i = this.fixtures.size() - 1; i >= 0; --i) {
+      LXFixture fixture = this.fixtures.get(i);
+      if (fixture.selected.isOn()) {
+        removeFixture(fixture);
+      }
+    }
     return this;
   }
 
@@ -105,6 +215,7 @@ public class LXStructure extends LXComponent {
       throw new IllegalStateException("LXStructure does not contain fixture: " + fixture);
     }
     this.mutableFixtures.remove(fixture);
+    _reindexFixtures();
     for (Listener l : this.listeners) {
       l.fixtureRemoved(fixture);
     }
@@ -114,10 +225,44 @@ public class LXStructure extends LXComponent {
   }
 
   private void removeAllFixtures() {
-    // Remove all fixtures
+    checkStaticModel(false, "Cannot invoke removeAllFixtures when static model is in use");
+
+    // Do this loop ourselves, rather than calling removeFixture(), so we only regenerate model once...
     for (int i = this.mutableFixtures.size() - 1; i >= 0; --i) {
-      removeFixture(this.mutableFixtures.get(i));
+      LXFixture fixture = this.mutableFixtures.remove(i);
+      for (Listener l : this.listeners) {
+        l.fixtureRemoved(fixture);
+      }
+      fixture.dispose();
     }
+    regenerateModel();
+  }
+
+  public LXStructure adjustSelectedFixtureBrightness(float delta) {
+    for (LXFixture fixture : this.fixtures) {
+      if (fixture.selected.isOn()) {
+        fixture.brightness.setNormalized(fixture.brightness.getNormalized() + delta);
+      }
+    }
+    return this;
+  }
+
+  public LXStructure enableSelectedFixtures(boolean enabled) {
+    for (LXFixture fixture : this.fixtures) {
+      if (fixture.selected.isOn()) {
+        fixture.enabled.setValue(enabled);
+      }
+    }
+    return this;
+  }
+
+  public LXStructure identifySelectedFixtures(boolean identify) {
+    for (LXFixture fixture : this.fixtures) {
+      if (fixture.selected.isOn()) {
+        fixture.identify.setValue(identify);
+      }
+    }
+    return this;
   }
 
   public LXStructure setStaticModel(LXModel model) {
@@ -132,14 +277,30 @@ public class LXStructure extends LXComponent {
       return;
     }
     int i = 0;
-    List<LXPoint> points = new ArrayList<LXPoint>();
+    List<LXPoint> points = new ArrayList<LXPoint>(this.model.size);
     for (LXFixture fixture : this.fixtures) {
       for (LXPoint p : fixture.points) {
         p.index = i++;
+        // Note: we make a deep copy here because a change to the number of points in one
+        // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
+        // mode, that point might have been passed to the UI, which holds a reference to the model.
+        // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
+        // points here to stay safe.
         points.add(new LXPoint(p));
       }
+      // The fixture's point indices may have changed... we'll need to update its datagram
+      fixture.updateDatagram();
     }
     this.lx.setModel(this.model = new LXModel(points));
+  }
+
+  protected void fixtureRegenerated(LXFixture fixture) {
+    // No indices have changed, only the fixture has been regenerated
+    for (LXPoint p : fixture.points) {
+      this.model.points[p.index].set(p);
+    }
+    // We need to re-normalize the points in the model, since some have changed
+    this.model.update();
   }
 
   private boolean isLoading = false;
@@ -150,9 +311,9 @@ public class LXStructure extends LXComponent {
   @Override
   public void load(LX lx, JsonObject obj) {
     this.isLoading = true;
-    removeAllFixtures();
     super.load(lx, obj);
     if ((this.staticModel == null) && obj.has(KEY_FIXTURES)) {
+      removeAllFixtures();
       JsonArray fixturesArr = obj.getAsJsonArray(KEY_FIXTURES);
       for (JsonElement fixtureElement : fixturesArr) {
         JsonObject fixtureObj = fixtureElement.getAsJsonObject();

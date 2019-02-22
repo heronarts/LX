@@ -19,6 +19,7 @@
 package heronarts.lx.structure;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -42,23 +43,28 @@ public class Arc extends LXFixture {
 
   public Arc(LX lx) {
     super(lx);
-    addGeometryParameter("numPoints", this.numPoints);
+    addMetricsParameter("numPoints", this.numPoints);
     addGeometryParameter("radius", this.radius);
     addGeometryParameter("degrees", this.degrees);
   }
 
   @Override
-  protected void generatePoints(LXTransform transform) {
-    int numPoints = this.numPoints.getValuei();
+  protected void computePointGeometry(LXTransform transform) {
+    int numPoints = size();
     float radius = this.radius.getValuef();
     float degrees = this.degrees.getValuef();
     float rotation = (float) (degrees / (numPoints-1) * Math.PI / 180);
-    for (int i = 0; i < numPoints; ++i) {
-      addPoint(transform);
+    for (LXPoint p : this.points) {
+      p.set(transform);
       transform.translate(0, radius, 0);
       transform.rotateZ(rotation);
       transform.translate(0, -radius, 0);
     }
+  }
+
+  @Override
+  protected int size() {
+    return this.numPoints.getValuei();
   }
 
 

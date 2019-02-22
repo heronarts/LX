@@ -19,6 +19,7 @@
 package heronarts.lx.structure;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -37,18 +38,21 @@ public class Strip extends LXFixture {
 
   public Strip(LX lx) {
     super(lx);
-    addGeometryParameter("numPoints", this.numPoints);
+    addMetricsParameter("numPoints", this.numPoints);
     addGeometryParameter("spacing", this.spacing);
   }
 
   @Override
-  protected void generatePoints(LXTransform transform) {
-    int numPoints = this.numPoints.getValuei();
+  protected void computePointGeometry(LXTransform transform) {
     float spacing = this.spacing.getValuef();
-    for (int i = 0; i < numPoints; ++i) {
-      addPoint(transform);
+    for (LXPoint p : this.points) {
+      p.set(transform);
       transform.translate(spacing, 0);
     }
   }
 
+  @Override
+  protected int size() {
+    return this.numPoints.getValuei();
+  }
 }
