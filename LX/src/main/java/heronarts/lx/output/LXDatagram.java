@@ -19,6 +19,7 @@
 package heronarts.lx.output;
 
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -59,9 +60,20 @@ public abstract class LXDatagram {
   /**
    * Whether this datagram is active
    */
-  public final BooleanParameter enabled = new BooleanParameter("ON", true);
+  public final BooleanParameter enabled =
+    new BooleanParameter("Enabled", true)
+    .setDescription("Whether this datagram is active");
 
-  public final BooleanParameter error = new BooleanParameter("Error", false);
+  public final BooleanParameter error =
+    new BooleanParameter("Error", false)
+    .setDescription("Whether there have been errors sending to this datagram");
+
+  /**
+   * Brightness of the datagram
+   */
+  public final BoundedParameter brightness =
+    new BoundedParameter("Brightness", 1)
+    .setDescription("Level of the output");
 
   protected LXDatagram(int bufferSize) {
     this.buffer = new byte[bufferSize];
@@ -131,19 +143,19 @@ public abstract class LXDatagram {
    * be a simple call to this method with the right parameters.
    *
    * @param colors Array of color values
+   * @param glut Look-up table of gamma-corrected brightness values
    * @param pointIndices Array of point indices
    * @param offset Offset in buffer to write
    * @return this
    */
-  protected LXDatagram copyPoints(int[] colors, int[] pointIndices, int offset) {
-    int i = offset;
+  protected LXDatagram copyPoints(int[] colors, byte[] glut, int[] pointIndices, int offset) {
     int[] byteOffset = BYTE_ORDERING[this.byteOrder.ordinal()];
     for (int index : pointIndices) {
       int color = (index >= 0) ? colors[index] : 0;
-      this.buffer[i + byteOffset[0]] = (byte) ((color >> 16) & 0xff); // R
-      this.buffer[i + byteOffset[1]] = (byte) ((color >> 8) & 0xff); // G
-      this.buffer[i + byteOffset[2]] = (byte) (color & 0xff); // B
-      i += 3;
+      this.buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
+      this.buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
+      this.buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
+      offset += 3;
     }
     return this;
   }
@@ -154,6 +166,7 @@ public abstract class LXDatagram {
    * appropriate buffer.
    *
    * @param colors Color buffer
+   * @param lut Look-up table with gamma-adjusted brightness values
    */
-  public abstract void onSend(int[] colors);
+  public abstract void onSend(int[] colors, byte[] glut);
 }

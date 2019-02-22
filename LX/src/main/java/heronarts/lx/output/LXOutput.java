@@ -20,14 +20,9 @@ package heronarts.lx.output;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
-import heronarts.lx.ModelBuffer;
-import heronarts.lx.color.LXColor;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.parameter.EnumParameter;
-
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -44,53 +39,25 @@ public abstract class LXOutput extends LXComponent {
   public final List<LXOutput> children = Collections.unmodifiableList(this.mutableChildren);
 
   /**
-   * Buffer with colors for this output, gamma-corrected
-   */
-  private final ModelBuffer outputColors = new ModelBuffer(lx);
-
-  private final ModelBuffer allWhite = new ModelBuffer(lx, LXColor.WHITE);
-
-  private final ModelBuffer allOff = new ModelBuffer(lx, LXColor.BLACK);
-
-  /**
-   * Local array for color-conversions
-   */
-  private final float[] hsb = new float[3];
-
-  /**
    * Whether the output is enabled.
    */
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled", true)
     .setDescription("Whether the output is active");
 
-  public enum Mode {
-    NORMAL,
-    WHITE,
-    RAW,
-    OFF
-  };
-
-  /**
-   * Sending mode, 0 = normal, 1 = all white, 2 = all off
-   */
-  public final EnumParameter<Mode> mode =
-    new EnumParameter<Mode>("Mode", Mode.NORMAL)
-    .setDescription("Operation mode of this output");
-
   /**
    * Framerate throttle
    */
   public final BoundedParameter framesPerSecond =
     new BoundedParameter("FPS", 0, 300)
-    .setDescription("Maximum frames per second this output will send");
+    .setDescription("Maximum frames per second this output will send (0 for no limiting)");
 
   /**
    * Gamma correction level
    */
-  public final DiscreteParameter gammaCorrection =
-    new DiscreteParameter("Gamma", 4)
-    .setDescription("Gamma correction on the output, 0 is none");
+  public final BoundedParameter gamma =
+    new BoundedParameter("Gamma", 1, 1, 4)
+    .setDescription("Gamma correction on the output, 1 is linear (no gamma)");
 
   /**
    * Brightness of the output
@@ -104,17 +71,50 @@ public abstract class LXOutput extends LXComponent {
    */
   private long lastFrameMillis = 0;
 
+  /**
+   * A lookup table that maps brightness and index byte to output byte. For high-pixel projects
+   * this avoids lots of redundant brightness multiplies at the output.
+   */
+  protected final byte[][] gammaLut = new byte[256][256];
+
+  private void buildGammaTable() {
+    double gamma = this.gamma.getValue();
+    if (gamma == 1) {
+      for (int b = 0; b < 256; ++b) {
+        int bb = b + (b > 127 ? 1 : 0);
+        for (int in = 0; in < 256; ++in) {
+          this.gammaLut[b][in] = (byte) ((in * bb) >> 8);
+        }
+      }
+    } else {
+      double maxInv = 1. / 65025.;
+      for (int b = 0; b < 256; ++b) {
+        for (int in = 0; in < 256; ++in) {
+          this.gammaLut[b][in] = (byte) (0xff & (int) Math.round(Math.pow(in * b * maxInv, gamma) * 255.f));
+        }
+      }
+    }
+  }
+
   protected LXOutput(LX lx) {
     this(lx, "Output");
   }
 
   protected LXOutput(LX lx, String label) {
     super(lx, label);
+    buildGammaTable();
+
     addParameter("enabled", this.enabled);
-    addParameter("mode", this.mode);
     addParameter("fps", this.framesPerSecond);
-    addParameter("gamma", this.gammaCorrection);
+    addParameter("gamma", this.gamma);
     addParameter("brightness", this.brightness);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    if (p == this.gamma) {
+      buildGammaTable();
+    }
   }
 
   /**
@@ -124,7 +124,7 @@ public abstract class LXOutput extends LXComponent {
    * @return this
    */
   public LXOutput addChild(LXOutput child) {
-    // TODO(mcslee): need to setParent() on the LXComponent...
+    child.setParent(this);
     this.mutableChildren.add(child);
     return this;
   }
@@ -141,77 +141,55 @@ public abstract class LXOutput extends LXComponent {
   }
 
   /**
-   * Sends data to this output, after applying throttle and color correction
+   * Sends data to this output, applying throttle and color correction
    *
    * @param colors Array of color values
    * @return this
    */
   public final LXOutput send(int[] colors) {
+    return send(colors, 1.);
+  }
+
+  /**
+   * Sends data to this output at the pre-corrected brightness
+   *
+   * @param colors
+   * @param brightness
+   * @return
+   */
+  private final LXOutput send(int[] colors, double brightness) {
     if (!this.enabled.isOn()) {
       return this;
     }
     long now = System.currentTimeMillis();
     double fps = this.framesPerSecond.getValue();
     if ((fps == 0) || ((now - this.lastFrameMillis) > (1000. / fps))) {
-      int[] colorsToSend;
+      // Compute effective brightness, input brightness multiplied by our own
+      brightness *= this.brightness.getValue();
 
-      switch (this.mode.getEnum()) {
-      case WHITE:
-        int white = LXColor.hsb(0, 0, 100 * this.brightness.getValuef());
-        int[] allWhite = this.allWhite.getArray();
-        for (int i = 0; i < allWhite.length; ++i) {
-          allWhite[i] = white;
-        }
-        colorsToSend = allWhite;
-        break;
+      // Send at the adjusted brightness level
+      onSend(colors, brightness);
 
-      case OFF:
-        colorsToSend = this.allOff.getArray();
-        break;
-
-      case RAW:
-        colorsToSend = colors;
-        break;
-
-      default:
-      case NORMAL:
-        colorsToSend = colors;
-        int gamma = this.gammaCorrection.getValuei();
-        double brt = this.brightness.getValuef();
-        if (gamma > 0 || brt < 1) {
-          colorsToSend = this.outputColors.getArray();
-          int r, g, b, rgb;
-          for (int i = 0; i < colors.length; ++i) {
-            rgb = colors[i];
-            r = (rgb >> 16) & 0xff;
-            g = (rgb >> 8) & 0xff;
-            b = rgb & 0xff;
-            Color.RGBtoHSB(r, g, b, this.hsb);
-            float scaleBrightness = this.hsb[2];
-            for (int x = 0; x < gamma; ++x) {
-              scaleBrightness *= this.hsb[2];
-            }
-            scaleBrightness *= brt;
-            colorsToSend[i] = Color.HSBtoRGB(hsb[0], hsb[1], scaleBrightness);
-          }
-        }
-        break;
-      }
-
-      this.onSend(colorsToSend);
-
+      // Send to all children, with cascading brightness
       for (LXOutput child : this.mutableChildren) {
-        child.send(colorsToSend);
+        child.send(colors, brightness);
       }
       this.lastFrameMillis = now;
     }
     return this;
   }
 
+  protected void onSend(int[] colors, double brightness) {
+    // Select the right gamma look-up table for our settings
+    byte[] glut = this.gammaLut[(int) Math.round(brightness * 255.f)];
+    onSend(colors, glut);
+  }
+
   /**
    * Subclasses implement this to send the data.
    *
    * @param colors Color values
+   * @param glut Look-up table scaled to appropriate brightness and gamma
    */
-  protected abstract void onSend(int[] colors);
+  protected abstract void onSend(int[] colors, byte[] glut);
 }

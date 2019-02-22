@@ -59,8 +59,8 @@ public class OPCDatagram extends LXDatagram implements OPCConstants {
   }
 
   @Override
-  public void onSend(int[] colors) {
-    copyPoints(colors, this.indices, INDEX_DATA);
+  public void onSend(int[] colors, byte[] glut) {
+    copyPoints(colors, glut, this.indices, INDEX_DATA);
   }
 
 }

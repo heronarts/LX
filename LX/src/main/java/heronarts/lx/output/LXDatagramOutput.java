@@ -126,39 +126,50 @@ public class LXDatagramOutput extends LXOutput {
    * Core method which sends the datagrams.
    */
   @Override
-  protected final void onSend(int[] colors) {
+  protected void onSend(int[] colors, double brightness) {
     long now = System.currentTimeMillis();
     beforeSend(colors);
     for (LXDatagram datagram : this.datagrams) {
-      if (datagram.enabled.isOn() && (now > datagram.sendAfter)) {
-        datagram.onSend(colors);
-        try {
-          this.socket.send(datagram.packet);
-          if (datagram.failureCount > 0) {
-            System.out.println(this.date.format(now) + " Recovered connectivity to " + datagram.packet.getAddress());
-          }
-          datagram.error.setValue(false);
-          datagram.failureCount = 0;
-          datagram.sendAfter = 0;
-        } catch (IOException iox) {
-          if (datagram.failureCount == 0) {
-            System.out.println(this.date.format(now) + " IOException sending to "
-                + datagram.packet.getAddress() + " (" + iox.getLocalizedMessage()
-                + "), will initiate backoff after 3 consecutive failures");
-          }
-          ++datagram.failureCount;
-          if (datagram.failureCount >= 3) {
-            int pow = Math.min(5, datagram.failureCount - 3);
-            long waitFor = (long) (50 * Math.pow(2, pow));
-            System.out.println(this.date.format(now) + " Retrying " + datagram.packet.getAddress()
-                + " in " + waitFor + "ms" + " (" + datagram.failureCount
-                + " consecutive failures)");
-            datagram.sendAfter = now + waitFor;
-            datagram.error.setValue(true);
-          }
-        }
-      }
+      onSendDatagram(datagram, now, colors, brightness);
     }
     afterSend(colors);
+  }
+
+  protected void onSendDatagram(LXDatagram datagram, long nowMillis, int[] colors, double brightness) {
+    if (!datagram.enabled.isOn() || (datagram.sendAfter >= nowMillis)) {
+      return;
+    }
+    byte[] glut = this.gammaLut[(int) Math.round(brightness * datagram.brightness.getValue() * 255.f)];
+    datagram.onSend(colors, glut);
+    try {
+      this.socket.send(datagram.packet);
+      if (datagram.failureCount > 0) {
+        System.out.println(this.date.format(nowMillis) + " Recovered connectivity to " + datagram.packet.getAddress());
+      }
+      datagram.error.setValue(false);
+      datagram.failureCount = 0;
+      datagram.sendAfter = 0;
+    } catch (IOException iox) {
+      if (datagram.failureCount == 0) {
+        System.out.println(this.date.format(nowMillis) + " IOException sending to "
+            + datagram.packet.getAddress() + " (" + iox.getLocalizedMessage()
+            + "), will initiate backoff after 3 consecutive failures");
+      }
+      ++datagram.failureCount;
+      if (datagram.failureCount >= 3) {
+        int pow = Math.min(5, datagram.failureCount - 3);
+        long waitFor = (long) (50 * Math.pow(2, pow));
+        System.out.println(this.date.format(nowMillis) + " Retrying " + datagram.packet.getAddress()
+            + " in " + waitFor + "ms" + " (" + datagram.failureCount
+            + " consecutive failures)");
+        datagram.sendAfter = nowMillis + waitFor;
+        datagram.error.setValue(true);
+      }
+    }
+  }
+
+  @Override
+  protected void onSend(int[] colors, byte[] glut) {
+    throw new UnsupportedOperationException("LXDatagramOutput does not implement onSend by glut");
   }
 }

@@ -99,7 +99,7 @@ public class DDPDatagram extends LXDatagram {
   }
 
   @Override
-  public void onSend(int[] colors) {
-    copyPoints(colors, this.pointIndices, HEADER_LENGTH);
+  public void onSend(int[] colors, byte[] glut) {
+    copyPoints(colors, glut, this.pointIndices, HEADER_LENGTH);
   }
 }

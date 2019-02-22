@@ -152,14 +152,19 @@ public class KinetDatagram extends LXDatagram {
     }
   }
 
+  public KinetDatagram setKinetPort(byte kinetPort) {
+    this.buffer[16] = kinetPort;
+    return this;
+  }
+
   @Override
-  public void onSend(int[] colors) {
+  public void onSend(int[] colors, byte[] glut) {
     switch (this.version) {
     case DMXOUT:
-      copyPoints(colors, this.pointIndices, DMXOUT_HEADER_LENGTH);
+      copyPoints(colors, glut, this.pointIndices, DMXOUT_HEADER_LENGTH);
       break;
     case PORTOUT:
-      copyPoints(colors, this.pointIndices, HEADER_LENGTH);
+      copyPoints(colors, glut, this.pointIndices, HEADER_LENGTH);
       break;
     }
   }

@@ -74,17 +74,17 @@ public abstract class LXSocketOutput extends LXOutput {
   }
 
   @Override
-  protected void onSend(int[] colors) {
+  protected void onSend(int[] colors, byte[] glut) {
     connect();
     if (isConnected()) {
       try {
-        this.output.write(getPacketData(colors));
+        this.output.write(getPacketData(colors, glut));
       } catch (IOException iox) {
         dispose(iox);
       }
     }
   }
 
-  protected abstract byte[] getPacketData(int[] colors);
+  protected abstract byte[] getPacketData(int[] colors, byte[] glut);
 
 }

@@ -34,7 +34,7 @@ public class LXOutputGroup extends LXOutput {
   }
 
   @Override
-  protected void onSend(int[] colors) {
+  protected void onSend(int[] colors, byte[] lut) {
     // Do nothing
   }
 

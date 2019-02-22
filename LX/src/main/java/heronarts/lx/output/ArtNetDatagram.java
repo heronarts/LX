@@ -119,9 +119,8 @@ public class ArtNetDatagram extends LXDatagram {
   }
 
   @Override
-  public void onSend(int[] colors) {
-    copyPoints(colors, this.pointIndices, ARTNET_HEADER_LENGTH);
-
+  public void onSend(int[] colors, byte[] glut) {
+    copyPoints(colors, glut, this.pointIndices, ARTNET_HEADER_LENGTH);
     if (this.sequenceEnabled) {
       if (++this.sequence == 0) {
         ++this.sequence;

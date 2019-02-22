@@ -234,8 +234,8 @@ public class StreamingACNDatagram extends LXDatagram {
   }
 
   @Override
-  public void onSend(int[] colors) {
+  public void onSend(int[] colors, byte[] glut) {
     advanceFrame();
-    copyPoints(colors, this.pointIndices, DMX_DATA_POSITION);
+    copyPoints(colors, glut, this.pointIndices, DMX_DATA_POSITION);
   }
 }

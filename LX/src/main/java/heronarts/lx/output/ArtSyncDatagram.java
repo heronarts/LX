@@ -43,7 +43,7 @@ public class ArtSyncDatagram extends LXDatagram {
   }
 
   @Override
-  public void onSend(int[] colors) {
+  public void onSend(int[] colors, byte[] glut) {
     // Nothing else needed!
   }
 

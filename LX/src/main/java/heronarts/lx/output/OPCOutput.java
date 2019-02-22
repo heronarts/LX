@@ -63,13 +63,13 @@ public class OPCOutput extends LXSocketOutput implements OPCConstants {
   }
 
   @Override
-  protected byte[] getPacketData(int[] colors) {
+  protected byte[] getPacketData(int[] colors, byte[] glut) {
     for (int i = 0; i < this.pointIndices.length; ++i) {
       int dataOffset = INDEX_DATA + i * BYTES_PER_PIXEL;
       int c = colors[this.pointIndices[i]];
-      this.packetData[dataOffset + OFFSET_R] = (byte) (0xFF & (c >> 16));
-      this.packetData[dataOffset + OFFSET_G] = (byte) (0xFF & (c >> 8));
-      this.packetData[dataOffset + OFFSET_B] = (byte) (0xFF & c);
+      this.packetData[dataOffset + OFFSET_R] = glut[(0xFF & (c >> 16))];
+      this.packetData[dataOffset + OFFSET_G] = glut[(0xFF & (c >> 8))];
+      this.packetData[dataOffset + OFFSET_B] = glut[(byte) (0xFF & c)];
     }
     return this.packetData;
   }
