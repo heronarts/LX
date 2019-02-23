@@ -118,12 +118,22 @@ public class LXStructure extends LXComponent {
   }
 
   public LXStructure addFixture(LXFixture fixture) {
+    return addFixture(fixture, -1);
+  }
+
+  public LXStructure addFixture(LXFixture fixture, int index) {
     checkStaticModel(false, "Cannot invoke addFixture when static model is in use");
     if (this.mutableFixtures.contains(fixture)) {
       throw new IllegalStateException("LXStructure may not contain two copies of same fixture");
     }
-    this.mutableFixtures.add(fixture);
-    fixture.setIndex(this.fixtures.size() - 1);
+    if (index > this.fixtures.size()) {
+      throw new IllegalArgumentException("Illegal fixture index: " + index);
+    }
+    if (index < 0) {
+      index = this.fixtures.size();
+    }
+    this.mutableFixtures.add(index, fixture);
+    _reindexFixtures();
     fixture.regeneratePoints();
     regenerateModel();
     for (Listener l : this.listeners) {
