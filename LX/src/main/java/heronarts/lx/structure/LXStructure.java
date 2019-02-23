@@ -18,10 +18,12 @@
 
 package heronarts.lx.structure;
 
+import java.io.File;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -71,6 +73,8 @@ public class LXStructure extends LXComponent {
     public void fixtureMoved(LXFixture fixture, int index);
   }
 
+  String fixturePath = ".";
+
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
@@ -92,6 +96,22 @@ public class LXStructure extends LXComponent {
       sx.printStackTrace();
     }
     this.output = output;
+  }
+
+  public LXStructure setFixturePath(String fixturePath) {
+    this.fixturePath = fixturePath;
+    return this;
+  }
+
+  public void registerFixtures() {
+    File fixtureDir = new File(this.fixturePath + File.separator + "fixtures");
+    if (fixtureDir.exists() && fixtureDir.isDirectory()) {
+      for (String fixture : fixtureDir.list()) {
+        if (fixture.endsWith(".lxf")) {
+          this.lx.registerFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
+        }
+      }
+    }
   }
 
   public LXModel getModel() {

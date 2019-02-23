@@ -224,6 +224,12 @@ public class LX {
     new ArrayList<Class<? extends LXEffect>>();
 
   /**
+   * The list of globally registered fixture types
+   */
+  private final List<String> registeredFixtures =
+    new ArrayList<String>();
+
+  /**
    * The list of globally registered channel blend classes
    */
   private final List<Class<? extends LXBlend>> registeredChannelBlends =
@@ -765,6 +771,19 @@ public class LX {
    */
   public List<Class<? extends LXEffect>> getRegisteredEffects() {
     return this.registeredEffects;
+  }
+
+  public LX registerFixture(String fixtureName) {
+    checkRegistration();
+    if (this.registeredFixtures.contains(fixtureName)) {
+      throw new IllegalStateException("Cannot double-register fixture: " + fixtureName);
+    }
+    this.registeredFixtures.add(fixtureName);
+    return this;
+  }
+
+  public List<String> getRegisteredFixtures() {
+    return this.registeredFixtures;
   }
 
   /**
