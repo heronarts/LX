@@ -199,6 +199,13 @@ public class LXStructure extends LXComponent {
     return this;
   }
 
+  public LXStructure soloFixture(LXFixture fixture) {
+    for (LXFixture f : this.fixtures) {
+      f.solo.setValue(f == fixture);
+    }
+    return this;
+  }
+
   public LXStructure removeSelectedFixtures() {
     for (int i = this.fixtures.size() - 1; i >= 0; --i) {
       LXFixture fixture = this.fixtures.get(i);

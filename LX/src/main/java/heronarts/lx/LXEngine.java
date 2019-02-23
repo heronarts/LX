@@ -1649,10 +1649,25 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Add fixture identification very last
     int identifyColor = LXColor.hsb(0, 100, Math.abs(-100 + (effectStart / 8000000) % 200));
     for (LXFixture fixture : this.lx.structure.fixtures) {
-      if (fixture.identify.isOn()) {
+      if (fixture.mute.isOn()) {
+        for (LXPoint p : fixture.points) {
+          this.buffer.render.main[p.index] = LXColor.BLACK;
+          this.buffer.render.cue[p.index] = LXColor.BLACK;
+        }
+      } else if (fixture.identify.isOn()) {
         for (LXPoint p : fixture.points) {
           this.buffer.render.main[p.index] = identifyColor;
           this.buffer.render.cue[p.index] = identifyColor;
+        }
+      }
+      if (fixture.solo.isOn()) {
+        int start = fixture.points.get(0).index;
+        int end = start + fixture.points.size();
+        for (int i = 0; i < this.buffer.render.main.length; ++i) {
+          if (i < start || i >= end) {
+            this.buffer.render.main[i] = LXColor.BLACK;
+            this.buffer.render.cue[i] = LXColor.BLACK;
+          }
         }
       }
     }

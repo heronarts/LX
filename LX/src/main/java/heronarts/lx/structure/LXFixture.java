@@ -45,12 +45,15 @@ import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
-public abstract class LXFixture extends LXComponent
-  implements LXComponent.Renamable {
+public abstract class LXFixture extends LXComponent implements LXComponent.Renamable {
 
   public enum Protocol {
-    NONE("None"), ARTNET("Art-Net"), SACN("E1.31 Streaming ACN"), OPC(
-      "OPC"), DDP("DDP"), KINET("KiNET");
+    NONE("None"),
+    ARTNET("Art-Net"),
+    SACN("E1.31 Streaming ACN"),
+    OPC("OPC"),
+    DDP("DDP"),
+    KINET("KiNET");
 
     private final String label;
 
@@ -66,75 +69,91 @@ public abstract class LXFixture extends LXComponent
 
   private static final double POSITION_RANGE = 1000000;
 
-  public final BooleanParameter selected = new BooleanParameter("Selected", false)
+  public final BooleanParameter selected =
+    new BooleanParameter("Selected", false)
     .setDescription("Whether this fixture is selected for editing");
 
-  public final BooleanParameter identify = new BooleanParameter("Identify", false)
+  public final BooleanParameter identify =
+    new BooleanParameter("Identify", false)
     .setDescription("Causes the fixture to flash red for identification");
 
-  public final BoundedParameter x = new BoundedParameter("X", 0,
-    -POSITION_RANGE, POSITION_RANGE)
-      .setDescription("Base X position of the fixture in space");
+  public final BoundedParameter x =
+    new BoundedParameter("X", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base X position of the fixture in space");
 
-  public final BoundedParameter y = new BoundedParameter("Y", 0,
-    -POSITION_RANGE, POSITION_RANGE)
-      .setDescription("Base Y position of the fixture in space");
+  public final BoundedParameter y =
+    new BoundedParameter("Y", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base Y position of the fixture in space");
 
-  public final BoundedParameter z = new BoundedParameter("Z", 0,
-    -POSITION_RANGE, POSITION_RANGE)
-      .setDescription("Base Z position of the fixture in space");
+  public final BoundedParameter z =
+    new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base Z position of the fixture in space");
 
-  public final BoundedParameter yaw = (BoundedParameter) new BoundedParameter(
-    "Yaw", 0, -360, 360)
-      .setDescription("Rotation of the fixture about the vertical axis")
-      .setUnits(LXParameter.Units.DEGREES);
+  public final BoundedParameter yaw = (BoundedParameter)
+    new BoundedParameter("Yaw", 0, -360, 360)
+    .setDescription("Rotation of the fixture about the vertical axis")
+    .setUnits(LXParameter.Units.DEGREES);
 
-  public final BoundedParameter pitch = (BoundedParameter) new BoundedParameter(
-    "Pitch", 0, -360, 360)
-      .setDescription("Rotation of the fixture about the horizontal plane")
-      .setUnits(LXParameter.Units.DEGREES);
+  public final BoundedParameter pitch = (BoundedParameter)
+    new BoundedParameter("Pitch", 0, -360, 360)
+    .setDescription("Rotation of the fixture about the horizontal plane")
+    .setUnits(LXParameter.Units.DEGREES);
 
-  public final BoundedParameter roll = (BoundedParameter) new BoundedParameter(
-    "Roll", 0, -360, 360)
-      .setDescription("Rotation of the fixture about its normal vector")
-      .setUnits(LXParameter.Units.DEGREES);
+  public final BoundedParameter roll = (BoundedParameter)
+    new BoundedParameter("Roll", 0, -360, 360)
+    .setDescription("Rotation of the fixture about its normal vector")
+    .setUnits(LXParameter.Units.DEGREES);
 
-  public final BooleanParameter enabled = new BooleanParameter("Enabled", false)
+  public final BooleanParameter enabled =
+    new BooleanParameter("Enabled", false)
     .setDescription("Whether output to this fixture is enabled");
 
-  public final BoundedParameter brightness = new BoundedParameter("Brightness",
-    1).setDescription("Brightness level of this fixture");
+  public final BoundedParameter brightness =
+    new BoundedParameter("Brightness", 1)
+    .setDescription("Brightness level of this fixture");
 
-  public final EnumParameter<Protocol> protocol = new EnumParameter<Protocol>(
-    "Protocol", Protocol.NONE)
-      .setDescription("Which lighting data protocol this fixture uses");
+  public final BooleanParameter mute =
+    new BooleanParameter("Mute", false)
+    .setDescription("Mutes this fixture, sending all black pixels");
 
-  public final StringParameter host = new StringParameter("Host", "127.0.0.1")
+  public final BooleanParameter solo =
+    new BooleanParameter("Solo", false)
+    .setDescription("Solos this fixture, no other fixtures illuminated");
+
+  public final EnumParameter<Protocol> protocol =
+    new EnumParameter<Protocol>("Protocol", Protocol.NONE)
+    .setDescription("Which lighting data protocol this fixture uses");
+
+  public final StringParameter host =
+    new StringParameter("Host", "127.0.0.1")
     .setDescription("Host/IP this fixture transmits to");
 
-  public final DiscreteParameter artNetUniverse = (DiscreteParameter) new DiscreteParameter(
-    "ArtNet Universe", 0, 0, 32768).setUnits(LXParameter.Units.INTEGER)
-      .setDescription("Which ArtNet universe is used");
+  public final DiscreteParameter artNetUniverse = (DiscreteParameter)
+    new DiscreteParameter("ArtNet Universe", 0, 0, 32768).setUnits(LXParameter.Units.INTEGER)
+    .setDescription("Which ArtNet universe is used");
 
-  public final DiscreteParameter opcChannel = (DiscreteParameter) new DiscreteParameter(
-    "OPC Channel", 0, 0, 256).setUnits(LXParameter.Units.INTEGER)
-      .setDescription("Which OPC channel is used");
+  public final DiscreteParameter opcChannel = (DiscreteParameter)
+    new DiscreteParameter("OPC Channel", 0, 0, 256)
+    .setUnits(LXParameter.Units.INTEGER)
+    .setDescription("Which OPC channel is used");
 
-  public final DiscreteParameter ddpDataOffset = (DiscreteParameter) new DiscreteParameter(
-    "DDP Offset", 0, 0, 32768).setUnits(LXParameter.Units.INTEGER)
-      .setDescription("The DDP data offset for this packet");
+  public final DiscreteParameter ddpDataOffset = (DiscreteParameter)
+    new DiscreteParameter("DDP Offset", 0, 0, 32768)
+    .setUnits(LXParameter.Units.INTEGER)
+    .setDescription("The DDP data offset for this packet");
 
-  public final DiscreteParameter kinetPort = (DiscreteParameter) new DiscreteParameter(
-    "KiNET Port", 1, 0, 256).setUnits(LXParameter.Units.INTEGER)
-      .setDescription("Which KiNET physical output port is used");
+  public final DiscreteParameter kinetPort = (DiscreteParameter)
+    new DiscreteParameter("KiNET Port", 1, 0, 256)
+    .setUnits(LXParameter.Units.INTEGER)
+    .setDescription("Which KiNET physical output port is used");
 
   protected LXMatrix parentTransformMatrix = new LXMatrix();
 
   private LXTransform transform = new LXTransform();
 
   private final List<LXPoint> mutablePoints = new ArrayList<LXPoint>();
-  public final List<LXPoint> points = Collections
-    .unmodifiableList(this.mutablePoints);
+
+  public final List<LXPoint> points = Collections.unmodifiableList(this.mutablePoints);
 
   private LXDatagram datagram = null;
 
@@ -166,6 +185,8 @@ public abstract class LXFixture extends LXComponent
     addParameter("ddpDataOffset", this.ddpDataOffset);
     addParameter("kinetPort", this.kinetPort);
     addParameter("identify", this.identify);
+    addParameter("mute", this.mute);
+    addParameter("solo", this.solo);
   }
 
   void setIndex(int index) {
@@ -331,6 +352,10 @@ public abstract class LXFixture extends LXComponent
           // TODO(mcslee): get an error to the UI...
           uhx.printStackTrace();
         }
+      }
+    } else if (p == this.solo) {
+      if (this.solo.isOn()) {
+        this.lx.structure.soloFixture(this);
       }
     }
   }
