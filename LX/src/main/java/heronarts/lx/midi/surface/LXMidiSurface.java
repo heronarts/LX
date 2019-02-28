@@ -70,18 +70,20 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     this.enabled.addListener((p) -> {
       if (enabled.isOn()) {
         // Make sure I/O channels are enabled
-        input.open();
-        if (output != null) {
-          output.open();
+        this.input.open();
+        if (this.output != null) {
+          this.output.open();
         }
-        input.addListener(LXMidiSurface.this);
+        this.input.addListener(LXMidiSurface.this);
       } else {
-        input.removeListener(LXMidiSurface.this);
+        this.input.removeListener(LXMidiSurface.this);
       }
-      onEnable(enabled.isOn());
+      onEnable(this.enabled.isOn());
     });
     this.output.connected.addListener((p) -> {
       if (this.output.connected.isOn()) {
+        this.input.open();
+        this.output.open();
         onReconnect();
       }
     });
