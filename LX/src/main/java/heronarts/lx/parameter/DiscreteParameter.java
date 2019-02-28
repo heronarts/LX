@@ -63,6 +63,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   public DiscreteParameter(String label, int value, int min, int max) {
     super(label, value);
     setRange(min, max);
+    setUnits(LXParameter.Units.INTEGER);
   }
 
   /**
