@@ -18,49 +18,49 @@
 
 package heronarts.lx.output;
 
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 
 /**
  * UDP implementation of http://openpixelcontrol.org/
  */
 public class OPCDatagram extends LXDatagram implements OPCConstants {
 
-  private final int[] indices;
+  private final int[] indexBuffer;
 
-  public OPCDatagram(LXFixture fixture) {
-    this(fixture, CHANNEL_BROADCAST);
+  public OPCDatagram(LXModel model) {
+    this(model, CHANNEL_BROADCAST);
   }
 
-  public OPCDatagram(LXFixture fixture, byte channel) {
-    this(LXFixture.Utils.getIndices(fixture), channel);
+  public OPCDatagram(LXModel model, byte channel) {
+    this(model.toIndexBuffer(), channel);
   }
 
-  public OPCDatagram(int[] indices) {
-    this(indices, CHANNEL_BROADCAST);
+  public OPCDatagram(int[] indexBuffer) {
+    this(indexBuffer, CHANNEL_BROADCAST);
   }
 
-  public OPCDatagram(int[] indices, byte channel) {
-    super(OPCOutput.HEADER_LEN + OPCOutput.BYTES_PER_PIXEL * indices.length);
-    this.indices = indices;
-    int dataLength = BYTES_PER_PIXEL * indices.length;
-    this.buffer[INDEX_CHANNEL] = channel;
-    this.buffer[INDEX_COMMAND] = COMMAND_SET_PIXEL_COLORS;
-    this.buffer[INDEX_DATA_LEN_MSB] = (byte)(dataLength >>> 8);
-    this.buffer[INDEX_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);
+  public OPCDatagram(int[] indexBuffer, byte channel) {
+    super(OPCOutput.HEADER_LEN + OPCOutput.BYTES_PER_PIXEL * indexBuffer.length);
+    this.indexBuffer = indexBuffer;
+    int dataLength = BYTES_PER_PIXEL * indexBuffer.length;
+    this.buffer[OFFSET_CHANNEL] = channel;
+    this.buffer[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;
+    this.buffer[OFFSET_DATA_LEN_MSB] = (byte)(dataLength >>> 8);
+    this.buffer[OFFSET_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);
   }
 
   public OPCDatagram setChannel(byte channel) {
-    this.buffer[INDEX_CHANNEL] = channel;
+    this.buffer[OFFSET_CHANNEL] = channel;
     return this;
   }
 
   public byte getChannel() {
-    return this.buffer[INDEX_CHANNEL];
+    return this.buffer[OFFSET_CHANNEL];
   }
 
   @Override
   public void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.indices, INDEX_DATA);
+    copyPoints(colors, glut, this.indexBuffer, OFFSET_DATA);
   }
 
 }

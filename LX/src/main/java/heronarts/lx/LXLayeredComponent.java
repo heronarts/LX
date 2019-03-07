@@ -20,7 +20,7 @@ package heronarts.lx;
 
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXPalette;
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 
 import java.util.ArrayList;
@@ -210,8 +210,8 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     return this;
   }
 
-  protected final LXLayeredComponent blendColor(LXFixture f, int c, LXColor.Blend blendMode) {
-    for (LXPoint p : f.getPoints()) {
+  protected final LXLayeredComponent blendColor(LXModel model, int c, LXColor.Blend blendMode) {
+    for (LXPoint p : model.points) {
       this.colors[p.index] = LXColor.blend(this.colors[p.index], c, blendMode);
     }
     return this;
@@ -244,12 +244,12 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   /**
    * Adds the color to the fixture
    *
-   * @param f Fixture
+   * @param model model
    * @param c New color
    * @return this
    */
-  protected final LXLayeredComponent addColor(LXFixture f, int c) {
-    for (LXPoint p : f.getPoints()) {
+  protected final LXLayeredComponent addColor(LXModel model, int c) {
+    for (LXPoint p : model.points) {
       this.colors[p.index] = LXColor.add(this.colors[p.index], c);
     }
     return this;
@@ -307,12 +307,12 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   /**
    * Sets the color of all points in a fixture
    *
-   * @param f Fixture
+   * @param model Model
    * @param c color
    * @return this
    */
-  protected final LXLayeredComponent setColor(LXFixture f, int c) {
-    for (LXPoint p : f.getPoints()) {
+  protected final LXLayeredComponent setColor(LXModel model, int c) {
+    for (LXPoint p : model.points) {
       this.colors[p.index] = c;
     }
     return this;

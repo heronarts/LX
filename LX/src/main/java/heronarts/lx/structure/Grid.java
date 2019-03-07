@@ -19,6 +19,7 @@
 package heronarts.lx.structure;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -50,6 +51,24 @@ public class Grid extends LXFixture {
     addMetricsParameter("numColumns", this.numColumns);
     addGeometryParameter("rowSpacing", this.rowSpacing);
     addGeometryParameter("columnSpacing", this.columnSpacing);
+  }
+
+  @Override
+  public LXModel[] toSubmodels() {
+    int numRows = this.numRows.getValuei();
+    int numColumns = this.numColumns.getValuei();
+
+    int i = 0;
+    LXModel[] submodels = new LXModel[2 * (numRows + numColumns)];
+    for (int r = 0; r < numRows; ++r) {
+      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1).setType("strip");
+      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1).setType("row");
+    }
+    for (int c = 0; c < numColumns; ++c) {
+      submodels[i++] = toSubmodel(c, numRows, numColumns).setType("strip");
+      submodels[i++] = toSubmodel(c, numRows, numColumns).setType("column");
+    }
+    return submodels;
   }
 
   @Override

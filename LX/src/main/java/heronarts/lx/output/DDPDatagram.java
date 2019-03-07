@@ -18,7 +18,7 @@
 
 package heronarts.lx.output;
 
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 
 /**
  * Distributed Display Protocol is a simple protocol developed by 3waylabs. It's
@@ -32,19 +32,19 @@ public class DDPDatagram extends LXDatagram {
   private static final int DEFAULT_PORT = 4048;
 
   private static final int FLAGS_INDEX = 0;
-  private static final int DATA_OFFSET_INDEX = 4;
+  private static final int OFFSET_DATA_OFFSET = 4;
 
   private final int[] pointIndices;
 
-  public DDPDatagram(LXFixture fixture) {
-    this(LXFixture.Utils.getIndices(fixture));
+  public DDPDatagram(LXModel model) {
+    this(model.toIndexBuffer());
   }
 
-  public DDPDatagram(int[] pointIndices) {
-    super(HEADER_LENGTH + pointIndices.length * 3);
+  public DDPDatagram(int[] indexBuffer) {
+    super(HEADER_LENGTH + indexBuffer.length * 3);
     setPort(DEFAULT_PORT);
-    int dataLen = pointIndices.length * 3;
-    this.pointIndices = pointIndices;
+    int dataLen = indexBuffer.length * 3;
+    this.pointIndices = indexBuffer;
 
     // Flags: V V x T S R Q P
     this.buffer[0] = 0x41;
@@ -91,10 +91,10 @@ public class DDPDatagram extends LXDatagram {
    * @return this
    */
   public DDPDatagram setDataOffset(int offset) {
-    this.buffer[DATA_OFFSET_INDEX] = (byte) (0xff & (offset >>> 24));
-    this.buffer[DATA_OFFSET_INDEX + 1] = (byte) (0xff & (offset >>> 16));
-    this.buffer[DATA_OFFSET_INDEX + 2] = (byte) (0xff & (offset >>> 8));
-    this.buffer[DATA_OFFSET_INDEX + 3] = (byte) (0xff & offset);
+    this.buffer[OFFSET_DATA_OFFSET] = (byte) (0xff & (offset >>> 24));
+    this.buffer[OFFSET_DATA_OFFSET + 1] = (byte) (0xff & (offset >>> 16));
+    this.buffer[OFFSET_DATA_OFFSET + 2] = (byte) (0xff & (offset >>> 8));
+    this.buffer[OFFSET_DATA_OFFSET + 3] = (byte) (0xff & offset);
     return this;
   }
 

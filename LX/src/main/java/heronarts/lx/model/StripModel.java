@@ -18,6 +18,9 @@
 
 package heronarts.lx.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import heronarts.lx.transform.LXVector;
 
 /**
@@ -60,7 +63,7 @@ public class StripModel extends LXModel {
   public final int length;
 
   public StripModel(Metrics metrics) {
-    super(new Fixture(metrics));
+    super(makePoints(metrics));
     this.metrics = metrics;
     this.length = metrics.length;
   }
@@ -69,15 +72,15 @@ public class StripModel extends LXModel {
     this(new Metrics(length));
   }
 
-  private static class Fixture extends LXAbstractFixture {
-    private Fixture(Metrics metrics) {
-      for (int i = 0; i < metrics.length; ++i) {
-        addPoint(new LXPoint(
-          metrics.origin.x + i * metrics.spacing.x,
-          metrics.origin.y + i * metrics.spacing.y,
-          metrics.origin.z + i * metrics.spacing.z
-        ));
-      }
+  private static List<LXPoint> makePoints(Metrics metrics) {
+    List<LXPoint> points = new ArrayList<LXPoint>(metrics.length);
+    for (int i = 0; i < metrics.length; ++i) {
+      points.add(new LXPoint(
+        metrics.origin.x + i * metrics.spacing.x,
+        metrics.origin.y + i * metrics.spacing.y,
+        metrics.origin.z + i * metrics.spacing.z
+      ));
     }
+    return points;
   }
 }

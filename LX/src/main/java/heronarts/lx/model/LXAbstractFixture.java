@@ -21,6 +21,7 @@ package heronarts.lx.model;
 import java.util.ArrayList;
 import java.util.List;
 
+@Deprecated
 public abstract class LXAbstractFixture implements LXFixture {
   protected final List<LXPoint> points = new ArrayList<LXPoint>();
 

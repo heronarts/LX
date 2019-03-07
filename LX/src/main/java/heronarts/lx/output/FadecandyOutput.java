@@ -21,7 +21,7 @@ package heronarts.lx.output;
 import java.io.IOException;
 
 import heronarts.lx.LX;
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 
 public class FadecandyOutput extends OPCOutput {
 
@@ -33,8 +33,8 @@ public class FadecandyOutput extends OPCOutput {
     super(lx, host, port);
   }
 
-  public FadecandyOutput(LX lx, String host, int port, LXFixture fixture) {
-    this(lx, host, port, LXFixture.Utils.getIndices(fixture));
+  public FadecandyOutput(LX lx, String host, int port, LXModel model) {
+    this(lx, host, port, model.toIndexBuffer());
   }
 
   public FadecandyOutput(LX lx, String host, int port, int[] pointIndices) {

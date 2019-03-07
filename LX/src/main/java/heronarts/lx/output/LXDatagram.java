@@ -144,13 +144,13 @@ public abstract class LXDatagram {
    *
    * @param colors Array of color values
    * @param glut Look-up table of gamma-corrected brightness values
-   * @param pointIndices Array of point indices
+   * @param indexBuffer Array of point indices
    * @param offset Offset in buffer to write
    * @return this
    */
-  protected LXDatagram copyPoints(int[] colors, byte[] glut, int[] pointIndices, int offset) {
+  protected LXDatagram copyPoints(int[] colors, byte[] glut, int[] indexBuffer, int offset) {
     int[] byteOffset = BYTE_ORDERING[this.byteOrder.ordinal()];
-    for (int index : pointIndices) {
+    for (int index : indexBuffer) {
       int color = (index >= 0) ? colors[index] : 0;
       this.buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
       this.buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G

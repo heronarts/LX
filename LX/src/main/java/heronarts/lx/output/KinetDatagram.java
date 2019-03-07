@@ -18,7 +18,7 @@
 
 package heronarts.lx.output;
 
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 
 /**
  * A datagram implementing the Kinet protocol, used by Color Kinetics devices.
@@ -35,7 +35,7 @@ public class KinetDatagram extends LXDatagram {
 
   private final static int KINET_PORT = 6038;
 
-  private final int[] pointIndices;
+  private final int[] indexBuffer;
 
   public enum Version {
     DMXOUT,
@@ -48,38 +48,38 @@ public class KinetDatagram extends LXDatagram {
    * Constructs a datagram that sends on the given kinet supply output port
    *
    * @param kinetPort Number of the output port on the kinet power supply
-   * @param fixture Fixture to output points for
+   * @param model Model to output points for
    */
-  public KinetDatagram(int kinetPort, LXFixture fixture) {
-    this(kinetPort, fixture, Version.PORTOUT);
+  public KinetDatagram(int kinetPort, LXModel model) {
+    this(kinetPort, model, Version.PORTOUT);
   }
 
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
    * @param kinetPort Number of the output port on the kinet power supply
-   * @param fixture Fixture that this datagram outputs points for
+   * @param model Model that this datagram outputs points for
    * @param version Version of Kinet Protocol
    */
-  public KinetDatagram(int kinetPort, LXFixture fixture, Version version) {
-    this(kinetPort, LXFixture.Utils.getIndices(fixture), version);
+  public KinetDatagram(int kinetPort, LXModel model, Version version) {
+    this(kinetPort, model.toIndexBuffer(), version);
   }
 
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
    * @param kinetPort Number of the output port on the kinet power supply
-   * @param indices A list of the point indices that should be sent on this port
+   * @param indexBuffer A list of the point indices that should be sent on this port
    */
-  public KinetDatagram(int kinetPort, int[] indices) {
-    this(kinetPort, indices, Version.PORTOUT);
+  public KinetDatagram(int kinetPort, int[] indexBuffer) {
+    this(kinetPort, indexBuffer, Version.PORTOUT);
   }
 
-  public KinetDatagram(int kinetPort, int[] indices, Version version) {
+  public KinetDatagram(int kinetPort, int[] indexBuffer, Version version) {
     super(PACKET_LENGTH);
     setPort(KINET_PORT);
 
-    this.pointIndices = indices;
+    this.indexBuffer = indexBuffer;
     this.version = version;
 
     // Kinet Header
@@ -161,10 +161,10 @@ public class KinetDatagram extends LXDatagram {
   public void onSend(int[] colors, byte[] glut) {
     switch (this.version) {
     case DMXOUT:
-      copyPoints(colors, glut, this.pointIndices, DMXOUT_HEADER_LENGTH);
+      copyPoints(colors, glut, this.indexBuffer, DMXOUT_HEADER_LENGTH);
       break;
     case PORTOUT:
-      copyPoints(colors, glut, this.pointIndices, HEADER_LENGTH);
+      copyPoints(colors, glut, this.indexBuffer, HEADER_LENGTH);
       break;
     }
   }

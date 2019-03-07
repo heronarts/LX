@@ -24,11 +24,11 @@ public interface OPCConstants {
 
   public static final int BYTES_PER_PIXEL = 3;
 
-  public static final int INDEX_CHANNEL = 0;
-  public static final int INDEX_COMMAND = 1;
-  public static final int INDEX_DATA_LEN_MSB = 2;
-  public static final int INDEX_DATA_LEN_LSB = 3;
-  public static final int INDEX_DATA = 4;
+  public static final int OFFSET_CHANNEL = 0;
+  public static final int OFFSET_COMMAND = 1;
+  public static final int OFFSET_DATA_LEN_MSB = 2;
+  public static final int OFFSET_DATA_LEN_LSB = 3;
+  public static final int OFFSET_DATA = 4;
 
   public static final byte CHANNEL_BROADCAST = 0;
 

@@ -29,6 +29,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
@@ -250,31 +251,30 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     if (protocol == Protocol.NONE) {
       return null;
     }
-    // Build indices array
-    int[] indices = new int[this.points.size()];
+
+    // Build index buffer
+    int[] indexBuffer = new int[this.points.size()];
     int i = 0;
     for (LXPoint point : this.points) {
-      indices[i++] = point.index;
+      indexBuffer[i++] = point.index;
     }
 
     LXDatagram datagram;
     switch (protocol) {
     case ARTNET:
-      datagram = new ArtNetDatagram(indices, this.artNetUniverse.getValuei());
+      datagram = new ArtNetDatagram(indexBuffer, this.artNetUniverse.getValuei());
       break;
     case SACN:
-      datagram = new StreamingACNDatagram(this.artNetUniverse.getValuei(),
-        indices);
+      datagram = new StreamingACNDatagram(this.artNetUniverse.getValuei(), indexBuffer);
       break;
     case OPC:
-      datagram = new OPCDatagram(indices, (byte) this.opcChannel.getValuei());
+      datagram = new OPCDatagram(indexBuffer, (byte) this.opcChannel.getValuei());
       break;
     case DDP:
-      datagram = new DDPDatagram(indices)
-        .setDataOffset(this.ddpDataOffset.getValuei());
+      datagram = new DDPDatagram(indexBuffer).setDataOffset(this.ddpDataOffset.getValuei());
       break;
     case KINET:
-      datagram = new KinetDatagram(this.kinetPort.getValuei(), indices);
+      datagram = new KinetDatagram(this.kinetPort.getValuei(), indexBuffer);
       break;
     default:
     case NONE:
@@ -383,6 +383,53 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   }
 
   protected abstract void computePointGeometry(LXTransform transform);
+
+  /**
+   * Constructs an LXModel object for this Fixture
+   *
+   * @param firstPointIndex
+   * @return Model representation of this fixture
+   */
+  final LXModel toModel(int firstPointIndex) {
+    List<LXPoint> points = new ArrayList<LXPoint>();
+    for (LXPoint p : this.points) {
+      p.index = firstPointIndex++;
+      // Note: we make a deep copy here because a change to the number of points in one
+      // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
+      // mode, that point might have been passed to the UI, which holds a reference to the model.
+      // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
+      // points here to stay safe.
+      points.add(new LXPoint(p));
+    }
+    // Our point indices may have changed... we'll need to update the datagram
+    updateDatagram();
+
+    // Okay, good to go
+    return new LXModel(points, toSubmodels()).setType(getModelType());
+  }
+
+  protected String getModelType() {
+    return getClass().getSimpleName();
+  }
+
+  protected final static LXModel[] NO_SUBMODELS = new LXModel[0];
+
+  /**
+   * Subclasses may override when they contain submodels
+   *
+   * @return Array of submodel objects
+   */
+  protected LXModel[] toSubmodels() {
+    return NO_SUBMODELS;
+  }
+
+  protected LXModel toSubmodel(int start, int n, int stride) {
+    List<LXPoint> submodel = new ArrayList<LXPoint>(n);
+    for (int i = 0; i < n; ++i) {
+      submodel.add(this.points.get(start + i*stride));
+    }
+    return new LXModel(submodel);
+  }
 
   /**
    * Subclasses must implement to specify the number of points in the fixture

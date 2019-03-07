@@ -18,7 +18,7 @@
 
 package heronarts.lx.output;
 
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 
 public class ArtNetDatagram extends LXDatagram {
 
@@ -28,7 +28,7 @@ public class ArtNetDatagram extends LXDatagram {
   private final static int ARTNET_HEADER_LENGTH = 18;
   private final static int SEQUENCE_INDEX = 12;
 
-  private final int[] pointIndices;
+  private final int[] indexBuffer;
 
   private boolean sequenceEnabled = false;
 
@@ -38,32 +38,32 @@ public class ArtNetDatagram extends LXDatagram {
 
   private int universeNumber;
 
-  public ArtNetDatagram(LXFixture fixture) {
-    this(fixture, DEFAULT_UNIVERSE);
+  public ArtNetDatagram(LXModel model) {
+    this(model, DEFAULT_UNIVERSE);
   }
 
-  public ArtNetDatagram(int[] indices) {
-    this(indices, DEFAULT_UNIVERSE);
+  public ArtNetDatagram(int[] indexBuffer) {
+    this(indexBuffer, DEFAULT_UNIVERSE);
   }
 
-  public ArtNetDatagram(LXFixture fixture, int universeNumber) {
-    this(LXFixture.Utils.getIndices(fixture), universeNumber);
+  public ArtNetDatagram(LXModel model, int universeNumber) {
+    this(model.toIndexBuffer(), universeNumber);
   }
 
-  public ArtNetDatagram(int[] indices, int universeNumber) {
-    this(indices, 3*indices.length, universeNumber);
+  public ArtNetDatagram(int[] indexBuffer, int universeNumber) {
+    this(indexBuffer, 3*indexBuffer.length, universeNumber);
   }
 
-  public ArtNetDatagram(LXFixture fixture, int dataLength, int universeNumber) {
-    this(LXFixture.Utils.getIndices(fixture), dataLength, universeNumber);
+  public ArtNetDatagram(LXModel model, int dataLength, int universeNumber) {
+    this(model.toIndexBuffer(), dataLength, universeNumber);
   }
 
-  public ArtNetDatagram(int[] indices, int dataLength, int universeNumber) {
+  public ArtNetDatagram(int[] indexBuffer, int dataLength, int universeNumber) {
     super(ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2));
 
     this.dataLength = dataLength + (dataLength % 2);
 
-    this.pointIndices = indices;
+    this.indexBuffer = indexBuffer;
     setPort(ARTNET_PORT);
 
     this.buffer[0] = 'A';
@@ -120,7 +120,7 @@ public class ArtNetDatagram extends LXDatagram {
 
   @Override
   public void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.pointIndices, ARTNET_HEADER_LENGTH);
+    copyPoints(colors, glut, this.indexBuffer, ARTNET_HEADER_LENGTH);
     if (this.sequenceEnabled) {
       if (++this.sequence == 0) {
         ++this.sequence;

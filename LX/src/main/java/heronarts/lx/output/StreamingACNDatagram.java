@@ -18,7 +18,7 @@
 
 package heronarts.lx.output;
 
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 
 /**
  * Streaming ACN, also referred to as E1.31, is a standardized protocol for
@@ -29,38 +29,36 @@ import heronarts.lx.model.LXFixture;
  */
 public class StreamingACNDatagram extends LXDatagram {
 
-  protected final static int DMX_DATA_POSITION = 126;
-
-  protected final static int SEQUENCE_NUMBER_POSITION = 111;
-
-  protected final static int UNIVERSE_NUMBER_POSITION = 113;
+  protected final static int OFFSET_DMX_DATA = 126;
+  protected final static int OFFSET_SEQUENCE_NUMBER = 111;
+  protected final static int OFFSET_UNIVERSE_NUMBER = 113;
 
   private final static int DEFAULT_PORT = 5568;
 
   private final static int DEFAULT_UNIVERSE_NUMBER = 1;
 
-  private final int[] pointIndices;
+  private final int[] indexBuffer;
 
   /**
    * The universe number that this packet sends to.
    */
   private int universeNumber;
 
-  public StreamingACNDatagram(LXFixture fixture) {
-    this(DEFAULT_UNIVERSE_NUMBER, fixture);
+  public StreamingACNDatagram(LXModel model) {
+    this(DEFAULT_UNIVERSE_NUMBER, model);
   }
 
   /**
    * Constructs a datagram on universe 1
    *
-   * @param pointIndices Points to send on this universe
+   * @param indexBuffer Points to send on this universe
    */
-  public StreamingACNDatagram(int[] pointIndices) {
-    this(DEFAULT_UNIVERSE_NUMBER, pointIndices);
+  public StreamingACNDatagram(int[] indexBuffer) {
+    this(DEFAULT_UNIVERSE_NUMBER, indexBuffer);
   }
 
-  public StreamingACNDatagram(int universeNumber, LXFixture fixture) {
-    this(universeNumber, LXFixture.Utils.getIndices(fixture));
+  public StreamingACNDatagram(int universeNumber, LXModel model) {
+    this(universeNumber, model.toIndexBuffer());
   }
 
   /**
@@ -68,10 +66,10 @@ public class StreamingACNDatagram extends LXDatagram {
    * universe number.
    *
    * @param universeNumber Universe
-   * @param pointIndices List of point indices to encode in packet
+   * @param indexBuffer List of point indices to encode in packet
    */
-  public StreamingACNDatagram(int universeNumber, int[] pointIndices) {
-    this(universeNumber, pointIndices.length * 3, pointIndices);
+  public StreamingACNDatagram(int universeNumber, int[] indexBuffer) {
+    this(universeNumber, indexBuffer.length * 3, indexBuffer);
   }
 
   /**
@@ -85,11 +83,11 @@ public class StreamingACNDatagram extends LXDatagram {
     this(universeNumber, dataSize, null);
   }
 
-  private StreamingACNDatagram(int universeNumber, int dataSize, int[] pointIndices) {
-    super(DMX_DATA_POSITION + dataSize);
+  private StreamingACNDatagram(int universeNumber, int dataSize, int[] indexBuffer) {
+    super(OFFSET_DMX_DATA + dataSize);
     setPort(DEFAULT_PORT);
     setUniverseNumber(universeNumber);
-    this.pointIndices = pointIndices;
+    this.indexBuffer = indexBuffer;
 
     int flagLength;
 
@@ -201,8 +199,8 @@ public class StreamingACNDatagram extends LXDatagram {
    */
   public StreamingACNDatagram setUniverseNumber(int universeNumber) {
     this.universeNumber = (universeNumber &= 0x0000ffff);
-    this.buffer[UNIVERSE_NUMBER_POSITION] = (byte) ((universeNumber >> 8) & 0xff);
-    this.buffer[UNIVERSE_NUMBER_POSITION + 1] = (byte) (universeNumber & 0xff);
+    this.buffer[OFFSET_UNIVERSE_NUMBER] = (byte) ((universeNumber >> 8) & 0xff);
+    this.buffer[OFFSET_UNIVERSE_NUMBER + 1] = (byte) (universeNumber & 0xff);
     return this;
   }
 
@@ -216,26 +214,26 @@ public class StreamingACNDatagram extends LXDatagram {
   }
 
   public void setDmxData(byte data, int channel) {
-    if (channel < 0 || channel >= this.buffer.length - DMX_DATA_POSITION) {
+    if (channel < 0 || channel >= this.buffer.length - OFFSET_DMX_DATA) {
       throw new IndexOutOfBoundsException("Channel is greater than DMX data length");
     }
-    this.buffer[DMX_DATA_POSITION + channel] = data;
+    this.buffer[OFFSET_DMX_DATA + channel] = data;
   }
 
   public void setDmxData(byte[] data, int channel) {
-    if (channel < 0 || channel > this.buffer.length - DMX_DATA_POSITION - data.length) {
+    if (channel < 0 || channel > this.buffer.length - OFFSET_DMX_DATA - data.length) {
       throw new IndexOutOfBoundsException("Channel is greater than DMX data length");
     }
-    System.arraycopy(data, 0, this.buffer, DMX_DATA_POSITION, data.length);
+    System.arraycopy(data, 0, this.buffer, OFFSET_DMX_DATA, data.length);
   }
 
   protected void advanceFrame() {
-    this.buffer[SEQUENCE_NUMBER_POSITION]++;
+    this.buffer[OFFSET_SEQUENCE_NUMBER]++;
   }
 
   @Override
   public void onSend(int[] colors, byte[] glut) {
     advanceFrame();
-    copyPoints(colors, glut, this.pointIndices, DMX_DATA_POSITION);
+    copyPoints(colors, glut, this.indexBuffer, OFFSET_DMX_DATA);
   }
 }

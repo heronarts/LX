@@ -30,6 +30,7 @@ import java.util.List;
 public class GridModel extends LXModel {
 
   public static class Metrics {
+
     public final int width;
 
     public final int height;
@@ -141,7 +142,7 @@ public class GridModel extends LXModel {
    * @param metrics Metrics
    */
   public GridModel(Metrics metrics) {
-    super(new Fixture(metrics));
+    super(makePoints(metrics));
 
     this.metrics = metrics;
     this.width = metrics.width;
@@ -201,19 +202,19 @@ public class GridModel extends LXModel {
     return this.points[y * this.width + x];
   }
 
-  private static class Fixture extends LXAbstractFixture {
-    private Fixture(Metrics metrics) {
-      for (int y = 0; y < metrics.height; ++y) {
-        for (int x = 0; x < metrics.width; ++x) {
-          this.points.add(new GridPoint(
-            x, y,
-            metrics.origin.x + x * metrics.xSpacing,
-            metrics.origin.y + y * metrics.ySpacing,
-            metrics.origin.z
-          ));
-        }
+  private static List<LXPoint> makePoints(Metrics metrics) {
+    List<LXPoint> points = new ArrayList<LXPoint>(metrics.width * metrics.height);
+    for (int y = 0; y < metrics.height; ++y) {
+      for (int x = 0; x < metrics.width; ++x) {
+        points.add(new GridPoint(
+          x, y,
+          metrics.origin.x + x * metrics.xSpacing,
+          metrics.origin.y + y * metrics.ySpacing,
+          metrics.origin.z
+        ));
       }
     }
+    return points;
   }
 
 }

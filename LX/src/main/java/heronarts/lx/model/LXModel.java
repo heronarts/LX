@@ -20,7 +20,9 @@ package heronarts.lx.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * An LXModel is a representation of a set of points in 3-d space. Each LXPoint
@@ -29,23 +31,26 @@ import java.util.List;
  * wraps them up with a few useful additional fields, such as the center
  * position of all points and the min/max/range on each axis.
  */
-public class LXModel implements LXFixture {
+public class LXModel {
 
   public interface Listener {
     public void onModelUpdated(LXModel model);
   }
-
   /**
    * An immutable list of all the points in this model
    */
   public final LXPoint[] points;
-
   private final List<LXPoint> pointList;
 
-  /**
-   * An immutable list of all the fixtures in this model
-   */
-  public final List<LXFixture> fixtures;
+  public final LXModel[] children;
+
+  private final Map<String, List<LXModel>> childDict =
+    new HashMap<String, List<LXModel>>();
+
+  private final Map<String, List<LXModel>> subDict =
+    new HashMap<String, List<LXModel>>();
+
+  private String type = "model";
 
   /**
    * Number of points in the model
@@ -146,7 +151,7 @@ public class LXModel implements LXFixture {
    * Constructs a null model with no points
    */
   public LXModel() {
-    this(new LXFixture[] {});
+    this(new ArrayList<LXPoint>());
   }
 
   /**
@@ -155,39 +160,97 @@ public class LXModel implements LXFixture {
    * @param points Points
    */
   public LXModel(List<LXPoint> points) {
-    this(new BasicFixture(points));
+    this(points, new LXModel[0]);
   }
 
   /**
-   * Constructs a model with one fixture
+   * Constructs a model with a given set of points and pre-constructed submodels
    *
-   * @param fixture Fixture
+   * @param points Points in this model
+   * @param children Pre-built direct child array
    */
-  public LXModel(LXFixture fixture) {
-    this(new LXFixture[] { fixture });
+  public LXModel(List<LXPoint> points, LXModel[] children) {
+    List<LXPoint> _points = new ArrayList<LXPoint>(points);
+    addChildren(children);
+    this.children = children;
+    this.points = _points.toArray(new LXPoint[0]);
+    this.pointList = Collections.unmodifiableList(_points);
+    this.size = this.points.length;
+    computeAverages();
   }
 
   /**
-   * Constructs a model with the given fixtures
+   * Constructs a model from the given submodels. The point list is generated from
+   * all points in the submodels.
    *
-   * @param fixtures Fixtures
+   * @param children Submodels
    */
-  public LXModel(LXFixture[] fixtures) {
-    List<LXFixture> _fixtures = new ArrayList<LXFixture>();
+  public LXModel(LXModel[] children) {
     List<LXPoint> _points = new ArrayList<LXPoint>();
-    for (LXFixture fixture : fixtures) {
-      _fixtures.add(fixture);
-      for (LXPoint point : fixture.getPoints()) {
-        _points.add(point);
+    addChildren(children);
+    for (LXModel submodel : children) {
+      for (LXPoint p : submodel.points) {
+        _points.add(p);
       }
     }
-
-    this.size = _points.size();
+    this.children = new LXModel[children.length];
+    System.arraycopy(children, 0, this.children, 0, children.length);
     this.pointList = Collections.unmodifiableList(_points);
     this.points = _points.toArray(new LXPoint[0]);
-    this.fixtures = Collections.unmodifiableList(_fixtures);
+    this.size = _points.size();
     computeAverages();
-    normalizePoints();
+  }
+
+  private void addChildren(LXModel[] children) {
+    addSubmodels(children, this.childDict, false);
+    addSubmodels(children, this.subDict, true);
+  }
+
+  private void addSubmodels(LXModel[] submodels, Map<String, List<LXModel>> dict, boolean recurse) {
+    for (LXModel submodel : submodels) {
+      String type = submodel.getType().toLowerCase();
+      List<LXModel> sub = dict.get(type);
+      if (sub == null) {
+        dict.put(type, sub = new ArrayList<LXModel>());
+      }
+      sub.add(submodel);
+      if (recurse) {
+        addSubmodels(submodel.children, dict, recurse);
+      }
+    }
+  }
+
+  public String getType() {
+    return this.type;
+  }
+
+  public LXModel setType(String type) {
+    this.type = type;
+    return this;
+  }
+
+  private static final List<LXModel> emptyList = Collections.unmodifiableList(new ArrayList<LXModel>());
+
+  /**
+   * Returns a list of all the direct child components by particular key
+   *
+   * @param key Child key, must be all lowercase
+   * @return List of direct children by type
+   */
+  public List<LXModel> children(String key) {
+    List<LXModel> children = this.childDict.get(key);
+    return (children == null) ? emptyList : children;
+  }
+
+  /**
+   * Returns a list of all the submodel components by particular key, at any level of depth
+   *
+   * @param key Submodel key, must be all lowercase
+   * @return List of submodels
+   */
+  public List<LXModel> sub(String key) {
+    List<LXModel> sub = this.subDict.get(key);
+    return (sub == null) ? emptyList : sub;
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -238,12 +301,10 @@ public class LXModel implements LXFixture {
   public LXModel update(boolean normalize, boolean recurse) {
     // Recursively update values of sub-models
     if (recurse) {
-      for (LXFixture fixture : this.fixtures) {
-        if (fixture instanceof LXModel) {
-          // NOTE: normals are relative to master model,
-          // flip to false for sub-models
-          ((LXModel) fixture).update(false, true);
-        }
+      for (LXModel submodel : this.children) {
+        // NOTE: normals are relative to master model,
+        // flip to false for sub-models
+        submodel.update(false, true);
       }
     }
     computeAverages();
@@ -260,6 +321,15 @@ public class LXModel implements LXFixture {
       listener.onModelUpdated(this);
     }
     return this;
+  }
+
+  public int[] toIndexBuffer() {
+    int[] indexBuffer = new int[this.points.length];
+    int i = 0;
+    for (LXPoint p : this.points) {
+      indexBuffer[i++] = p.index;
+    }
+    return indexBuffer;
   }
 
   /**
@@ -337,18 +407,6 @@ public class LXModel implements LXFixture {
 
   public List<LXPoint> getPoints() {
     return this.pointList;
-  }
-
-  private final static class BasicFixture implements LXFixture {
-    private final List<LXPoint> points;
-
-    private BasicFixture(List<LXPoint> points) {
-      this.points = points;
-    }
-
-    public List<LXPoint> getPoints() {
-      return this.points;
-    }
   }
 
 }

@@ -313,22 +313,16 @@ public class LXStructure extends LXComponent {
       this.needsRegenerate = true;
       return;
     }
-    int i = 0;
-    List<LXPoint> points = new ArrayList<LXPoint>(this.model.size);
+    LXModel[] submodels = new LXModel[this.fixtures.size()];
+    int pointIndex = 0;
+    int fixtureIndex = 0;
     for (LXFixture fixture : this.fixtures) {
-      for (LXPoint p : fixture.points) {
-        p.index = i++;
-        // Note: we make a deep copy here because a change to the number of points in one
-        // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
-        // mode, that point might have been passed to the UI, which holds a reference to the model.
-        // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
-        // points here to stay safe.
-        points.add(new LXPoint(p));
-      }
-      // The fixture's point indices may have changed... we'll need to update its datagram
-      fixture.updateDatagram();
+      LXModel fixtureModel = fixture.toModel(pointIndex);
+      pointIndex += fixtureModel.size;
+      submodels[fixtureIndex++] = fixtureModel;
     }
-    this.lx.setModel(this.model = new LXModel(points));
+    this.lx.setModel(this.model = new LXModel(submodels));
+    this.model.normalizePoints();
   }
 
   protected void fixtureRegenerated(LXFixture fixture) {

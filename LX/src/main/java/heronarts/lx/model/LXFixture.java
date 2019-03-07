@@ -23,6 +23,7 @@ import java.util.List;
 /**
  * An LXFixture is a base object that represents a raw set of points.
  */
+@Deprecated
 public interface LXFixture {
 
   public List<LXPoint> getPoints();

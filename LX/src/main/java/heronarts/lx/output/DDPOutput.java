@@ -21,7 +21,7 @@ package heronarts.lx.output;
 import java.net.SocketException;
 import java.util.Arrays;
 import heronarts.lx.LX;
-import heronarts.lx.model.LXFixture;
+import heronarts.lx.model.LXModel;
 
 /**
  * DDPOutput is a helper class that constructs and sends a set of DDPDatagram packets
@@ -35,16 +35,16 @@ public class DDPOutput extends LXDatagramOutput {
 
   public static final int DEFAULT_CHUNK_SIZE = 400;
 
-  public DDPOutput(LX lx, LXFixture fixture) throws SocketException {
-    this(lx, LXFixture.Utils.getIndices(fixture));
+  public DDPOutput(LX lx, LXModel model) throws SocketException {
+    this(lx, model.toIndexBuffer());
   }
 
-  public DDPOutput(LX lx, LXFixture fixture, int chunkSize) throws SocketException {
-    this(lx, LXFixture.Utils.getIndices(fixture), chunkSize);
+  public DDPOutput(LX lx, LXModel model, int chunkSize) throws SocketException {
+    this(lx, model.toIndexBuffer(), chunkSize);
   }
 
-  public DDPOutput(LX lx, int[] pointIndices) throws SocketException {
-    this(lx, pointIndices, DEFAULT_CHUNK_SIZE);
+  public DDPOutput(LX lx, int[] indexBuffer) throws SocketException {
+    this(lx, indexBuffer, DEFAULT_CHUNK_SIZE);
   }
 
   /**
@@ -52,17 +52,17 @@ public class DDPOutput extends LXDatagramOutput {
    * By default, the DDP Push flag is only set on the final packet.
    *
    * @param lx LX instance
-   * @param pointIndices All of the points to send
+   * @param indexBuffer All of the points to send
    * @param chunkSize Number of points to chunk per packet
-   * @throws SocketException if a DatagramSocket coul dnot be created
+   * @throws SocketException if a DatagramSocket could not be created
    */
-  public DDPOutput(LX lx, int[] pointIndices, int chunkSize) throws SocketException {
+  public DDPOutput(LX lx, int[] indexBuffer, int chunkSize) throws SocketException {
     super(lx);
-    int total = pointIndices.length;
+    int total = indexBuffer.length;
     int start = 0;
     while (start < total) {
       int end = Math.min(start + chunkSize, total);
-      int[] chunk = Arrays.copyOfRange(pointIndices, start, end);
+      int[] chunk = Arrays.copyOfRange(indexBuffer, start, end);
       DDPDatagram datagram = new DDPDatagram(chunk);
       datagram.setDataOffset(start);
       datagram.setPushFlag(end == total);

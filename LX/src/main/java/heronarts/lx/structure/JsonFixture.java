@@ -25,6 +25,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXTransform;
@@ -56,6 +57,11 @@ public class JsonFixture extends LXFixture {
   public JsonFixture(LX lx) {
     super(lx);
     addMetricsParameter("fixtureType", this.fixtureType);
+  }
+
+  @Override
+  protected String getModelType() {
+    return this.fixtureType.getString();
   }
 
   @Override
@@ -144,6 +150,30 @@ public class JsonFixture extends LXFixture {
       System.err.println("Bad JSON data in fixture " + this.fixtureType.getString() + ": " + x.getMessage());
       x.printStackTrace();
     }
+  }
+
+  @Override
+  protected LXModel[] toSubmodels() {
+    if (this.jsonStrips == null) {
+      return NO_SUBMODELS;
+    }
+    int startIndex = 0;
+    if (this.jsonPoints != null) {
+      startIndex = this.jsonPoints.size();
+    }
+    try {
+      LXModel[] submodels = new LXModel[this.jsonStrips.size()];
+      for (int i = 0; i < this.jsonStrips.size(); ++i) {
+        JsonObject stripObj = this.jsonStrips.get(i).getAsJsonObject();
+        int numPoints = stripObj.get(KEY_NUM_POINTS).getAsInt();
+        submodels[i] = toSubmodel(startIndex, numPoints, 1).setType("strip");
+        startIndex += numPoints;
+      }
+      return submodels;
+    } catch (Exception x) {
+      x.printStackTrace();
+    }
+    return NO_SUBMODELS;
   }
 
   private static float getFloat(JsonObject obj, String key, float def) {
