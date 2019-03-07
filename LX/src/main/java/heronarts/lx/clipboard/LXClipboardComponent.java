@@ -18,8 +18,6 @@
 
 package heronarts.lx.clipboard;
 
-import java.awt.datatransfer.StringSelection;
-import java.awt.datatransfer.Transferable;
 import java.io.StringWriter;
 import java.util.Map;
 
@@ -103,14 +101,14 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
   }
 
   @Override
-  public Transferable getSystemClipboardItem() {
+  public String getSystemClipboardString() {
     try {
       StringWriter io = new StringWriter();
       JsonWriter writer = new JsonWriter(io);
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(this.componentObj, writer);
       writer.close();
-      return new StringSelection(io.toString());
+      return io.toString();
     } catch (Exception x) {
       System.err.println("Error serializing LXComponent for system clipboard");
       x.printStackTrace();

@@ -198,7 +198,7 @@ public class LX {
   /**
    * Clipboard for copy/paste
    */
-  public final LXClipboard clipboard = new LXClipboard();
+  public final LXClipboard clipboard = new LXClipboard(this);
 
   /**
    * The animation engine.
@@ -252,27 +252,6 @@ public class LX {
    */
   public LX() {
     this(new Flags());
-  }
-
-  /**
-   * Creates an LX instance. This instance will run patterns for a grid of the
-   * specified size.
-   *
-   * @param total Number of nodes
-   */
-  public LX(int total) {
-    this(total, 1);
-  }
-
-  /**
-   * Creates a LX instance. This instance will run patterns for a grid of the
-   * specified size.
-   *
-   * @param width Width
-   * @param height Height
-   */
-  public LX(int width, int height) {
-    this(new GridModel(width, height));
   }
 
   /**
@@ -397,6 +376,7 @@ public class LX {
    */
   public void dispose() {
     this.engine.audio.dispose();
+    this.engine.midi.dispose();
   }
 
   /**
@@ -1127,6 +1107,11 @@ public class LX {
 
   public LXBlend instantiateBlend(Class<? extends LXBlend> cls) {
     return instantiateComponent(cls, LXBlend.class);
+  }
+
+  public void setSystemClipboardString(String str) {
+    // This is not implemented by default, don't want to mess with AWT or any of that noise
+    // on systems that might not have it or it may interfere with other UI libraries
   }
 
 }
