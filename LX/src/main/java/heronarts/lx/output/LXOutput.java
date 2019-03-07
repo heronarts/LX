@@ -21,6 +21,7 @@ package heronarts.lx.output;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import java.util.ArrayList;
@@ -62,8 +63,8 @@ public abstract class LXOutput extends LXComponent {
   /**
    * Brightness of the output
    */
-  public final BoundedParameter brightness =
-    new BoundedParameter("Brightness", 1)
+  public final CompoundParameter brightness =
+    new CompoundParameter("Brightness", 1)
     .setDescription("Level of the output");
 
   /**
