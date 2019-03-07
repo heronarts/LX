@@ -43,6 +43,12 @@ public class EnumParameter<T> extends ObjectParameter<T> {
     return this;
   }
 
+  @Override
+  public EnumParameter<T> addListener(LXParameterListener listener) {
+    super.addListener(listener);
+    return this;
+  }
+
   public T getEnum() {
     return getObject();
   }

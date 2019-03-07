@@ -93,7 +93,7 @@ public abstract class LXListenableParameter implements LXParameter {
     return this;
   }
 
-  public final LXListenableParameter addListener(LXParameterListener listener) {
+  public LXListenableParameter addListener(LXParameterListener listener) {
     if (listener == null) {
       throw new IllegalArgumentException("Cannot add null parameter listener");
     }
