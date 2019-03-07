@@ -215,11 +215,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
 
         // Now, schedule the engine thread to perform any blocked whenReady tasks
-        lx.engine.addTask(new Runnable() {
-          public void run() {
-            for (Runnable runnable : initializationLock.whenReady) {
-              runnable.run();
-            }
+        lx.engine.addTask(() -> {
+          for (Runnable runnable : initializationLock.whenReady) {
+            runnable.run();
           }
         });
 
@@ -247,6 +245,14 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
     }.start();
+  }
+
+  @Override
+  public void dispose() {
+    synchronized (this.deviceUpdateThread) {
+      this.deviceUpdateThread.interrupt();
+    }
+    super.dispose();
   }
 
   private final MidiDeviceUpdateThread deviceUpdateThread = new MidiDeviceUpdateThread();
@@ -277,13 +283,14 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
           // until an observer notifies us...
           wait(this.polling ? 5000 : 0);
         } catch (InterruptedException ix) {
-          ix.printStackTrace();
+          break;
         }
         if (!this.setPolling) {
           updateMidiDevices();
         }
         this.setPolling = false;
       }
+      System.out.println("LXMidiEngine Device Update Thread finished");
     }
   };
 
@@ -337,10 +344,8 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
                 input.setDevice(device);
               } else {
                 // Add new midi input on the engine thread!
-                lx.engine.addTask(new Runnable() {
-                  public void run() {
-                    addInput(deviceInfo, device);
-                  }
+                lx.engine.addTask(() -> {
+                  addInput(deviceInfo, device);
                 });
 
                 // Add this to the list of devices that should be checked for control surface
@@ -355,10 +360,8 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
                 output.setDevice(device);
               } else {
                 // Add new midi output on the engine thread
-                lx.engine.addTask(new Runnable() {
-                  public void run() {
-                    addOutput(deviceInfo, device);
-                  }
+                lx.engine.addTask(() -> {
+                  addOutput(deviceInfo, device);
                 });
               }
             }
@@ -373,10 +376,8 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       // after the above loop because we need to ensure that both the input and output
       // of the control surface have been added.
       for (MidiDevice.Info deviceInfo : checkForSurface) {
-        lx.engine.addTask(new Runnable() {
-          public void run() {
-            checkForSurface(getDeviceName(deviceInfo));
-          }
+        lx.engine.addTask(() -> {
+          checkForSurface(getDeviceName(deviceInfo));
         });
       }
 
@@ -856,35 +857,37 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
     }
-    whenReady(new Runnable() {
-      public void run() {
-        if (object.has(KEY_INPUTS)) {
-          JsonArray inputs = object.getAsJsonArray(KEY_INPUTS);
-          if (inputs.size() > 0) {
-            for (JsonElement element : inputs) {
-              JsonObject inputObj = element.getAsJsonObject();
-              String inputName = inputObj.get(LXMidiInput.KEY_NAME).getAsString();
-              LXMidiInput input = findInput(inputName);
-              if (input != null) {
-                input.load(lx, inputObj);
-              } else {
-                rememberMidiInputs.add(inputObj);
-              }
+
+    // NOTE: this is performed later on the engine thread, after the MIDI engine
+    // is fully initialized, because we need to make sure that we've detected
+    // all the available inputs and control surfaces
+    whenReady(() -> {
+      if (object.has(KEY_INPUTS)) {
+        JsonArray inputs = object.getAsJsonArray(KEY_INPUTS);
+        if (inputs.size() > 0) {
+          for (JsonElement element : inputs) {
+            JsonObject inputObj = element.getAsJsonObject();
+            String inputName = inputObj.get(LXMidiInput.KEY_NAME).getAsString();
+            LXMidiInput input = findInput(inputName);
+            if (input != null) {
+              input.load(lx, inputObj);
+            } else {
+              this.rememberMidiInputs.add(inputObj);
             }
           }
         }
-        if (object.has(KEY_SURFACES)) {
-          JsonArray surfaces = object.getAsJsonArray(KEY_SURFACES);
-          if (surfaces.size() > 0) {
-            for (JsonElement element : surfaces) {
-              JsonObject surfaceObj = element.getAsJsonObject();
-              String surfaceName = surfaceObj.get(LXMidiSurface.KEY_NAME).getAsString();
-              LXMidiSurface surface = findSurface(surfaceName);
-              if (surface != null) {
-                surface.enabled.setValue(true);
-              } else {
-                rememberMidiSurfaces.add(surfaceObj);
-              }
+      }
+      if (object.has(KEY_SURFACES)) {
+        JsonArray surfaces = object.getAsJsonArray(KEY_SURFACES);
+        if (surfaces.size() > 0) {
+          for (JsonElement element : surfaces) {
+            JsonObject surfaceObj = element.getAsJsonObject();
+            String surfaceName = surfaceObj.get(LXMidiSurface.KEY_NAME).getAsString();
+            LXMidiSurface surface = findSurface(surfaceName);
+            if (surface != null) {
+              surface.enabled.setValue(true);
+            } else {
+              this.rememberMidiSurfaces.add(surfaceObj);
             }
           }
         }
