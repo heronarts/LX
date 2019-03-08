@@ -963,6 +963,7 @@ public class LX {
       System.out.println("Project saved successfully to " + file.toString());
       this.componentRegistry.resetProject();
       setProject(file, ProjectListener.Change.SAVE);
+      this.command.setDirty(false);
     } catch (IOException iox) {
       System.err.println(iox.getLocalizedMessage());
     }
@@ -998,46 +999,50 @@ public class LX {
 
   private void closeProject() {
     this.command.clear();
+    this.command.setDirty(false);
     this.componentRegistry.resetProject();
   }
 
+  protected final boolean confirmChangedSaved(String message) {
+    return !this.command.isDirty() || showConfirmUnsavedProjectDialog(message);
+  }
+
+  protected boolean showConfirmUnsavedProjectDialog(String message) {
+    // Subclasses that have a UI can prompt the user to confirm here...
+    // maybe headless could show something on the CLI? But not sure we want to
+    // get into that...
+    return true;
+  }
+
   public void newProject() {
-    closeProject();
-    this.engine.load(this, new JsonObject());
-    setProject(null, ProjectListener.Change.NEW);
+    if (confirmChangedSaved("create a new project")) {
+      closeProject();
+      this.engine.load(this, new JsonObject());
+      setProject(null, ProjectListener.Change.NEW);
+    }
   }
 
   public void openProject(File file) {
-    try {
-      FileReader fr = null;
-      try {
-        fr = new FileReader(file);
-        JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
-        closeProject();
-        this.componentRegistry.loading = true;
-        this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
-        LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL);
-        this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
-        if (obj.has(KEY_EXTERNALS)) {
-          JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
-          for (String key : this.externals.keySet()) {
-            if (externalsObj.has(key)) {
-              this.externals.get(key).load(this, externalsObj.getAsJsonObject(key));
-            }
+    try (FileReader fr = new FileReader(file)) {
+      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      closeProject();
+      this.componentRegistry.loading = true;
+      this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
+      LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL);
+      this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
+      if (obj.has(KEY_EXTERNALS)) {
+        JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
+        for (String key : this.externals.keySet()) {
+          if (externalsObj.has(key)) {
+            this.externals.get(key).load(this, externalsObj.getAsJsonObject(key));
           }
         }
-        this.componentRegistry.loading = false;
-        setProject(file, ProjectListener.Change.OPEN);
-        System.out.println("Project loaded successfully from " + file.toString());
-      } catch (IOException iox) {
-        System.err.println("Could not load project file: " + iox.getLocalizedMessage());
-      } finally {
-        if (fr != null) {
-          try {
-            fr.close();
-          } catch (IOException ignored) {}
-        }
       }
+      this.componentRegistry.loading = false;
+      setProject(file, ProjectListener.Change.OPEN);
+      System.out.println("Project loaded successfully from " + file.toString());
+    } catch (IOException iox) {
+      System.err.println("Could not load project file: " + iox.getLocalizedMessage());
     } catch (Exception x) {
       System.err.println("Exception in openProject: " + x.getLocalizedMessage());
       x.printStackTrace(System.err);

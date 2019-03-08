@@ -48,6 +48,8 @@ public class LXCommandEngine {
   private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
   private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
 
+  private boolean dirty = false;
+
   /**
    * Performs a command and pushes it onto the undo stack.
    *
@@ -75,6 +77,16 @@ public class LXCommandEngine {
       _commandException(icx);
     }
 
+    this.dirty = true;
+    return this;
+  }
+
+  public boolean isDirty() {
+    return this.dirty;
+  }
+
+  public LXCommandEngine setDirty(boolean dirty) {
+    this.dirty = dirty;
     return this;
   }
 
