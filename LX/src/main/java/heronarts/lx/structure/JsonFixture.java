@@ -77,7 +77,7 @@ public class JsonFixture extends LXFixture {
     this.jsonPoints = null;
     this.jsonStrips = null;
 
-    File fixtureFile = new File(this.lx.structure.fixturePath + File.separator + "fixtures" + File.separator + this.fixtureType.getString() + ".lxf");
+    File fixtureFile = new File(this.lx.getMediaPath() + File.separator + "fixtures" + File.separator + this.fixtureType.getString() + ".lxf");
     if (!fixtureFile.exists() || !fixtureFile.isFile()) {
       System.err.println("Invalid fixture type, could not find file: " + this.fixtureType.getString());
       return;

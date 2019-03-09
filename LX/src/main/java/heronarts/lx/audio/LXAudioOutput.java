@@ -169,15 +169,6 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
     }
   }
 
-  public String getMediaPath() {
-    return this.mediaPath;
-  }
-
-  public LXAudioOutput setMediaPath(String mediaPath) {
-    this.mediaPath = mediaPath;
-    return this;
-  }
-
   public void setInputStream(File file) {
     try {
       setInputStream(new FileInputStream(file));

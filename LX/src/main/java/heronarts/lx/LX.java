@@ -91,6 +91,7 @@ public class LX {
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
+    public String mediaPath = ".";
   }
 
   /**
@@ -1012,6 +1013,10 @@ public class LX {
     // maybe headless could show something on the CLI? But not sure we want to
     // get into that...
     return true;
+  }
+
+  public String getMediaPath() {
+    return this.flags.mediaPath;
   }
 
   public void newProject() {

@@ -27,19 +27,7 @@ public class LXScriptEngine {
 
   private ScriptEngine engine;
 
-  private String scriptPath = ".";
-
-  public LXScriptEngine(LX lx) {
-  }
-
-  public LXScriptEngine setScriptPath(String path) {
-    this.scriptPath = path;
-    return this;
-  }
-
-  public String getScriptPath() {
-    return this.scriptPath;
-  }
+  public LXScriptEngine(LX lx) {}
 
   public ScriptEngine getEngine() {
     if (this.engine == null) {

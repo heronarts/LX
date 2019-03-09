@@ -73,8 +73,6 @@ public class LXStructure extends LXComponent {
     public void fixtureMoved(LXFixture fixture, int index);
   }
 
-  String fixturePath = ".";
-
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
@@ -98,13 +96,7 @@ public class LXStructure extends LXComponent {
     this.output = output;
   }
 
-  public LXStructure setFixturePath(String fixturePath) {
-    this.fixturePath = fixturePath;
-    return this;
-  }
-
-  public void registerFixtures() {
-    File fixtureDir = new File(this.fixturePath + File.separator + "fixtures");
+  public void registerFixtures(File fixtureDir) {
     if (fixtureDir.exists() && fixtureDir.isDirectory()) {
       for (String fixture : fixtureDir.list()) {
         if (fixture.endsWith(".lxf")) {

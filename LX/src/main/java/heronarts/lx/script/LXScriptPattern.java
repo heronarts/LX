@@ -99,7 +99,7 @@ public class LXScriptPattern extends LXPattern {
   }
 
   protected File getFile() {
-    return new File(lx.engine.script.getScriptPath() + "/" + this.scriptPath.getString());
+    return new File(lx.getMediaPath() + "/" + this.scriptPath.getString());
   }
 
   protected void initialize() {
