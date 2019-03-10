@@ -1019,6 +1019,10 @@ public class LX {
     return this.flags.mediaPath;
   }
 
+  public File getSaveFile(String path) {
+    return new File(getMediaPath(), path);
+  }
+
   public void newProject() {
     if (confirmChangedSaved("create a new project")) {
       closeProject();
