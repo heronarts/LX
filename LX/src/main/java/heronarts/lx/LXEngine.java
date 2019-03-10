@@ -1784,12 +1784,19 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * double-buffer and duplicates the internal copy buffer into the provided
    * buffer.
    *
-   * @param copy Buffer to copy into
+   * @param frame Frame buffer to copy into
    */
   public void copyFrameThreadSafe(Frame frame) {
     this.buffer.copyTo(frame);
   }
 
+  /**
+   * Non-thread safe accessor of the render buffer. Directly copies from it,
+   * which if in multi-threaded mode could happen during modification. Basically,
+   * never call this from the non-engine thread.
+   *
+   * @param frame Frame buffer to copy into
+   */
   public void getFrameNonThreadSafe(Frame frame) {
     frame.copyFrom(this.buffer.render);
   }

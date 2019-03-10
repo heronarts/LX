@@ -161,7 +161,9 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
    * Compiles all modulations that act upon any parameter or subcomponent of the given
    * component, whether as source or target.
    *
+   * @param <T> type of parameter modulation, could be compound or trigger
    * @param component Component
+   * @param modulations List of modulations that we're checking within
    * @return All modulations acting in any way upon this component or its children
    */
   public <T extends LXParameterModulation> List<T> findModulations(LXComponent component, List<T> modulations) {

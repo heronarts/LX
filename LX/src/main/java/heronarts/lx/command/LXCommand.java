@@ -156,6 +156,7 @@ public abstract class LXCommand {
    * Perform the given command
    *
    * @param lx LX instance
+   * @throws InvalidCommandException if the command is invalid
    */
   public abstract void perform(LX lx) throws InvalidCommandException;
 
@@ -163,6 +164,7 @@ public abstract class LXCommand {
    * Undo the command, after it has been performed
    *
    * @param lx LX instance
+   * @throws InvalidCommandException if the command is invalid
    */
   public abstract void undo(LX lx) throws InvalidCommandException;
 

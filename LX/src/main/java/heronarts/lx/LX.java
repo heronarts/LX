@@ -361,7 +361,7 @@ public class LX {
   /**
    * Updates the geometric model that is being rendered to
    *
-   * @param model
+   * @param model Model to be set
    * @return this
    */
   public LX setModel(LXModel model) {

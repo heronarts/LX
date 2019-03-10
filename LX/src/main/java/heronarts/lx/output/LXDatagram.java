@@ -166,7 +166,7 @@ public abstract class LXDatagram {
    * appropriate buffer.
    *
    * @param colors Color buffer
-   * @param lut Look-up table with gamma-adjusted brightness values
+   * @param glut Look-up table with gamma-adjusted brightness values
    */
   public abstract void onSend(int[] colors, byte[] glut);
 }

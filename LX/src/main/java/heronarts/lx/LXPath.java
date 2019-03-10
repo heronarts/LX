@@ -57,13 +57,20 @@ public interface LXPath {
   /**
    * Gets the canonical path of a Path object all the way up its chain
    *
-   * @param path
-   * @return Canonical path
+   * @param path Any object implementing the LXPath interface
+   * @return Canonical paths
    */
   public static String getCanonicalPath(LXPath path) {
     return getCanonicalPath(null, path);
   }
 
+  /**
+   * Globally retrieves an LX object with a path in the hierarchy
+   *
+   * @param lx LX instance
+   * @param path Canonical path of object
+   * @return Object at the given canonical path
+   */
   public static LXPath get(LX lx, String path) {
     if (path.charAt(0) == '/') {
       path = path.substring(1);
