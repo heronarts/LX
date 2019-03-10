@@ -23,7 +23,7 @@
 		<link href="${javadoc.java.href}" />
   		<link href="${javadoc.gson.href}" offline="true" packagelistLoc="." />
 
-			<fileset dir="../LX/src" defaultexcludes="yes">
+			<fileset dir="../LX/src/main/java" defaultexcludes="yes">
   			<include name="**/*"/>
   		</fileset>
   	</javadoc>
