@@ -18,6 +18,7 @@
 
 package heronarts.lx;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -100,8 +101,20 @@ public class LXClassLoader extends ClassLoader {
   }
 
   private void loadClassFile(String className, JarFile jarFile, JarEntry entry) {
-    try (InputStream is = jarFile.getInputStream(entry)) {
-      loadClassFile(className, is.readAllBytes());
+    long jarSize = entry.getSize();
+    int jarBufferSize = 4096;
+    if (jarSize > 0 || jarSize < Integer.MAX_VALUE) {
+      jarBufferSize = (int) jarSize;
+    }
+    try (InputStream is = jarFile.getInputStream(entry);
+         ByteArrayOutputStream baos = new ByteArrayOutputStream(jarBufferSize)) {
+      byte[] buffer = new byte[jarBufferSize];
+      int read = -1;
+      while ((read = is.read(buffer)) != -1) {
+        baos.write(buffer, 0, read);
+      }
+      baos.flush();
+      loadClassFile(className, baos.toByteArray());
     } catch (IOException iox) {
       iox.printStackTrace();
     }
