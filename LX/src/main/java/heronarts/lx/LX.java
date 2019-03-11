@@ -134,7 +134,8 @@ public class LX {
    * Listener for top-level events
    */
   public interface Listener {
-    public void modelChanged(LX lx, LXModel model);
+    default public void modelChanged(LX lx, LXModel model) {}
+    default public void contentChanged(LX lx) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -248,6 +249,9 @@ public class LX {
   private final List<Class<? extends LXBlend>> registeredCrossfaderBlends =
     new ArrayList<Class<? extends LXBlend>>();
 
+  private LXClassLoader contentLoader;
+  private boolean contentReloading = false;
+
   /**
    * Creates an LX instance with no nodes.
    */
@@ -299,6 +303,10 @@ public class LX {
     this.engine = new LXEngine(this);
     this.command = new LXCommandEngine(this);
     LX.initTimer.log("Engine");
+
+    // Custom content loader
+    this.contentLoader = new LXClassLoader(this);
+    LX.initTimer.log("Custom Content");
 
     // Midi
     this.engine.midi.initialize();
@@ -679,7 +687,7 @@ public class LX {
   }
 
   public void checkRegistration() {
-    if (this.engine.hasStarted) {
+    if (!this.contentReloading && this.engine.hasStarted) {
       throw new IllegalStateException("May not register components outside of initialize() callback");
     }
   }
@@ -706,6 +714,19 @@ public class LX {
     checkRegistration();
     for (Class<LXPattern> pattern : patterns) {
       registerPattern(pattern);
+    }
+    return this;
+  }
+
+  /**
+   * Unregister pattern classes with the engine
+   *
+   * @param patterns Pattern classes
+   * @return this
+   */
+  public LX unregisterPatterns(List<Class<? extends LXPattern>> patterns) {
+    for (Class<? extends LXPattern> pattern : patterns) {
+      this.registeredPatterns.remove(pattern);
     }
     return this;
   }
@@ -741,6 +762,19 @@ public class LX {
     checkRegistration();
     for (Class<? extends LXEffect> effect : effects) {
       registerEffect(effect);
+    }
+    return this;
+  }
+
+  /**
+   * Unregister effect classes with the engine
+   *
+   * @param effects Effect classes
+   * @return this
+   */
+  public LX unregisterEffects(List<Class<? extends LXEffect>> effects) {
+    for (Class<? extends LXEffect> effect : effects) {
+      this.registeredEffects.remove(effect);
     }
     return this;
   }
@@ -1060,7 +1094,7 @@ public class LX {
 
   public <T extends LXComponent> T instantiateComponent(String className, Class<T> type) {
     try {
-      Class<? extends T> cls = Class.forName(className).asSubclass(type);
+      Class<? extends T> cls = Class.forName(className, true, this.contentLoader).asSubclass(type);
       return instantiateComponent(cls, type);
     } catch (Exception x) {
       System.err.println("Exception in instantiateComponent: " + x.getLocalizedMessage());
@@ -1121,6 +1155,16 @@ public class LX {
 
   public LXBlend instantiateBlend(Class<? extends LXBlend> cls) {
     return instantiateComponent(cls, LXBlend.class);
+  }
+
+  public void reloadContent() {
+    this.contentLoader.dispose();
+    this.contentReloading = true;
+    this.contentLoader = new LXClassLoader(this);
+    this.contentReloading = false;
+    for (Listener listener : this.listeners) {
+      listener.contentChanged(this);
+    }
   }
 
   public void setSystemClipboardString(String str) {

@@ -26,9 +26,11 @@ public class ModelBuffer implements LXBuffer {
   private int[] array;
   private final int defaultColor;
 
-  private final LX.Listener modelListener = (lx, model) -> {
-    if (this.array.length != model.size) {
-      initArray(model);
+  private final LX.Listener modelListener = new LX.Listener() {
+    public void modelChanged(LX lx, LXModel model) {
+      if (array.length != model.size) {
+        initArray(model);
+      }
     }
   };
 
