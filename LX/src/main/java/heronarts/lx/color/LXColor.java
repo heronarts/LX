@@ -18,8 +18,6 @@
 
 package heronarts.lx.color;
 
-import java.awt.Color;
-
 /**
  * Various utilities that operate on color values
  */
@@ -310,75 +308,6 @@ public class LXColor {
     return
       (min(0xff, (int) (a * 0xff)) << ALPHA_SHIFT) |
       (hsb(h, s, b) & 0x00ffffff);
-  }
-
-  /**
-   * Scales the brightness of an array of colors by some factor
-   *
-   * @param rgbs Array of color values
-   * @param s Factor by which to scale brightness
-   * @return Array of new color values
-   */
-  @Deprecated
-  public static int[] scaleBrightness(int[] rgbs, float s) {
-    int[] result = new int[rgbs.length];
-    scaleBrightness(rgbs, s, result);
-    return result;
-  }
-
-  /**
-   * Scales the brightness of an array of colors by some factor
-   *
-   * @param rgbs Array of color values
-   * @param s Factor by which to scale brightness
-   * @param result Array to write results into, if null, input array is modified
-   */
-  @Deprecated
-  public static void scaleBrightness(int[] rgbs, float s, int[] result) {
-    int r, g, b, rgb;
-    float[] hsb = new float[3];
-    if (result == null) {
-      result = rgbs;
-    }
-    for (int i = 0; i < rgbs.length; ++i) {
-      rgb = rgbs[i];
-      r = (rgb & R_MASK) >> R_SHIFT;
-      g = (rgb & G_MASK) >> G_SHIFT;
-      b = rgb & B_MASK;
-      Color.RGBtoHSB(r, g, b, hsb);
-      result[i] = Color.HSBtoRGB(hsb[0], hsb[1], Math.min(1, hsb[2] * s));
-    }
-  }
-
-  /**
-   * Scales the brightness of a color by a factor
-   *
-   * @param rgb Color value
-   * @param s Factory by which to scale brightness
-   * @return New color
-   */
-  @Deprecated
-  public static int scaleBrightness(int rgb, float s) {
-    int r = (rgb & R_MASK) >> R_SHIFT;
-    int g = (rgb & G_MASK) >> G_SHIFT;
-    int b = rgb & B_MASK;
-    float[] hsb = Color.RGBtoHSB(r, g, b, null);
-    return Color.HSBtoRGB(hsb[0], hsb[1], Math.min(1, hsb[2] * s));
-  }
-
-  /**
-   * Utility function to invoke Color.RGBtoHSB without requiring the caller to
-   * manually unpack bytes from an integer color.
-   *
-   * @param rgb ARGB integer color
-   * @param hsb Array into which results should be placed
-   * @return Array of hsb values, or null if hsb parameter was provided
-   */
-  public static float[] RGBtoHSB(int rgb, float[] hsb) {
-    int r = (rgb & R_MASK) >> R_SHIFT;
-    int g = (rgb & G_MASK) >> G_SHIFT;
-    int b = rgb & B_MASK;
-    return Color.RGBtoHSB(r, g, b, hsb);
   }
 
   /**
