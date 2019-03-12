@@ -58,8 +58,7 @@ public class DJM900nxs2 extends LXMidiSurface {
     }
   }
 
-  public static final Channel[] ALL_CHANNELS = { Channel.ONE, Channel.TWO, Channel.THREE, Channel.FOUR };
-  public static final int NUM_CHANNELS = ALL_CHANNELS.length;
+  public static final Channel[] ALL_CHANNELS = Channel.values();
 
   // MIDI ControlChanges
   public static final int MASTER_FADER = 24;
