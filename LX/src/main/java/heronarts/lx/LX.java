@@ -94,6 +94,22 @@ public class LX {
     public String mediaPath = ".";
   }
 
+  public static enum Media {
+    CONTENT("Content"),
+    FIXTURES("Fixtures"),
+    PROJECTS("Projects");
+
+    private final String dirName;
+
+    private Media(String dirName) {
+      this.dirName = dirName;
+    }
+
+    public String getDirName() {
+      return this.dirName;
+    }
+  }
+
   /**
    * Returns the version of the library.
    *
@@ -305,7 +321,7 @@ public class LX {
     LX.initTimer.log("Engine");
 
     // Custom content loader
-    this.contentLoader = new LXClassLoader(this);
+    this.contentLoader = LXClassLoader.createNew(this);
     LX.initTimer.log("Custom Content");
 
     // Midi
@@ -1049,11 +1065,45 @@ public class LX {
     return true;
   }
 
+  /**
+   * Get the root media path for storage of LX-related objects and extensions
+   *
+   * @return File path to root storage location of LX-related content
+   */
   public String getMediaPath() {
     return this.flags.mediaPath;
   }
 
+  /**
+   * Retrieves a file handle to the folder used to store the given type of media
+   *
+   * @param type Media type
+   * @return File handle to directory for storage of this type of media
+   */
+  public File getMediaFolder(Media type) {
+    File folder = new File(getMediaPath(), type.getDirName());
+    if (folder.exists()) {
+      if (folder.isFile()) {
+        throw new IllegalStateException("LX media folder already exists, but contains a plain file: " + folder);
+      }
+    } else {
+      folder.mkdir();
+    }
+    return folder;
+  }
+
+  /**
+   * Retrieves a file handle to a file that can be saved. Path is given relative
+   * to the root LX media directory, unless the given path is absolute.
+   *
+   * @param path File path relative to LX media dir, or absolute
+   * @return File handle to file that can be saved
+   */
   public File getSaveFile(String path) {
+    File file = new File(path);
+    if (file.isAbsolute()) {
+      return file;
+    }
     return new File(getMediaPath(), path);
   }
 
@@ -1158,9 +1208,16 @@ public class LX {
   }
 
   public void reloadContent() {
+    System.out.println("Reloading custom content folders");
     this.contentLoader.dispose();
     this.contentReloading = true;
-    this.contentLoader = new LXClassLoader(this);
+
+    // The previous contentLoader is now disposed. Note that the classes it defined
+    // may still be in use, e.g. via live patterns or effects. But we've released our
+    // handle to it. Those classes will be garbage collected when they have no more
+    // references. And all our new instantiations will use the new version of the Class
+    // objects defined by a new instance of the LXClassLoader.
+    this.contentLoader = LXClassLoader.createNew(this);
     this.contentReloading = false;
     for (Listener listener : this.listeners) {
       listener.contentChanged(this);

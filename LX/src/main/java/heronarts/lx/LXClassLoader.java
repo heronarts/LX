@@ -18,30 +18,88 @@
 
 package heronarts.lx;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class LXClassLoader extends ClassLoader {
+import heronarts.lx.model.LXModel;
+
+/**
+ * The LX class loader parses JAR files in the LX content directory. Any
+ * valid extension components are automatically registered with the engine as
+ * eligible to be instantiated. Note that this requires an active, upfront definition
+ * of all the classes contained, since any JAR file in this path is considered to
+ * potentially hold LX content.
+ *
+ * We subclass from URLClassLoader because the JAR files may contain more than
+ * just class files. They may also contain bundled resource files and using this
+ * classloader ensures that the loaded classes will get proper behavior from methods
+ * like getResourceAsStream().
+ */
+public class LXClassLoader extends URLClassLoader {
 
   private final LX lx;
 
   private final List<Class<? extends LXPattern>> patterns = new ArrayList<Class<? extends LXPattern>>();
   private final List<Class<? extends LXEffect>> effects = new ArrayList<Class<? extends LXEffect>>();
+  private final List<Class<? extends LXModel>> models = new ArrayList<Class<? extends LXModel>>();
+  private final List<Class<? extends LXPlugin>> plugins = new ArrayList<Class<? extends LXPlugin>>();
 
-  public LXClassLoader(LX lx) {
-    super(lx.getClass().getClassLoader());
+  public static LXClassLoader createNew(LX lx) {
+    List<File> jarFiles = new ArrayList<File>();
+    collectJarFiles(jarFiles, lx.getMediaFolder(LX.Media.CONTENT));
+    return new LXClassLoader(lx, jarFiles);
+  }
+
+  private static void collectJarFiles(List<File> jarFiles, File folder) {
+    try {
+      for (File file : folder.listFiles()) {
+        if (file.isHidden()) {
+          // I mean, god bless anyone who tried this, but it will only cause great pain...
+          continue;
+        }
+        if (file.isDirectory()) {
+          collectJarFiles(jarFiles, file);
+        } else if (file.isFile() && file.getName().endsWith(".jar")) {
+          jarFiles.add(file);
+        }
+      }
+    } catch (Exception x) {
+      System.err.println("Unhandled exception loading custom content dir");
+      x.printStackTrace();
+    }
+  }
+
+  private static URL[] fileListToURLArray(List<File> files) {
+    List<URL> urls = new ArrayList<URL>();
+    for (File file : files) {
+      // Intentional URI -> URL here! See the javadoc on File.toURL being deprecated!
+      try {
+        urls.add(file.toURI().toURL());
+      } catch (MalformedURLException e) {
+        e.printStackTrace();
+      }
+    }
+    return urls.toArray(new URL[0]);
+  }
+
+  private final List<File> jarFiles;
+
+  private LXClassLoader(LX lx, List<File> jarFiles) {
+    super(fileListToURLArray(jarFiles), lx.getClass().getClassLoader());
     this.lx = lx;
-    loadContent();
+    this.jarFiles = jarFiles;
+    for (File jarFile : this.jarFiles) {
+      loadJarFile(jarFile);
+    }
   }
 
   protected void dispose() {
@@ -49,50 +107,23 @@ public class LXClassLoader extends ClassLoader {
     this.lx.unregisterEffects(this.effects);
   }
 
-  private void loadContent() {
-    try {
-      File contentDir = new File(this.lx.getMediaPath(), "Content");
-      if (contentDir.exists() && contentDir.isDirectory()) {
-        for (File file : contentDir.listFiles()) {
-          if (file.isHidden()) {
-            // This will only cause great pain...
-            continue;
-          }
-          String fileName = file.getName();
-          if (file.isFile()) {
-            if (fileName.endsWith(".jar")) {
-              loadJarFile(file);
-            } else if (fileName.endsWith(".class")) {
-              loadClassFile(className(fileName), file);
-            } else {
-              System.err.println("Unknown file type in Content directory: " + fileName);
-            }
-          } else {
-            System.err.println("Content directory does not currently support nested directories: " + fileName);
-          }
-        }
-      }
-    } catch (Exception x) {
-      System.err.println("Unhandled exception reading the custom content directory");
-      x.printStackTrace();
-    }
-  }
-
   private void loadJarFile(File file) {
-    System.out.println("Loading custom content from: " + file.getName());
+    System.out.println("Loading custom content from: " + file);
     try (JarFile jarFile = new JarFile(file)) {
       Enumeration<JarEntry> entries = jarFile.entries();
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         String fileName = entry.getName();
         if (fileName.endsWith(".class")) {
-          loadClassFile(className(fileName).replaceAll("/", "\\."), jarFile, entry);
+          loadClassEntry(jarFile, className(fileName).replaceAll("/", "\\."));
         }
       }
-
     } catch (IOException iox) {
-      System.err.println("Exception unpacking JAR file " + file.getName());
+      System.err.println("Exception unpacking JAR file " + file);
       iox.printStackTrace();
+    } catch (Exception | Error e) {
+      System.err.println("Unhandled exception loading JAR file " + file);
+      e.printStackTrace();
     }
   }
 
@@ -100,39 +131,13 @@ public class LXClassLoader extends ClassLoader {
     return fileName.substring(0, fileName.length() - ".class".length());
   }
 
-  private void loadClassFile(String className, JarFile jarFile, JarEntry entry) {
-    long jarSize = entry.getSize();
-    int jarBufferSize = 4096;
-    if (jarSize > 0 || jarSize < Integer.MAX_VALUE) {
-      jarBufferSize = (int) jarSize;
-    }
-    try (InputStream is = jarFile.getInputStream(entry);
-         ByteArrayOutputStream baos = new ByteArrayOutputStream(jarBufferSize)) {
-      byte[] buffer = new byte[jarBufferSize];
-      int read = -1;
-      while ((read = is.read(buffer)) != -1) {
-        baos.write(buffer, 0, read);
-      }
-      baos.flush();
-      loadClassFile(className, baos.toByteArray());
-    } catch (IOException iox) {
-      iox.printStackTrace();
-    }
-  }
-
-  private void loadClassFile(String className, File file) {
+  private void loadClassEntry(JarFile jarFile, String className) {
     try {
-      loadClassFile(className, Files.readAllBytes(file.toPath()));
-    } catch (IOException iox) {
-      iox.printStackTrace();
-    }
-  }
+      // This might be slightly slower, but just let URL loader find it...
+      // Let's not re-invent the wheel on parsing JAR files and all that
+      Class<?> clz = loadClass(className, false);
 
-  private void loadClassFile(String className, byte[] bytes) {
-    try {
-      Class<?> clz = defineClass(className, bytes, 0, bytes.length);
-
-      // Register non-abstract patterns and effects
+      // Register all non-abstract components that we discover!
       if (!Modifier.isAbstract(clz.getModifiers())) {
         if (LXPattern.class.isAssignableFrom(clz)) {
           Class<? extends LXPattern> patternClz = clz.asSubclass(LXPattern.class);
@@ -144,31 +149,19 @@ public class LXClassLoader extends ClassLoader {
           this.effects.add(effectClz);
           this.lx.registerEffect(effectClz);
         }
+        if (LXModel.class.isAssignableFrom(clz)) {
+          this.models.add(clz.asSubclass(LXModel.class));
+        }
+        if (LXPlugin.class.isAssignableFrom(clz)) {
+          this.plugins.add(clz.asSubclass(LXPlugin.class));
+        }
       }
-
-      try {
-        clz.getMethod("initialize").invoke(null);
-      } catch (NoSuchMethodException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (SecurityException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (IllegalAccessException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (IllegalArgumentException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      } catch (InvocationTargetException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-      }
-
-    } catch (ClassFormatError cfe) {
-      cfe.printStackTrace();
-    } catch (Exception | Error e) {
-      e.printStackTrace();
+    } catch (ClassNotFoundException cnfx) {
+      System.err.println("Class not actually found, expected in JAR file: " + className + " " + jarFile.getName());
+      cnfx.printStackTrace();
+    } catch (Exception x) {
+      System.err.println("Unhandled exception in class loading: " + className);
+      x.printStackTrace();
     }
   }
 }
