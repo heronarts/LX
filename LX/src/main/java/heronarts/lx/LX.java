@@ -1141,7 +1141,9 @@ public class LX {
   public void newProject() {
     if (confirmChangedSaved("create a new project")) {
       closeProject();
-      this.structure.load(this, new JsonObject());
+      if (!this.flags.immutableModel) {
+        this.structure.load(this, new JsonObject());
+      }
       this.engine.load(this, new JsonObject());
       setProject(null, ProjectListener.Change.NEW);
     }
@@ -1153,7 +1155,9 @@ public class LX {
       closeProject();
       this.componentRegistry.loading = true;
       this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
-      LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL, true);
+      if (!this.flags.immutableModel) {
+        LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL, true);
+      }
       this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
       if (obj.has(KEY_EXTERNALS)) {
         JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
