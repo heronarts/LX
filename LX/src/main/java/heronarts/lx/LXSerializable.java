@@ -53,8 +53,14 @@ public interface LXSerializable {
     }
 
     public static void loadObject(LX lx, LXSerializable serializable, JsonObject object, String key) {
+      loadObject(lx, serializable, object, key, false);
+    }
+
+    public static void loadObject(LX lx, LXSerializable serializable, JsonObject object, String key, boolean defaultEmptyObj) {
       if (object.has(key)) {
         serializable.load(lx, object.getAsJsonObject(key));
+      } else if (defaultEmptyObj) {
+        serializable.load(lx, new JsonObject());
       }
     }
 
