@@ -87,7 +87,7 @@ public class LX {
      * any dependency upon P3LX.
      */
     public boolean isP3LX = false;
-    public boolean staticModel = false;
+    public boolean immutableModel = false;
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
@@ -97,7 +97,8 @@ public class LX {
   public static enum Media {
     CONTENT("Content"),
     FIXTURES("Fixtures"),
-    PROJECTS("Projects");
+    PROJECTS("Projects"),
+    MODELS("Models");
 
     private final String dirName;
 
@@ -291,7 +292,7 @@ public class LX {
   protected LX(Flags flags, LXModel model) {
     LX.initTimer.init();
     this.flags = flags;
-    this.flags.staticModel = (model != null);
+    this.flags.immutableModel = (model != null);
     this.structure = new LXStructure(this);
     if (model == null) {
       this.total = this.width = this.height = 0;
@@ -402,6 +403,7 @@ public class LX {
   public void dispose() {
     this.engine.audio.dispose();
     this.engine.midi.dispose();
+    this.engine.osc.dispose();
   }
 
   /**
@@ -817,6 +819,10 @@ public class LX {
     return this.registeredFixtures;
   }
 
+  public List<Class<? extends LXModel>> getRegisteredModels() {
+    return this.contentLoader.getRegisteredModels();
+  }
+
   /**
    * Register a [channel and crossfader] blend class with the engine
    *
@@ -997,7 +1003,7 @@ public class LX {
 
   public void saveProject(File file) {
     JsonObject obj = new JsonObject();
-    obj.addProperty(KEY_VERSION, "0.1");
+    obj.addProperty(KEY_VERSION, LX.VERSION);
     obj.addProperty(KEY_TIMESTAMP, System.currentTimeMillis());
     obj.add(KEY_MODEL, LXSerializable.Utils.toObject(this, this.structure));
     obj.add(KEY_ENGINE, LXSerializable.Utils.toObject(this, this.engine));
@@ -1006,11 +1012,9 @@ public class LX {
       externalsObj.add(key, LXSerializable.Utils.toObject(this, this.externals.get(key)));
     }
     obj.add(KEY_EXTERNALS, externalsObj);
-    try {
-      JsonWriter writer = new JsonWriter(new FileWriter(file));
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
-      writer.close();
       System.out.println("Project saved successfully to " + file.toString());
       this.componentRegistry.resetProject();
       setProject(file, ProjectListener.Change.SAVE);
@@ -1075,6 +1079,17 @@ public class LX {
   }
 
   /**
+   * Gets the path to a file relative to a base media path. Useful for writing file names into project files.
+   *
+   * @param type Media type
+   * @param file File
+   * @return Relative path to file, from media type base, or absolute if outside of media container
+   */
+  public String getMediaPath(Media type, File file) {
+    return getMediaFolder(type).getAbsoluteFile().toURI().relativize(file.getAbsoluteFile().toURI()).getPath();
+  }
+
+  /**
    * Retrieves a file handle to the folder used to store the given type of media
    *
    * @param type Media type
@@ -1096,10 +1111,26 @@ public class LX {
    * Retrieves a file handle to a file that can be saved. Path is given relative
    * to the root LX media directory, unless the given path is absolute.
    *
+   * @param type Media type
    * @param path File path relative to LX media dir, or absolute
    * @return File handle to file that can be saved
    */
-  public File getSaveFile(String path) {
+  public File getMediaFile(Media type, String path) {
+    File file = new File(path);
+    if (file.isAbsolute()) {
+      return file;
+    }
+    return new File(getMediaFolder(type), path);
+  }
+
+  /**
+   * Retrieves a file handle to a file that can be saved. Path is given relative
+   * to the root LX media directory, unless the given path is absolute.
+   *
+   * @param path File path relative to LX media dir, or absolute
+   * @return File handle to file that can be saved
+   */
+  public File getMediaFile(String path) {
     File file = new File(path);
     if (file.isAbsolute()) {
       return file;
@@ -1110,6 +1141,7 @@ public class LX {
   public void newProject() {
     if (confirmChangedSaved("create a new project")) {
       closeProject();
+      this.structure.load(this, new JsonObject());
       this.engine.load(this, new JsonObject());
       setProject(null, ProjectListener.Change.NEW);
     }
@@ -1121,7 +1153,7 @@ public class LX {
       closeProject();
       this.componentRegistry.loading = true;
       this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
-      LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL);
+      LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL, true);
       this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
       if (obj.has(KEY_EXTERNALS)) {
         JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
@@ -1140,6 +1172,17 @@ public class LX {
       System.err.println("Exception in openProject: " + x.getLocalizedMessage());
       x.printStackTrace(System.err);
     }
+  }
+
+  public LXModel instantiateModel(String className) {
+    try {
+      Class<? extends LXModel> cls = Class.forName(className, true, this.contentLoader).asSubclass(LXModel.class);
+      return cls.getConstructor().newInstance();
+    } catch (Exception x) {
+      System.err.println("Exception in instantiateModel: " + x.getLocalizedMessage());
+      x.printStackTrace();
+    }
+    return null;
   }
 
   public <T extends LXComponent> T instantiateComponent(String className, Class<T> type) {

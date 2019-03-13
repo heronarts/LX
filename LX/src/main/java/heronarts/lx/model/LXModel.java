@@ -24,6 +24,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
+
+import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXSerializable;
+
 /**
  * An LXModel is a representation of a set of points in 3-d space. Each LXPoint
  * corresponds to a single point. Models are comprised of Fixtures. An LXFixture
@@ -31,7 +37,7 @@ import java.util.Map;
  * wraps them up with a few useful additional fields, such as the center
  * position of all points and the min/max/range on each axis.
  */
-public class LXModel {
+public class LXModel implements LXSerializable {
 
   public interface Listener {
     public void onModelUpdated(LXModel model);
@@ -397,16 +403,27 @@ public class LXModel {
    * Sets the normalized values of all the points in this model (xn, yn, zn)
    * relative to this model's absolute bounds.
    */
-  public void normalizePoints() {
+  public LXModel normalizePoints() {
     // TODO(mcslee): correct when to call this... since submodels may normalize
     // points differently... we only want it relative to top-level model
     for (LXPoint p : this.points) {
       p.normalize(this);
     }
+    return this;
   }
 
   public List<LXPoint> getPoints() {
     return this.pointList;
+  }
+
+  @Override
+  public void save(LX lx, JsonObject object) {
+    object.addProperty(LXComponent.KEY_CLASS, getClass().getName());
+  }
+
+  @Override
+  public void load(LX lx, JsonObject object) {
+    // No-op, but can be overridden for custom model classes...
   }
 
 }

@@ -19,14 +19,20 @@
 package heronarts.lx.structure;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.google.gson.JsonArray;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
@@ -35,8 +41,12 @@ import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXDatagramOutput;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.StringParameter;
 
 public class LXStructure extends LXComponent {
+
+  private static final String PROJECT_MODEL = "<Embedded in Project>";
 
   public class Output extends LXDatagramOutput {
     public Output(LX lx) throws SocketException {
@@ -73,6 +83,20 @@ public class LXStructure extends LXComponent {
     public void fixtureMoved(LXFixture fixture, int index);
   }
 
+  public File modelFile = null;
+
+  public final StringParameter modelName =
+    new StringParameter("Model Name", PROJECT_MODEL)
+    .setDescription("Displays the name of the loaded model, may be a class or an .lxm file");
+
+  public final BooleanParameter isStatic =
+    new BooleanParameter("Static Model", false)
+    .setDescription("Whether a static model class is being used");
+
+  public final BooleanParameter syncModelFile =
+    new BooleanParameter("Sync Model File", false)
+    .setDescription("Keep the project model in sync with the model file. Saving the project automatically writes to the model file.");
+
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
@@ -86,6 +110,7 @@ public class LXStructure extends LXComponent {
 
   public LXStructure(LX lx) {
     super(lx);
+    addParameter("syncModelFile", this.syncModelFile);
     Output output = null;
     try {
       output = new Output(lx);
@@ -94,6 +119,10 @@ public class LXStructure extends LXComponent {
       sx.printStackTrace();
     }
     this.output = output;
+  }
+
+  public File getModelFile() {
+    return this.modelFile;
   }
 
   public void registerFixtures(File fixtureDir) {
@@ -229,12 +258,23 @@ public class LXStructure extends LXComponent {
   }
 
   public LXStructure removeSelectedFixtures() {
-    for (int i = this.fixtures.size() - 1; i >= 0; --i) {
-      LXFixture fixture = this.fixtures.get(i);
+    checkStaticModel(false, "Cannot invoke removeSelectedFixture when static model is in use");
+    List<LXFixture> removed = new ArrayList<LXFixture>();
+    for (int i = this.mutableFixtures.size() - 1; i >= 0; --i) {
+      LXFixture fixture = this.mutableFixtures.get(i);
       if (fixture.selected.isOn()) {
-        removeFixture(fixture);
+        this.mutableFixtures.remove(i);
+        removed.add(fixture);
       }
     }
+    _reindexFixtures();
+    for (LXFixture fixture : removed) {
+      for (Listener l : this.listeners) {
+        l.fixtureRemoved(fixture);
+      }
+      fixture.dispose();
+    }
+    regenerateModel();
     return this;
   }
 
@@ -294,9 +334,33 @@ public class LXStructure extends LXComponent {
     return this;
   }
 
-  public LXStructure setStaticModel(LXModel model) {
+  public LXStructure reset() {
+    this.staticModel = null;
     removeAllFixtures();
-    this.lx.setModel(this.model = this.staticModel = model);
+    this.syncModelFile.setValue(false);
+    this.modelFile = null;
+    this.modelName.setValue(PROJECT_MODEL);
+    this.isStatic.setValue(false);
+    return this;
+  }
+
+  public LXStructure setDynamicModel() {
+    this.staticModel = null;
+    this.isStatic.setValue(false);
+    regenerateModel();
+    return this;
+  }
+
+  public LXStructure setStaticModel(LXModel model) {
+    // Ensure that all the points in this model are properly indexed...
+    int pi = 0;
+    for (LXPoint p : model.points) {
+      p.index = pi++;
+    }
+    this.lx.setModel(this.model = this.staticModel = model.normalizePoints());
+    this.modelFile = null;
+    this.modelName.setValue(model.getClass().getSimpleName() + ".class");
+    this.isStatic.setValue(true);
     return this;
   }
 
@@ -313,8 +377,10 @@ public class LXStructure extends LXComponent {
       pointIndex += fixtureModel.size;
       submodels[fixtureIndex++] = fixtureModel;
     }
-    this.lx.setModel(this.model = new LXModel(submodels));
-    this.model.normalizePoints();
+    this.lx.setModel(this.model = new LXModel(submodels).normalizePoints());
+    if (this.modelFile != null) {
+      this.modelName.setValue(this.modelFile.getName() + "*");
+    }
   }
 
   protected void fixtureRegenerated(LXFixture fixture) {
@@ -330,15 +396,27 @@ public class LXStructure extends LXComponent {
   private boolean needsRegenerate = false;
 
   private static final String KEY_FIXTURES = "fixtures";
+  private static final String KEY_STATIC_MODEL = "staticModel";
+  private static final String KEY_FILE = "file";
 
   @Override
   public void load(LX lx, JsonObject obj) {
     this.isLoading = true;
     super.load(lx, obj);
-    if ((this.staticModel == null) && obj.has(KEY_FIXTURES)) {
-      removeAllFixtures();
-      JsonArray fixturesArr = obj.getAsJsonArray(KEY_FIXTURES);
-      for (JsonElement fixtureElement : fixturesArr) {
+    reset();
+
+    LXModel staticModel = null;
+    File modelFile = null;
+    if (obj.has(KEY_STATIC_MODEL)) {
+      JsonObject modelObj = obj.get(KEY_STATIC_MODEL).getAsJsonObject();
+      String className = modelObj.get(LXComponent.KEY_CLASS).getAsString();
+      staticModel = lx.instantiateModel(className);
+      if (staticModel != null) {
+        staticModel.load(lx, modelObj);
+      }
+    }
+    if (obj.has(KEY_FIXTURES)) {
+      for (JsonElement fixtureElement : obj.getAsJsonArray(KEY_FIXTURES)) {
         JsonObject fixtureObj = fixtureElement.getAsJsonObject();
         LXFixture fixture = this.lx.instantiateFixture(fixtureObj.get(KEY_CLASS).getAsString());
         if (fixture != null) {
@@ -347,16 +425,71 @@ public class LXStructure extends LXComponent {
         }
       }
     }
+    if (obj.has(KEY_FILE)) {
+      modelFile = this.lx.getMediaFile(LX.Media.MODELS, obj.get(KEY_FILE).getAsString());
+    }
+
     this.isLoading = false;
-    if (this.needsRegenerate) {
+    if (staticModel != null) {
+      setStaticModel(staticModel);
       this.needsRegenerate = false;
-      regenerateModel();
+    } else {
+      this.isStatic.setValue(false);
+      if ((modelFile != null) && this.syncModelFile.isOn()) {
+        importModel(modelFile);
+      } else {
+        this.modelName.setValue(PROJECT_MODEL);
+        if (this.needsRegenerate) {
+          this.needsRegenerate = false;
+          regenerateModel();
+        }
+      }
     }
   }
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
+    if (this.staticModel != null) {
+      obj.add(KEY_STATIC_MODEL, LXSerializable.Utils.toObject(lx, this.staticModel));
+    }
     obj.add(KEY_FIXTURES, LXSerializable.Utils.toArray(lx, this.fixtures));
+    if (this.modelFile != null) {
+      obj.addProperty(KEY_FILE, this.lx.getMediaPath(LX.Media.MODELS, this.modelFile));
+      if (this.syncModelFile.isOn()) {
+        exportModel(this.modelFile);
+      }
+    }
+  }
+
+  public LXStructure importModel(File file) {
+    try (FileReader fr = new FileReader(file)) {
+      load(this.lx, new Gson().fromJson(fr, JsonObject.class));
+      this.modelFile = file;
+      this.modelName.setValue(file.getName());
+      this.isStatic.bang();
+    } catch (FileNotFoundException e) {
+      System.err.println("Model file does not exist: " + file.toString());
+    } catch (IOException iox) {
+      System.err.println("Exception loading model file: " + file.toString());
+      iox.printStackTrace();
+    }
+    return this;
+  }
+
+  public LXStructure exportModel(File file) {
+    JsonObject obj = new JsonObject();
+    this.save(this.lx, obj);
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      this.modelFile = file;
+      this.modelName.setValue(file.getName());
+      this.isStatic.bang();
+      System.out.println("Model exported successfully to " + file.toString());
+    } catch (IOException iox) {
+      iox.printStackTrace();
+    }
+    return this;
   }
 }

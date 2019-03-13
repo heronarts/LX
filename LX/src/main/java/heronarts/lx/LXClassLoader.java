@@ -164,4 +164,8 @@ public class LXClassLoader extends URLClassLoader {
       x.printStackTrace();
     }
   }
+
+  protected List<Class<? extends LXModel>> getRegisteredModels() {
+    return this.models;
+  }
 }
