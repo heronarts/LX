@@ -450,4 +450,13 @@ public class LXOscEngine extends LXComponent {
     }
   }
 
+  @Override
+  public void dispose() {
+    super.dispose();
+    stopReceiver();
+    for (Receiver receiver : this.receivers) {
+      receiver.stop();
+    }
+  }
+
 }
