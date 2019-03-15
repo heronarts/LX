@@ -335,11 +335,17 @@ public class LXStructure extends LXComponent {
   }
 
   public LXStructure reset() {
+    return reset(false);
+  }
+
+  private LXStructure reset(boolean fromSync) {
     this.staticModel = null;
     removeAllFixtures();
-    this.syncModelFile.setValue(false);
-    this.modelFile = null;
-    this.modelName.setValue(PROJECT_MODEL);
+    if (!fromSync) {
+      this.syncModelFile.setValue(false);
+      this.modelFile = null;
+      this.modelName.setValue(PROJECT_MODEL);
+    }
     this.isStatic.setValue(false);
     return this;
   }
@@ -402,8 +408,8 @@ public class LXStructure extends LXComponent {
   @Override
   public void load(LX lx, JsonObject obj) {
     this.isLoading = true;
-    super.load(lx, obj);
     reset();
+    super.load(lx, obj);
 
     LXModel staticModel = null;
     File modelFile = null;
@@ -415,16 +421,7 @@ public class LXStructure extends LXComponent {
         staticModel.load(lx, modelObj);
       }
     }
-    if (obj.has(KEY_FIXTURES)) {
-      for (JsonElement fixtureElement : obj.getAsJsonArray(KEY_FIXTURES)) {
-        JsonObject fixtureObj = fixtureElement.getAsJsonObject();
-        LXFixture fixture = this.lx.instantiateFixture(fixtureObj.get(KEY_CLASS).getAsString());
-        if (fixture != null) {
-          fixture.load(lx, fixtureObj);
-          addFixture(fixture);
-        }
-      }
-    }
+    loadFixtures(lx, obj);
     if (obj.has(KEY_FILE)) {
       modelFile = this.lx.getMediaFile(LX.Media.MODELS, obj.get(KEY_FILE).getAsString());
     }
@@ -436,12 +433,25 @@ public class LXStructure extends LXComponent {
     } else {
       this.isStatic.setValue(false);
       if ((modelFile != null) && this.syncModelFile.isOn()) {
-        importModel(modelFile);
+        importModel(modelFile, true);
       } else {
         this.modelName.setValue(PROJECT_MODEL);
         if (this.needsRegenerate) {
           this.needsRegenerate = false;
           regenerateModel();
+        }
+      }
+    }
+  }
+
+  private void loadFixtures(LX lx, JsonObject obj) {
+    if (obj.has(KEY_FIXTURES)) {
+      for (JsonElement fixtureElement : obj.getAsJsonArray(KEY_FIXTURES)) {
+        JsonObject fixtureObj = fixtureElement.getAsJsonObject();
+        LXFixture fixture = this.lx.instantiateFixture(fixtureObj.get(KEY_CLASS).getAsString());
+        if (fixture != null) {
+          fixture.load(lx, fixtureObj);
+          addFixture(fixture);
         }
       }
     }
@@ -453,7 +463,7 @@ public class LXStructure extends LXComponent {
     if (this.staticModel != null) {
       obj.add(KEY_STATIC_MODEL, LXSerializable.Utils.toObject(lx, this.staticModel));
     }
-    obj.add(KEY_FIXTURES, LXSerializable.Utils.toArray(lx, this.fixtures));
+    saveFixtures(lx, obj);
     if (this.modelFile != null) {
       obj.addProperty(KEY_FILE, this.lx.getMediaPath(LX.Media.MODELS, this.modelFile));
       if (this.syncModelFile.isOn()) {
@@ -462,9 +472,18 @@ public class LXStructure extends LXComponent {
     }
   }
 
+  private void saveFixtures(LX lx, JsonObject obj) {
+    obj.add(KEY_FIXTURES, LXSerializable.Utils.toArray(lx, this.fixtures));
+  }
+
   public LXStructure importModel(File file) {
+    return importModel(file, false);
+  }
+
+  private LXStructure importModel(File file, boolean fromSync) {
     try (FileReader fr = new FileReader(file)) {
-      load(this.lx, new Gson().fromJson(fr, JsonObject.class));
+      reset(fromSync);
+      loadFixtures(this.lx, new Gson().fromJson(fr, JsonObject.class));
       this.modelFile = file;
       this.modelName.setValue(file.getName());
       this.isStatic.bang();
@@ -479,7 +498,7 @@ public class LXStructure extends LXComponent {
 
   public LXStructure exportModel(File file) {
     JsonObject obj = new JsonObject();
-    this.save(this.lx, obj);
+    this.saveFixtures(this.lx, obj);
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
