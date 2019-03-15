@@ -323,6 +323,7 @@ public class LX {
 
     // Custom content loader
     this.contentLoader = LXClassLoader.createNew(this);
+    this.structure.registerFixtures(getMediaFolder(LX.Media.FIXTURES));
     LX.initTimer.log("Custom Content");
 
     // Midi
