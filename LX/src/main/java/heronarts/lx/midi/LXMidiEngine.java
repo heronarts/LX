@@ -27,6 +27,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.midi.surface.APC40Mk2;
+import heronarts.lx.midi.surface.DJM900nxs2;
 import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -142,6 +143,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   public LXMidiEngine(LX lx) {
     super(lx);
     this.registeredSurfaces.put(APC40Mk2.DEVICE_NAME, APC40Mk2.class);
+    this.registeredSurfaces.put(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
     addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
   }
 
