@@ -396,6 +396,9 @@ public class LXStructure extends LXComponent {
     }
     // We need to re-normalize the points in the model, since some have changed
     this.model.update();
+    if (this.modelFile != null) {
+      this.modelName.setValue(this.modelFile.getName() + "*");
+    }
   }
 
   private boolean isLoading = false;
