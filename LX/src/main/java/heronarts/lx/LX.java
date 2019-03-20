@@ -391,6 +391,12 @@ public class LX {
    * @return this
    */
   public LX setModel(LXModel model) {
+    if (this.model == model) {
+      throw new IllegalStateException("Cannot reset same model instance: " + model);
+    }
+    if (this.model != null) {
+      this.model.dispose();
+    }
     this.model = model;
     for (Listener listener : this.listeners) {
       listener.modelChanged(this, model);

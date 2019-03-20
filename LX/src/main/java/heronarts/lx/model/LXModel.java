@@ -404,8 +404,6 @@ public class LXModel implements LXSerializable {
    * relative to this model's absolute bounds.
    */
   public LXModel normalizePoints() {
-    // TODO(mcslee): correct when to call this... since submodels may normalize
-    // points differently... we only want it relative to top-level model
     for (LXPoint p : this.points) {
       p.normalize(this);
     }
@@ -424,6 +422,10 @@ public class LXModel implements LXSerializable {
   @Override
   public void load(LX lx, JsonObject object) {
     // No-op, but can be overridden for custom model classes...
+  }
+
+  public void dispose() {
+    this.listeners.clear();
   }
 
 }
