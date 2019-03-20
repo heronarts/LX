@@ -425,6 +425,9 @@ public class LXModel implements LXSerializable {
   }
 
   public void dispose() {
+    for (LXModel child : this.children) {
+      child.dispose();
+    }
     this.listeners.clear();
   }
 
