@@ -266,7 +266,7 @@ public class LX {
   private final List<Class<? extends LXBlend>> registeredCrossfaderBlends =
     new ArrayList<Class<? extends LXBlend>>();
 
-  private LXClassLoader contentLoader;
+  protected LXClassLoader contentLoader;
   private boolean contentReloading = false;
 
   /**
@@ -332,6 +332,9 @@ public class LX {
     // Add a default channel
     this.engine.addChannel(new LXPattern[] { new IteratorPattern(this) }).fader.setValue(1);
     LX.initTimer.log("Default Channel");
+
+    // Initialize plugins!
+    this.contentLoader.initializePlugins();
   }
 
   private void registerDefaultBlends() {

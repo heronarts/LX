@@ -30,6 +30,7 @@ import heronarts.lx.model.LXPoint;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
+import heronarts.lx.output.LXDatagramOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutputGroup;
 import heronarts.lx.parameter.BooleanParameter;
@@ -43,6 +44,7 @@ import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.script.LXScriptEngine;
 import heronarts.lx.structure.LXFixture;
 
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -170,8 +172,53 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private float frameRate = 0;
 
   public class Output extends LXOutputGroup implements LXOscComponent {
+
+    /**
+     * This ModelOutput helper is used for sending dynamic datagrams that are
+     * specified in the model. Any time the model is changed, this set will be
+     * updated.
+     */
+    private class ModelOutput extends LXDatagramOutput implements LX.Listener {
+      ModelOutput(LX lx) throws SocketException {
+        super(lx);
+        setModel(lx.model);
+        lx.addListener(this);
+      }
+
+      @Override
+      public void modelChanged(LX lx, LXModel model) {
+        // We have a new model, use that instead...
+        setModel(model);
+      }
+
+      private void setModel(LXModel model) {
+        // Clear out all the datagrams from the old model
+        this.datagrams.clear();
+        // Recursively add all dynamic datagrams attached to this model
+        if (model != null) {
+          addDatagrams(model);
+        }
+      }
+
+      private void addDatagrams(LXModel model) {
+        // Depth-first, a model's children are sent before its own datagram
+        for (LXModel child : model.children) {
+          addDatagrams(child);
+        }
+        // Then send the datagrams for the model itself. For instance, this makes it possible
+        // for a parent to send an ArtSync or something after all children send ArtDmx
+        addDatagrams(model.datagrams);
+      }
+    }
+
     Output(LX lx) {
       super(lx);
+      try {
+        addChild(new ModelOutput(lx));
+      } catch (SocketException sx) {
+        // TODO(mcslee): report this to the UI somehow
+        System.err.println("Could not create output datagram socket, model will not send");
+      }
     }
   }
 

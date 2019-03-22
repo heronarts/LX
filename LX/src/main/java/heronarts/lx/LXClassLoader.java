@@ -51,7 +51,9 @@ public class LXClassLoader extends URLClassLoader {
   private final List<Class<? extends LXPattern>> patterns = new ArrayList<Class<? extends LXPattern>>();
   private final List<Class<? extends LXEffect>> effects = new ArrayList<Class<? extends LXEffect>>();
   private final List<Class<? extends LXModel>> models = new ArrayList<Class<? extends LXModel>>();
-  private final List<Class<? extends LXPlugin>> plugins = new ArrayList<Class<? extends LXPlugin>>();
+
+  private final List<Class<? extends LXPlugin>> pluginClasses = new ArrayList<Class<? extends LXPlugin>>();
+  private final List<LXPlugin> plugins = new ArrayList<LXPlugin>();
 
   public static LXClassLoader createNew(LX lx) {
     List<File> jarFiles = new ArrayList<File>();
@@ -153,7 +155,7 @@ public class LXClassLoader extends URLClassLoader {
           this.models.add(clz.asSubclass(LXModel.class));
         }
         if (LXPlugin.class.isAssignableFrom(clz)) {
-          this.plugins.add(clz.asSubclass(LXPlugin.class));
+          this.pluginClasses.add(clz.asSubclass(LXPlugin.class));
         }
       }
     } catch (ClassNotFoundException cnfx) {
@@ -167,5 +169,22 @@ public class LXClassLoader extends URLClassLoader {
 
   protected List<Class<? extends LXModel>> getRegisteredModels() {
     return this.models;
+  }
+
+  protected void initializePlugins() {
+    for (Class<? extends LXPlugin> pluginClass : this.pluginClasses) {
+      try {
+        LXPlugin plugin = pluginClass.getConstructor().newInstance();
+        plugin.initialize(this.lx);
+        this.plugins.add(plugin);
+      } catch (Exception x) {
+        System.err.println("Unhandled exception in plugin initialize: " + pluginClass.getName());
+        x.printStackTrace();
+      }
+    }
+  }
+
+  public List<LXPlugin> getPlugins() {
+    return this.plugins;
   }
 }

@@ -70,6 +70,13 @@ public class LXDatagramOutput extends LXOutput {
     return this;
   }
 
+  public LXDatagramOutput addDatagrams(List<LXDatagram> datagrams) {
+    for (LXDatagram datagram : datagrams) {
+      addDatagram(datagram);
+    }
+    return this;
+  }
+
   /**
    * Sets the destination address of all datagrams on this output
    *

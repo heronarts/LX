@@ -29,6 +29,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.output.LXDatagram;
 
 /**
  * An LXModel is a representation of a set of points in 3-d space. Each LXPoint
@@ -56,7 +57,11 @@ public class LXModel implements LXSerializable {
   private final Map<String, List<LXModel>> subDict =
     new HashMap<String, List<LXModel>>();
 
-  private String type = "model";
+  private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
+
+  public final List<LXDatagram> datagrams = Collections.unmodifiableList(this.mutableDatagrams);
+
+  private String[] keys = { "model" };
 
   /**
    * Number of points in the model
@@ -207,6 +212,21 @@ public class LXModel implements LXSerializable {
     computeAverages();
   }
 
+  /**
+   * Custom LXModel subclasses may want to directly implement their output functionality.
+   * Any datagrams added by this call will be sent
+   *
+   * @param datagram
+   * @return
+   */
+  public LXModel addDatagram(LXDatagram datagram) {
+    if (this.mutableDatagrams.contains(datagram)) {
+      throw new IllegalStateException("Cannot add datagram twice: " + datagram);
+    }
+    this.mutableDatagrams.add(datagram);
+    return this;
+  }
+
   private void addChildren(LXModel[] children) {
     addSubmodels(children, this.childDict, false);
     addSubmodels(children, this.subDict, true);
@@ -214,33 +234,45 @@ public class LXModel implements LXSerializable {
 
   private void addSubmodels(LXModel[] submodels, Map<String, List<LXModel>> dict, boolean recurse) {
     for (LXModel submodel : submodels) {
-      String type = submodel.getType().toLowerCase();
-      List<LXModel> sub = dict.get(type);
-      if (sub == null) {
-        dict.put(type, sub = new ArrayList<LXModel>());
+      for (String key : submodel.getKeys()) {
+        List<LXModel> sub = dict.get(key);
+        if (sub == null) {
+          dict.put(key, sub = new ArrayList<LXModel>());
+        }
+        sub.add(submodel);
       }
-      sub.add(submodel);
       if (recurse) {
         addSubmodels(submodel.children, dict, recurse);
       }
     }
   }
 
-  public String getType() {
-    return this.type;
+  /**
+   * Gets a set of keys by which this model type can be identified. Keys must be lowercase strings.
+   * These keys can be used with the {@link children()} and {@link submodel()} methods to dynamically
+   * retrieve submodels from this model.
+   *
+   * @return Array of keys that identify this model type
+   */
+  public String[] getKeys() {
+    return this.keys;
   }
 
-  public LXModel setType(String type) {
-    this.type = type;
+  public LXModel setKeys(String[] keys) {
+    this.keys = keys;
+    for (int i = 0; i < keys.length; ++i) {
+      keys[i] = keys[i].toLowerCase();
+    }
     return this;
   }
 
   private static final List<LXModel> emptyList = Collections.unmodifiableList(new ArrayList<LXModel>());
 
   /**
-   * Returns a list of all the direct child components by particular key
+   * Returns a list of all the direct child components by particular key. Children are only one-level
+   * deep.
    *
-   * @param key Child key, must be all lowercase
+   * @param key Child key type , must be all lowercase
    * @return List of direct children by type
    */
   public List<LXModel> children(String key) {
@@ -249,10 +281,11 @@ public class LXModel implements LXSerializable {
   }
 
   /**
-   * Returns a list of all the submodel components by particular key, at any level of depth
+   * Returns a list of all the submodel components by particular key, at any level of depth, may be
+   * many levels of descendants contained here
    *
    * @param key Submodel key, must be all lowercase
-   * @return List of submodels
+   * @return List of all descendant submodels
    */
   public List<LXModel> sub(String key) {
     List<LXModel> sub = this.subDict.get(key);
@@ -279,7 +312,7 @@ public class LXModel implements LXSerializable {
 
   /**
    * Update the meta-values in this model. Re-normalizes the points relative to
-   * this model and recomputes its averages
+   * this model and recomputes its averages.
    *
    * @return this
    */
@@ -329,11 +362,32 @@ public class LXModel implements LXSerializable {
     return this;
   }
 
+  /**
+   * Creates an index buffer of all the point indices in this model.
+   *
+   * @return Index buffer of all points in this model, containing their global color indices
+   */
   public int[] toIndexBuffer() {
-    int[] indexBuffer = new int[this.points.length];
-    int i = 0;
-    for (LXPoint p : this.points) {
-      indexBuffer[i++] = p.index;
+    return toIndexBuffer(0, this.points.length);
+  }
+
+  /**
+   * Creates an index buffer of a subset of points in this model.
+   *
+   * @param offset Initial offset into this model's points
+   * @param length Length of the index buffer
+   * @return Array that contains the global color buffer indices for the specified points in this model
+   */
+  public int[] toIndexBuffer(int offset, int length) {
+    if (offset < 0 || ((offset+length) > this.points.length)) {
+      throw new IllegalArgumentException("Index buffer cannot exceed points array length - offset:" + offset + " length:" + length);
+    }
+    if (length < 0) {
+      throw new IllegalArgumentException("Index buffer length cannot be negative: " + length);
+    }
+    int[] indexBuffer = new int[length];
+    for (int i = 0; i < length; ++i) {
+      indexBuffer[i++] = this.points[offset+i].index;
     }
     return indexBuffer;
   }

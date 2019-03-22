@@ -59,14 +59,12 @@ public class Grid extends LXFixture {
     int numColumns = this.numColumns.getValuei();
 
     int i = 0;
-    LXModel[] submodels = new LXModel[2 * (numRows + numColumns)];
+    LXModel[] submodels = new LXModel[numRows + numColumns];
     for (int r = 0; r < numRows; ++r) {
-      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1).setType("strip");
-      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1).setType("row");
+      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1).setKeys(new String[] { "strip", "row" });
     }
     for (int c = 0; c < numColumns; ++c) {
-      submodels[i++] = toSubmodel(c, numRows, numColumns).setType("strip");
-      submodels[i++] = toSubmodel(c, numRows, numColumns).setType("column");
+      submodels[i++] = toSubmodel(c, numRows, numColumns).setKeys(new String[] { "strip", "column" });
     }
     return submodels;
   }

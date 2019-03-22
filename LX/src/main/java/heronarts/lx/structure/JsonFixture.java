@@ -86,6 +86,7 @@ public class JsonFixture extends LXFixture {
     try (FileReader fr = new FileReader(fixtureFile)) {
       JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
       if (obj.has(KEY_FIXTURE_TYPE)) {
+        // TODO(mcslee): find a better way to detect and overwrite default label here...
         if (this.label.getString().equals("Json")) {
           this.label.setValue(obj.get(KEY_FIXTURE_TYPE).getAsString());
         }
@@ -166,7 +167,7 @@ public class JsonFixture extends LXFixture {
       for (int i = 0; i < this.jsonStrips.size(); ++i) {
         JsonObject stripObj = this.jsonStrips.get(i).getAsJsonObject();
         int numPoints = stripObj.get(KEY_NUM_POINTS).getAsInt();
-        submodels[i] = toSubmodel(startIndex, numPoints, 1).setType("strip");
+        submodels[i] = toSubmodel(startIndex, numPoints, 1).setKeys(new String[] { "strip" });
         startIndex += numPoints;
       }
       return submodels;

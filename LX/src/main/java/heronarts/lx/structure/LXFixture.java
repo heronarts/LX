@@ -372,8 +372,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   private void regenerateGeometry() {
     double degreesToRadians = Math.PI / 180;
     this.transform.reset(this.parentTransformMatrix);
-    this.transform.translate(this.x.getValuef(), this.y.getValuef(),
-      this.z.getValuef());
+    this.transform.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
     this.transform.rotateY(this.yaw.getValuef() * degreesToRadians);
     this.transform.rotateX(this.pitch.getValuef() * degreesToRadians);
     this.transform.rotateZ(this.roll.getValuef() * degreesToRadians);
@@ -405,7 +404,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     updateDatagram();
 
     // Okay, good to go
-    return new LXModel(points, toSubmodels()).setType(getModelType());
+    return new LXModel(points, toSubmodels()).setKeys(new String[] { getModelType() });
   }
 
   protected String getModelType() {
