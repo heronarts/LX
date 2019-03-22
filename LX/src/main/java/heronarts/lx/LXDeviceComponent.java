@@ -35,7 +35,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
   public final BooleanParameter modulationExpanded =
     new BooleanParameter("Modulation Expanded", false)
-    .setDescription("Whether the device controls are expanded");
+    .setDescription("Whether the device modulation section is expanded");
 
   protected LXDeviceComponent(LX lx) {
     this(lx, null);
