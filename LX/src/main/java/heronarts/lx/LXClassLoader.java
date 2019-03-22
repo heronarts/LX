@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 import heronarts.lx.model.LXModel;
 
 /**
@@ -44,16 +47,83 @@ import heronarts.lx.model.LXModel;
  * classloader ensures that the loaded classes will get proper behavior from methods
  * like getResourceAsStream().
  */
-public class LXClassLoader extends URLClassLoader {
+public class LXClassLoader extends URLClassLoader implements LXSerializable {
+
+  public class Plugin implements LXSerializable {
+    public final Class<? extends LXPlugin> clazz;
+    public LXPlugin instance;
+    private boolean hasError = false;
+    private boolean isEnabled = true;
+
+    private Plugin(Class<? extends LXPlugin> clazz) {
+      this.clazz = clazz;
+    }
+
+    public LXPlugin getInstance() {
+      return this.instance;
+    }
+
+    public boolean hasInstance() {
+      return (this.instance != null);
+    }
+
+    public boolean isEnabled() {
+      return this.isEnabled;
+    }
+
+    public Plugin setEnabled(boolean enabled) {
+      this.isEnabled = enabled;
+      lx.pluginChanged(this);
+      return this;
+    }
+
+    private void initialize(LX lx) {
+      if (!this.isEnabled) {
+        return;
+      }
+      try {
+        this.instance = clazz.getConstructor().newInstance();
+        this.instance.initialize(lx);
+      } catch (Exception x) {
+        System.err.println("Unhandled exception in plugin initialize: " + clazz.getName());
+        x.printStackTrace();
+        this.hasError = true;
+      }
+    }
+
+    public Plugin setException(Exception x) {
+      this.hasError = true;
+      lx.pluginChanged(this);
+      return this;
+    }
+
+    public boolean hasError() {
+      return this.hasError;
+    }
+
+    private static final String KEY_CLASS = "class";
+    private static final String KEY_ENABLED = "enabled";
+
+    @Override
+    public void save(LX lx, JsonObject object) {
+      object.addProperty(KEY_CLASS, this.clazz.getName());
+      object.addProperty(KEY_ENABLED, this.isEnabled);
+    }
+
+    @Override
+    public void load(LX lx, JsonObject object) {
+      if (object.has(KEY_ENABLED)) {
+        this.isEnabled = object.get(KEY_ENABLED).getAsBoolean();
+      }
+    }
+  }
 
   private final LX lx;
 
   private final List<Class<? extends LXPattern>> patterns = new ArrayList<Class<? extends LXPattern>>();
   private final List<Class<? extends LXEffect>> effects = new ArrayList<Class<? extends LXEffect>>();
   private final List<Class<? extends LXModel>> models = new ArrayList<Class<? extends LXModel>>();
-
-  private final List<Class<? extends LXPlugin>> pluginClasses = new ArrayList<Class<? extends LXPlugin>>();
-  private final List<LXPlugin> plugins = new ArrayList<LXPlugin>();
+  private final List<Plugin> plugins = new ArrayList<Plugin>();
 
   public static LXClassLoader createNew(LX lx) {
     List<File> jarFiles = new ArrayList<File>();
@@ -155,7 +225,7 @@ public class LXClassLoader extends URLClassLoader {
           this.models.add(clz.asSubclass(LXModel.class));
         }
         if (LXPlugin.class.isAssignableFrom(clz)) {
-          this.pluginClasses.add(clz.asSubclass(LXPlugin.class));
+          this.plugins.add(new Plugin(clz.asSubclass(LXPlugin.class)));
         }
       }
     } catch (ClassNotFoundException cnfx) {
@@ -172,19 +242,46 @@ public class LXClassLoader extends URLClassLoader {
   }
 
   protected void initializePlugins() {
-    for (Class<? extends LXPlugin> pluginClass : this.pluginClasses) {
+    for (Plugin plugin : this.plugins) {
       try {
-        LXPlugin plugin = pluginClass.getConstructor().newInstance();
         plugin.initialize(this.lx);
-        this.plugins.add(plugin);
       } catch (Exception x) {
-        System.err.println("Unhandled exception in plugin initialize: " + pluginClass.getName());
-        x.printStackTrace();
+
       }
     }
   }
 
-  public List<LXPlugin> getPlugins() {
+  public List<Plugin> getPlugins() {
     return this.plugins;
+  }
+
+  private Plugin findPlugin(String clazz) {
+    for (Plugin plugin : this.plugins) {
+      if (plugin.clazz.getName().equals(clazz)) {
+        return plugin;
+      }
+    }
+    return null;
+  }
+
+  private static final String KEY_PLUGINS = "plugins";
+
+  @Override
+  public void save(LX lx, JsonObject object) {
+    object.add(KEY_PLUGINS, LXSerializable.Utils.toArray(lx, this.plugins));
+  }
+
+  @Override
+  public void load(LX lx, JsonObject object) {
+    if (object.has(KEY_PLUGINS)) {
+      for (JsonElement pluginElement : object.get(KEY_PLUGINS).getAsJsonArray()) {
+        JsonObject pluginObj = pluginElement.getAsJsonObject();
+        Plugin plugin = findPlugin(pluginObj.get(Plugin.KEY_CLASS).getAsString());
+        if (plugin != null) {
+          plugin.load(lx, pluginObj);
+        }
+      }
+    }
+
   }
 }

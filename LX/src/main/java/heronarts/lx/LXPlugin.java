@@ -18,12 +18,28 @@
 
 package heronarts.lx;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 /**
  * Generic interface for an object that contains callback methods for
  * the LX engine. These can be used to integrate third-party components
  * or perform custom initializations.
  */
 public interface LXPlugin {
+
+  /**
+   * An annotation to be applied to an LXPlugin class giving it a user-facing name
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Name {
+    String value();
+  }
 
   /**
    * This method is invoked on the plugin object after LX has been initialized. Note

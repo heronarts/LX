@@ -153,6 +153,7 @@ public class LX {
   public interface Listener {
     default public void modelChanged(LX lx, LXModel model) {}
     default public void contentChanged(LX lx) {}
+    default public void pluginChanged(LX lx, LXClassLoader.Plugin plugin) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -171,6 +172,11 @@ public class LX {
   private final List<ProjectListener> projectListeners = new ArrayList<ProjectListener>();
 
   final LXComponent.Registry componentRegistry = new LXComponent.Registry();
+
+  /**
+   * Global preferences stored in persistent file
+   */
+  public final LXPreferences preferences;
 
   /**
    * Configuration flags
@@ -293,6 +299,8 @@ public class LX {
     LX.initTimer.init();
     this.flags = flags;
     this.flags.immutableModel = (model != null);
+
+    // Create structure object
     this.structure = new LXStructure(this);
     if (model == null) {
       this.total = this.width = this.height = 0;
@@ -332,6 +340,10 @@ public class LX {
     // Add a default channel
     this.engine.addChannel(new LXPattern[] { new IteratorPattern(this) }).fader.setValue(1);
     LX.initTimer.log("Default Channel");
+
+    // Load the global preferences before plugin initialization
+    this.preferences = new LXPreferences(this);
+    this.preferences.load();
 
     // Initialize plugins!
     this.contentLoader.initializePlugins();
@@ -405,6 +417,12 @@ public class LX {
       listener.modelChanged(this, model);
     }
     return this;
+  }
+
+  protected void pluginChanged(LXClassLoader.Plugin plugin) {
+    for (Listener listener : this.listeners) {
+      listener.pluginChanged(this, plugin);
+    }
   }
 
   /**
@@ -984,6 +1002,10 @@ public class LX {
     return instantiateBlends(this.registeredCrossfaderBlends);
   }
 
+  public List<LXClassLoader.Plugin> getPlugins() {
+    return this.contentLoader.getPlugins();
+  }
+
   private final Map<String, LXSerializable> externals = new HashMap<String, LXSerializable>();
 
   private final static String KEY_VERSION = "version";
@@ -999,6 +1021,7 @@ public class LX {
     for (ProjectListener projectListener : this.projectListeners) {
       projectListener.projectChanged(file, change);
     }
+    this.preferences.setProject(file);
   }
 
   public File getProject() {
