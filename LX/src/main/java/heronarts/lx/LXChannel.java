@@ -582,6 +582,27 @@ public class LXChannel extends LXChannelBus {
     return this;
   }
 
+  public LXChannel reloadPattern(LXPattern pattern) {
+    if (!this.patterns.contains(pattern)) {
+      throw new IllegalStateException("Cannot remove pattern not on a channel");
+    }
+    boolean active = (pattern == getActivePattern());
+    boolean focused = (pattern == getFocusedPattern());
+
+    int index = pattern.getIndex();
+    JsonObject patternObj = new JsonObject();
+    pattern.save(getLX(), patternObj);
+    removePattern(pattern);
+    pattern = loadPattern(patternObj, index);
+    if (focused) {
+      this.focusedPattern.setValue(pattern.getIndex());
+    }
+    if (active) {
+      goPattern(pattern);
+    }
+    return this;
+  }
+
 
   public final int getFocusedPatternIndex() {
     return this.focusedPattern.getValuei();
@@ -914,11 +935,7 @@ public class LXChannel extends LXChannelBus {
     JsonArray patternsArray = obj.getAsJsonArray(KEY_PATTERNS);
     for (JsonElement patternElement : patternsArray) {
       JsonObject patternObj = (JsonObject) patternElement;
-      LXPattern pattern = this.lx.instantiatePattern(patternObj.get(KEY_CLASS).getAsString());
-      if (pattern != null) {
-        pattern.load(lx, patternObj);
-        addPattern(pattern);
-      }
+      loadPattern(patternObj, -1);
     }
 
     // Set the active index instantly, do not transition!
@@ -944,5 +961,15 @@ public class LXChannel extends LXChannelBus {
 
     super.load(lx, obj);
   }
+
+  private LXPattern loadPattern(JsonObject patternObj, int index) {
+    LXPattern pattern = this.lx.instantiatePattern(patternObj.get(KEY_CLASS).getAsString());
+    if (pattern != null) {
+      pattern.load(lx, patternObj);
+      addPattern(pattern, index);
+    }
+    return pattern;
+  }
+
 
 }
