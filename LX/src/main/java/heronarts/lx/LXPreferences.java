@@ -184,13 +184,13 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
     this.inLoad = false;
   }
 
-  public void loadInitialProject(String overrideProjectFileName) {
+  public void loadInitialProject(File overrideProjectFile) {
     try {
       File projectFile = null;
-      if (overrideProjectFileName != null) {
-        projectFile = this.lx.getMediaFile(LX.Media.PROJECTS, overrideProjectFileName);
+      if (overrideProjectFile != null) {
+        projectFile = overrideProjectFile;
         if (!projectFile.exists()) {
-          System.err.println("Project file does not exist: " + overrideProjectFileName);
+          System.err.println("Project file does not exist: " + overrideProjectFile);
           projectFile = null;
         }
       } else if (this.projectFileName != null) {

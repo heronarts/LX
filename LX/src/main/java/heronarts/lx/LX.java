@@ -1309,5 +1309,53 @@ public class LX {
     // on systems that might not have it or it may interfere with other UI libraries
   }
 
+  protected static void bootstrapMediaPath(Flags flags) {
+    File studioDir = new File(System.getProperty("user.home"), "LXStudio");
+    if (!studioDir.exists()) {
+      System.out.println("Creating directory: " + studioDir);
+      studioDir.mkdir();
+    }
+    if (studioDir.isDirectory()) {
+      flags.mediaPath = studioDir.getPath();
+      for (LX.Media type : LX.Media.values()) {
+        File contentDir = new File(studioDir, type.getDirName());
+        if (!contentDir.exists()) {
+          System.out.println("Creating directory: " + contentDir);
+          contentDir.mkdir();
+        }
+      }
+    } else {
+      System.err.println("~/LXStudio already exists but is not a directory, this will not go well.");
+    }
+  }
+
+  /**
+   * Runs a headless version of LX
+   *
+   * @param args Command line arguments
+   */
+  public static void main(String[] args) {
+    Flags flags = new Flags();
+    bootstrapMediaPath(flags);
+    File projectFile = null;
+    for (String arg : args) {
+      if (arg.endsWith(".lxp")) {
+        projectFile = new File(arg);
+        if (!projectFile.exists()) {
+          System.err.println("Project file not found: " + projectFile);
+          projectFile = null;
+        }
+      }
+    }
+    headless(flags, projectFile);
+  }
+
+  protected static void headless(Flags flags, File projectFile) {
+    LX lx = new LX(flags);
+    if (projectFile != null) {
+      lx.openProject(projectFile);
+    }
+    lx.engine.start();
+  }
 }
 
