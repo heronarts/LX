@@ -63,6 +63,8 @@ public class LXModel implements LXSerializable {
 
   private String[] keys = { "model" };
 
+  private LXModel parent;
+
   /**
    * Number of points in the model
    */
@@ -175,15 +177,17 @@ public class LXModel implements LXSerializable {
   }
 
   /**
-   * Constructs a model with a given set of points and pre-constructed submodels
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
    *
    * @param points Points in this model
-   * @param children Pre-built direct child array
+   * @param submodels Pre-built direct submodel child array
    */
-  public LXModel(List<LXPoint> points, LXModel[] children) {
+  public LXModel(List<LXPoint> points, LXModel[] submodels) {
     List<LXPoint> _points = new ArrayList<LXPoint>(points);
-    addChildren(children);
-    this.children = children;
+    addChildren(submodels);
+    this.children = submodels;
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = this.points.length;
@@ -199,17 +203,35 @@ public class LXModel implements LXSerializable {
   public LXModel(LXModel[] children) {
     List<LXPoint> _points = new ArrayList<LXPoint>();
     addChildren(children);
-    for (LXModel submodel : children) {
-      for (LXPoint p : submodel.points) {
+    for (LXModel child : children) {
+      for (LXPoint p : child.points) {
         _points.add(p);
       }
     }
-    this.children = new LXModel[children.length];
-    System.arraycopy(children, 0, this.children, 0, children.length);
-    this.pointList = Collections.unmodifiableList(_points);
+    this.children = children;
     this.points = _points.toArray(new LXPoint[0]);
+    this.pointList = Collections.unmodifiableList(_points);
     this.size = _points.size();
     computeAverages();
+  }
+
+  public LXModel getParent() {
+    return this.parent;
+  }
+
+  public String getPath() {
+    LXModel parent = this.parent;
+    if (parent == null) {
+      return "/" + this.keys[0];
+    }
+    int index = 0;
+    for (LXModel child : parent.childDict.get(this.keys[0])) {
+      if (child == this) {
+        break;
+      }
+      ++index;
+    }
+    return parent.getPath() + "/" + this.keys[0] + "[" + index + "]";
   }
 
   /**
@@ -228,6 +250,9 @@ public class LXModel implements LXSerializable {
   }
 
   private void addChildren(LXModel[] children) {
+    for (LXModel child : children) {
+      child.parent = this;
+    }
     addSubmodels(children, this.childDict, false);
     addSubmodels(children, this.subDict, true);
   }
@@ -256,6 +281,10 @@ public class LXModel implements LXSerializable {
    */
   public String[] getKeys() {
     return this.keys;
+  }
+
+  public LXModel setKey(String key) {
+    return setKeys(new String[] { key });
   }
 
   public LXModel setKeys(String[] keys) {

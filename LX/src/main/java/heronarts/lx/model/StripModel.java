@@ -64,6 +64,7 @@ public class StripModel extends LXModel {
 
   public StripModel(Metrics metrics) {
     super(makePoints(metrics));
+    setKey("strip");
     this.metrics = metrics;
     this.length = metrics.length;
   }

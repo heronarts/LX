@@ -143,7 +143,7 @@ public class GridModel extends LXModel {
    */
   public GridModel(Metrics metrics) {
     super(makePoints(metrics));
-
+    setKey("grid");
     this.metrics = metrics;
     this.width = metrics.width;
     this.height = metrics.height;
