@@ -867,6 +867,7 @@ public abstract class LXCommand {
       private final JsonObject channelObj;
       private final int index;
 
+      private Parameter.SetNormalized focusedChannel;
       private final List<RemoveChannel> groupChildren = new ArrayList<RemoveChannel>();
 
       public RemoveChannel(LXChannelBus channel) {
@@ -874,6 +875,7 @@ public abstract class LXCommand {
         this.channel = new ComponentReference<LXChannelBus>(channel);
         this.channelObj = LXSerializable.Utils.toObject(channel);
         this.index = channel.getIndex();
+        this.focusedChannel = new Parameter.SetNormalized(channel.getLX().engine.focusedChannel);
 
         // Are we a group? We'll need to bring our children back as well...
         if (channel instanceof LXGroup) {
@@ -907,11 +909,23 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
+        undo(lx, false);
+      }
+
+      public void undo(LX lx, boolean multiRemove) throws InvalidCommandException {
+        // Re-load the removed channel
         lx.engine.loadChannel(this.channelObj, this.index);
 
         // Restore all the group children
         for (RemoveChannel child : this.groupChildren) {
           child.undo(lx);
+        }
+
+        // Restore channel focus
+        this.focusedChannel.undo(lx);
+
+        if (!multiRemove) {
+          lx.engine.selectChannel(this.channel.get());
         }
 
         // Bring back modulations on all patterns and effects
@@ -924,6 +938,20 @@ public abstract class LXCommand {
 
       private final List<RemoveChannel> removedChannels = new ArrayList<RemoveChannel>();
 
+      public RemoveSelectedChannels(LX lx) {
+        // Serialize a list of all the channels that will end up removed, so we
+        // can undo properly
+        List<LXChannelBus> removeChannels = new ArrayList<LXChannelBus>();
+        for (LXChannelBus channel : lx.engine.channels) {
+          if (channel.selected.isOn() && !removeChannels.contains(channel.getGroup())) {
+            removeChannels.add(channel);
+          }
+        }
+        for (LXChannelBus removeChannel : removeChannels) {
+          this.removedChannels.add(new RemoveChannel(removeChannel));
+        }
+      }
+
       @Override
       public String getDescription() {
         return "Delete Channels";
@@ -931,25 +959,20 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        // Serialize a list of all the channels that will end up removed, so we
-        // can undo properly
-        List<LXChannelBus> removeChannels = new ArrayList<LXChannelBus>();
-        for (LXChannelBus channel : lx.engine.channels) {
-          if (channel.selected.isOn()
-            && !removeChannels.contains(channel.getGroup())) {
-            removeChannels.add(channel);
-          }
+        for (RemoveChannel remove : this.removedChannels) {
+          remove.perform(lx);
         }
-        for (LXChannelBus removeChannel : removeChannels) {
-          this.removedChannels.add(new RemoveChannel(removeChannel));
-        }
-        lx.engine.removeSelectedChannels();
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
+        for (LXBus bus : lx.engine.channels) {
+          bus.selected.setValue(false);
+        }
+        lx.engine.masterChannel.selected.setValue(false);
+
         for (RemoveChannel removedChannel : this.removedChannels) {
-          removedChannel.undo(lx);
+          removedChannel.undo(lx, true);
         }
       }
 

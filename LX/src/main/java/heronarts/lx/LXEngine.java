@@ -1013,6 +1013,14 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
     LXChannel channel = new LXChannel(this.lx, index, patterns);
     _addChannel(channel, index);
+
+    // This new channel is focused now!
+    if (this.focusedChannel.getValuei() == index) {
+      this.focusedChannel.bang();
+    } else {
+      this.focusedChannel.setValue(index);
+    }
+
     return channel;
   }
 
@@ -1903,7 +1911,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     if (channelClass.equals("heronarts.lx.LXGroup")) {
       channel = addGroup(index, false);
     } else {
-      // TODO(mcslee): improve efficiency, allow no-patterns in a channel?
       channel = addChannel(index);
     }
     channel.load(this.lx, channelObj);
