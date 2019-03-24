@@ -1097,13 +1097,16 @@ public abstract class LXCommand {
         if (instance != null) {
           if (this.modulatorObj != null) {
             instance.load(lx, this.modulatorObj);
-          }
-          this.modulatorObj = LXSerializable.Utils.toObject(instance);
-          int count = this.modulation.get().getModulatorCount(this.modulatorClass);
-          if (count > 0) {
-            instance.label.setValue(instance.getLabel() + " " + (count + 1));
+          } else {
+            int count = this.modulation.get().getModulatorCount(this.modulatorClass);
+            if (count > 0) {
+              instance.label.setValue(instance.getLabel() + " " + (count + 1));
+            }
           }
           this.modulation.get().addModulator(instance);
+          if (this.modulatorObj == null) {
+            this.modulatorObj = LXSerializable.Utils.toObject(instance);
+          }
           instance.start();
           this.modulator = new ComponentReference<LXModulator>(instance);
         }
