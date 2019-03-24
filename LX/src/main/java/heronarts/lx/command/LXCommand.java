@@ -1184,8 +1184,8 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         LXModulator instance = lx.instantiateModulator(this.modulatorObj.get(LXComponent.KEY_CLASS).getAsString());
-        this.modulation.get().addModulator(instance, this.index);
         instance.load(lx, this.modulatorObj);
+        this.modulation.get().addModulator(instance, this.index);
         instance.start();
 
         // Restore all the modulations...
