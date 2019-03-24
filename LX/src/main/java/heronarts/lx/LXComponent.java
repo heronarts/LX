@@ -111,7 +111,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         throw new IllegalStateException("Component has bunk ID: " + component.id + " " + component);
       }
       if (this.components.containsKey(component.id)) {
-        throw new IllegalStateException("Component id already registered: " + component.id);
+        throw new IllegalStateException("Component id already registered: " + component.id + " to " + this.components.get(component.id));
       }
       this.components.put(component.id, component);
     }
@@ -172,7 +172,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   protected LXComponent(LX lx, int id, String label) {
     this.lx = lx;
     this.id = id;
-    if (id != ID_UNASSIGNED && lx == null) {
+    if ((id != ID_UNASSIGNED) && (lx == null)) {
       throw new IllegalArgumentException("Cannot specify id on component with no LX instance");
     }
     if (lx != null) {
@@ -439,8 +439,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
 
   public void dispose() {
     if (this.lx == null) {
-      throw new IllegalStateException(
-        "LXComponent never had lx reference set: " + this);
+      throw new IllegalStateException("LXComponent never had lx reference set: " + this);
     }
     // TODO(mcslee): dispose of all children?? remove LXModulationContainer??
     if (this instanceof LXModulationContainer) {
@@ -661,6 +660,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public void load(LX lx, JsonObject obj) {
     if (obj.has(KEY_ID)) {
       lx.componentRegistry.registerId(this, obj.get(KEY_ID).getAsInt());
+      this.lx = lx;
     }
     if (obj.has(KEY_MODULATION_COLOR)) {
       this.modulationColor.setColor(obj.get(KEY_MODULATION_COLOR).getAsInt());
