@@ -456,10 +456,13 @@ public class LXChannel extends LXChannelBus {
       }
     }
 
-    // Retain the focused pattern index
     this.focusedPattern.setRange(Math.max(1, this.mutablePatterns.size()));
     if (focusedPattern != null) {
+      // Retain the focused pattern index if it has been shifted
       this.focusedPattern.setValue(focusedPattern.getIndex());
+    } else {
+      // Otherwise send a bang - newly added pattern is focused
+      this.focusedPattern.bang();
     }
 
     this.listenerSnapshot.clear();
@@ -519,12 +522,11 @@ public class LXChannel extends LXChannelBus {
     } else if (focusedPatternIndex >= this.mutablePatterns.size()) {
       focusedPatternIndex = this.mutablePatterns.size() - 1;
     }
-    if (focusedPatternIndex >= 0) {
-      if (this.focusedPattern.getValuei() != focusedPatternIndex) {
-        this.focusedPattern.setValue(focusedPatternIndex);
-      } else {
-        this.focusedPattern.bang();
-      }
+    if ((focusedPatternIndex >= 0) && (this.focusedPattern.getValuei() != focusedPatternIndex)) {
+      this.focusedPattern.setValue(focusedPatternIndex);
+    } else {
+      // Either the value wasn't changed, or we removed the last one
+      this.focusedPattern.bang();
     }
     this.focusedPattern.setRange(Math.max(1, this.mutablePatterns.size()));
     this.listenerSnapshot.clear();
