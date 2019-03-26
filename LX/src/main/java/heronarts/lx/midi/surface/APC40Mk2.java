@@ -294,11 +294,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     @Override
     public void onParameterChanged(LXParameter parameter) {
-      if (this.channel != null && this.channel instanceof LXChannel && parameter == ((LXChannel)this.channel).focusedPattern) {
-        if (this.device instanceof LXPattern) {
-          register(((LXChannel)this.channel).getFocusedPattern());
+      if ((this.channel != null) &&
+          (this.channel instanceof LXChannel) &&
+          (parameter == ((LXChannel)this.channel).focusedPattern)) {
+        if ((this.device == null) || (this.device instanceof LXPattern)) {
+          register(((LXChannel) this.channel).getFocusedPattern());
         }
-      } else if (this.effect != null && parameter == this.effect.enabled) {
+      } else if ((this.effect != null) && (parameter == this.effect.enabled)) {
         sendNoteOn(0, DEVICE_ON_OFF, this.effect.enabled.isOn() ? LED_ON : LED_OFF);
       } else {
         for (int i = 0; i < this.knobs.length; ++i) {
@@ -581,21 +583,29 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       int activeIndex = channel.getActivePatternIndex() - baseIndex;
       int nextIndex = channel.getNextPatternIndex() - baseIndex;
       int focusedIndex = channel.focusedPattern.getValuei() - baseIndex;
+      if (channel.patterns.size() == 0) {
+        focusedIndex = -1;
+      }
       for (int y = 0; y < CLIP_LAUNCH_ROWS; ++y) {
         int note = CLIP_LAUNCH + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - y) + index;
         int midiChannel = LED_MODE_PRIMARY;
         int color = LED_OFF;
         if (y == activeIndex) {
+          // This pattern is active (may also be focused)
           color = 60;
         } else if (y == nextIndex) {
+          // This pattern is being transitioned to
           sendNoteOn(LED_MODE_PRIMARY, note, 60);
           midiChannel = LED_MODE_PULSE;
           color = 9;
         } else if (y == focusedIndex) {
+          // This pattern is not active, but it is focused
           color = 10;
         } else if (y < endIndex) {
+          // There is a pattern present
           color = 117;
         }
+
         sendNoteOn(midiChannel, note, color);
       }
     } else {
@@ -651,6 +661,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       @Override
       public void channelRemoved(LXEngine engine, LXChannelBus channel) {
         unregisterChannel(channel);
+        sendChannels();
       }
 
       @Override
@@ -769,13 +780,16 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       LXBus bus;
       switch (pitch) {
       case MASTER_FOCUS:
+        lx.engine.selectChannel(lx.engine.masterChannel);
         lx.engine.focusedChannel.setValue(lx.engine.channels.size());
         return;
       case BANK_SELECT_LEFT:
         this.lx.engine.focusedChannel.decrement(false);
+        lx.engine.selectChannel(lx.engine.getFocusedChannel());
         return;
       case BANK_SELECT_RIGHT:
         this.lx.engine.focusedChannel.increment(false);
+        lx.engine.selectChannel(lx.engine.getFocusedChannel());
         return;
       case BANK_SELECT_UP:
         bus = this.lx.engine.getFocusedChannel();
@@ -875,6 +889,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           }
         } else {
           this.lx.engine.focusedChannel.setValue(channel.getIndex());
+          lx.engine.selectChannel(lx.engine.getFocusedChannel());
         }
         return;
       case DEVICE_ON_OFF:
