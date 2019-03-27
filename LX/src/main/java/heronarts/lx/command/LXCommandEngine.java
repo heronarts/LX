@@ -44,11 +44,38 @@ public class LXCommandEngine {
 
   public final MutableParameter undoChanged = new MutableParameter("Undo");
   public final MutableParameter redoChanged = new MutableParameter("Redo");
+  public final MutableParameter errorChanged = new MutableParameter("Error");
 
   private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
   private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
+  private final Stack<String> errorStack = new Stack<String>();
 
   private boolean dirty = false;
+
+  public LXCommandEngine pushError(Exception exception) {
+    return pushError(exception.getMessage());
+  }
+
+  public LXCommandEngine pushError(String message) {
+    this.errorStack.push(message);
+    this.errorChanged.bang();
+    return this;
+  }
+
+  public LXCommandEngine popError() {
+    if (!this.errorStack.isEmpty()) {
+      this.errorStack.pop();
+      this.errorChanged.bang();
+    }
+    return this;
+  }
+
+  public String getError() {
+    if (!this.errorStack.isEmpty()) {
+      return this.errorStack.peek();
+    }
+    return null;
+  }
 
   /**
    * Performs a command and pushes it onto the undo stack.
@@ -74,7 +101,7 @@ public class LXCommandEngine {
       this.redoChanged.bang();
 
     } catch (InvalidCommandException icx) {
-      _commandException(icx);
+      pushError(icx);
     }
 
     this.dirty = true;
@@ -121,7 +148,7 @@ public class LXCommandEngine {
         this.undoChanged.bang();
         this.redoChanged.bang();
       } catch (InvalidCommandException icx) {
-        _commandException(icx);
+        pushError(icx);
       } catch (Exception x) {
         System.err.println("Unhandled exception on undo " + command + " - bad internal state?");
         x.printStackTrace();
@@ -145,7 +172,7 @@ public class LXCommandEngine {
         this.undoChanged.bang();
         this.redoChanged.bang();
       } catch (InvalidCommandException icx) {
-        _commandException(icx);
+        pushError(icx);
       } catch (Exception x) {
         System.err.println("Unhandled exception on redo " + command + " - bad internal state?");
         x.printStackTrace();
@@ -153,11 +180,6 @@ public class LXCommandEngine {
       }
     }
     return this;
-  }
-
-  private void _commandException(InvalidCommandException icx) {
-    // TODO(mcslee): set an error parameter on LXCommandEngine that the UI can watch to show
-    // an error dialog of some sort.
   }
 
 }
