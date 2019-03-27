@@ -244,6 +244,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           for (int i = 0; i < this.knobs.length; ++i) {
             if (this.knobs[i] != null) {
               this.knobs[i].removeListener(this);
+              this.knobs[i] = null;
             }
           }
           this.device.controlSurfaceSemaphore.decrement();
@@ -531,12 +532,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       sendControlChange(0, DEVICE_KNOB_STYLE+i, LED_STYLE_OFF);
     }
     for (int i = 0; i < CHANNEL_KNOB_NUM; ++i) {
+      // Initialize channel knobs for generic control, but don't
+      // reset their values if we're in a reconnect situation
+      sendControlChange(0, CHANNEL_KNOB_STYLE+i, LED_STYLE_SINGLE);
       if (!reconnect) {
-        // Initialize channel knobs for generic control, but don't
-        // reset them if we're in a reconnect situation
         sendControlChange(0, CHANNEL_KNOB+i, 64);
       }
-      sendControlChange(0, CHANNEL_KNOB_STYLE+i, LED_STYLE_SINGLE);
     }
     sendChannels();
   }
