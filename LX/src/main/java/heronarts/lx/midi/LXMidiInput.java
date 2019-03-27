@@ -74,7 +74,6 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
     if (this.isOpen) {
       try {
         this.transmitter.close();
-        this.device.close();
       } finally {
         this.transmitter = null;
         this.isOpen = false;
@@ -86,7 +85,9 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
   protected void onEnabled(boolean enabled) {
     if (enabled && !this.isOpen) {
       try {
-        this.device.open();
+        if (!this.device.isOpen()) {
+          this.device.open();
+        }
         this.transmitter = this.device.getTransmitter();
         this.transmitter.setReceiver(this.receiver);
         this.isOpen = true;

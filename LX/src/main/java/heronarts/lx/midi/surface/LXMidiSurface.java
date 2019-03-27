@@ -68,18 +68,21 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
       throw new IllegalArgumentException("Surface " + getClass().getSimpleName() + " requires MIDI output");
     }
     this.enabled.addListener((p) -> {
-      if (enabled.isOn()) {
+      if (this.enabled.isOn()) {
         // Make sure I/O channels are enabled
         this.input.open();
         if (this.output != null) {
           this.output.open();
         }
-        this.input.addListener(LXMidiSurface.this);
+        // Listen to the input
+        this.input.addListener(this);
       } else {
-        this.input.removeListener(LXMidiSurface.this);
+        // Stop listening to the input
+        this.input.removeListener(this);
       }
       onEnable(this.enabled.isOn());
     });
+
     this.output.connected.addListener((p) -> {
       if (this.output.connected.isOn()) {
         this.input.open();

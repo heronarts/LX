@@ -99,7 +99,9 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
   protected void onEnabled(boolean enabled) {
     if (enabled && !this.isOpen) {
       try {
-        this.device.open();
+        if (!this.device.isOpen()) {
+          this.device.open();
+        }
         this.receiver = device.getReceiver();
         this.isOpen = true;
       } catch (MidiUnavailableException mux) {

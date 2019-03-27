@@ -254,6 +254,12 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     synchronized (this.deviceUpdateThread) {
       this.deviceUpdateThread.interrupt();
     }
+    for (LXMidiInput input : this.inputs) {
+      input.dispose();
+    }
+    for (LXMidiOutput output : this.outputs) {
+      output.dispose();
+    }
     super.dispose();
   }
 
@@ -304,7 +310,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
    */
   private void updateMidiDevices() {
     try {
-      // We'll need to check that all are alive, set this flag to false on
+      // We'll need to check that all are alive, set this flag to false
       for (LXMidiInput input : this.mutableInputs) {
         input.keepAlive = false;
       }
@@ -312,38 +318,48 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         output.keepAlive = false;
       }
 
-      // Set up a list of devices that need to be checked for midi surfaces...
-      final List<MidiDevice.Info> checkForSurface = new ArrayList<MidiDevice.Info>();
+      // Set up a list of devices that need to be checked for midi surfaces... we'll lazy-initialize
+      // this below because this is often empty.
+      List<MidiDevice.Info> checkForSurface = null;
 
       for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
-        // First, check if we know this deviceInfo instance, if it's the exact same instance
+        // First, check if we know this MidiDevice.Info instance, if it's the exact same instance
         // then we know we've done initialization on this before and don't need further
         // checks...
         LXMidiInput existingInput = this.midiInfoToInput.get(deviceInfo);
         if (existingInput != null) {
           existingInput.keepAlive = true;
           if (!existingInput.connected.isOn()) {
-            existingInput.setDevice(MidiSystem.getMidiDevice(deviceInfo));
+            MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
+            lx.engine.addTask(() -> {
+              existingInput.setDevice(device);
+            });
           }
         }
         LXMidiOutput existingOutput = this.midiInfoToOutput.get(deviceInfo);
         if (existingOutput != null) {
           existingOutput.keepAlive = true;
           if (!existingOutput.connected.isOn()) {
-            existingOutput.setDevice(MidiSystem.getMidiDevice(deviceInfo));
+            MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
+            lx.engine.addTask(() -> {
+              existingOutput.setDevice(device);
+            });
           }
         }
 
-        // Nothing found for this? We'll need to check again...
-        if (existingInput == null && existingOutput == null) {
-          String deviceName = getDeviceName(deviceInfo);
+        // Nothing found for this? We'll need to check again, but this time we do a lookup by
+        // the contents of the info rather than exact instance comparison...
+        if ((existingInput == null) && (existingOutput == null)) {
           try {
             final MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
+            String deviceName = getDeviceName(deviceInfo);
             if (device.getMaxTransmitters() != 0) {
               LXMidiInput input = findInput(deviceName);
               if (input != null) {
                 input.keepAlive = true;
-                input.setDevice(device);
+                lx.engine.addTask(() -> {
+                  input.setDevice(device);
+                });
               } else {
                 // Add new midi input on the engine thread!
                 lx.engine.addTask(() -> {
@@ -351,6 +367,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
                 });
 
                 // Add this to the list of devices that should be checked for control surface
+                if (checkForSurface == null) {
+                  checkForSurface = new ArrayList<MidiDevice.Info>();
+                }
                 checkForSurface.add(deviceInfo);
               }
             }
@@ -359,7 +378,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
               LXMidiOutput output = findOutput(deviceName);
               if (output != null) {
                 output.keepAlive = true;
-                output.setDevice(device);
+                lx.engine.addTask(() -> {
+                  output.setDevice(device);
+                });
               } else {
                 // Add new midi output on the engine thread
                 lx.engine.addTask(() -> {
@@ -373,25 +394,32 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
 
-      // Now, in a last-pass, we've scheduled all new inputs and outputs for addition
-      // and we should check for any possible new control surfaces. Note that this is done
-      // after the above loop because we need to ensure that both the input and output
-      // of the control surface have been added.
-      for (MidiDevice.Info deviceInfo : checkForSurface) {
-        lx.engine.addTask(() -> {
-          checkForSurface(getDeviceName(deviceInfo));
-        });
-      }
-
       // Did any inputs or outputs disappear?? If keepAlive was not set to true
       // then it means that we've lost something... iterating over all the current
       // midi devices didn't find it, so we'll set its connected flag to false
       // and wait for it to come back later.
       for (LXMidiInput input : this.mutableInputs) {
-        input.connected.setValue(input.keepAlive);
+        if (!input.keepAlive) {
+          input.connected.setValue(false);
+        }
       }
       for (LXMidiOutput output : this.mutableOutputs) {
-        output.connected.setValue(output.keepAlive);
+        if (!output.keepAlive) {
+          output.connected.setValue(false);
+        }
+      }
+
+      // Now, in a last-pass, we've scheduled all new inputs and outputs for addition
+      // and we should check for any possible new control surfaces. Note that this is done
+      // after the above loop because we need to ensure that *both* the input and output
+      // of the control surface have been added first.
+      if (checkForSurface != null) {
+        final List<MidiDevice.Info> checkForSurface2 = checkForSurface;
+        lx.engine.addTask(() -> {
+          for (MidiDevice.Info deviceInfo : checkForSurface2) {
+            checkForSurface(getDeviceName(deviceInfo));
+          }
+        });
       }
 
     } catch (Exception x) {
