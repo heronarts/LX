@@ -166,6 +166,7 @@ public class LXDatagramOutput extends LXOutput {
       datagramErrorState.sendAfter = 0;
       datagram.error.setValue(false);
     } catch (IOException iox) {
+      datagram.error.setValue(true);
       if (datagramErrorState.failureCount == 0) {
         System.err.println(this.date.format(nowMillis) + " IOException sending to "
             + datagramErrorState.destination + " (" + iox.getLocalizedMessage()
@@ -179,7 +180,7 @@ public class LXDatagramOutput extends LXOutput {
             + " in " + waitFor + "ms" + " (" + datagramErrorState.failureCount
             + " consecutive failures)");
         datagramErrorState.sendAfter = nowMillis + waitFor;
-        datagram.error.setValue(true);
+
       }
     }
   }
