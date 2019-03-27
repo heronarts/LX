@@ -1091,15 +1091,19 @@ public class LX {
     this.componentRegistry.resetProject();
   }
 
-  protected final boolean confirmChangedSaved(String message) {
-    return !this.command.isDirty() || showConfirmUnsavedProjectDialog(message);
+  protected final void confirmChangesSaved(String message, Runnable confirm) {
+    if (this.command.isDirty()) {
+      showConfirmUnsavedProjectDialog(message, confirm);
+    } else {
+      confirm.run();
+    }
   }
 
-  protected boolean showConfirmUnsavedProjectDialog(String message) {
+  protected void showConfirmUnsavedProjectDialog(String message, Runnable confirm) {
     // Subclasses that have a UI can prompt the user to confirm here...
     // maybe headless could show something on the CLI? But not sure we want to
     // get into that...
-    return true;
+    confirm.run();
   }
 
   /**
@@ -1172,14 +1176,14 @@ public class LX {
   }
 
   public void newProject() {
-    if (confirmChangedSaved("create a new project")) {
+    confirmChangesSaved("create a new project", () -> {
       closeProject();
       if (!this.flags.immutableModel) {
         this.structure.load(this, new JsonObject());
       }
       this.engine.load(this, new JsonObject());
       setProject(null, ProjectListener.Change.NEW);
-    }
+    });
   }
 
   public void openProject(File file) {
