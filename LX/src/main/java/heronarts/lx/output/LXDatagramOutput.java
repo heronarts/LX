@@ -143,33 +143,42 @@ public class LXDatagramOutput extends LXOutput {
   }
 
   protected void onSendDatagram(LXDatagram datagram, long nowMillis, int[] colors, double brightness) {
-    if (!datagram.enabled.isOn() || (datagram.sendAfter >= nowMillis)) {
+    if (!datagram.enabled.isOn()) {
       return;
     }
+
+    LXDatagram.ErrorState datagramErrorState = datagram.getErrorState();
+    if (datagramErrorState.sendAfter >= nowMillis) {
+      // This datagram can't be sent now... mark its error state
+      datagram.error.setValue(true);
+      return;
+    }
+
     byte[] glut = this.gammaLut[(int) Math.round(brightness * datagram.brightness.getValue() * 255.f)];
     datagram.onSend(colors, glut);
     try {
       this.socket.send(datagram.packet);
-      if (datagram.failureCount > 0) {
-        System.out.println(this.date.format(nowMillis) + " Recovered connectivity to " + datagram.packet.getAddress());
+      if (datagramErrorState.failureCount > 0) {
+        System.out.println(this.date.format(nowMillis) + " Recovered connectivity to " + datagramErrorState.destination);
       }
+      // Sent fine! All good here...
+      datagramErrorState.failureCount = 0;
+      datagramErrorState.sendAfter = 0;
       datagram.error.setValue(false);
-      datagram.failureCount = 0;
-      datagram.sendAfter = 0;
     } catch (IOException iox) {
-      if (datagram.failureCount == 0) {
-        System.out.println(this.date.format(nowMillis) + " IOException sending to "
-            + datagram.packet.getAddress() + " (" + iox.getLocalizedMessage()
+      if (datagramErrorState.failureCount == 0) {
+        System.err.println(this.date.format(nowMillis) + " IOException sending to "
+            + datagramErrorState.destination + " (" + iox.getLocalizedMessage()
             + "), will initiate backoff after 3 consecutive failures");
       }
-      ++datagram.failureCount;
-      if (datagram.failureCount >= 3) {
-        int pow = Math.min(5, datagram.failureCount - 3);
+      ++datagramErrorState.failureCount;
+      if (datagramErrorState.failureCount >= 3) {
+        int pow = Math.min(5, datagramErrorState.failureCount - 3);
         long waitFor = (long) (50 * Math.pow(2, pow));
-        System.out.println(this.date.format(nowMillis) + " Retrying " + datagram.packet.getAddress()
-            + " in " + waitFor + "ms" + " (" + datagram.failureCount
+        System.err.println(this.date.format(nowMillis) + " Retrying " + datagramErrorState.destination
+            + " in " + waitFor + "ms" + " (" + datagramErrorState.failureCount
             + " consecutive failures)");
-        datagram.sendAfter = nowMillis + waitFor;
+        datagramErrorState.sendAfter = nowMillis + waitFor;
         datagram.error.setValue(true);
       }
     }

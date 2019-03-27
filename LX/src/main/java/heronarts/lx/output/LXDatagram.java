@@ -24,12 +24,37 @@ import heronarts.lx.parameter.BoundedParameter;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.HashMap;
+import java.util.Map;
 
 public abstract class LXDatagram {
 
-  long sendAfter = 0;
+  protected static class ErrorState {
+    // Destination address
+    final String destination;
 
-  int failureCount = 0;
+    // Number of failures sending to this datagram address
+    int failureCount = 0;
+
+    // Timestamp to re-try sending to this address again after
+    long sendAfter = 0;
+
+    private ErrorState(String destination) {
+      this.destination = destination;
+    }
+  }
+
+  private static final Map<String, ErrorState> _datagramErrorState =
+    new HashMap<String, ErrorState>();
+
+  private static ErrorState getDatagramErrorState(LXDatagram datagram) {
+    String destination = datagram.getAddress() + ":" + datagram.getPort();
+    ErrorState datagramErrorState = _datagramErrorState.get(destination);
+    if (datagramErrorState == null) {
+      _datagramErrorState.put(destination, datagramErrorState = new ErrorState(destination));
+    }
+    return datagramErrorState;
+  }
 
   /**
    * Various orderings for RGB buffer data
@@ -55,6 +80,8 @@ public abstract class LXDatagram {
 
   protected final byte[] buffer;
 
+  ErrorState errorState = null;
+
   final DatagramPacket packet;
 
   /**
@@ -66,7 +93,7 @@ public abstract class LXDatagram {
 
   public final BooleanParameter error =
     new BooleanParameter("Error", false)
-    .setDescription("Whether there have been errors sending to this datagram");
+    .setDescription("Whether there have been errors sending to this datagram address");
 
   /**
    * Brightness of the datagram
@@ -81,6 +108,13 @@ public abstract class LXDatagram {
       this.buffer[i] = 0;
     }
     this.packet = new DatagramPacket(this.buffer, bufferSize);
+  }
+
+  protected ErrorState getErrorState() {
+    if (this.errorState != null) {
+      return this.errorState;
+    }
+    return this.errorState = getDatagramErrorState(this);
   }
 
   /**
@@ -102,6 +136,7 @@ public abstract class LXDatagram {
    * @throws UnknownHostException Bad address
    */
   public LXDatagram setAddress(String ipAddress) throws UnknownHostException {
+    this.errorState = null;
     this.packet.setAddress(InetAddress.getByName(ipAddress));
     return this;
   }
@@ -113,6 +148,7 @@ public abstract class LXDatagram {
    * @return this
    */
   public LXDatagram setAddress(InetAddress address) {
+    this.errorState = null;
     this.packet.setAddress(address);
     return this;
   }
@@ -127,14 +163,24 @@ public abstract class LXDatagram {
   }
 
   /**
-   * Sets the destination port number to send this datagram on
+   * Sets the destination port number to send this datagram to
    *
    * @param port Port number
    * @return this
    */
   public LXDatagram setPort(int port) {
+    this.errorState = null;
     this.packet.setPort(port);
     return this;
+  }
+
+  /**
+   * Gets the destination port number this datagram is sent to
+   *
+   * @return Destination port number
+   */
+  public int getPort() {
+    return this.packet.getPort();
   }
 
   /**
