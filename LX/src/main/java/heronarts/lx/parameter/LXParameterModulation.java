@@ -85,7 +85,7 @@ public abstract class LXParameterModulation extends LXComponent {
     // back at source, then we've got issues...
     for (LXParameter target2 : targets) {
       if (target2 == source) {
-        throw new CircularDependencyException("Mapping from " + source.getLabel() + " to " + target.getLabel() + " not allowed due to circular dependency.");
+        throw new CircularDependencyException("Mapping from " + source.getLabel() + " to " + target.getLabel() + " is not allowed because it would create a circular dependency.");
       }
       checkForCycles(source, target, modulationGraph.get(target2));
     }
