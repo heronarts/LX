@@ -97,6 +97,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
   @Override
   public void dispose() {
     this.input.close();
+    this.output.close();
     super.dispose();
   }
 

@@ -48,8 +48,6 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
   private boolean stopped = false;
   private boolean closed = false;
 
-  private String mediaPath = ".";
-
   public final BooleanParameter trigger = new BooleanParameter("Trigger", false)
     .setDescription("Triggers playback of the audio file from its beginning");
 
@@ -270,7 +268,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
     } else if (p == this.file) {
       String path = this.file.getString();
       if (path != null && path.length() > 0) {
-        setInputStream(new File(this.mediaPath, path));
+        setInputStream(new File(path));
       } else {
         stop();
       }
@@ -309,6 +307,13 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
       synchronized (this.outputThread) {
         this.outputThread.notify();
       }
+    }
+  }
+
+  public void close() {
+    if (this.line != null) {
+      this.closed = true;
+      this.line.close();
     }
   }
 
