@@ -992,17 +992,15 @@ public class LX {
   }
 
   private LXBlend[] instantiateBlends(List<Class<? extends LXBlend>> blendTypes) {
-    LXBlend[] blends = new LXBlend[blendTypes.size()];
-    int i = 0;
+    List<LXBlend> blends = new ArrayList<LXBlend>(blendTypes.size());
     for (Class<? extends LXBlend> blend : blendTypes) {
       try {
-        LXBlend instance = instantiateBlend(blend);
-        blends[i++] = instance;
+        blends.add(instantiateBlend(blend));
       } catch (LX.InstantiationException x) {
         this.command.pushError("Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?");
       }
     }
-    return blends;
+    return blends.toArray(new LXBlend[0]);
   }
 
   protected LXBlend[] instantiateChannelBlends() {
