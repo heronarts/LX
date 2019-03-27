@@ -253,6 +253,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   public void dispose() {
     synchronized (this.deviceUpdateThread) {
       this.deviceUpdateThread.interrupt();
+      // TODO(mcslee): join that thread before disposing inputs/outputs?
     }
     for (LXMidiInput input : this.inputs) {
       input.dispose();
