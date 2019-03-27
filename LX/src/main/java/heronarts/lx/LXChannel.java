@@ -586,7 +586,7 @@ public class LXChannel extends LXChannelBus {
 
   public LXChannel reloadPattern(LXPattern pattern) {
     if (!this.patterns.contains(pattern)) {
-      throw new IllegalStateException("Cannot remove pattern not on a channel");
+      throw new IllegalStateException("Cannot reload pattern not on a channel");
     }
     boolean active = (pattern == getActivePattern());
     boolean focused = (pattern == getFocusedPattern());
@@ -595,16 +595,15 @@ public class LXChannel extends LXChannelBus {
     JsonObject patternObj = new JsonObject();
     pattern.save(getLX(), patternObj);
     removePattern(pattern);
-    pattern = loadPattern(patternObj, index);
+    LXPattern newPattern = loadPattern(patternObj, index);
     if (focused) {
-      this.focusedPattern.setValue(pattern.getIndex());
+      this.focusedPattern.setValue(newPattern.getIndex());
     }
     if (active) {
-      goPattern(pattern);
+      goPattern(newPattern);
     }
     return this;
   }
-
 
   public final int getFocusedPatternIndex() {
     return this.focusedPattern.getValuei();
@@ -965,11 +964,16 @@ public class LXChannel extends LXChannelBus {
   }
 
   private LXPattern loadPattern(JsonObject patternObj, int index) {
-    LXPattern pattern = this.lx.instantiatePattern(patternObj.get(KEY_CLASS).getAsString());
-    if (pattern != null) {
-      pattern.load(lx, patternObj);
-      addPattern(pattern, index);
+    String patternClass = patternObj.get(KEY_CLASS).getAsString();
+    LXPattern pattern;
+    try {
+      pattern = this.lx.instantiatePattern(patternClass);
+    } catch (LX.InstantiationException x) {
+      pattern = new LXPattern.Placeholder(lx);
+      lx.command.pushError("Pattern class " + patternClass + " could not be loaded, check that content files were not removed?");
     }
+    pattern.load(lx, patternObj);
+    addPattern(pattern, index);
     return pattern;
   }
 

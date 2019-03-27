@@ -81,6 +81,16 @@ public class LX {
 
   public static final String VERSION = "0.1.1";
 
+  public static class InstantiationException extends Exception {
+
+    private static final long serialVersionUID = 1L;
+
+    protected InstantiationException(Exception underlying) {
+      super(underlying);
+    }
+
+  }
+
   public static class Flags {
     /**
      * Sometimes we need to know if we are P3LX, but we don't want LX library to have
@@ -985,7 +995,12 @@ public class LX {
     LXBlend[] blends = new LXBlend[blendTypes.size()];
     int i = 0;
     for (Class<? extends LXBlend> blend : blendTypes) {
-      blends[i++] = instantiateBlend(blend);
+      try {
+        LXBlend instance = instantiateBlend(blend);
+        blends[i++] = instance;
+      } catch (LX.InstantiationException x) {
+        this.command.pushError("Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?");
+      }
     }
     return blends;
   }
@@ -1215,29 +1230,27 @@ public class LX {
     }
   }
 
-  public LXModel instantiateModel(String className) {
+  public LXModel instantiateModel(String className) throws InstantiationException {
     try {
       Class<? extends LXModel> cls = Class.forName(className, true, this.contentLoader).asSubclass(LXModel.class);
       return cls.getConstructor().newInstance();
     } catch (Exception x) {
       System.err.println("Exception in instantiateModel: " + x.getLocalizedMessage());
-      x.printStackTrace();
+      throw new InstantiationException(x);
     }
-    return null;
   }
 
-  public <T extends LXComponent> T instantiateComponent(String className, Class<T> type) {
+  public <T extends LXComponent> T instantiateComponent(String className, Class<T> type) throws InstantiationException {
     try {
       Class<? extends T> cls = Class.forName(className, true, this.contentLoader).asSubclass(type);
       return instantiateComponent(cls, type);
     } catch (Exception x) {
       System.err.println("Exception in instantiateComponent: " + x.getLocalizedMessage());
-      x.printStackTrace();
+      throw new InstantiationException(x);
     }
-    return null;
   }
 
-  public <T extends LXComponent> T instantiateComponent(Class<? extends T> cls, Class<T> type) {
+  public <T extends LXComponent> T instantiateComponent(Class<? extends T> cls, Class<T> type) throws InstantiationException {
     try {
       try {
         return cls.getConstructor(LX.class).newInstance(this);
@@ -1246,48 +1259,47 @@ public class LX {
       }
     } catch (Exception x) {
       System.err.println("Exception in instantiateComponent: " + x.getLocalizedMessage());
-      x.printStackTrace();
+      throw new InstantiationException(x);
     }
-    return null;
   }
 
-  public LXFixture instantiateFixture(String className) {
+  public LXFixture instantiateFixture(String className) throws InstantiationException {
     return instantiateComponent(className, LXFixture.class);
   }
 
-  public LXFixture instantiateFixture(Class<? extends LXFixture> cls) {
+  public LXFixture instantiateFixture(Class<? extends LXFixture> cls) throws InstantiationException {
     return instantiateComponent(cls, LXFixture.class);
   }
 
-  public LXModulator instantiateModulator(String className) {
+  public LXModulator instantiateModulator(String className) throws InstantiationException {
     return instantiateComponent(className, LXModulator.class);
   }
 
-  public LXModulator instantiateModulator(Class<? extends LXModulator> cls) {
+  public LXModulator instantiateModulator(Class<? extends LXModulator> cls) throws InstantiationException {
     return instantiateComponent(cls, LXModulator.class);
   }
 
-  public LXPattern instantiatePattern(String className) {
+  public LXPattern instantiatePattern(String className) throws InstantiationException {
     return instantiateComponent(className, LXPattern.class);
   }
 
-  public LXPattern instantiatePattern(Class<? extends LXPattern> cls) {
+  public LXPattern instantiatePattern(Class<? extends LXPattern> cls) throws InstantiationException {
     return instantiateComponent(cls, LXPattern.class);
   }
 
-  public LXEffect instantiateEffect(String className) {
+  public LXEffect instantiateEffect(String className) throws InstantiationException {
     return instantiateComponent(className, LXEffect.class);
   }
 
-  public LXEffect instantiateEffect(Class<? extends LXEffect> cls) {
+  public LXEffect instantiateEffect(Class<? extends LXEffect> cls) throws InstantiationException {
     return instantiateComponent(cls, LXEffect.class);
   }
 
-  public LXBlend instantiateBlend(String className) {
+  public LXBlend instantiateBlend(String className) throws InstantiationException {
     return instantiateComponent(className, LXBlend.class);
   }
 
-  public LXBlend instantiateBlend(Class<? extends LXBlend> cls) {
+  public LXBlend instantiateBlend(Class<? extends LXBlend> cls) throws InstantiationException {
     return instantiateComponent(cls, LXBlend.class);
   }
 

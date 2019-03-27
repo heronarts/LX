@@ -53,6 +53,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    */
   public interface Renamable {}
 
+  public interface Placeholder {
+    public String getPlaceholderTypeName();
+    public String getPlaceholderClassName();
+  }
+
   protected LX lx;
 
   private LXComponent parent;

@@ -419,9 +419,11 @@ public class LXStructure extends LXComponent {
     if (obj.has(KEY_STATIC_MODEL)) {
       JsonObject modelObj = obj.get(KEY_STATIC_MODEL).getAsJsonObject();
       String className = modelObj.get(LXComponent.KEY_CLASS).getAsString();
-      staticModel = lx.instantiateModel(className);
-      if (staticModel != null) {
+      try {
+        staticModel = lx.instantiateModel(className);
         staticModel.load(lx, modelObj);
+      } catch (LX.InstantiationException x) {
+        lx.command.pushError("Could not instantiate model class " + className + ". Check that content files are present?");
       }
     }
     loadFixtures(lx, obj);
@@ -451,10 +453,12 @@ public class LXStructure extends LXComponent {
     if (obj.has(KEY_FIXTURES)) {
       for (JsonElement fixtureElement : obj.getAsJsonArray(KEY_FIXTURES)) {
         JsonObject fixtureObj = fixtureElement.getAsJsonObject();
-        LXFixture fixture = this.lx.instantiateFixture(fixtureObj.get(KEY_CLASS).getAsString());
-        if (fixture != null) {
+        try {
+          LXFixture fixture = this.lx.instantiateFixture(fixtureObj.get(KEY_CLASS).getAsString());
           fixture.load(lx, fixtureObj);
           addFixture(fixture);
+        } catch (LX.InstantiationException x) {
+          x.printStackTrace();
         }
       }
     }

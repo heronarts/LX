@@ -21,6 +21,11 @@ package heronarts.lx;
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
 
+import java.util.Map;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
@@ -34,6 +39,53 @@ import heronarts.lx.parameter.BooleanParameter;
  * colors for all the points.
  */
 public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXLayeredComponent.Buffered, LXMidiListener, LXOscComponent {
+
+  /**
+   * Placeholder pattern for when a class is missing
+   */
+  public static class Placeholder extends LXPattern implements LXComponent.Placeholder {
+
+    private String placeholderClassName;
+    private JsonObject patternObj = null;
+
+    public Placeholder(LX lx) {
+      super(lx);
+    }
+
+    @Override
+    public String getPlaceholderTypeName() {
+      return "Pattern";
+    }
+
+    @Override
+    public String getPlaceholderClassName() {
+      return this.placeholderClassName;
+    }
+
+    @Override
+    public void save(LX lx, JsonObject object) {
+      super.save(lx, object);
+
+      // Just re-save exactly what was loaded
+      if (this.patternObj != null) {
+        for (Map.Entry<String, JsonElement> entry : this.patternObj.entrySet()) {
+          object.add(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+
+    @Override
+    public void load(LX lx, JsonObject object) {
+      super.load(lx, object);
+      this.placeholderClassName = object.get(LXComponent.KEY_CLASS).getAsString();
+      this.patternObj = object;
+    }
+
+    @Override
+    protected void run(double deltaMs) {
+    }
+
+  }
 
   private int index = -1;
 

@@ -227,6 +227,18 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     return this;
   }
 
+  public LXBus reloadEffect(LXEffect effect) {
+    if (!this.effects.contains(effect)) {
+      throw new IllegalStateException("Cannot reload effect not on a channel");
+    }
+    int index = effect.getIndex();
+    JsonObject effectObj = new JsonObject();
+    effect.save(getLX(), effectObj);
+    removeEffect(effect);
+    loadEffect(effectObj, index);
+    return this;
+  }
+
   private void _reindexEffects() {
     int i = 0;
     for (LXEffect e : this.mutableEffects) {
@@ -390,9 +402,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
       JsonArray effectsArray = obj.getAsJsonArray(KEY_EFFECTS);
       for (JsonElement effectElement : effectsArray) {
         JsonObject effectObj = (JsonObject) effectElement;
-        LXEffect effect = this.lx.instantiateEffect(effectObj.get("class").getAsString());
-        effect.load(lx, effectObj);
-        addEffect(effect);
+        loadEffect(effectObj, -1);
       }
     }
 
@@ -408,6 +418,20 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     }
 
     super.load(lx, obj);
+  }
+
+  private LXEffect loadEffect(JsonObject effectObj, int index) {
+    String effectClass = effectObj.get("class").getAsString();
+    LXEffect effect;
+    try {
+      effect = this.lx.instantiateEffect(effectClass);
+    } catch (LX.InstantiationException x) {
+      lx.command.pushError("Effect class " + effectClass + " could not be loaded, check that content files were not removed?");
+      effect = new LXEffect.Placeholder(lx) ;
+    }
+    effect.load(lx, effectObj);
+    addEffect(effect, index);
+    return effect;
   }
 
 }

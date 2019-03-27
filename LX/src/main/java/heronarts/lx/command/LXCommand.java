@@ -72,8 +72,8 @@ public abstract class LXCommand {
       super(message);
     }
 
-    protected InvalidCommandException(String message, Throwable cause) {
-      super(message, cause);
+    protected InvalidCommandException(Exception cause) {
+      super(cause.getMessage(), cause);
     }
 
   }
@@ -534,9 +534,9 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void perform(LX lx) {
-        LXPattern instance = lx.instantiatePattern(this.patternClass);
-        if (instance != null) {
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          LXPattern instance = lx.instantiatePattern(this.patternClass);
           if (this.patternObj != null) {
             instance.load(lx, this.patternObj);
           }
@@ -544,6 +544,8 @@ public abstract class LXCommand {
           this.patternObj = LXSerializable.Utils.toObject(instance);
           this.channel.get().addPattern(instance);
           this.pattern = new ComponentReference<LXPattern>(instance);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
         }
       }
 
@@ -589,9 +591,8 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         LXChannel channel = this.channel.get();
-        LXPattern pattern = lx.instantiatePattern(
-          this.patternObj.get(LXComponent.KEY_CLASS).getAsString());
-        if (pattern != null) {
+        try {
+          LXPattern pattern = lx.instantiatePattern(this.patternObj.get(LXComponent.KEY_CLASS).getAsString());
           pattern.load(lx, this.patternObj);
           channel.addPattern(pattern, this.patternIndex);
           if (this.isActive) {
@@ -601,6 +602,8 @@ public abstract class LXCommand {
             channel.focusedPattern.setValue(pattern.getIndex());
           }
           super.undo(lx);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
         }
       }
     }
@@ -686,15 +689,17 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void perform(LX lx) {
-        LXEffect instance = lx.instantiateEffect(this.effectClass);
-        if (instance != null) {
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          LXEffect instance = lx.instantiateEffect(this.effectClass);
           if (this.effectObj != null) {
             instance.load(lx, this.effectObj);
           }
           this.effectObj = LXSerializable.Utils.toObject(instance);
           this.channel.get().addEffect(instance);
           this.effect = new ComponentReference<LXEffect>(instance);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
         }
       }
 
@@ -735,12 +740,13 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         LXBus channel = this.channel.get();
-        LXEffect effect = lx.instantiateEffect(
-          this.effectObj.get(LXComponent.KEY_CLASS).getAsString());
-        if (effect != null) {
+        try {
+          LXEffect effect = lx.instantiateEffect(this.effectObj.get(LXComponent.KEY_CLASS).getAsString());
           effect.load(lx, effectObj);
           channel.addEffect(effect, this.effectIndex);
           super.undo(lx);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
         }
       }
     }
@@ -808,10 +814,14 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void perform(LX lx) {
+      public void perform(LX lx) throws InvalidCommandException {
         LXChannel channel;
         if (this.patternClass != null) {
-          channel = lx.engine.addChannel(new LXPattern[] { lx.instantiatePattern(this.patternClass) });
+          try {
+            channel = lx.engine.addChannel(new LXPattern[] { lx.instantiatePattern(this.patternClass) });
+          } catch (LX.InstantiationException x) {
+            throw new InvalidCommandException(x);
+          }
         } else {
           channel = lx.engine.addChannel();
         }
@@ -1092,9 +1102,9 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void perform(LX lx) {
-        LXModulator instance = lx.instantiateModulator(this.modulatorClass);
-        if (instance != null) {
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          LXModulator instance = lx.instantiateModulator(this.modulatorClass);
           if (this.modulatorObj != null) {
             instance.load(lx, this.modulatorObj);
           } else {
@@ -1109,7 +1119,10 @@ public abstract class LXCommand {
           }
           instance.start();
           this.modulator = new ComponentReference<LXModulator>(instance);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
         }
+
       }
 
       @Override
@@ -1183,13 +1196,17 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        LXModulator instance = lx.instantiateModulator(this.modulatorObj.get(LXComponent.KEY_CLASS).getAsString());
-        instance.load(lx, this.modulatorObj);
-        this.modulation.get().addModulator(instance, this.index);
-        instance.start();
+        try {
+          LXModulator instance = lx.instantiateModulator(this.modulatorObj.get(LXComponent.KEY_CLASS).getAsString());
+          instance.load(lx, this.modulatorObj);
+          this.modulation.get().addModulator(instance, this.index);
+          instance.start();
 
-        // Restore all the modulations...
-        super.undo(lx);
+          // Restore all the modulations...
+          super.undo(lx);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
+        }
       }
     }
 
@@ -1249,7 +1266,7 @@ public abstract class LXCommand {
           this.modulation = new ComponentReference<LXCompoundModulation>(
             modulation);
         } catch (LXParameterModulation.ModulationException mx) {
-          throw new InvalidCommandException(mx.getMessage(), mx);
+          throw new InvalidCommandException(mx);
         }
       }
 
@@ -1293,7 +1310,7 @@ public abstract class LXCommand {
           this.modulation = new ComponentReference<LXCompoundModulation>(
             modulation);
         } catch (LXParameterModulation.ModulationException mx) {
-          throw new InvalidCommandException(mx.getMessage(), mx);
+          throw new InvalidCommandException(mx);
         }
       }
     }
@@ -1325,7 +1342,7 @@ public abstract class LXCommand {
           this.engine.get().addTrigger(trigger);
           this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
         } catch (LXParameterModulation.ModulationException mx) {
-          throw new InvalidCommandException(mx.getMessage(), mx);
+          throw new InvalidCommandException(mx);
         }
       }
 
@@ -1367,7 +1384,7 @@ public abstract class LXCommand {
           trigger.load(lx, this.triggerObj);
           this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
         } catch (LXParameterModulation.ModulationException mx) {
-          throw new InvalidCommandException(mx.getMessage(), mx);
+          throw new InvalidCommandException(mx);
         }
       }
     }

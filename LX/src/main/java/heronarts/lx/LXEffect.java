@@ -20,6 +20,12 @@ package heronarts.lx;
 
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
+
+import java.util.Map;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
@@ -38,6 +44,53 @@ import heronarts.lx.parameter.MutableParameter;
  * frame. Only the current frame is provided at runtime.
  */
 public abstract class LXEffect extends LXDeviceComponent implements LXComponent.Renamable, LXMidiListener, LXOscComponent {
+
+  /**
+   * Placeholder pattern for when a class is missing
+   */
+  public static class Placeholder extends LXEffect implements LXComponent.Placeholder {
+
+    private String placeholderClassName;
+    private JsonObject effectObj = null;
+
+    public Placeholder(LX lx) {
+      super(lx);
+    }
+
+    @Override
+    public String getPlaceholderTypeName() {
+      return "Effect";
+    }
+
+    @Override
+    public String getPlaceholderClassName() {
+      return this.placeholderClassName;
+    }
+
+    @Override
+    public void save(LX lx, JsonObject object) {
+      super.save(lx, object);
+
+      // Just re-save exactly what was loaded
+      if (this.effectObj != null) {
+        for (Map.Entry<String, JsonElement> entry : this.effectObj.entrySet()) {
+          object.add(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+
+    @Override
+    public void load(LX lx, JsonObject object) {
+      super.load(lx, object);
+      this.placeholderClassName = object.get(LXComponent.KEY_CLASS).getAsString();
+      this.effectObj = object;
+    }
+
+    @Override
+    protected void run(double deltaMs, double enabledAmount) {
+    }
+
+  }
 
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled", false)

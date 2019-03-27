@@ -130,11 +130,14 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
   }
 
   public T duplicate(LX lx) {
-    T instance = lx.instantiateComponent(this.instanceClass.asSubclass(this.componentClass), this.componentClass);
-    if (instance != null) {
+    try {
+      T instance = lx.instantiateComponent(this.instanceClass.asSubclass(this.componentClass), this.componentClass);
       instance.load(lx, this.componentObj);
+      return instance;
+    } catch (LX.InstantiationException x) {
+      lx.command.pushError("Cannot duplicate component, class is missing: " + this.componentClass + ". Check that content files have not been removed?");
     }
-    return instance;
+    return null;
   }
 
 
