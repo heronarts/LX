@@ -54,6 +54,9 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterModulation;
 import heronarts.lx.parameter.LXTriggerModulation;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.structure.JsonFixture;
+import heronarts.lx.structure.LXFixture;
+import heronarts.lx.structure.LXStructure;
 
 /**
  * An LXCommand is an operation that may be performed by the engine, potentially
@@ -1400,6 +1403,174 @@ public abstract class LXCommand {
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
+      }
+    }
+  }
+
+  public static class Structure {
+
+    public static class AddFixture extends LXCommand {
+
+      private ComponentReference<LXFixture> fixture;
+      private final Class<? extends LXFixture> fixtureClass;
+      private JsonObject fixtureObj;
+      private final String fixtureType;
+      private final int index;
+
+      public AddFixture(Class<? extends LXFixture> fixtureClass) {
+        this(fixtureClass, null, -1);
+      }
+
+      public AddFixture(Class<? extends LXFixture> fixtureClass, int index) {
+        this(fixtureClass, null, index);
+      }
+
+      public AddFixture(Class<? extends LXFixture> fixtureClass, JsonObject fixtureObj) {
+        this(fixtureClass, fixtureObj, -1);
+      }
+
+      public AddFixture(Class<? extends LXFixture> fixtureClass, JsonObject fixtureObj, int index) {
+        this.fixtureClass = fixtureClass;
+        this.fixtureObj = fixtureObj;
+        this.fixtureType = null;
+        this.index = index;
+      }
+
+      public AddFixture(String fixtureType) {
+        this.fixtureClass = null;
+        this.fixtureType = fixtureType;
+        this.index = -1;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Fixture";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        LXFixture fixture;
+        if (this.fixtureClass != null) {
+          try {
+            fixture = lx.instantiateFixture(this.fixtureClass);
+            fixture.label.setValue(fixture.label.getString() + " " + (lx.structure.fixtures.size() + 1));
+          } catch (LX.InstantiationException x) {
+            throw new InvalidCommandException(x);
+          }
+        } else if (this.fixtureType != null) {
+          fixture = new JsonFixture(lx);
+          ((JsonFixture) fixture).fixtureType.setValue(this.fixtureType);
+        } else {
+          throw new InvalidCommandException("No fixture type specified for AddFixture");
+        }
+        if (this.fixtureObj != null) {
+          fixture.load(lx, this.fixtureObj);
+          fixture.selected.setValue(false);
+        }
+        this.fixtureObj = LXSerializable.Utils.toObject(fixture);
+        lx.structure.addFixture(fixture, this.index);
+        this.fixture = new ComponentReference<LXFixture>(fixture);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.structure.removeFixture(this.fixture.get());
+      }
+
+    }
+
+    public static class RemoveFixture extends LXCommand {
+
+      private ComponentReference<LXFixture> fixture;
+      private final int index;
+      private final JsonObject fixtureObj;
+
+      public RemoveFixture(LXFixture fixture) {
+        this.fixture = new ComponentReference<LXFixture>(fixture);
+        this.fixtureObj = LXSerializable.Utils.toObject(fixture);
+        this.index = fixture.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Fixture";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.structure.removeFixture(this.fixture.get());
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        try {
+          LXFixture fixture = lx.instantiateFixture(this.fixtureObj.get(LXComponent.KEY_CLASS).getAsString());
+          fixture.load(lx, this.fixtureObj);
+          lx.structure.addFixture(fixture, this.index);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+    }
+
+    public static class RemoveSelectedFixtures extends LXCommand {
+
+      private final List<LXFixture> selectedFixtures;
+
+      private final List<RemoveFixture> removeFixtures =
+        new ArrayList<RemoveFixture>();
+
+      public RemoveSelectedFixtures(LXStructure structure) {
+        this.selectedFixtures = structure.getSelectedFixtures();
+        for (LXFixture fixture : this.selectedFixtures) {
+          this.removeFixtures.add(new RemoveFixture(fixture));
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Fixtures";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.structure.removeFixtures(this.selectedFixtures);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (RemoveFixture remove : this.removeFixtures) {
+          remove.undo(lx);
+        }
+      }
+
+    }
+
+    public static class MoveFixture extends LXCommand {
+
+      private final ComponentReference<LXFixture> fixture;
+      private final int originalIndex;
+      private final int index;
+
+      public MoveFixture(LXFixture fixture, int index) {
+        this.fixture = new ComponentReference<LXFixture>(fixture);
+        this.originalIndex = fixture.getIndex();
+        this.index = index;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Fixture";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        lx.structure.moveFixture(this.fixture.get(), this.index);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        lx.structure.moveFixture(this.fixture.get(), this.originalIndex);
       }
     }
   }

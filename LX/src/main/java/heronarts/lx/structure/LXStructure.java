@@ -257,6 +257,36 @@ public class LXStructure extends LXComponent {
     return this;
   }
 
+  public List<LXFixture> getSelectedFixtures() {
+    List<LXFixture> selected = new ArrayList<LXFixture>();
+    for (LXFixture fixture : this.fixtures) {
+      if (fixture.selected.isOn()) {
+        selected.add(fixture);
+      }
+    }
+    return selected;
+  }
+
+  public LXStructure removeFixtures(List<LXFixture> fixtures) {
+    checkStaticModel(false, "Cannot invoke removeFixtures when static model is in use");
+    List<LXFixture> removed = new ArrayList<LXFixture>();
+    for (LXFixture fixture : fixtures) {
+      if (!this.mutableFixtures.remove(fixture)) {
+        throw new IllegalStateException("Cannot remove fixture not present in structure");
+      }
+      removed.add(fixture);
+    }
+    _reindexFixtures();
+    for (LXFixture fixture : removed) {
+      for (Listener l : this.listeners) {
+        l.fixtureRemoved(fixture);
+      }
+      fixture.dispose();
+    }
+    regenerateModel();
+    return this;
+  }
+
   public LXStructure removeSelectedFixtures() {
     checkStaticModel(false, "Cannot invoke removeSelectedFixture when static model is in use");
     List<LXFixture> removed = new ArrayList<LXFixture>();
