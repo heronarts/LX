@@ -1016,7 +1016,7 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) {
-        LXGroup group = lx.engine.addGroup(this.index, false);
+        LXGroup group = lx.engine.addGroup(this.index);
         group.load(lx, this.groupObj);
         for (ComponentReference<LXChannel> channel : this.groupChannels) {
           group.addChannel(channel.get());
@@ -1056,7 +1056,17 @@ public abstract class LXCommand {
 
     public static class GroupSelectedChannels extends LXCommand {
 
+      private final List<ComponentReference<LXChannel>> groupChannels =
+        new ArrayList<ComponentReference<LXChannel>>();
+
       private ComponentReference<LXGroup> group;
+
+      public GroupSelectedChannels(LX lx) {
+        List<LXChannel> channels = lx.engine.getSelectedChannelsForGroup();
+        for (LXChannel channel : channels) {
+          groupChannels.add(new ComponentReference<LXChannel>(channel));
+        }
+      }
 
       @Override
       public String getDescription() {
@@ -1065,7 +1075,11 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.group = new ComponentReference<LXGroup>(lx.engine.addGroup());
+        List<LXChannel> channels = new ArrayList<LXChannel>(this.groupChannels.size());
+        for (ComponentReference<LXChannel> channel : this.groupChannels) {
+          channels.add(channel.get());
+        }
+        this.group = new ComponentReference<LXGroup>(lx.engine.addGroup(channels));
       }
 
       @Override

@@ -1059,62 +1059,64 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this;
   }
 
+  public LXGroup addGroupFromSelection() {
+    return addGroup(getSelectedChannelsForGroup());
+  }
+
   public LXGroup addGroup() {
-    return addGroup(true);
+    return addGroup(-1);
   }
 
-  public LXGroup addGroup(boolean fromSelection) {
-    return addGroup(-1, fromSelection);
-  }
-
-  public LXGroup addGroup(int index, boolean fromSelection) {
+  public LXGroup addGroup(int index) {
     if (index > this.mutableChannels.size()) {
       throw new IllegalArgumentException("Invalid group index: " + index);
     }
     if (index < 0) {
       index = this.mutableChannels.size();
     }
-    if (!fromSelection) {
-      LXGroup group = new LXGroup(this.lx, index);
-      _addChannel(group, group.getIndex());
-      return group;
-    }
 
+    LXGroup group = new LXGroup(this.lx, index);
+    _addChannel(group, group.getIndex());
+    return group;
+
+  }
+
+  public LXGroup addGroup(List<LXChannel> groupChannels) {
+    if (groupChannels.isEmpty()) {
+      return null;
+    }
+    int groupIndex = groupChannels.get(0).index;
+    LXGroup group = new LXGroup(this.lx, groupIndex);
+    int reindex = groupIndex;
+    for (LXChannel channel : groupChannels) {
+      // Put the group channels in order in their group
+      this.mutableChannels.remove(channel);
+      this.mutableChannels.add(reindex++, channel);
+      group.addChannel(channel);
+    }
+    _addChannel(group, group.getIndex());
+
+    // Fix indexing on all channels
+    _reindexChannels();
+
+    // This new group channel is focused now!
+    if (this.focusedChannel.getValuei() == groupIndex) {
+      this.focusedChannel.bang();
+    } else {
+      this.focusedChannel.setValue(groupIndex);
+    }
+    selectChannel(group);
+    return group;
+  }
+
+  public List<LXChannel> getSelectedChannelsForGroup() {
     List<LXChannel> groupChannels = new ArrayList<LXChannel>();
-    int groupIndex = -1;
     for (LXChannelBus channel : this.channels) {
       if (channel.isChannel() && channel.selected.isOn() && !channel.isInGroup()) {
-        if (groupIndex < 0) {
-          groupIndex = channel.index;
-        }
         groupChannels.add((LXChannel) channel);
       }
     }
-    if (groupIndex >= 0) {
-      LXGroup group = new LXGroup(this.lx, groupIndex);
-      int reindex = groupIndex;
-      for (LXChannel channel : groupChannels) {
-        // Put the group channels in order in their group
-        this.mutableChannels.remove(channel);
-        this.mutableChannels.add(reindex++, channel);
-        group.addChannel(channel);
-      }
-      _addChannel(group, group.getIndex());
-
-      // Fix indexing on all channels
-      _reindexChannels();
-
-      // This new group channel is focused now!
-      if (this.focusedChannel.getValuei() == groupIndex) {
-        this.focusedChannel.bang();
-      } else {
-        this.focusedChannel.setValue(groupIndex);
-      }
-      selectChannel(group);
-      return group;
-    }
-
-    return null;
+    return groupChannels;
   }
 
   private void _addChannel(LXChannelBus channel, int index) {
@@ -1909,7 +1911,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     String channelClass = channelObj.get(KEY_CLASS).getAsString();
     LXChannelBus channel;
     if (channelClass.equals("heronarts.lx.LXGroup")) {
-      channel = addGroup(index, false);
+      channel = addGroup(index);
     } else {
       channel = addChannel(index);
     }
