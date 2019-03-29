@@ -28,6 +28,7 @@ import java.util.Stack;
 
 import heronarts.lx.LX;
 import heronarts.lx.command.LXCommand.InvalidCommandException;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.MutableParameter;
 
 /**
@@ -50,7 +51,9 @@ public class LXCommandEngine {
   private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
   private final Stack<String> errorStack = new Stack<String>();
 
-  private boolean dirty = false;
+  public final BooleanParameter dirty =
+    new BooleanParameter("Dirty", false)
+    .setDescription("Whether the project has unsaved changes");
 
   public LXCommandEngine pushError(Exception exception) {
     return pushError(exception.getMessage());
@@ -104,16 +107,16 @@ public class LXCommandEngine {
       pushError(icx);
     }
 
-    this.dirty = true;
+    this.dirty.setValue(true);
     return this;
   }
 
   public boolean isDirty() {
-    return this.dirty;
+    return this.dirty.isOn();
   }
 
   public LXCommandEngine setDirty(boolean dirty) {
-    this.dirty = dirty;
+    this.dirty.setValue(dirty);
     return this;
   }
 
@@ -155,6 +158,7 @@ public class LXCommandEngine {
         clear();
       }
     }
+    this.dirty.setValue(true);
     return this;
   }
 
@@ -179,6 +183,7 @@ public class LXCommandEngine {
         clear();
       }
     }
+    this.dirty.setValue(true);
     return this;
   }
 
