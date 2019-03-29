@@ -1227,7 +1227,9 @@ public class LX {
       System.out.println("Project loaded successfully from " + file.toString());
     } catch (IOException iox) {
       System.err.println("Could not load project file: " + iox.getLocalizedMessage());
+      this.command.pushError("Could not load project file: " + iox.getLocalizedMessage());
     } catch (Exception x) {
+      this.command.pushError("Exception in openProject: " + x.getLocalizedMessage());
       System.err.println("Exception in openProject: " + x.getLocalizedMessage());
       x.printStackTrace(System.err);
     }
