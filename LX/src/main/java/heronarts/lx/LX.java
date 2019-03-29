@@ -1240,7 +1240,8 @@ public class LX {
       Class<? extends LXModel> cls = Class.forName(className, true, this.contentLoader).asSubclass(LXModel.class);
       return cls.getConstructor().newInstance();
     } catch (Exception x) {
-      System.err.println("Exception in instantiateModel: " + x.getLocalizedMessage());
+      System.err.println("Exception in instantiateModel: " + x.getMessage());
+      x.printStackTrace();
       throw new InstantiationException(x);
     }
   }
@@ -1250,7 +1251,8 @@ public class LX {
       Class<? extends T> cls = Class.forName(className, true, this.contentLoader).asSubclass(type);
       return instantiateComponent(cls, type);
     } catch (Exception x) {
-      System.err.println("Exception in instantiateComponent: " + x.getLocalizedMessage());
+      System.err.println("Exception in instantiateComponent: " + x.getMessage());
+      x.printStackTrace();
       throw new InstantiationException(x);
     }
   }
@@ -1263,7 +1265,8 @@ public class LX {
         return cls.getConstructor().newInstance();
       }
     } catch (Exception x) {
-      System.err.println("Exception in instantiateComponent: " + x.getLocalizedMessage());
+      System.err.println("Exception in instantiateComponent: " + x.getMessage());
+      x.printStackTrace();
       throw new InstantiationException(x);
     }
   }
