@@ -171,6 +171,7 @@ public class LX {
   public interface ProjectListener {
 
     enum Change {
+      TRY,
       NEW,
       SAVE,
       OPEN
@@ -1200,6 +1201,10 @@ public class LX {
   }
 
   public void openProject(File file) {
+    for (ProjectListener projectListener : this.projectListeners) {
+      projectListener.projectChanged(file, ProjectListener.Change.TRY);
+    }
+
     try (FileReader fr = new FileReader(file)) {
       JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
       closeProject();
