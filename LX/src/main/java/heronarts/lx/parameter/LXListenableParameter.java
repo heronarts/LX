@@ -144,7 +144,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   @Override
   public void dispose() {
-
+    this.listeners.clear();
   }
 
   public LXParameter reset() {
