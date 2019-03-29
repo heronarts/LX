@@ -337,6 +337,27 @@ public class LXStructure extends LXComponent {
     regenerateModel();
   }
 
+  public LXStructure translateSelectedFixtures(float tx, float ty, float tz) {
+    for (LXFixture fixture : this.fixtures) {
+      if (fixture.selected.isOn()) {
+        fixture.x.incrementValue(tx);
+        fixture.y.incrementValue(ty);
+        fixture.z.incrementValue(tz);
+      }
+    }
+    return this;
+  }
+
+  public LXStructure rotateSelectedFixtures(float theta, float phi) {
+    for (LXFixture fixture : this.fixtures) {
+      if (fixture.selected.isOn()) {
+        fixture.yaw.incrementValue(theta * 180 / Math.PI);
+        fixture.pitch.incrementValue(phi * 180 / Math.PI);
+      }
+    }
+    return this;
+  }
+
   public LXStructure adjustSelectedFixtureBrightness(float delta) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
