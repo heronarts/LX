@@ -36,9 +36,9 @@ public interface LXParameter extends LXPath {
     @Override
     public String toString() {
       switch (this) {
-      case BIPOLAR: return "↔";
+      case BIPOLAR: return "\u2194";
       default:
-      case UNIPOLAR: return "→";
+      case UNIPOLAR: return "\u2192";
       }
     }
   };
