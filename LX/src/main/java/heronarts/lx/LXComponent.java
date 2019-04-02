@@ -342,7 +342,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public String getCanonicalLabel(LXComponent root) {
     String label = getLabel();
     if (this.parent != null && this.parent != root) {
-      return this.parent.getCanonicalLabel(root) + " | " + label;
+      return this.parent.getCanonicalLabel(root) + " \u2022 " + label;
     }
     return label;
   }
@@ -410,7 +410,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public static String getCanonicalLabel(LXParameter p, LXComponent root) {
     LXComponent component = p.getParent();
     if (component != null && component != root) {
-      return component.getCanonicalLabel(root) + " | " + p.getLabel();
+      return component.getCanonicalLabel(root) + " \u2022 " + p.getLabel();
     }
     return p.getLabel();
   }
@@ -418,7 +418,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public static String getCanonicalLabel(LXParameter p) {
     LXComponent component = p.getParent();
     if (component != null) {
-      return component.getCanonicalLabel() + " | " + p.getLabel();
+      return component.getCanonicalLabel() + " \u2022 " + p.getLabel();
     }
     return p.getLabel();
   }
