@@ -274,7 +274,7 @@ public class LXModel implements LXSerializable {
 
   /**
    * Gets a set of keys by which this model type can be identified. Keys must be lowercase strings.
-   * These keys can be used with the {@link children()} and {@link submodel()} methods to dynamically
+   * These keys can be used with the {@link #children(String)} and {@link #sub(String)} methods to dynamically
    * retrieve submodels from this model.
    *
    * @return Array of keys that identify this model type
