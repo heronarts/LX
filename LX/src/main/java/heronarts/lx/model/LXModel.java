@@ -238,8 +238,8 @@ public class LXModel implements LXSerializable {
    * Custom LXModel subclasses may want to directly implement their output functionality.
    * Any datagrams added by this call will be sent
    *
-   * @param datagram
-   * @return
+   * @param datagram the datagram to add
+   * @return this for chaining method calls.
    */
   public LXModel addDatagram(LXDatagram datagram) {
     if (this.mutableDatagrams.contains(datagram)) {
@@ -274,7 +274,7 @@ public class LXModel implements LXSerializable {
 
   /**
    * Gets a set of keys by which this model type can be identified. Keys must be lowercase strings.
-   * These keys can be used with the {@link children()} and {@link submodel()} methods to dynamically
+   * These keys can be used with the {@link LXModel#children(String)} and {@link LXModel#sub(String)} methods to dynamically
    * retrieve submodels from this model.
    *
    * @return Array of keys that identify this model type
@@ -485,6 +485,9 @@ public class LXModel implements LXSerializable {
   /**
    * Sets the normalized values of all the points in this model (xn, yn, zn)
    * relative to this model's absolute bounds.
+   *
+   * @return this for chaining method calls
+   *
    */
   public LXModel normalizePoints() {
     for (LXPoint p : this.points) {
