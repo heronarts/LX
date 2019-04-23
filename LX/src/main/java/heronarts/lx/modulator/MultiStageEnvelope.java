@@ -30,10 +30,10 @@ import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.LXUtils;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.MutableParameter;
 
 public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape, LXOscComponent {
 
@@ -74,12 +74,12 @@ public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape,
         this.basis = LXUtils.constrain(basis, this.previous.basis, this.next.basis);
       }
       this.value = value;
-      monitor.toggle();
+      monitor.bang();
     }
 
     public void setShape(double shape) {
       this.shape = shape;
-      monitor.toggle();
+      monitor.bang();
     }
 
     public double getBasis() {
@@ -134,19 +134,23 @@ public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape,
 
   public final List<Stage> stages = Collections.unmodifiableList(mutableStages);
 
-  public final BooleanParameter monitor = new BooleanParameter("Monitor");
+  public final MutableParameter monitor = new MutableParameter("Monitor");
 
   public MultiStageEnvelope() {
     this("Env");
   }
 
   public MultiStageEnvelope(String label) {
+    this(label, 0, 1);
+  }
+
+  public MultiStageEnvelope(String label, float initialValue, float endValue) {
     super(label, new FixedParameter(0), new FixedParameter(1), new FixedParameter(1000));
     setPeriod(period);
     setLooping(false);
     addParameter("period", period);
-    mutableStages.add(new Stage(0, 0, 1, true, false));
-    mutableStages.add(new Stage(1, 1, 1, false, true));
+    this.mutableStages.add(new Stage(0, initialValue, 1, true, false));
+    this.mutableStages.add(new Stage(1, endValue, 1, false, true));
     updateStages();
   }
 
@@ -166,7 +170,7 @@ public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape,
     if (!stage.initial && !stage.last) {
       this.mutableStages.remove(stage);
       updateStages();
-      this.monitor.toggle();
+      this.monitor.bang();
     }
     return this;
   }
@@ -176,7 +180,7 @@ public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape,
       if (stage.basis <= this.mutableStages.get(i).basis) {
         this.mutableStages.add(i, stage);
         updateStages();
-        this.monitor.toggle();
+        this.monitor.bang();
         break;
       }
     }
@@ -247,7 +251,7 @@ public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape,
         ++index;
       }
     }
-    this.monitor.toggle();
+    this.monitor.bang();
   }
 
 }
