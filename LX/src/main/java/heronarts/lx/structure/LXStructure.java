@@ -102,15 +102,31 @@ public class LXStructure extends LXComponent {
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
   public final List<LXFixture> fixtures = Collections.unmodifiableList(this.mutableFixtures);
 
-  private LXModel model = new LXModel();
+  private LXModel model;
 
   private LXModel staticModel = null;
+
+  // Whether a single immutable model is used, defined at construction time
+  private final boolean isImmutable;
 
   public final Output output;
 
   public LXStructure(LX lx) {
+    this(lx, null);
+  }
+
+  public LXStructure(LX lx, LXModel immutable) {
     super(lx);
     addParameter("syncModelFile", this.syncModelFile);
+    if (immutable != null) {
+      this.isImmutable = true;
+      this.staticModel = this.model = immutable.normalizePoints();
+      this.isStatic.setValue(true);
+    } else {
+      this.isImmutable = false;
+      this.model = new LXModel();
+    }
+
     Output output = null;
     try {
       output = new Output(lx);
@@ -461,6 +477,9 @@ public class LXStructure extends LXComponent {
 
   @Override
   public void load(LX lx, JsonObject obj) {
+    if (this.isImmutable) {
+      return;
+    }
     this.isLoading = true;
     reset();
     super.load(lx, obj);
@@ -474,7 +493,7 @@ public class LXStructure extends LXComponent {
         staticModel = lx.instantiateModel(className);
         staticModel.load(lx, modelObj);
       } catch (LX.InstantiationException x) {
-        lx.command.pushError("Could not instantiate model class " + className + ". Check that content files are present?");
+        lx.command.pushError("Could not instantiate model class " + className + ". Check that content files are present?", x);
       }
     }
     loadFixtures(lx, obj);
@@ -518,6 +537,9 @@ public class LXStructure extends LXComponent {
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
+    if (this.isImmutable) {
+      return;
+    }
     if (this.staticModel != null) {
       obj.add(KEY_STATIC_MODEL, LXSerializable.Utils.toObject(lx, this.staticModel));
     }

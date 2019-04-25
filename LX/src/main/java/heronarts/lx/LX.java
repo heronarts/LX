@@ -312,13 +312,13 @@ public class LX {
     this.flags.immutableModel = (model != null);
 
     // Create structure object
-    this.structure = new LXStructure(this);
+    this.structure = new LXStructure(this, model);
     if (model == null) {
       this.total = this.width = this.height = 0;
-      this.model = new LXModel();
+      this.model = this.structure.getModel();
       this.cx = this.cy = 0;
     } else {
-      this.structure.setStaticModel(this.model = model);
+      this.model = model;
       this.total = model.points.length;
       this.cx = model.cx;
       this.cy = model.cy;
@@ -998,7 +998,7 @@ public class LX {
       try {
         blends.add(instantiateBlend(blend));
       } catch (LX.InstantiationException x) {
-        this.command.pushError("Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?");
+        this.command.pushError("Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?", x);
       }
     }
     return blends.toArray(new LXBlend[0]);
@@ -1227,9 +1227,9 @@ public class LX {
       System.out.println("Project loaded successfully from " + file.toString());
     } catch (IOException iox) {
       System.err.println("Could not load project file: " + iox.getLocalizedMessage());
-      this.command.pushError("Could not load project file: " + iox.getLocalizedMessage());
+      this.command.pushError("Could not load project file: " + iox.getLocalizedMessage(), iox);
     } catch (Exception x) {
-      this.command.pushError("Exception in openProject: " + x.getLocalizedMessage());
+      this.command.pushError("Exception in openProject: " + x.getLocalizedMessage(), x);
       System.err.println("Exception in openProject: " + x.getLocalizedMessage());
       x.printStackTrace(System.err);
     }
