@@ -135,7 +135,7 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
       instance.load(lx, this.componentObj);
       return instance;
     } catch (LX.InstantiationException x) {
-      lx.command.pushError("Cannot duplicate component, class is missing: " + this.componentClass + ". Check that content files have not been removed?");
+      lx.command.pushError("Cannot duplicate component, class is missing: " + this.componentClass + ". Check that content files have not been removed?", x);
     }
     return null;
   }

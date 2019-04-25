@@ -24,6 +24,9 @@
 
 package heronarts.lx.command;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Stack;
 
 import heronarts.lx.LX;
@@ -37,6 +40,38 @@ import heronarts.lx.parameter.MutableParameter;
  */
 public class LXCommandEngine {
 
+  public static class Error {
+    public final Throwable cause;
+    public final String message;
+
+    private Error(String message) {
+      this(message, null);
+    }
+
+    private Error(Throwable cause) {
+      this(cause.getMessage(), cause);
+    }
+
+    private Error(String message, Throwable cause) {
+      this.message = message;
+      this.cause = cause;
+    }
+
+    public String getStackTrace() {
+      if (this.cause != null) {
+        try (
+          StringWriter sw = new StringWriter();
+          PrintWriter pw = new PrintWriter(sw)) {
+          this.cause.printStackTrace(pw);
+          return sw.toString();
+        } catch (IOException e) {
+          // Ignored, we failed.
+        }
+      }
+      return null;
+    }
+  }
+
   private final LX lx;
 
   public LXCommandEngine(LX lx) {
@@ -49,18 +84,22 @@ public class LXCommandEngine {
 
   private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
   private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
-  private final Stack<String> errorStack = new Stack<String>();
+  private final Stack<Error> errorStack = new Stack<Error>();
 
   public final BooleanParameter dirty =
     new BooleanParameter("Dirty", false)
     .setDescription("Whether the project has unsaved changes");
 
   public LXCommandEngine pushError(Exception exception) {
-    return pushError(exception.getMessage());
+    return pushError(new Error(exception));
   }
 
-  public LXCommandEngine pushError(String message) {
-    this.errorStack.push(message);
+  public LXCommandEngine pushError(String message, Exception exception) {
+    return pushError(new Error(message, exception));
+  }
+
+  public LXCommandEngine pushError(Error error) {
+    this.errorStack.push(error);
     this.errorChanged.bang();
     return this;
   }
@@ -73,7 +112,7 @@ public class LXCommandEngine {
     return this;
   }
 
-  public String getError() {
+  public LXCommandEngine.Error getError() {
     if (!this.errorStack.isEmpty()) {
       return this.errorStack.peek();
     }

@@ -970,7 +970,7 @@ public class LXChannel extends LXChannelBus {
       pattern = this.lx.instantiatePattern(patternClass);
     } catch (LX.InstantiationException x) {
       pattern = new LXPattern.Placeholder(lx);
-      lx.command.pushError("Pattern class " + patternClass + " could not be loaded, check that content files were not removed?");
+      lx.command.pushError("Pattern class " + patternClass + " could not be loaded, check that content files were not removed?", x);
     }
     pattern.load(lx, patternObj);
     addPattern(pattern, index);
