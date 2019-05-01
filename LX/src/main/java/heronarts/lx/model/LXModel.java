@@ -416,7 +416,7 @@ public class LXModel implements LXSerializable {
     }
     int[] indexBuffer = new int[length];
     for (int i = 0; i < length; ++i) {
-      indexBuffer[i++] = this.points[offset+i].index;
+      indexBuffer[i] = this.points[offset+i].index;
     }
     return indexBuffer;
   }
