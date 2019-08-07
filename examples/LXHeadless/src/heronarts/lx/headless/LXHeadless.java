@@ -79,15 +79,16 @@ public class LXHeadless {
       LXModel model = buildModel();
       LX lx = new LX(model);
 
-      String[] shlomo_controller_ips = { "10.200.1.64", "10.200.1.65", "10.200.1.66", "10.200.1.67", "10.200.1.68", "10.200.1.81" };
+      String[] shlomo_controller_ips = { "10.200.1.98" };
       for (String shlomo_controller_ip : shlomo_controller_ips){
         addTenereOutput(lx, shlomo_controller_ip);
       }
 //       target some OPC servers
       String[] controller_ips = {
-              "10.200.1.102",
-              "10.200.1.142",
-              "10.200.1.141",
+//              "10.200.1.102",
+//              "10.200.1.142",
+//              "10.200.1.141",
+//              "10.200.1.98"
       };
 
       for (String controller_ipaddr : controller_ips){

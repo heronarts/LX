@@ -3,3 +3,5 @@
 /doc
 .DS_Store
 /examples/LXHeadless/bin
+.idea
+LX.iml

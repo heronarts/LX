@@ -35,9 +35,9 @@ public interface LXParameter {
     @Override
     public String toString() {
       switch (this) {
-      case BIPOLAR: return "↔";
+      case BIPOLAR: return "<->";
       default:
-      case UNIPOLAR: return "→";
+      case UNIPOLAR: return "->";
       }
     }
   };
