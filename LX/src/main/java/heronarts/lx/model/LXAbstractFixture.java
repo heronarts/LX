@@ -43,4 +43,11 @@ public abstract class LXAbstractFixture implements LXFixture {
     }
     return this;
   }
+
+  public LXAbstractFixture addPoints(LXModel model) {
+    for (LXPoint point : model.points) {
+      this.points.add(point);
+    }
+    return this;
+  }
 }

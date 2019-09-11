@@ -593,7 +593,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public static final String KEY_PARAMETER_PATH = "parameterPath";
   public static final String KEY_PATH = "path";
 
-  private static void saveParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
+  protected static void saveParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
     for (String path : parameters.keySet()) {
       LXParameter parameter = parameters.get(path);
       if (parameter instanceof StringParameter) {
@@ -616,7 +616,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
   }
 
-  private static void loadParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
+  protected static void loadParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
     for (String path : parameters.keySet()) {
       LXParameter parameter = parameters.get(path);
       if (parameter == component.label && !(component instanceof LXComponent.Renamable)) {
