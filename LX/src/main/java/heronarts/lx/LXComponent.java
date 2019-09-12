@@ -283,8 +283,14 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     return getCanonicalPath();
   }
 
+  public static final String PATH_OSC_QUERY = "osc-query";
+
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
     String path = parts[index];
+    if (path.equals(PATH_OSC_QUERY)) {
+      oscQuery();
+      return true;
+    }
     LXComponent child = getChild(path);
     if (child != null) {
       return child.handleOscMessage(message, parts, index + 1);
@@ -325,6 +331,22 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       parameter.setValue(message.getFloat());
     }
     return true;
+  }
+
+  private void oscQuery() {
+    if (this instanceof LXOscComponent) {
+      for (LXParameter p : this.parameters.values()) {
+        this.lx.engine.osc.sendParameter(p);
+      }
+      for (LXComponent child : this.children.values()) {
+        child.oscQuery();
+      }
+      for (List<? extends LXComponent> array : childArrays.values()) {
+        for (LXComponent component : array) {
+          component.oscQuery();
+        }
+      }
+    }
   }
 
   public String getCanonicalPath() {
