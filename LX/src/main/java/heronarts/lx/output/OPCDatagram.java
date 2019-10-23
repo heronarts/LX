@@ -40,7 +40,7 @@ public class OPCDatagram extends LXDatagram implements OPCConstants {
   }
 
   public OPCDatagram(int[] indexBuffer, byte channel) {
-    super(OPCOutput.HEADER_LEN + OPCOutput.BYTES_PER_PIXEL * indexBuffer.length);
+    super(OPCOutput.HEADER_LEN + OPCOutput.BYTES_PER_PIXEL * indexBuffer.length, ByteOrder.RGB);
     this.indexBuffer = indexBuffer;
     int dataLength = BYTES_PER_PIXEL * indexBuffer.length;
     this.buffer[OFFSET_CHANNEL] = channel;

@@ -60,20 +60,49 @@ public abstract class LXDatagram {
    * Various orderings for RGB buffer data
    */
   public enum ByteOrder {
-    RGB, RBG, GRB, GBR, BRG, BGR,
-  };
+    RGB(new int[] { 0, 1, 2 }),
+    RBG(new int[] { 0, 2, 1 }),
+    GRB(new int[] { 1, 0, 2 }),
+    GBR(new int[] { 2, 0, 1 }),
+    BRG(new int[] { 1, 2, 0 }),
+    BGR(new int[] { 2, 1, 0 }),
 
-  /**
-   * Note that the order here MUST match the order specified above
-   */
-  protected static final int[][] BYTE_ORDERING = {
-    // R G B
-    { 0, 1, 2 }, // RGB
-    { 0, 2, 1 }, // RBG
-    { 1, 0, 2 }, // GRB
-    { 2, 0, 1 }, // GBR
-    { 1, 2, 0 }, // BRG
-    { 2, 1, 0 }, // BGR
+    RGBW(new int[] { 0, 1, 2, 3 }),
+    RBGW(new int[] { 0, 2, 1, 3 }),
+    GRBW(new int[] { 1, 0, 2, 3 }),
+    GBRW(new int[] { 2, 0, 1, 3 }),
+    BRGW(new int[] { 1, 2, 0, 3 }),
+    BGRW(new int[] { 2, 1, 0, 3 }),
+
+    WRGB(new int[] { 1, 2, 3, 0 }),
+    WRBG(new int[] { 1, 3, 2, 0 }),
+    WGRB(new int[] { 2, 1, 3, 0 }),
+    WGBR(new int[] { 3, 1, 2, 0 }),
+    WBRG(new int[] { 2, 3, 1, 0 }),
+    WBGR(new int[] { 3, 2, 1, 0 });
+
+    /**
+     * Byte offet is array of integer offsets in order RGBW, indicating
+     * at what position the red, green, blue, and optionally white byte
+     * go in the payload.
+     */
+    private final int[] byteOffset;
+
+    ByteOrder(int[] byteOffset) {
+      this.byteOffset = byteOffset;
+    }
+
+    public boolean hasWhite() {
+      return this.byteOffset.length == 4;
+    }
+
+    public int getNumBytes() {
+      return this.byteOffset.length;
+    }
+
+    public int[] getByteOffset() {
+      return this.byteOffset;
+    }
   };
 
   protected ByteOrder byteOrder = ByteOrder.RGB;
@@ -103,11 +132,16 @@ public abstract class LXDatagram {
     .setDescription("Level of the output");
 
   protected LXDatagram(int bufferSize) {
+    this(bufferSize, ByteOrder.RGB);
+  }
+
+  protected LXDatagram(int bufferSize, ByteOrder byteOrder) {
     this.buffer = new byte[bufferSize];
     for (int i = 0; i < bufferSize; ++i) {
       this.buffer[i] = 0;
     }
     this.packet = new DatagramPacket(this.buffer, bufferSize);
+    this.byteOrder = byteOrder;
   }
 
   protected ErrorState getErrorState() {
@@ -124,6 +158,9 @@ public abstract class LXDatagram {
    * @return this
    */
   public LXDatagram setByteOrder(ByteOrder byteOrder) {
+    if (this.byteOrder.getNumBytes() != byteOrder.getNumBytes()) {
+      throw new IllegalArgumentException("May not change number of bytes in order");
+    }
     this.byteOrder = byteOrder;
     return this;
   }
@@ -195,13 +232,33 @@ public abstract class LXDatagram {
    * @return this
    */
   protected LXDatagram copyPoints(int[] colors, byte[] glut, int[] indexBuffer, int offset) {
-    int[] byteOffset = BYTE_ORDERING[this.byteOrder.ordinal()];
-    for (int index : indexBuffer) {
-      int color = (index >= 0) ? colors[index] : 0;
-      this.buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
-      this.buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
-      this.buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
-      offset += 3;
+    int numBytes = this.byteOrder.getNumBytes();
+    if (this.byteOrder.hasWhite()) {
+      int[] byteOffset = this.byteOrder.getByteOffset();
+      for (int index : indexBuffer) {
+        int color = (index >= 0) ? colors[index] : 0;
+        byte r = glut[((color >> 16) & 0xff)];
+        byte g = glut[((color >> 8) & 0xff)];
+        byte b = glut[(color & 0xff)];
+        byte w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+        r -= w;
+        g -= w;
+        b -= w;
+        this.buffer[offset + byteOffset[0]] = r;
+        this.buffer[offset + byteOffset[1]] = g;
+        this.buffer[offset + byteOffset[2]] = b;
+        this.buffer[offset + byteOffset[3]] = w;
+        offset += numBytes;
+      }
+    } else {
+      int[] byteOffset = this.byteOrder.getByteOffset();
+      for (int index : indexBuffer) {
+        int color = (index >= 0) ? colors[index] : 0;
+        this.buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
+        this.buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
+        this.buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
+        offset += numBytes;
+      }
     }
     return this;
   }

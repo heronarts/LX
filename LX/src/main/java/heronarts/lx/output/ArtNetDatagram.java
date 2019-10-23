@@ -38,29 +38,122 @@ public class ArtNetDatagram extends LXDatagram {
 
   private int universeNumber;
 
+  /**
+   * Creates an ArtNetDatagram for the given model
+   *
+   * @param model Model of points
+   */
   public ArtNetDatagram(LXModel model) {
     this(model, DEFAULT_UNIVERSE);
   }
 
+  /**
+   * Creates an ArtNetDatagram for the given index buffer
+   *
+   * @param indexBuffer Index buffer
+   */
   public ArtNetDatagram(int[] indexBuffer) {
     this(indexBuffer, DEFAULT_UNIVERSE);
   }
 
+  /**
+   * Creates an ArtNetDatagram for the given index buffer and byte ordering
+   *
+   * @param indexBuffer Index buffer
+   * @param byteOrder Byte ordering for points
+   */
+  public ArtNetDatagram(int[] indexBuffer, ByteOrder byteOrder) {
+    this(indexBuffer, DEFAULT_UNIVERSE, byteOrder);
+  }
+
+  /**
+   * Creates an ArtNetDatagram for the given model and universe number
+   *
+   * @param model Model of points
+   * @param universeNumber universe number
+   */
   public ArtNetDatagram(LXModel model, int universeNumber) {
     this(model.toIndexBuffer(), universeNumber);
   }
 
+  /**
+   * Creates an ArtNetDatagram for the given model, universe, and byte order
+   *
+   * @param model Model of points
+   * @param universeNumber Universe number
+   * @param byteOrder Byte ordering
+   */
+  public ArtNetDatagram(LXModel model, int universeNumber, ByteOrder byteOrder) {
+    this(model.toIndexBuffer(), universeNumber, byteOrder);
+  }
+
+  /**
+   * Creates an ArtNetDatagram for the given index buffer and universe number
+   *
+   * @param indexBuffer Index buffer
+   * @param universeNumber Universe number
+   */
   public ArtNetDatagram(int[] indexBuffer, int universeNumber) {
-    this(indexBuffer, 3*indexBuffer.length, universeNumber);
+    this(indexBuffer, indexBuffer.length, universeNumber, ByteOrder.RGB);
   }
 
+  /**
+   * Creates an ArtNetDatagram for the given index buffer, universe and byte ordering
+   *
+   * @param indexBuffer Index buffer
+   * @param universeNumber Universe number
+   * @param byteOrder Byte ordering
+   */
+  public ArtNetDatagram(int[] indexBuffer, int universeNumber, ByteOrder byteOrder) {
+    this(indexBuffer, byteOrder.getNumBytes() * indexBuffer.length, universeNumber, byteOrder);
+  }
+
+  /**
+   * Creates an ArtNetDatagram for the given model, with fixed data length and universe
+   *
+   * @param model Model
+   * @param dataLength Fixed data payload length
+   * @param universeNumber Universe number
+   */
   public ArtNetDatagram(LXModel model, int dataLength, int universeNumber) {
-    this(model.toIndexBuffer(), dataLength, universeNumber);
+    this(model.toIndexBuffer(), dataLength, universeNumber, ByteOrder.RGB);
   }
 
-  public ArtNetDatagram(int[] indexBuffer, int dataLength, int universeNumber) {
-    super(ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2));
+  /**
+   * Creates an ArtNetDatagram with fixed data length for given model, universe, and byte ordering
+   *
+   * @param model Model of points
+   * @param dataLength Fixed data payload length
+   * @param universeNumber Universe number
+   * @param byteOrder Byte ordering
+   */
+  public ArtNetDatagram(LXModel model, int dataLength, int universeNumber, ByteOrder byteOrder) {
+    this(model.toIndexBuffer(), dataLength, universeNumber, byteOrder);
+  }
 
+  /**
+   * Creates an ArtNetDatagram with fixed data length for given index buffer and universe
+   *
+   * @param indexBuffer Index buffer
+   * @param dataLength Fixed data payload length
+   * @param universeNumber Universe number
+   */
+  public ArtNetDatagram(int[] indexBuffer, int dataLength, int universeNumber) {
+    this(indexBuffer, dataLength, universeNumber, ByteOrder.RGB);
+  }
+
+  /**
+   * Creates an ArtNetDatagram with fixed data length for given index buffer, universe, and byte order
+   *
+   * @param indexBuffer Index buffer
+   * @param dataLength Fixed data payload length
+   * @param universeNumber Universe number
+   * @param byteOrder Byte order
+   */
+  public ArtNetDatagram(int[] indexBuffer, int dataLength, int universeNumber, ByteOrder byteOrder) {
+    super(ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2), byteOrder);
+
+    // DMX alignment requirement, ensure data length is even number of bytes
     this.dataLength = dataLength + (dataLength % 2);
 
     this.indexBuffer = indexBuffer;

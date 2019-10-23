@@ -76,7 +76,7 @@ public class KinetDatagram extends LXDatagram {
   }
 
   public KinetDatagram(int kinetPort, int[] indexBuffer, Version version) {
-    super(PACKET_LENGTH);
+    super(PACKET_LENGTH, ByteOrder.RGB);
     setPort(KINET_PORT);
 
     this.indexBuffer = indexBuffer;

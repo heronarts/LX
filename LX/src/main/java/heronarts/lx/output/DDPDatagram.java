@@ -41,7 +41,7 @@ public class DDPDatagram extends LXDatagram {
   }
 
   public DDPDatagram(int[] indexBuffer) {
-    super(HEADER_LENGTH + indexBuffer.length * 3);
+    super(HEADER_LENGTH + indexBuffer.length * 3, ByteOrder.RGB);
     setPort(DEFAULT_PORT);
     int dataLen = indexBuffer.length * 3;
     this.pointIndices = indexBuffer;

@@ -44,47 +44,73 @@ public class StreamingACNDatagram extends LXDatagram {
    */
   private int universeNumber;
 
+  /**
+   * Creates a StreamingACNDatagram for the given model
+   *
+   * @param model Model of points
+   */
   public StreamingACNDatagram(LXModel model) {
-    this(DEFAULT_UNIVERSE_NUMBER, model);
+    this(model, DEFAULT_UNIVERSE_NUMBER);
   }
 
   /**
-   * Constructs a datagram on universe 1
+   * Constructs a StreamingACNDatagram on default universe
    *
    * @param indexBuffer Points to send on this universe
    */
   public StreamingACNDatagram(int[] indexBuffer) {
-    this(DEFAULT_UNIVERSE_NUMBER, indexBuffer);
+    this(indexBuffer, DEFAULT_UNIVERSE_NUMBER);
   }
 
-  public StreamingACNDatagram(int universeNumber, LXModel model) {
-    this(universeNumber, model.toIndexBuffer());
+  /**
+   * Creates a StreamingACNDatagram for the model on given universe
+   *
+   * @param model Model of points
+   * @param universeNumber Universe number
+   */
+  public StreamingACNDatagram(LXModel model, int universeNumber) {
+    this(model.toIndexBuffer(), universeNumber);
   }
 
   /**
    * Constructs a datagram, sends the list of point indices on the given
    * universe number.
    *
-   * @param universeNumber Universe
    * @param indexBuffer List of point indices to encode in packet
+   * @param universeNumber Universe number
    */
-  public StreamingACNDatagram(int universeNumber, int[] indexBuffer) {
-    this(universeNumber, indexBuffer.length * 3, indexBuffer);
+  public StreamingACNDatagram(int[] indexBuffer, int universeNumber) {
+    this(indexBuffer, universeNumber, ByteOrder.RGB);
+  }
+
+  /**
+   * Creates a StreamingACNDatagrm for given index buffer on universe and byte order
+   *
+   * @param indexBuffer Index buffer
+   * @param universeNumber Universe number
+   * @param byteOrder Byte order
+   */
+  public StreamingACNDatagram(int[] indexBuffer, int universeNumber, ByteOrder byteOrder) {
+    this(indexBuffer, indexBuffer.length * byteOrder.getNumBytes(), universeNumber, byteOrder);
   }
 
   /**
    * Subclasses may override for a custom payload with fixed size, not necessarily
    * based upon an array of point indices - such as custom DMX data
    *
+   * @param dataSize Fixed data payload size
    * @param universeNumber Universe number
-   * @param dataSize Data payload size
    */
-  protected StreamingACNDatagram(int universeNumber, int dataSize) {
-    this(universeNumber, dataSize, null);
+  protected StreamingACNDatagram(int dataSize, int universeNumber) {
+    this(null, dataSize, universeNumber);
   }
 
-  private StreamingACNDatagram(int universeNumber, int dataSize, int[] indexBuffer) {
-    super(OFFSET_DMX_DATA + dataSize);
+  private StreamingACNDatagram(int[] indexBuffer, int dataSize, int universeNumber) {
+    this(indexBuffer, dataSize, universeNumber, ByteOrder.RGB);
+  }
+
+  private StreamingACNDatagram(int[] indexBuffer, int dataSize, int universeNumber, ByteOrder byteOrder) {
+    super(OFFSET_DMX_DATA + dataSize, byteOrder);
     setPort(DEFAULT_PORT);
     setUniverseNumber(universeNumber);
     this.indexBuffer = indexBuffer;

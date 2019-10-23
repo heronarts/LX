@@ -265,7 +265,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
       datagram = new ArtNetDatagram(indexBuffer, this.artNetUniverse.getValuei());
       break;
     case SACN:
-      datagram = new StreamingACNDatagram(this.artNetUniverse.getValuei(), indexBuffer);
+      datagram = new StreamingACNDatagram(indexBuffer, this.artNetUniverse.getValuei());
       break;
     case OPC:
       datagram = new OPCDatagram(indexBuffer, (byte) this.opcChannel.getValuei());
