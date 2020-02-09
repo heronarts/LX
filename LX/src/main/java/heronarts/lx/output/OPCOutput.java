@@ -69,7 +69,7 @@ public class OPCOutput extends LXSocketOutput implements OPCConstants {
       int c = colors[this.indexBuffer[i]];
       this.packetData[dataOffset + OFFSET_R] = glut[(0xFF & (c >> 16))];
       this.packetData[dataOffset + OFFSET_G] = glut[(0xFF & (c >> 8))];
-      this.packetData[dataOffset + OFFSET_B] = glut[(byte) (0xFF & c)];
+      this.packetData[dataOffset + OFFSET_B] = glut[(0xFF & c)];
     }
     return this.packetData;
   }
