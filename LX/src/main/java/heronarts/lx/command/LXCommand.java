@@ -102,7 +102,7 @@ public abstract class LXCommand {
 
     @SuppressWarnings("unchecked")
     public T get() {
-      return (T) this.lx.getProjectComponent(this.componentId);
+      return (T) this.lx.getComponent(this.componentId);
     }
   }
 

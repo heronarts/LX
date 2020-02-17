@@ -397,6 +397,22 @@ public class LX {
     return this;
   }
 
+  /**
+   * Gets a component by its raw component id
+   *
+   * @param componentId Component ID
+   * @return Component with that ID, or null if none exists
+   */
+  public LXComponent getComponent(int componentId) {
+    return this.componentRegistry.getComponent(componentId);
+  }
+
+  /**
+   * Gets a component by its id from the project file (which may have been remapped)
+   *
+   * @param projectId Component ID from loaded project file
+   * @return Component with that ID in the project file, may have a different component ID now
+   */
   public LXComponent getProjectComponent(int projectId) {
     return this.componentRegistry.getProjectComponent(projectId);
   }

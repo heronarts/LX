@@ -95,6 +95,22 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     private final Map<Integer, LXComponent> components = new HashMap<Integer, LXComponent>();
     private final Map<Integer, LXComponent> projectIdMap = new HashMap<Integer, LXComponent>();
 
+    /**
+     * Retrieves the component with this id
+     *
+     * @param componentId component ID
+     * @return Component, or null if none exists
+     */
+    LXComponent getComponent(int componentId) {
+      return this.components.get(componentId);
+    }
+
+    /**
+     * Gets the component referenced by id in project file
+     *
+     * @param projectId Component ID from project file
+     * @return Matching component, which may have a different ID now
+     */
     LXComponent getProjectComponent(int projectId) {
       // Check first in the project ID map, there may be another layer of
       // indirection if the engine components have changed underneath us
