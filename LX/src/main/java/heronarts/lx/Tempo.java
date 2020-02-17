@@ -155,10 +155,16 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   }
 
   private static final String PATH_BEAT = "beat";
+  private static final String PATH_SET_BPM = "setBPM";
 
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
-    if (parts[index].equals(PATH_BEAT)) {
+    if (parts[index].equals(PATH_SET_BPM)) {
+      if (message.size() > 0) {
+        this.bpm.setValue(message.getFloat());
+        return true;
+      }
+    } else if (parts[index].equals(PATH_BEAT)) {
       if (this.clockSource.getObject() == Tempo.ClockSource.OSC) {
         if (message.size() > 0) {
           // Message specifies a beat count
