@@ -94,7 +94,7 @@ public class ArtNetDatagram extends LXDatagram {
    * @param universeNumber Universe number
    */
   public ArtNetDatagram(int[] indexBuffer, int universeNumber) {
-    this(indexBuffer, indexBuffer.length, universeNumber, ByteOrder.RGB);
+    this(indexBuffer, universeNumber, ByteOrder.RGB);
   }
 
   /**
