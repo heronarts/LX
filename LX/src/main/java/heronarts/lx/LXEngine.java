@@ -93,6 +93,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final LXScriptEngine script;
 
+  public final LXSnapshotController snapshotController;
+
   private Dispatch inputDispatch = null;
 
   private final List<LXLoopTask> loopTasks = new ArrayList<LXLoopTask>();
@@ -481,6 +483,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         }
       });
     }
+
+    // Snapshots
+    addChild("snapshot", this.snapshotController = new LXSnapshotController(lx));
+    LX.initTimer.log("Engine: Snapshot");
 
     // Master output
     addChild("output", this.output = new Output(lx));
