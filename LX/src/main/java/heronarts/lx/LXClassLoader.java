@@ -127,21 +127,23 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
 
   public static LXClassLoader createNew(LX lx) {
     List<File> jarFiles = new ArrayList<File>();
-    collectJarFiles(jarFiles, lx.getMediaFolder(LX.Media.CONTENT));
+    collectJarFiles(jarFiles, lx.getMediaFolder(LX.Media.CONTENT, false));
     return new LXClassLoader(lx, jarFiles);
   }
 
   private static void collectJarFiles(List<File> jarFiles, File folder) {
     try {
-      for (File file : folder.listFiles()) {
-        if (file.isHidden()) {
-          // I mean, god bless anyone who tried this, but it will only cause great pain...
-          continue;
-        }
-        if (file.isDirectory()) {
-          collectJarFiles(jarFiles, file);
-        } else if (file.isFile() && file.getName().endsWith(".jar")) {
-          jarFiles.add(file);
+      if (folder.exists() && folder.isDirectory()) {
+        for (File file : folder.listFiles()) {
+          if (file.isHidden()) {
+            // I mean, god bless anyone who tried this, but it will only cause great pain...
+            continue;
+          }
+          if (file.isDirectory()) {
+            collectJarFiles(jarFiles, file);
+          } else if (file.isFile() && file.getName().endsWith(".jar")) {
+            jarFiles.add(file);
+          }
         }
       }
     } catch (Exception x) {

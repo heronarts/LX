@@ -342,7 +342,7 @@ public class LX {
 
     // Custom content loader
     this.contentLoader = LXClassLoader.createNew(this);
-    this.structure.registerFixtures(getMediaFolder(LX.Media.FIXTURES));
+    this.structure.registerFixtures(getMediaFolder(LX.Media.FIXTURES, false));
     LX.initTimer.log("Custom Content");
 
     // Midi
@@ -1163,12 +1163,23 @@ public class LX {
    * @return File handle to directory for storage of this type of media
    */
   public File getMediaFolder(Media type) {
+    return getMediaFolder(type, true);
+  }
+
+  /**
+   * Retrieves a file handle to the folder used to store the given type of media
+   *
+   * @param type Media type
+   * @param create Create folder if true
+   * @return File handle to directory for storage of this type of media
+   */
+  public File getMediaFolder(Media type, boolean create) {
     File folder = new File(getMediaPath(), type.getDirName());
     if (folder.exists()) {
       if (folder.isFile()) {
         throw new IllegalStateException("LX media folder already exists, but contains a plain file: " + folder);
       }
-    } else {
+    } else if (create) {
       folder.mkdir();
     }
     return folder;
