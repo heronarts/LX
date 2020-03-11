@@ -490,7 +490,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
     this.lx.engine.midi.removeMappings(this);
     this.lx.engine.modulation.removeModulations(this);
-    this.lx.engine.snapshotController.removeLinks(this);
+    this.lx.engine.snapshots.removeReferences(this);
     for (LXParameter parameter : this.parameters.values()) {
       parameter.dispose();
     }

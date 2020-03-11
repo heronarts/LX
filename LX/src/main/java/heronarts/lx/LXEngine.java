@@ -42,6 +42,7 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.script.LXScriptEngine;
+import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
 
 import java.net.SocketException;
@@ -93,7 +94,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final LXScriptEngine script;
 
-  public final LXSnapshotController snapshotController;
+  public final LXSnapshotEngine snapshots;
 
   private Dispatch inputDispatch = null;
 
@@ -485,8 +486,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
 
     // Snapshots
-    addChild("snapshot", this.snapshotController = new LXSnapshotController(lx));
-    LX.initTimer.log("Engine: Snapshot");
+    addChild("snapshots", this.snapshots = new LXSnapshotEngine(lx));
+    LX.initTimer.log("Engine: Snapshots");
 
     // Master output
     addChild("output", this.output = new Output(lx));

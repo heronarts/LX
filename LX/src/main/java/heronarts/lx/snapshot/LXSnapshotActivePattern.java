@@ -1,6 +1,11 @@
-package heronarts.lx;
+package heronarts.lx.snapshot;
 
 import com.google.gson.JsonObject;
+
+import heronarts.lx.LX;
+import heronarts.lx.LXChannel;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXPattern;
 
 public class LXSnapshotActivePattern extends LXComponent {
 

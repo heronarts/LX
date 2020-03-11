@@ -1,24 +1,36 @@
-package heronarts.lx;
+package heronarts.lx.snapshot;
 
 import com.google.gson.JsonObject;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXPath;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 
 public class LXSnapshotValue extends LXComponent {
 
-  public Boolean isEnabled;
+  public final BooleanParameter isEnabled =
+    new BooleanParameter("isEnabled")
+    .setDescription("If TRUE value will be applied to parameter when snapshot is loaded.");
 
-  public double value;
+  private double value;
 
   public LXParameter parameter;
 
   public LXSnapshotValue(LX lx) {
     super(lx);
+    addParameter(this.isEnabled);
   }
 
+  public LXSnapshotValue(LX lx, LXParameter parameter, double value) {
+    this(lx);
+    this.parameter = parameter;
+    this.value = value;
+}
+
   public LXSnapshotValue(LX lx, LXComponent scope, JsonObject obj) {
-    super(lx);
-    this.isEnabled = obj.get(KEY_ENABLED).getAsBoolean();
+    this(lx);
     this.value = obj.get(KEY_VALUE).getAsDouble();
     this.parameter = getParameter(lx, scope, obj.getAsJsonObject(KEY_PARAMETER));
   }
@@ -39,6 +51,12 @@ public class LXSnapshotValue extends LXComponent {
     return component.getParameter(path);
   }
 
+  public void applyValue() {
+    if (this.parameter != null) {
+      this.parameter.setValue(this.value);
+    }
+  }
+
   @Override
   public void dispose() {
     this.parameter = null;
@@ -52,7 +70,6 @@ public class LXSnapshotValue extends LXComponent {
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    obj.addProperty(KEY_ENABLED, this.isEnabled);
     obj.addProperty(KEY_VALUE, this.value);
 
     JsonObject parameterObj = new JsonObject();
