@@ -170,6 +170,10 @@ public class LXOscEngine extends LXComponent {
     public void setHost(String host) throws UnknownHostException {
       this.packet.setAddress(InetAddress.getByName(host));
     }
+
+    public void setHost(InetAddress host) {
+      this.packet.setAddress(host);
+    }
   }
 
   private class EngineTransmitter extends Transmitter implements LXParameterListener {
