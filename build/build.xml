@@ -12,7 +12,7 @@
   	<mkdir dir="../doc"/>
   	<javadoc
   		bottom="LX library by Mark C. Slee. (C) 2012-" 
-  		classpath="../lib/gson-2.8.0.jar;../lib/coremidi4j-0.9.jar;"
+  		classpath="../lib/gson-2.8.6.jar;../lib/coremidi4j-1.4.jar;"
   		destdir="../doc"
   		verbose="false" 
   		stylesheetfile="stylesheet.css" 
@@ -39,8 +39,8 @@
   	<copy file="../LICENSE" todir="../tmp" />
     <mkdir dir="../bin"/>
   	<jar destfile="../bin/LX.jar" basedir="../tmp" includes="LICENSE VERSION **/*.class">
-  		<zipgroupfileset dir="../lib" includes="coremidi4j-0.9.jar" />
-  		<zipgroupfileset dir="../lib" includes="gson-2.8.0.jar" />
+  		<zipgroupfileset dir="../lib" includes="coremidi4j-1.4.jar" />
+  		<zipgroupfileset dir="../lib" includes="gson-2.8.6.jar" />
     </jar>
   	<delete dir="../tmp"/>
   </target>
