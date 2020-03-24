@@ -37,29 +37,7 @@ A companion library, [P3LX](https://github.com/heronarts/P3LX), makes it simple 
 
 ### Headless ###
 
-LX may be run in headless mode on any Java-enabled device (such as a Raspberry Pi).
-
-```
-cd LX-example-headless
-ant
-./LXHeadless
-```
-
-or via maven:
-```
-mvn package
-java -jar LX-example-headless/target/headless.jar
-```
-
-By default, the provided headless example outputs OPC formatted data via TCP on `localhost:7890`. This data can be viewed using the emulator that comes with [openpixelcontrol](https://github.com/zestyping/openpixelcontrol) as follows...
-```
-git clone git://github.com/zestyping/openpixelcontrol.git
-cd openpixelcontrol
-make
-bin/gl_server -l layouts/freespace.json
-```
-Alternatively, you could monitor raw network output with netcat: `nc -l 7890`
-
+LX may be run in headless mode on any Java-enabled device (such as a Raspberry Pi). There is a provided example of a standalone headless project in the tests folder.
 
 ### Contact and Collaboration ###
 
