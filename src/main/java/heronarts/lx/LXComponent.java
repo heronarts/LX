@@ -28,6 +28,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscArgument;
 import heronarts.lx.osc.OscInt;

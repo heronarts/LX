@@ -27,6 +27,8 @@ import heronarts.lx.color.LXPalette;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.modulation.LXModulationContainer;
+import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;

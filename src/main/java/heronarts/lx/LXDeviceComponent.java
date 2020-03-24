@@ -18,6 +18,8 @@
 
 package heronarts.lx;
 
+import heronarts.lx.modulation.LXModulationContainer;
+import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 

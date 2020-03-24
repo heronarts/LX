@@ -16,12 +16,16 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx.parameter;
+package heronarts.lx.modulation;
 
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXModulationEngine;
+import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.LXNormalizedParameter;
+import heronarts.lx.parameter.LXParameter;
 
 public class LXCompoundModulation extends LXParameterModulation {
 
@@ -54,6 +58,7 @@ public class LXCompoundModulation extends LXParameterModulation {
     addParameter("Polarity", this.polarity);
     addParameter("Range", this.range);
     target.addModulation(this);
+    setParent(scope);
   }
 
   public LXCompoundModulation setPolarity(LXParameter.Polarity polarity) {

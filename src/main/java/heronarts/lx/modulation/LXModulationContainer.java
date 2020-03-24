@@ -16,7 +16,7 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.modulation;
 
 public interface LXModulationContainer {
   public LXModulationEngine getModulationEngine();

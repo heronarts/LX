@@ -16,12 +16,13 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx.parameter;
+package heronarts.lx.modulation;
 
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXModulationEngine;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXParameter;
 
 public class LXTriggerModulation extends LXParameterModulation {
 
@@ -38,6 +39,7 @@ public class LXTriggerModulation extends LXParameterModulation {
     this.sourceMomentary = (source.getMode() == BooleanParameter.Mode.MOMENTARY);
     this.targetMomentary = (target.getMode() == BooleanParameter.Mode.MOMENTARY);
     this.source.addListener(this);
+    setParent(scope);
   }
 
   public LXTriggerModulation(LX lx, LXModulationEngine scope, JsonObject obj) throws ModulationException {

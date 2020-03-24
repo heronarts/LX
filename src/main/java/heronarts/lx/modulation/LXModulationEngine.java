@@ -22,7 +22,7 @@
  * @version     ##library.prettyVersion## (##library.version##)
  */
 
-package heronarts.lx;
+package heronarts.lx.modulation;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,13 +32,15 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXEngine;
+import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.LXCompoundModulation;
-import heronarts.lx.parameter.LXParameterModulation;
-import heronarts.lx.parameter.LXTriggerModulation;
 
 public class LXModulationEngine extends LXModulatorComponent implements LXOscComponent {
 
@@ -108,7 +110,6 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     if (this.mutableModulations.contains(modulation)) {
       throw new IllegalStateException("Cannot add same modulation twice");
     }
-    ((LXComponent) modulation).setParent(this);
     this.mutableModulations.add(modulation);
     _reindex(this.modulations);
     for (Listener listener : this.listeners) {
@@ -131,7 +132,6 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     if (this.mutableTriggers.contains(trigger)) {
       throw new IllegalStateException("Cannot add same trigger twice");
     }
-    ((LXComponent) trigger).setParent(this);
     this.mutableTriggers.add(trigger);
     _reindex(this.triggers);
     for (Listener listener : this.listeners) {

@@ -16,7 +16,7 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx.parameter;
+package heronarts.lx.modulation;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,9 +27,10 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXModulationEngine;
 import heronarts.lx.LXPath;
 import heronarts.lx.color.ColorParameter;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXParameter;
 
 public abstract class LXParameterModulation extends LXComponent {
 
