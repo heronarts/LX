@@ -58,7 +58,7 @@ mvn install -pl LX
 `mvn install -pl LX` creates the following artifacts:
 
 in `LX/target`:
-1. fat jar (with dependencies): `LX.jar`
+1. fat jar with dependencies
 1. thin jar for distribution via maven repository publishing
 1. source jar for distribution via maven repository publishing
 1. javadoc jar for distribution via maven repository publishing
