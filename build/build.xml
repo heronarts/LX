@@ -23,7 +23,7 @@
 		<link href="${javadoc.java.href}" />
   		<link href="${javadoc.gson.href}" offline="true" packagelistLoc="." />
 
-			<fileset dir="../LX/src/main/java" defaultexcludes="yes">
+			<fileset dir="../src/main/java" defaultexcludes="yes">
   			<include name="**/*"/>
   		</fileset>
   	</javadoc>
@@ -31,7 +31,7 @@
 	
   <target name="jar" depends="clean">
     <mkdir dir="../tmp"/>
-	<javac srcdir="../LX/src" destdir="../tmp" includeAntRuntime="false" source="1.8" target="1.8">
+	<javac srcdir="../src" destdir="../tmp" includeAntRuntime="false" source="1.8" target="1.8">
 		<classpath refid="lib.path" />
 		<compilerarg value="-Xlint" />
 	</javac>
