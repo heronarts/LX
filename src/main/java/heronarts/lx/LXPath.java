@@ -18,6 +18,8 @@
 
 package heronarts.lx;
 
+import heronarts.lx.parameter.LXParameter;
+
 /**
  * Interface for any object in the LX system that can be represented by an abstract path.
  * Typcially this is an LXComponent or an LXParameter
@@ -86,10 +88,78 @@ public interface LXPath {
     return null;
   }
 
+  /**
+   * Globally retrieves an LX component with a path in the hierarchy
+   *
+   * @param lx LX instance
+   * @param path Canonical path of object
+   * @return Object at the given canonical path, if it is an LXComponent
+   */
+  public static LXComponent getComponent(LX lx, String path) {
+    LXPath component = get(lx, path);
+    if (component instanceof LXComponent) {
+      return (LXComponent) component;
+    }
+    return null;
+  }
+
+  /**
+   * Globally retrieves an LX parameter with a path in the hierarchy
+   *
+   * @param lx LX instance
+   * @param path Canonical path of object
+   * @return Object at the given canonical path, if it is an LXParameter
+   */
+  public static LXParameter getParameter(LX lx, String path) {
+    LXPath parameter = get(lx, path);
+    if (parameter instanceof LXParameter) {
+      return (LXParameter) parameter;
+    }
+    return null;
+  }
+
+  /**
+   * Globally retrieves an LX parameter at a certain scope in the LX hierarchy
+   *
+   * @param root LX root scope
+   * @param path Canonical path of object
+   * @return Object at the given canonical path
+   */
   public static LXPath get(LXComponent root, String path) {
     if (path.charAt(0) == '/') {
       path = path.substring(1);
     }
     return root.path(path.split("/"), 0);
   }
+
+  /**
+   * Globally retrieves an LX component at a certain scope in the LX hierarchy
+   *
+   * @param root LX root scope
+   * @param path Canonical path of object
+   * @return Object at the given canonical path, if an LXComponent
+   */
+  public static LXComponent getComponent(LXComponent root, String path) {
+    LXPath component = get(root, path);
+    if (component instanceof LXComponent) {
+      return (LXComponent) component;
+    }
+    return null;
+  }
+
+  /**
+   * Globally retrieves an LX parameter at a certain scope in the LX hierarchy
+   *
+   * @param root LX root scope
+   * @param path Canonical path of object
+   * @return Object at the given canonical path, if an LXParameter
+   */
+  public static LXParameter getParameter(LXComponent root, String path) {
+    LXPath parameter = get(root, path);
+    if (parameter instanceof LXParameter) {
+      return (LXParameter) parameter;
+    }
+    return null;
+  }
+
 }

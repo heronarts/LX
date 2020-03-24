@@ -167,7 +167,7 @@ public abstract class LXParameterModulation extends LXComponent {
 
   protected static LXParameter getParameter(LX lx, LXModulationEngine scope, JsonObject obj) {
     if (obj.has(KEY_PATH)) {
-      LXParameter parameter = (LXParameter) LXPath.get(scope.getParent(), obj.get(KEY_PATH).getAsString());
+      LXParameter parameter = LXPath.getParameter(scope.getParent(), obj.get(KEY_PATH).getAsString());
       if (parameter != null) {
         return parameter;
       }
