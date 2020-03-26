@@ -297,7 +297,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
         this.setPolling = false;
       }
-      log("LXMidiEngine Device Update Thread finished");
+      log("LXMidiEngine Device Update Thread finished.");
     }
   };
 

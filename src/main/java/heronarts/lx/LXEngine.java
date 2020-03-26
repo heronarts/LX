@@ -737,12 +737,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private class EngineThread extends Thread {
 
     private EngineThread() {
-      super("LXEngine Render Thread");
+      super("LXEngine Core Thread");
     }
 
     @Override
     public void run() {
-      LX.log("LXEngine Core Thread started");
+      LX.log("LXEngine Core Thread started.");
       while (!isInterrupted()) {
         long frameStart = System.currentTimeMillis();
         LXEngine.this.run();
@@ -773,7 +773,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       engineThread = null;
       isEngineThreadRunning = false;
 
-      LX.log("LXEngine Core Thread finished");
+      LX.log("LXEngine Core Thread finished.");
     }
   }
 

@@ -970,6 +970,7 @@ public class LXChannel extends LXChannelBus {
     try {
       pattern = this.lx.instantiatePattern(patternClass);
     } catch (LX.InstantiationException x) {
+      LX.error("Using placeholder class for missing pattern: " + patternClass);
       pattern = new LXPattern.Placeholder(lx);
       lx.command.pushError("Pattern class " + patternClass + " could not be loaded, check that content files were not removed?", x);
     }
