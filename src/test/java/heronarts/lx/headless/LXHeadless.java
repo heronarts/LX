@@ -76,7 +76,7 @@ public class LXHeadless {
 
       lx.engine.start();
     } catch (Exception x) {
-      System.err.println(x.getLocalizedMessage());
+      LX.error(x);
     }
   }
 }

@@ -159,7 +159,7 @@ public class LXDatagramOutput extends LXOutput {
     try {
       this.socket.send(datagram.packet);
       if (datagramErrorState.failureCount > 0) {
-        System.out.println(this.date.format(nowMillis) + " Recovered connectivity to " + datagramErrorState.destination);
+        LXOutput.log(this.date.format(nowMillis) + " Recovered connectivity to " + datagramErrorState.destination);
       }
       // Sent fine! All good here...
       datagramErrorState.failureCount = 0;
@@ -168,7 +168,7 @@ public class LXDatagramOutput extends LXOutput {
     } catch (IOException iox) {
       datagram.error.setValue(true);
       if (datagramErrorState.failureCount == 0) {
-        System.err.println(this.date.format(nowMillis) + " IOException sending to "
+        LXOutput.error(this.date.format(nowMillis) + " IOException sending to "
             + datagramErrorState.destination + " (" + iox.getLocalizedMessage()
             + "), will initiate backoff after 3 consecutive failures");
       }
@@ -176,7 +176,7 @@ public class LXDatagramOutput extends LXOutput {
       if (datagramErrorState.failureCount >= 3) {
         int pow = Math.min(5, datagramErrorState.failureCount - 3);
         long waitFor = (long) (50 * Math.pow(2, pow));
-        System.err.println(this.date.format(nowMillis) + " Retrying " + datagramErrorState.destination
+        LXOutput.error(this.date.format(nowMillis) + " Retrying " + datagramErrorState.destination
             + " in " + waitFor + "ms" + " (" + datagramErrorState.failureCount
             + " consecutive failures)");
         datagramErrorState.sendAfter = nowMillis + waitFor;

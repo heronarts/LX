@@ -161,8 +161,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
       new GsonBuilder().create().toJson(obj, writer);
       writer.close();
     } catch (IOException iox) {
-      System.err.println("Exception writing the preferences file");
-      iox.printStackTrace();
+      LX.error(iox, "Exception writing the preferences file: " + this.file);
     }
   }
 
@@ -177,8 +176,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
         load(this.lx, obj);
 
       } catch (Exception x) {
-        System.err.println("Exception loading preferences file");
-        x.printStackTrace();
+        LX.error(x, "Exception loading preferences file: " + this.file);
       }
     }
     this.inLoad = false;
@@ -190,13 +188,13 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
       if (overrideProjectFile != null) {
         projectFile = overrideProjectFile;
         if (!projectFile.exists()) {
-          System.err.println("Project file does not exist: " + overrideProjectFile);
+          LX.error("Project file does not exist: " + overrideProjectFile);
           projectFile = null;
         }
       } else if (this.projectFileName != null) {
         projectFile = this.lx.getMediaFile(LX.Media.PROJECTS, this.projectFileName);
         if (!projectFile.exists()) {
-          System.err.println("Last saved project file no longer exists: " + this.projectFileName);
+          LX.error("Last saved project file no longer exists: " + this.projectFileName);
           projectFile = null;
         }
       }
@@ -208,8 +206,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
         this.lx.openProject(projectFile);
       }
     } catch (Exception x) {
-      System.err.println("Exception loading initial project");
-      x.printStackTrace();
+      LX.error(x, "Unhandled exception loading initial project");
     }
   }
 

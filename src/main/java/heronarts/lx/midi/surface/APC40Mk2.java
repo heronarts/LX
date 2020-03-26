@@ -32,6 +32,7 @@ import heronarts.lx.LXEngine;
 import heronarts.lx.LXGroup;
 import heronarts.lx.LXPattern;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
 import heronarts.lx.midi.LXShortMessage;
@@ -911,7 +912,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    System.out.println("APC40mk2 UNMAPPED: " + note);
+    LXMidiEngine.error("APC40mk2 received unmapped note: " + note);
   }
 
   @Override
@@ -966,7 +967,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return;
     }
 
-    // System.out.println("APC40mk2 UNMAPPED: " + cc);
+    // LXMidiEngine.error("APC40mk2 UNMAPPED: " + cc);
   }
 
 }

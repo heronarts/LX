@@ -24,6 +24,7 @@ import heronarts.lx.clip.LXClip;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -321,7 +322,7 @@ public class LXChannel extends LXChannelBus {
         }
       }
       if (pattern == null) {
-        System.err.println("[OSC] Channel " + getLabel() + " has no pattern at path: " + patternId);
+        LXOscEngine.error("Channel " + getLabel() + " has no pattern at path: " + patternId);
         return false;
       } else {
         return pattern.handleOscMessage(message, parts, index + 2);

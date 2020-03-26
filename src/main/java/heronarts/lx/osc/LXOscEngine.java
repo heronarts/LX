@@ -136,7 +136,7 @@ public class LXOscEngine extends LXComponent {
           throw new OscException();
         }
       } catch (Exception x) {
-        System.err.println("[OSC] Failed to handle OSC message: " + message.getAddressPattern().getValue());
+        error("Failed to handle OSC message: " + message.getAddressPattern().getValue());
       }
     }
 
@@ -232,7 +232,7 @@ public class LXOscEngine extends LXComponent {
       try {
         send(oscMessage);
       } catch (IOException iox) {
-        System.err.println("[OSC] Failed to transmit: " + iox.getLocalizedMessage());
+        error(iox, "Failed to transmit message: " + message.getAddressPattern().toString());
       }
     }
   }
@@ -302,16 +302,16 @@ public class LXOscEngine extends LXComponent {
                 }
               }
             } catch (OscException oscx) {
-              System.err.println("OSC exception: " + oscx.getMessage());
+              error(oscx, "Error handling OscPacket in receiver");
             }
           } catch (IOException iox) {
             if (!isInterrupted()) {
-              System.err.println("Exception in OSC listener on port " + port + ":" + iox.getMessage());
+              error(iox, "Exception in OSC listener on port " + port + ":" + iox.getLocalizedMessage());
             }
           }
         }
         socket.close();
-        System.out.println("Stopped OSC listener " + address);
+        log("Stopped OSC listener " + address);
       }
     }
 
@@ -361,7 +361,7 @@ public class LXOscEngine extends LXComponent {
         try {
           this.engineTransmitter.setHost(this.transmitHost.getString());
         } catch (UnknownHostException uhx) {
-          System.err.println("[OSC] Invalid host: " + uhx.getLocalizedMessage());
+          error("Invalid OSC output host: " + this.transmitHost.getString() + " " + uhx.getLocalizedMessage());
           this.transmitActive.setValue(false);
         }
       }
@@ -377,11 +377,11 @@ public class LXOscEngine extends LXComponent {
     try {
       this.engineReceiver = receiver(this.receivePort.getValuei(), this.receiveHost.getString());
       this.engineReceiver.addListener(this.engineListener);
-      System.out.println("Started OSC listener " + this.engineReceiver.address);
+      log("Started OSC listener " + this.engineReceiver.address);
     } catch (SocketException sx) {
-      System.err.println("Failed to start OSC receiver: " + sx.getLocalizedMessage());
+      error("Failed to start OSC receiver: " + sx.getLocalizedMessage());
     } catch (UnknownHostException uhx) {
-      System.err.println("Bad OSC receive host: " + uhx.getLocalizedMessage());
+      error("Bad OSC receive host: " + uhx.getLocalizedMessage());
     }
   }
 
@@ -401,9 +401,9 @@ public class LXOscEngine extends LXComponent {
           DEFAULT_MAX_PACKET_SIZE
         );
       } catch (UnknownHostException uhx) {
-        System.err.println("[OSC] Invalid host: " + uhx.getLocalizedMessage());
+        error("Invalid host: " + uhx.getLocalizedMessage());
       } catch (SocketException sx) {
-        System.err.println("[OSC] Could not start transmitter: " + sx.getLocalizedMessage());
+        error("Could not start transmitter: " + sx.getLocalizedMessage());
       }
     }
   }
@@ -462,5 +462,20 @@ public class LXOscEngine extends LXComponent {
       receiver.stop();
     }
   }
+
+  private static final String OSC_LOG_PREFIX = "[OSC] ";
+
+  public static final void log(String message) {
+    LX.log(OSC_LOG_PREFIX + message);
+  }
+
+  public static final void error(String message) {
+    LX.error(OSC_LOG_PREFIX + message);
+  }
+
+  public static final void error(Exception x, String message) {
+    LX.error(x, OSC_LOG_PREFIX + message);
+  }
+
 
 }

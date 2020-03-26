@@ -31,7 +31,7 @@ public class MidiNoteClipLane extends LXClipLane {
       sm.setMessage(command, channel, data1, data2);
       return new MidiNoteClipEvent(this, (MidiNote) LXShortMessage.fromShortMessage(sm));
     } catch (InvalidMidiDataException imdx) {
-      System.err.println("Invalid MIDI in Clip: " + channel + " " + command + " " + data1 + " " + data2);
+      LX.error(imdx, "Invalid MIDI in clip event: " + channel + " " + command + " " + data1 + " " + data2);
     }
     return null;
   }

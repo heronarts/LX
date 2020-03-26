@@ -85,8 +85,7 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
         this.instance = clazz.getConstructor().newInstance();
         this.instance.initialize(lx);
       } catch (Exception x) {
-        System.err.println("Unhandled exception in plugin initialize: " + clazz.getName());
-        x.printStackTrace();
+        LX.error(x, "Unhandled exception in plugin initialize: " + clazz.getName());
         this.hasError = true;
       }
     }
@@ -147,8 +146,7 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
         }
       }
     } catch (Exception x) {
-      System.err.println("Unhandled exception loading custom content dir");
-      x.printStackTrace();
+      LX.error(x, "Unhandled exception loading custom content dir: " + folder);
     }
   }
 
@@ -159,7 +157,7 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
       try {
         urls.add(file.toURI().toURL());
       } catch (MalformedURLException e) {
-        e.printStackTrace();
+        LX.error(e, "Bad URL in file list: " + file);
       }
     }
     return urls.toArray(new URL[0]);
@@ -182,7 +180,7 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
   }
 
   private void loadJarFile(File file) {
-    System.out.println("Loading custom content from: " + file);
+    LX.log("Loading custom content from: " + file);
     try (JarFile jarFile = new JarFile(file)) {
       Enumeration<JarEntry> entries = jarFile.entries();
       while (entries.hasMoreElements()) {
@@ -193,11 +191,9 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
         }
       }
     } catch (IOException iox) {
-      System.err.println("Exception unpacking JAR file " + file);
-      iox.printStackTrace();
+      LX.error(iox, "Exception unpacking JAR file " + file);
     } catch (Exception | Error e) {
-      System.err.println("Unhandled exception loading JAR file " + file);
-      e.printStackTrace();
+      LX.error(e, "Unhandled exception loading JAR file " + file);
     }
   }
 
@@ -231,11 +227,9 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
         }
       }
     } catch (ClassNotFoundException cnfx) {
-      System.err.println("Class not actually found, expected in JAR file: " + className + " " + jarFile.getName());
-      cnfx.printStackTrace();
+      LX.error(cnfx, "Class not actually found, expected in JAR file: " + className + " " + jarFile.getName());
     } catch (Exception x) {
-      System.err.println("Unhandled exception in class loading: " + className);
-      x.printStackTrace();
+      LX.error(x, "Unhandled exception in class loading: " + className);
     }
   }
 
@@ -248,7 +242,7 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
       try {
         plugin.initialize(this.lx);
       } catch (Exception x) {
-
+        LX.error(x, "Exception in plugin initialization callback: " + plugin.getClass().getName());
       }
     }
   }

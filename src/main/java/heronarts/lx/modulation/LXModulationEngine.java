@@ -288,8 +288,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
           addModulator(modulator);
           modulator.load(lx, modulatorObj);
         } catch (LX.InstantiationException x) {
-          System.err.println("Could not instantiate modulator: " + modulatorClass);
-          x.printStackTrace();
+          LX.error(x, "Could not instantiate modulator: " + modulatorObj.toString());
         }
       }
     }
@@ -302,8 +301,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
           addModulation(modulation);
           modulation.load(lx, modulationObj);
         } catch (Exception x) {
-          System.err.println("Could not load modulation");
-          x.printStackTrace();
+          LX.error(x, "Could not load modulation " + modulationObj.toString());
         }
       }
     }
@@ -316,8 +314,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
           addTrigger(trigger);
           trigger.load(lx, triggerObj);
         } catch (Exception x) {
-          System.err.println("Could not load trigger mapping");
-          x.printStackTrace();
+          LX.error(x, "Could not load trigger mapping " + triggerObj.toString());
         }
       }
     }

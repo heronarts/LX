@@ -171,7 +171,7 @@ public abstract class LXParameterModulation extends LXComponent {
       if (parameter != null) {
         return parameter;
       }
-      System.err.println("Failed to locate parameter at " + obj.get(KEY_PATH).getAsString() + " in scope " + scope.getParent());
+      LX.error("Failed to locate parameter at " + obj.get(KEY_PATH).getAsString() + " in scope " + scope.getParent());
     }
     if (obj.has(KEY_ID)) {
       return (LXParameter) lx.getProjectComponent(obj.get(KEY_ID).getAsInt());

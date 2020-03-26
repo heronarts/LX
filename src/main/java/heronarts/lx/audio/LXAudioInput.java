@@ -182,7 +182,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
         this.format = MONO;
         info = MONO_TARGET_LINE;
       } else {
-        System.err.println("Device " + device + " does not support mono/stereo 16-bit input");
+        LX.error("Audio device does not support mono/stereo 16-bit input: " + device);
         return;
       }
       try {
@@ -195,7 +195,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
         this.inputThread = new InputThread(this.format);
         this.inputThread.start();
       } catch (Exception x) {
-        System.err.println(x.getLocalizedMessage());
+        LX.error(x, "Exception opening audio input line and starting audio input thread");
         return;
       }
     }
@@ -233,7 +233,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
       try {
         this.inputThread.join();
       } catch (InterruptedException ix) {
-        ix.printStackTrace();
+        LX.error(ix, "Audio input thread interrupted waiting to close: " + ix.getLocalizedMessage());
       }
       this.inputThread = null;
     }

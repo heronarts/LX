@@ -65,7 +65,7 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
       message.setMessage(sysex, sysex.length);
       send(message);
     } catch (InvalidMidiDataException imdx) {
-      imdx.printStackTrace();
+      LXMidiEngine.error(imdx, "Invalid midi data sennding sysex message: " + imdx.getLocalizedMessage());
     }
   }
 
@@ -75,7 +75,7 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
       message.setMessage(command, channel, data1, data2);
       send(message);
     } catch (InvalidMidiDataException imdx) {
-      imdx.printStackTrace();
+      LXMidiEngine.error(imdx, "Invalid midi data sennding short message: " + imdx.getLocalizedMessage());
     }
   }
 
@@ -105,7 +105,7 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
         this.receiver = device.getReceiver();
         this.isOpen = true;
       } catch (MidiUnavailableException mux) {
-        System.err.println(mux.getLocalizedMessage());
+        LXMidiEngine.error("Could not enable LXMidiOutput device " + this + ": " + mux.getLocalizedMessage());
         this.enabled.setValue(false);
       }
     }

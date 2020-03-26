@@ -92,7 +92,7 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
         this.transmitter.setReceiver(this.receiver);
         this.isOpen = true;
       } catch (MidiUnavailableException mux) {
-        System.err.println(mux.getLocalizedMessage());
+        LXMidiEngine.error("Could not enable LXMidiInput device " + this + ": " + mux.getLocalizedMessage());
         this.enabled.setValue(false);
       }
     }

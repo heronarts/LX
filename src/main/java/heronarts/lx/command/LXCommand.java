@@ -141,7 +141,7 @@ public abstract class LXCommand {
       }
       LXComponent component = this.component.get();
       if (component == null) {
-        System.err.println("Bad internal state, component " + this.component.componentId + " of type " + componentCls.getName() + " does not exist, cannot get parameter: " + this.parameterPath);
+        LX.error("Bad internal state, component " + this.component.componentId + " of type " + componentCls.getName() + " does not exist, cannot get parameter: " + this.parameterPath);
         return null;
       }
       return (T) component.getParameter(this.parameterPath);

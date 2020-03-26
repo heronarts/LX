@@ -131,8 +131,7 @@ public class LXStructure extends LXComponent {
     try {
       output = new Output(lx);
     } catch (SocketException sx) {
-      System.err.println("Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getMessage());
-      sx.printStackTrace();
+      LX.error(sx, "Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getMessage());
     }
     this.output = output;
   }
@@ -528,7 +527,7 @@ public class LXStructure extends LXComponent {
           fixture.load(lx, fixtureObj);
           addFixture(fixture);
         } catch (LX.InstantiationException x) {
-          x.printStackTrace();
+          LX.error(x, "Could not instantiate fixture " + fixtureObj.toString());
         }
       }
     }
@@ -568,10 +567,9 @@ public class LXStructure extends LXComponent {
       this.modelName.setValue(file.getName());
       this.isStatic.bang();
     } catch (FileNotFoundException e) {
-      System.err.println("Model file does not exist: " + file.toString());
+      LX.error("Model file does not exist: " + file);
     } catch (IOException iox) {
-      System.err.println("Exception loading model file: " + file.toString());
-      iox.printStackTrace();
+      LX.error(iox, "Exception loading model file: " + file);
     }
     return this;
   }
@@ -585,9 +583,9 @@ public class LXStructure extends LXComponent {
       this.modelFile = file;
       this.modelName.setValue(file.getName());
       this.isStatic.bang();
-      System.out.println("Model exported successfully to " + file.toString());
+      LX.log("Model exported successfully to " + file);
     } catch (IOException iox) {
-      iox.printStackTrace();
+      LX.error(iox, "Exception writing model file to " + file);
     }
     return this;
   }

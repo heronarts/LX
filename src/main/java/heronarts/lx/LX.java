@@ -41,7 +41,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -143,7 +147,7 @@ public class LX {
     public void log(String label) {
       long thisTime = System.nanoTime();
       if (LX.LOG_INIT_TIMING) {
-        System.out.println(String.format("[LX init: %s: %.2fms]", label, (thisTime - lastTime) / 1000000.));
+        LX.log(String.format("init: %s: %.2fms", label, (thisTime - lastTime) / 1000000.));
       }
       this.lastTime = thisTime;
     }
@@ -1078,12 +1082,12 @@ public class LX {
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
-      System.out.println("Project saved successfully to " + file.toString());
+      LX.log("Project saved successfully to " + file.toString());
       this.componentRegistry.resetProject();
       setProject(file, ProjectListener.Change.SAVE);
       this.command.setDirty(false);
     } catch (IOException iox) {
-      System.err.println(iox.getLocalizedMessage());
+      LX.error(iox, "Could not write project to output file: " + file.toString());
     }
   }
 
@@ -1251,14 +1255,13 @@ public class LX {
       }
       this.componentRegistry.loading = false;
       setProject(file, ProjectListener.Change.OPEN);
-      System.out.println("Project loaded successfully from " + file.toString());
+      LX.log("Project loaded successfully from " + file.toString());
     } catch (IOException iox) {
-      System.err.println("Could not load project file: " + iox.getLocalizedMessage());
+      LX.error("Could not load project file: " + iox.getLocalizedMessage());
       this.command.pushError("Could not load project file: " + iox.getLocalizedMessage(), iox);
     } catch (Exception x) {
+      LX.error(x, "Exception in openProject: " + x.getLocalizedMessage());
       this.command.pushError("Exception in openProject: " + x.getLocalizedMessage(), x);
-      System.err.println("Exception in openProject: " + x.getLocalizedMessage());
-      x.printStackTrace(System.err);
     }
   }
 
@@ -1267,8 +1270,7 @@ public class LX {
       Class<? extends LXModel> cls = Class.forName(className, true, this.contentLoader).asSubclass(LXModel.class);
       return cls.getConstructor().newInstance();
     } catch (Exception x) {
-      System.err.println("Exception in instantiateModel: " + x.getMessage());
-      x.printStackTrace();
+      LX.error(x, "Exception in instantiateModel: " + x.getMessage());
       throw new InstantiationException(x);
     }
   }
@@ -1278,8 +1280,7 @@ public class LX {
       Class<? extends T> cls = Class.forName(className, true, this.contentLoader).asSubclass(type);
       return instantiateComponent(cls, type);
     } catch (Exception x) {
-      System.err.println("Exception in instantiateComponent: " + x.getMessage());
-      x.printStackTrace();
+      LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
       throw new InstantiationException(x);
     }
   }
@@ -1292,8 +1293,7 @@ public class LX {
         return cls.getConstructor().newInstance();
       }
     } catch (Exception x) {
-      System.err.println("Exception in instantiateComponent: " + x.getMessage());
-      x.printStackTrace();
+      LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
       throw new InstantiationException(x);
     }
   }
@@ -1339,7 +1339,7 @@ public class LX {
   }
 
   public void reloadContent() {
-    System.out.println("Reloading custom content folders");
+    LX.log("Reloading custom content folders");
     this.contentLoader.dispose();
     this.contentReloading = true;
 
@@ -1363,7 +1363,7 @@ public class LX {
   protected static void bootstrapMediaPath(Flags flags) {
     File studioDir = new File(System.getProperty("user.home"), "LXStudio");
     if (!studioDir.exists()) {
-      System.out.println("Creating directory: " + studioDir);
+      LX.log("Creating directory: " + studioDir);
       studioDir.mkdir();
     }
     if (studioDir.isDirectory()) {
@@ -1371,13 +1371,57 @@ public class LX {
       for (LX.Media type : LX.Media.values()) {
         File contentDir = new File(studioDir, type.getDirName());
         if (!contentDir.exists()) {
-          System.out.println("Creating directory: " + contentDir);
+          LX.log("Creating directory: " + contentDir);
           contentDir.mkdir();
         }
       }
     } else {
-      System.err.println("~/LXStudio already exists but is not a directory, this will not go well.");
+      LX.error("~/LXStudio already exists but is not a directory, this will not go well.");
     }
+  }
+
+  public static void log(String message) {
+    _log(System.out, message);
+  }
+
+  public static void error(String message) {
+    _log(System.err, message);
+  }
+
+  public static void error(Exception x) {
+    error(x, x.getCause().getClass().getName() + ":" + x.getLocalizedMessage());
+  }
+
+  public static void error(String prefix, Throwable x) {
+    error(x, x.getCause().getClass().getName() + ":" + x.getLocalizedMessage());
+  }
+
+  public static void error(Throwable x, String message) {
+    _log(System.err, message);
+    x.printStackTrace(System.err);
+  }
+
+  private static final DateFormat logDateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+
+  protected static void _log(String prefix, String message) {
+    _log(System.out, prefix, message);
+  }
+
+  protected static void _error(String prefix, Exception x, String message) {
+    _log(System.err, prefix, message);
+    x.printStackTrace(System.err);
+  }
+
+  protected static void _error(String prefix, String message) {
+    _log(System.err, prefix, message);
+  }
+
+  protected static void _log(PrintStream stream, String message) {
+    _log(stream, "LX", message);
+  }
+
+  protected static void _log(PrintStream stream, String prefix, String message) {
+    stream.println("[" + prefix + " " + logDateFormat.format(Calendar.getInstance().getTime()) + "] " + message);
   }
 
   /**
@@ -1393,7 +1437,7 @@ public class LX {
       if (arg.endsWith(".lxp")) {
         projectFile = new File(arg);
         if (!projectFile.exists()) {
-          System.err.println("Project file not found: " + projectFile);
+          LX.error("Project file does not exist: " + projectFile);
           projectFile = null;
         }
       }
@@ -1406,6 +1450,7 @@ public class LX {
     if (projectFile != null) {
       lx.openProject(projectFile);
     }
+    LX.log("Starting headless engine");
     lx.engine.start();
   }
 }

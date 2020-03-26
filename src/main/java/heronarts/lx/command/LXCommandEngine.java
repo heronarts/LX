@@ -65,7 +65,7 @@ public class LXCommandEngine {
           this.cause.printStackTrace(pw);
           return sw.toString();
         } catch (IOException e) {
-          // Ignored, we failed.
+          // Ignored, we really meta-failed hard here.
         }
       }
       return null;
@@ -192,8 +192,7 @@ public class LXCommandEngine {
       } catch (InvalidCommandException icx) {
         pushError(icx);
       } catch (Exception x) {
-        System.err.println("Unhandled exception on undo " + command + " - bad internal state?");
-        x.printStackTrace();
+        LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
         clear();
       }
     }
@@ -217,8 +216,7 @@ public class LXCommandEngine {
       } catch (InvalidCommandException icx) {
         pushError(icx);
       } catch (Exception x) {
-        System.err.println("Unhandled exception on redo " + command + " - bad internal state?");
-        x.printStackTrace();
+        LX.error(x, "Unhandled exception on redo " + command + " - bad internal state?");
         clear();
       }
     }

@@ -109,7 +109,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
             if (inputStream.markSupported()) {
               inputStream.reset();
             } else {
-              System.err.println("Audio format does not support reset");
+              LX.error("Audio format does not support reset");
             }
             this.trigger = false;
           }
@@ -142,8 +142,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
           try {
             line.write(this.buffer, 0, len);
           } catch (Exception x) {
-            System.err.println("LXAudioOutput error: " + x.getLocalizedMessage());
-            x.printStackTrace();
+            LX.error(x, "LXAudioOutput error writing to line: " + x.getLocalizedMessage());
             play.setValue(false);
           }
 
@@ -157,8 +156,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
           mix.computeMix(left, right);
 
         } catch (IOException iox) {
-          System.err.println(iox);
-          iox.printStackTrace();
+          LX.error(iox);
           break;
         }
       }
@@ -171,7 +169,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
     try {
       setInputStream(new FileInputStream(file));
     } catch (FileNotFoundException fnfx) {
-      System.err.println(fnfx.getLocalizedMessage());
+      LX.error(fnfx, "Audio file does not exist for setInputStream: " + file);
     }
   }
 
@@ -182,10 +180,9 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
     try {
       return setAudioInputStream(AudioSystem.getAudioInputStream(inputStream));
     } catch (UnsupportedAudioFileException uafx) {
-      uafx.printStackTrace(System.err);
-      System.err.println(uafx.getLocalizedMessage());
+      LX.error(uafx);
     } catch (IOException iox) {
-      System.err.println(iox.getLocalizedMessage());
+      LX.error(iox);
     }
     return false;
   }
@@ -203,33 +200,33 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
         }
         format = inputStream.getFormat();
       } catch (Exception x) {
-        System.err.println("Invalid audio format: " + x.getLocalizedMessage());
+        LX.error(x, "Invalid audio format: " + x.getLocalizedMessage());
         return false;
       }
     }
 
     if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED) {
-      System.err.println("Audio must be decodable to PCM_SIGNED data");
+      LX.error("Audio must be decodable to PCM_SIGNED data");
       return false;
     }
     if (format.getSampleRate() != SAMPLE_RATE) {
-      System.err.println("Audio file must have sample rate of " + SAMPLE_RATE);
+      LX.error("Audio file must have sample rate of " + SAMPLE_RATE);
       return false;
     }
     if (format.getSampleSizeInBits() != BITS_PER_SAMPLE) {
-      System.err.println("Audio file must have " + BITS_PER_SAMPLE + " bits per sample");
+      LX.error("Audio file must have " + BITS_PER_SAMPLE + " bits per sample");
       return false;
     }
     if (format.isBigEndian()) {
-      System.err.println("Audio file must be little endian");
+      LX.error("Audio file must be little endian");
       return false;
     }
     if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED) {
-      System.err.println("Audio file must be PCM signed");
+      LX.error("Audio file must be PCM signed");
       return false;
     }
     if (format.getChannels() > 2) {
-      System.err.println("Audio file has more than 2 channels");
+      LX.error("Audio file has more than 2 channels");
     }
 
     // Okay we're valid!
@@ -294,7 +291,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
         this.outputThread = new OutputThread(this.line);
         this.outputThread.start();
       } catch (Exception x) {
-        System.err.println(x.getLocalizedMessage());
+        LX.error(x, "Exception opening stereo output audio line");
         return;
       }
     }
@@ -328,16 +325,16 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
   public void update(LineEvent event) {
     LineEvent.Type type = event.getType();
     if (type == LineEvent.Type.OPEN) {
-      System.out.println("LXAudioOuput OPEN");
+      LX.log("LXAudioOuput OPEN");
     } else if (type == LineEvent.Type.START){
-      System.out.println("LXAudioOuput START");
+      LX.log("LXAudioOuput START");
     } else if (type == LineEvent.Type.STOP) {
-      System.out.println("LXAudioOuput STOP");
+      LX.log("LXAudioOuput STOP");
       if (this.line == event.getLine()) {
         this.stopped = true;
       }
     } else if (type == LineEvent.Type.CLOSE) {
-      System.out.println("LXAudioOuput CLOSE");
+      LX.log("LXAudioOuput CLOSE");
       if (this.line == event.getLine()) {
         this.closed = true;
       }

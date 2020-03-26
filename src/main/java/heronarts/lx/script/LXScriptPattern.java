@@ -129,13 +129,13 @@ public class LXScriptPattern extends LXPattern {
       ((Invocable) engine).invokeFunction("init");
       this.jsInitialized = true;
     } catch (FileNotFoundException fnfx) {
-      System.err.println("[SCRIPT] " + getLabel() + " (" + this.scriptPath.getString() + ") File not found: " + fnfx.getLocalizedMessage());
+      LXScriptEngine.error(getLabel() + " (" + this.scriptPath.getString() + ") File not found: " + fnfx.getLocalizedMessage());
     } catch (NoSuchMethodException nsmx) {
-      System.err.println("[SCRIPT] " + getLabel() + " (" + this.scriptPath.getString() + ") has no init() function: " + nsmx.getLocalizedMessage());
+      LXScriptEngine.error(getLabel() + " (" + this.scriptPath.getString() + ") has no init() function: " + nsmx.getLocalizedMessage());
     } catch (ScriptException sx) {
-      System.err.println("[SCRIPT] " + getLabel() + " (" + this.scriptPath.getString() + ") failed to initialize: " + sx.getLocalizedMessage());
+      LXScriptEngine.error(getLabel() + " (" + this.scriptPath.getString() + ") failed to initialize: " + sx.getLocalizedMessage());
     } catch (Exception x) {
-      System.err.println("[SCRIPT] " + getLabel() + " (" + this.scriptPath.getString() + ") error: " + x.getLocalizedMessage());
+      LXScriptEngine.error(getLabel() + " (" + this.scriptPath.getString() + ") error: " + x.getLocalizedMessage());
     }
     this.jsInitializing = false;
   }
@@ -148,13 +148,13 @@ public class LXScriptPattern extends LXPattern {
       try {
         ((Invocable) engine).invokeFunction("run", deltaMs);
       } catch (NoSuchMethodException nsmx) {
-        System.err.println("[SCRIPT] " + getLabel() + " (" + this.scriptPath.getString() + ") has no run() function: " + nsmx.getLocalizedMessage());
+        LXScriptEngine.error(getLabel() + " (" + this.scriptPath.getString() + ") has no run() function: " + nsmx.getLocalizedMessage());
         this.jsInitialized = false;
       } catch (ScriptException sx) {
-        System.err.println("[SCRIPT] " + getLabel() + " (" + this.scriptPath.getString() + ") error in run: " + sx.getLocalizedMessage());
+        LXScriptEngine.error(getLabel() + " (" + this.scriptPath.getString() + ") error in run: " + sx.getLocalizedMessage());
         this.jsInitialized = false;
       } catch (Exception x) {
-        System.err.println("[SCRIPT] " + getLabel() + " (" + this.scriptPath.getString() + ") error: " + x.getLocalizedMessage());
+        LXScriptEngine.error(getLabel() + " (" + this.scriptPath.getString() + ") error: " + x.getLocalizedMessage());
         this.jsInitialized = false;
       }
     }

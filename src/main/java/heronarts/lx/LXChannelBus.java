@@ -138,7 +138,7 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
 
     @Override
     public void run() {
-      System.out.println("LXEngine Channel thread started [" + getLabel() + "]");
+      LX.log("LXEngine Channel thread started [" + getLabel() + "]");
       while (!isInterrupted()) {
         synchronized (this) {
           try {
@@ -157,7 +157,7 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
           this.signal.notify();
         }
       }
-      System.out.println("LXEngine Channel thread finished [" + getLabel() + "]");
+      LX.log("LXEngine Channel thread finished [" + getLabel() + "]");
     }
   };
 

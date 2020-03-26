@@ -36,4 +36,18 @@ public class LXScriptEngine {
     return this.engine;
   }
 
+  private static final String SCRIPT_LOG_PREFIX = "[SCRIPT] ";
+
+  protected static final void log(String message) {
+    LX.log(SCRIPT_LOG_PREFIX + message);
+  }
+
+  protected static final void error(String message) {
+    LX.error(SCRIPT_LOG_PREFIX + message);
+  }
+
+  protected static final void error(Exception x, String message) {
+    LX.error(x, SCRIPT_LOG_PREFIX + message);
+  }
+
 }

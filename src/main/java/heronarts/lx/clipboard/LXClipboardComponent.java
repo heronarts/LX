@@ -110,8 +110,7 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
       writer.close();
       return io.toString();
     } catch (Exception x) {
-      System.err.println("Error serializing LXComponent for system clipboard");
-      x.printStackTrace();
+      LX.error(x, "Error serializing LXComponent for system clipboard");
     }
     return null;
   }

@@ -219,7 +219,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         addChild(new ModelOutput(lx));
       } catch (SocketException sx) {
         // TODO(mcslee): report this to the UI somehow
-        System.err.println("Could not create output datagram socket, model will not send");
+        LXOutput.error("Could not create output datagram socket, model will not be able to send");
       }
     }
   }
@@ -578,7 +578,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         }
       }
       if (channel == null) {
-        System.err.println("[OSC] Engine has no channel at path: " + channelIndex);
+        LXOscEngine.error("Engine has no channel at path: " + channelIndex);
         return false;
       } else {
         if (channel instanceof LXChannel) {
@@ -742,7 +742,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     @Override
     public void run() {
-      System.out.println("LXEngine Render Thread started");
+      LX.log("LXEngine Core Thread started");
       while (!isInterrupted()) {
         long frameStart = System.currentTimeMillis();
         LXEngine.this.run();
@@ -773,7 +773,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       engineThread = null;
       isEngineThreadRunning = false;
 
-      System.out.println("LXEngine Render Thread finished");
+      LX.log("LXEngine Core Thread finished");
     }
   }
 
@@ -1776,7 +1776,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         sb.append("LXEngine::" + channel.getLabel() + "::" + pattern.getLabel() + "::run() " + ((int) (pattern.timer.runNanos / 1000000)) + "ms\n");
       }
     }
-    System.out.println(sb);
+    LX.log(sb.toString());
   }
 
   public class NetworkThread extends Thread {
@@ -1801,14 +1801,14 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     @Override
     public void run() {
-      System.out.println("LXEngine Network Thread started");
+      LXOutput.log("LXEngine Network Thread started");
       while (!isInterrupted()) {
         try {
           synchronized(this) {
             wait();
           }
         } catch (InterruptedException ix) {
-          System.out.println("LXEngine Network Thread interrupted");
+          LXOutput.log("LXEngine Network Thread interrupted");
           break;
         }
 
@@ -1830,7 +1830,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         this.lastFrame = now;
       }
 
-      System.out.println("LXEngine Network Thread finished");
+      LXOutput.log("LXEngine Network Thread finished");
     }
 
     public float frameRate() {

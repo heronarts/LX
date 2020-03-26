@@ -79,7 +79,7 @@ public class JsonFixture extends LXFixture {
 
     File fixtureFile = new File(this.lx.getMediaPath() + File.separator + "fixtures" + File.separator + this.fixtureType.getString() + ".lxf");
     if (!fixtureFile.exists() || !fixtureFile.isFile()) {
-      System.err.println("Invalid fixture type, could not find file: " + this.fixtureType.getString());
+      LX.error("Invalid fixture type, could not find file: " + this.fixtureType.getString());
       return;
     }
 
@@ -103,8 +103,7 @@ public class JsonFixture extends LXFixture {
         }
       }
     } catch (Exception x) {
-      System.err.println("Exception loading fixture: " + x.getMessage());
-      x.printStackTrace();
+      LX.error(x, "Exception loading fixture from " + fixtureFile + ": " + x.getLocalizedMessage());
     }
   }
 
@@ -148,8 +147,7 @@ public class JsonFixture extends LXFixture {
         }
       }
     } catch (Exception x) {
-      System.err.println("Bad JSON data in fixture " + this.fixtureType.getString() + ": " + x.getMessage());
-      x.printStackTrace();
+      LX.error(x, "Bad JSON data in fixture " + this.fixtureType.getString() + ": " + x.getMessage());
     }
   }
 
@@ -172,7 +170,7 @@ public class JsonFixture extends LXFixture {
       }
       return submodels;
     } catch (Exception x) {
-      x.printStackTrace();
+      LX.error(x, "Exception producing submodels: " + x.getLocalizedMessage());
     }
     return NO_SUBMODELS;
   }

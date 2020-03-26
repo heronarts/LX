@@ -593,7 +593,7 @@ public class DJM900nxs2 extends LXMidiSurface {
       return;
     }
 
-    //System.out.println("DJM-900NXS2 UNMAPPED CC: " + cc);
+    // LXMidiEngine.error("DJM-900NXS2 UNMAPPED CC: " + cc);
   }
 
   private void noteReceived(MidiNote note, boolean on) {
@@ -604,7 +604,7 @@ public class DJM900nxs2 extends LXMidiSurface {
       return;
     }
 
-    //System.out.println("DJM-900NXS2 UNMAPPED Note: " + note + " " + on);
+    // LXMidiEngine.error("DJM-900NXS2 UNMAPPED Note: " + note + " " + on);
   }
 
   @Override

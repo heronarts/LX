@@ -19,6 +19,7 @@
 package heronarts.lx.midi.remote;
 
 import heronarts.lx.LXUtils;
+import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXMidiOutput;
@@ -679,7 +680,7 @@ public class LXMidiRemote implements LXMidiListener {
   @Override
   public final void noteOnReceived(MidiNoteOn note) {
     if (this.logEvents) {
-      System.out.println(this.input.getName() + ":noteOn:" + note.getChannel()
+      LXMidiEngine.log(this.input.getName() + ":noteOn:" + note.getChannel()
           + ":" + note.getPitch() + ":" + note.getVelocity());
     }
     int index = index(note.getChannel(), note.getPitch());
@@ -692,7 +693,7 @@ public class LXMidiRemote implements LXMidiListener {
   @Override
   public final void noteOffReceived(MidiNote note) {
     if (this.logEvents) {
-      System.out.println(this.input.getName() + ":noteOff:" + note.getChannel()
+      LXMidiEngine.log(this.input.getName() + ":noteOff:" + note.getChannel()
           + ":" + note.getPitch() + ":" + note.getVelocity());
     }
     int index = index(note.getChannel(), note.getPitch());
@@ -705,7 +706,7 @@ public class LXMidiRemote implements LXMidiListener {
   @Override
   public final void controlChangeReceived(MidiControlChange controller) {
     if (this.logEvents) {
-      System.out.println(this.input.getName() + ":controllerChange:"
+      LXMidiEngine.log(this.input.getName() + ":controllerChange:"
           + controller.getChannel() + ":" + controller.getCC() + ":"
           + controller.getValue());
     }
@@ -719,7 +720,7 @@ public class LXMidiRemote implements LXMidiListener {
   @Override
   public final void programChangeReceived(MidiProgramChange programChange) {
     if (this.logEvents) {
-      System.out.println(this.input.getName() + ":programChange:"
+      LXMidiEngine.log(this.input.getName() + ":programChange:"
           + programChange.getChannel() + ":" + programChange.getProgram());
     }
     programChange(programChange);
@@ -729,7 +730,7 @@ public class LXMidiRemote implements LXMidiListener {
   @Override
   public final void pitchBendReceived(MidiPitchBend pitchBend) {
     if (this.logEvents) {
-      System.out.println(this.input.getName() + ":pitchBend:"
+      LXMidiEngine.log(this.input.getName() + ":pitchBend:"
           + pitchBend.getChannel() + ":" + pitchBend.getPitchBend());
     }
     pitchBend(pitchBend);
@@ -738,7 +739,7 @@ public class LXMidiRemote implements LXMidiListener {
   @Override
   public final void aftertouchReceived(MidiAftertouch aftertouch) {
     if (this.logEvents) {
-      System.out.println(this.input.getName() + ":aftertouch:"
+      LXMidiEngine.log(this.input.getName() + ":aftertouch:"
           + aftertouch.getChannel() + ":" + aftertouch.getAftertouch());
     }
     aftertouch(aftertouch);

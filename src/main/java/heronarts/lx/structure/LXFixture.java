@@ -35,6 +35,7 @@ import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
@@ -289,7 +290,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     } catch (UnknownHostException uhx) {
       // TODO(mcslee): get an error to the UI...
       datagram.enabled.setValue(false);
-      uhx.printStackTrace();
+      LXOutput.error(uhx, "Unkown host for fixture datagram: " + this.host.getString());
     }
 
     return datagram;
@@ -350,7 +351,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
         } catch (UnknownHostException uhx) {
           this.datagram.enabled.setValue(false);
           // TODO(mcslee): get an error to the UI...
-          uhx.printStackTrace();
+          LXOutput.error(uhx, "Unkown host for fixture datagram: " + this.host.getString());
         }
       }
     } else if (p == this.solo) {

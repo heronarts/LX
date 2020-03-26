@@ -193,4 +193,18 @@ public abstract class LXOutput extends LXComponent {
    * @param glut Look-up table scaled to appropriate brightness and gamma
    */
   protected abstract void onSend(int[] colors, byte[] glut);
+
+  private static final String OUTPUT_LOG_PREFIX = "[I/O] ";
+
+  public static final void log(String message) {
+    LX.log(OUTPUT_LOG_PREFIX + message);
+  }
+
+  public static final void error(String message) {
+    LX.error(OUTPUT_LOG_PREFIX + message);
+  }
+
+  public static final void error(Exception x, String message) {
+    LX.error(x, OUTPUT_LOG_PREFIX + message);
+  }
 }

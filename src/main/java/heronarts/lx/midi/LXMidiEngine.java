@@ -197,12 +197,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
                 midiInfoToOutput.put(deviceInfo, output);
               }
             } catch (MidiUnavailableException mux) {
-              mux.printStackTrace();
+              error(mux, "MidiUnavailable on MIDI device initialization thread: " + mux.getLocalizedMessage());
             }
           }
         } catch (Exception x) {
-          System.err.println("Unexpected MIDI error, MIDI unavailable: " + x.getLocalizedMessage());
-          x.printStackTrace();
+          error(x, "Unexpected MIDI error, MIDI unavailable: " + x.getLocalizedMessage());
         }
 
         // Instantiate any midi surfaces
@@ -237,8 +236,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             listening = true;
           }
         } catch (CoreMidiException cmx) {
-          System.err.println("Could not initialize CoreMidi notification listener: " + cmx.getMessage());
-          cmx.printStackTrace();
+          error(cmx, "Could not initialize CoreMidi notification listener: " + cmx.getMessage());
         }
 
         // Can't listen? We're not on Mac. Then we'll just have to poll for changes...
@@ -299,7 +297,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
         this.setPolling = false;
       }
-      System.out.println("LXMidiEngine Device Update Thread finished");
+      log("LXMidiEngine Device Update Thread finished");
     }
   };
 
@@ -390,7 +388,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
               }
             }
           } catch (MidiUnavailableException mux) {
-            mux.printStackTrace();
+            error(mux, "MIDI unavailable in updateMidiDevices: " + mux.getLocalizedMessage());
           }
         }
       }
@@ -424,8 +422,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       }
 
     } catch (Exception x) {
-      System.err.println("Unhandled exception in midi system update: " + x.getMessage());
-      x.printStackTrace();
+      error(x, "Unhandled exception in midi system update: " + x.getLocalizedMessage());
     }
   }
 
@@ -504,8 +501,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
     } catch (Exception x) {
-      System.err.println("Could not instantiate midi surface class: " + surfaceClass);
-      x.printStackTrace();
+      error(x, "Could not instantiate midi surface class: " + surfaceClass);
     }
     return surface;
   }
@@ -521,7 +517,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         try {
           this.initializationLock.wait();
         } catch (InterruptedException ix) {
-          System.err.println(ix.getLocalizedMessage());
+          error(ix, "MIDI intiialization lock was interrupted??");
         }
       }
     }
@@ -683,7 +679,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         return true;
       }
     } catch (InvalidMidiDataException imdx) {
-      System.err.println("[OSC] Invalid MIDI message: " + imdx.getLocalizedMessage());
+      error("Invalid MIDI message via OSC: " + message);
       return false;
     }
     return super.handleOscMessage(message, parts, index);
@@ -884,7 +880,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         try {
           addMapping(LXMidiMapping.create(this.lx, element.getAsJsonObject()));
         } catch (Exception x) {
-          System.err.println("Could not load MIDI mapping: " + element.toString());
+          error("Could not load MIDI mapping: " + element.toString());
         }
       }
     }
@@ -924,6 +920,20 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
     });
+  }
+
+  private static final String MIDI_LOG_PREFIX = "[MIDI] ";
+
+  public static final void log(String message) {
+    LX.log(MIDI_LOG_PREFIX + message);
+  }
+
+  public static final void error(String message) {
+    LX.error(MIDI_LOG_PREFIX + message);
+  }
+
+  public static final void error(Exception x, String message) {
+    LX.error(x, MIDI_LOG_PREFIX + message);
   }
 
 }

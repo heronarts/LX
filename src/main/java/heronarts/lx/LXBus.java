@@ -21,6 +21,7 @@ package heronarts.lx;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 
@@ -138,7 +139,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
           return effect.handleOscMessage(message, parts, index+2);
         }
       }
-      System.err.println("[OSC] Channel " + getLabel() + " does not have effect at path: " + effectId);
+      LXOscEngine.error("Channel " + getLabel() + " does not have effect at path: " + effectId);
       return false;
     }
     return super.handleOscMessage(message, parts, index);

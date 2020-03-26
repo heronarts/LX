@@ -30,6 +30,7 @@ import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscArgument;
 import heronarts.lx.osc.OscInt;
 import heronarts.lx.osc.OscMessage;
@@ -314,7 +315,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
     LXParameter parameter = getParameter(path);
     if (parameter == null) {
-      System.err.println("[OSC] Component " + this + " does not have parameter: " + path);
+      LXOscEngine.error("Component " + this + " does not have parameter: " + path);
       return false;
     }
     if (parameter instanceof BooleanParameter) {
