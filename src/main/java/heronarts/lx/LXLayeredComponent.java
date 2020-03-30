@@ -230,18 +230,6 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   }
 
   /**
-   * Adds to the color of point (x,y) in a default GridModel, using blendColor
-   *
-   * @param x x-index
-   * @param y y-index
-   * @param c color
-   * @return this
-   */
-  protected final LXLayeredComponent addColor(int x, int y, int c) {
-    return addColor(x + y * this.lx.width, c);
-  }
-
-  /**
    * Adds the color to the fixture
    *
    * @param model model
@@ -265,30 +253,6 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   protected final LXLayeredComponent subtractColor(int i, int c) {
     this.colors[i] = LXColor.subtract(this.colors[i], c);
     return this;
-  }
-
-  /**
-   * Sets the color of point (x,y) in a default GridModel
-   *
-   * @param x x-index
-   * @param y y-index
-   * @param c color
-   * @return this
-   */
-  protected final LXLayeredComponent setColor(int x, int y, int c) {
-    this.colors[x + y * this.lx.width] = c;
-    return this;
-  }
-
-  /**
-   * Gets the color at point (x,y) in a GridModel
-   *
-   * @param x x-index
-   * @param y y-index
-   * @return Color value
-   */
-  protected final int getColor(int x, int y) {
-    return this.colors[x + y * this.lx.width];
   }
 
   /**

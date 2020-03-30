@@ -33,7 +33,6 @@ import heronarts.lx.command.LXCommandEngine;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
-import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
@@ -182,28 +181,6 @@ public class LX {
   public final Flags flags;
 
   /**
-   * The width of the grid, immutable.
-   */
-  public final int width;
-
-  /**
-   * The height of the grid, immutable.
-   */
-  public final int height;
-
-  /**
-   * The midpoint of the x-space.
-   */
-  @Deprecated
-  public final float cx;
-
-  /**
-   * This midpoint of the y-space.
-   */
-  @Deprecated
-  public final float cy;
-
-  /**
    * The lighting system structure
    */
   public final LXStructure structure;
@@ -212,11 +189,6 @@ public class LX {
    * The pixel model.
    */
   protected LXModel model;
-
-  /**
-   * The total number of pixels in the grid, immutable.
-   */
-  public final int total;
 
   /**
    * Clipboard for copy/paste
@@ -301,21 +273,9 @@ public class LX {
     // Create structure object
     this.structure = new LXStructure(this, model);
     if (model == null) {
-      this.total = this.width = this.height = 0;
       this.model = this.structure.getModel();
-      this.cx = this.cy = 0;
     } else {
       this.model = model;
-      this.total = model.points.length;
-      this.cx = model.cx;
-      this.cy = model.cy;
-      if (model instanceof GridModel) {
-        GridModel grid = (GridModel) model;
-        this.width = grid.width;
-        this.height = grid.height;
-      } else {
-        this.width = this.height = 0;
-      }
     }
     LX.initTimer.log("Model");
 
@@ -446,98 +406,6 @@ public class LX {
     this.engine.audio.dispose();
     this.engine.midi.dispose();
     this.engine.osc.dispose();
-  }
-
-  /**
-   * Utility function to return the row of a given index
-   *
-   * @param i Index into colors array
-   * @return Which row this index is in
-   */
-  @Deprecated
-  public int row(int i) {
-    return (this.width == 0) ? 0 : (i / this.width);
-  }
-
-  /**
-   * Utility function to return the column of a given index
-   *
-   * @param i Index into colors array
-   * @return Which column this index is in
-   */
-  @Deprecated
-  public int column(int i) {
-    return (this.width == 0) ? 0 : (i % this.width);
-  }
-
-  /**
-   * Utility function to get the x-coordinate of a pixel
-   *
-   * @param i Node index
-   * @return x coordinate
-   */
-  @Deprecated
-  public int x(int i) {
-    return (this.width == 0) ? 0 : (i % this.width);
-  }
-
-  /**
-   * Utility function to return the position of an index in x coordinate space
-   * normalized from 0 to 1.
-   *
-   * @param i Node index
-   * @return Position of this node in x space, from 0 to 1
-   */
-  @Deprecated
-  public double xn(int i) {
-    return (this.width == 0) ? 0 : ((i % this.width) / (double) (this.width - 1));
-  }
-
-  /**
-   * Utility function to return the position of an index in x coordinate space
-   * normalized from 0 to 1, as a floating point.
-   *
-   * @param i Node index
-   * @return Position of this node in x space, from 0 to 1
-   */
-  @Deprecated
-  public float xnf(int i) {
-    return (float) this.xn(i);
-  }
-
-  /**
-   * Utility function to get the y-coordinate of a pixel
-   *
-   * @param i Node index
-   * @return y coordinate
-   */
-  @Deprecated
-  public int y(int i) {
-    return (this.width == 0) ? 0 : (i / this.width);
-  }
-
-  /**
-   * Utility function to return the position of an index in y coordinate space
-   * normalized from 0 to 1.
-   *
-   * @param i Node index
-   * @return Position of this node in y space, from 0 to 1
-   */
-  @Deprecated
-  public double yn(int i) {
-    return (this.width == 0) ? 0 : ((i / this.width) / (double) (this.height - 1));
-  }
-
-  /**
-   * Utility function to return the position of an index in y coordinate space
-   * normalized from 0 to 1, as a floating point.
-   *
-   * @param i Node index
-   * @return Position of this node in y space, from 0 to 1
-   */
-  @Deprecated
-  public float ynf(int i) {
-    return (float) this.yn(i);
   }
 
   /**

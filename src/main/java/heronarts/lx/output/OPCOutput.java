@@ -34,16 +34,8 @@ public class OPCOutput extends LXSocketOutput implements OPCConstants {
 
   private final int[] indexBuffer;
 
-  private static int[] allPoints(LX lx) {
-    int[] points = new int[lx.total];
-    for (int i = 0; i < points.length; ++i) {
-      points[i] = i;
-    }
-    return points;
-  }
-
   public OPCOutput(LX lx, String host, int port) {
-    this(lx, host, port, allPoints(lx));
+    this(lx, host, port, lx.getModel());
   }
 
   public OPCOutput(LX lx, String host, int port, LXModel model) {

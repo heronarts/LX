@@ -22,10 +22,12 @@ import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
 import heronarts.lx.LXUtils;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.model.GridModel;
+
 import java.util.HashMap;
 
 @LXCategory(LXCategory.FORM)
-public class LifePattern extends LXPattern {
+public class LifePattern extends LXModelPattern<GridModel> {
 
   private enum CellState {
     DEAD, BIRTHING, ALIVE, DYING
@@ -39,8 +41,8 @@ public class LifePattern extends LXPattern {
 
   public LifePattern(LX lx) {
     super(lx);
-    this.state = new CellState[lx.total];
-    this.newState = new CellState[lx.total];
+    this.state = new CellState[model.size];
+    this.newState = new CellState[model.size];
     spawn();
   }
 
@@ -66,21 +68,21 @@ public class LifePattern extends LXPattern {
   }
 
   private int neighborsAlive(int i) {
-    int x = i % this.lx.width;
-    int y = i / this.lx.width;
+    int x = i % this.model.width;
+    int y = i / this.model.width;
     return isAlive(x - 1, y - 1) + isAlive(x, y - 1) + isAlive(x + 1, y - 1)
         + isAlive(x - 1, y) + isAlive(x + 1, y) + isAlive(x - 1, y + 1)
         + isAlive(x, y + 1) + isAlive(x + 1, y + 1);
   }
 
   private int isAlive(int x, int y) {
-    if (x < 0 || x >= lx.width) {
+    if (x < 0 || x >= this.model.width) {
       return 0;
     }
-    if (y < 0 || y >= lx.height) {
+    if (y < 0 || y >= this.model.height) {
       return 0;
     }
-    int idx = x + y * lx.width;
+    int idx = x + y * this.model.width;
     if (this.isLiveState(this.state[idx])) {
       return 1;
     }
@@ -132,7 +134,7 @@ public class LifePattern extends LXPattern {
       }
     }
     double ramp = this.lx.engine.tempo.ramp();
-    for (int i = 0; i < lx.total; ++i) {
+    for (int i = 0; i < this.model.size; ++i) {
       double b = 0;
       switch (this.state[i]) {
       case ALIVE:
