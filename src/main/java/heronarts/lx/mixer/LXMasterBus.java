@@ -16,8 +16,9 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.mixer;
 
+import heronarts.lx.LX;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXMasterClip;
 
@@ -25,14 +26,14 @@ import heronarts.lx.clip.LXMasterClip;
  * Represents the master channel. Doesn't do anything special
  * that a normal bus does not.
  */
-public class LXMasterChannel extends LXBus {
-  LXMasterChannel(LX lx) {
+public class LXMasterBus extends LXBus {
+  public LXMasterBus(LX lx) {
     super(lx, "Master");
   }
 
   @Override
   public int getIndex() {
-    return lx.engine.channels.size();
+    return lx.engine.mixer.channels.size();
   }
 
   @Override

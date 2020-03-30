@@ -25,13 +25,13 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXChannelBus;
+import heronarts.lx.mixer.LXAbstractChannel;
 
 public class LXChannelBusClip extends LXClip {
 
-  public final LXChannelBus channel;
+  public final LXAbstractChannel channel;
 
-  public LXChannelBusClip(LX lx, LXChannelBus channel, int index, boolean registerListener) {
+  public LXChannelBusClip(LX lx, LXAbstractChannel channel, int index, boolean registerListener) {
     super(lx, channel, index, registerListener);
 
     this.channel = channel;

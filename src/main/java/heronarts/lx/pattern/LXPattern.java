@@ -16,7 +16,7 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.pattern;
 
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
@@ -26,11 +26,17 @@ import java.util.Map;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXDeviceComponent;
+import heronarts.lx.LXLayeredComponent;
+import heronarts.lx.LXTime;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.midi.MidiPitchBend;
 import heronarts.lx.midi.MidiProgramChange;
+import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 
@@ -116,7 +122,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return LXChannel.PATH_PATTERN + "/" + (this.index + 1);
   }
 
-  void setIndex(int index) {
+  public void setIndex(int index) {
     this.index = index;
   }
 
@@ -141,7 +147,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * @param channel Channel pattern is loaded onto
    * @return this
    */
-  final LXPattern setChannel(LXChannel channel) {
+  public final LXPattern setChannel(LXChannel channel) {
     setParent(channel);
     return this;
   }

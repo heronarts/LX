@@ -16,11 +16,15 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.mixer;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXSerializable;
+import heronarts.lx.LXUtils;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
@@ -32,6 +36,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.parameter.BooleanParameter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -46,13 +51,13 @@ import com.google.gson.JsonObject;
  * which it plays and rotates. It also has a fader to control how this channel
  * is blended with the channels before it.
  */
-public class LXChannel extends LXChannelBus {
+public class LXChannel extends LXAbstractChannel {
 
   /**
    * Listener interface for objects which want to be notified when the internal
    * channel state is modified.
    */
-  public interface Listener extends LXChannelBus.Listener {
+  public interface Listener extends LXAbstractChannel.Listener {
     public void groupChanged(LXChannel channel, LXGroup group);
     public void patternAdded(LXChannel channel, LXPattern pattern);
     public void patternRemoved(LXChannel channel, LXPattern pattern);
@@ -71,7 +76,7 @@ public class LXChannel extends LXChannelBus {
   public abstract static class AbstractListener implements Listener {
 
     @Override
-    public void indexChanged(LXChannelBus channel) {
+    public void indexChanged(LXAbstractChannel channel) {
     }
 
     @Override
@@ -219,7 +224,7 @@ public class LXChannel extends LXChannelBus {
 
   private long transitionMillis = 0;
 
-  LXChannel(LX lx, int index, LXPattern[] patterns) {
+  public LXChannel(LX lx, int index, LXPattern[] patterns) {
     super(lx, index, "Channel-" + (index+1));
 
     this.focusedPattern =
@@ -257,7 +262,7 @@ public class LXChannel extends LXChannelBus {
         blend.dispose();
       }
     }
-    this.transitionBlendMode.setObjects(this.lx.instantiateTransitionBlends());
+    this.transitionBlendMode.setObjects(this.lx.engine.mixer.instantiateTransitionBlends());
   }
 
   @Override

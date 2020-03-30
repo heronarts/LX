@@ -20,7 +20,6 @@ package heronarts.lx.pattern;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
-import heronarts.lx.LXPattern;
 import heronarts.lx.LXUtils;
 import heronarts.lx.color.LXColor;
 import java.util.HashMap;

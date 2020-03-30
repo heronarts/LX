@@ -16,20 +16,23 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.mixer;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXGroupClip;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.parameter.LXParameter;
 
-public class LXGroup extends LXChannelBus {
+public class LXGroup extends LXAbstractChannel {
 
-  public class Timer extends LXChannelBus.Timer {
+  public class Timer extends LXAbstractChannel.Timer {
     public long compositeNanos;
   }
 
@@ -83,7 +86,7 @@ public class LXGroup extends LXChannelBus {
       removeChannel(this.channels.get(i));
     }
     // Remove ourselves
-    this.lx.engine.removeChannel(this);
+    this.lx.engine.mixer.removeChannel(this);
   }
 
   @Override
@@ -101,7 +104,7 @@ public class LXGroup extends LXChannelBus {
   void afterLoop(double deltaMs) {
     // Composite all the channels in this group
     long compositeStart = System.nanoTime();
-    int[] blendDestination = this.lx.engine.backgroundTransparent.getArray();
+    int[] blendDestination = this.lx.engine.mixer.backgroundTransparent.getArray();
     int[] blendOutput = this.blendBuffer.getArray();
     for (LXChannel channel : this.channels) {
       if (channel.enabled.isOn()) {

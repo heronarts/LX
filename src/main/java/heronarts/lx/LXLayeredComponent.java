@@ -97,7 +97,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     return setBuffer(component.getBuffer());
   }
 
-  protected LXLayeredComponent setBuffer(LXBuffer buffer) {
+  public LXLayeredComponent setBuffer(LXBuffer buffer) {
     this.buffer = buffer;
     this.colors = buffer.getArray();
     return this;

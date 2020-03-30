@@ -27,12 +27,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXChannel;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXEffect;
-import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.effect.LXEffect;
+import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
+import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
 
 public class LXClipboardComponent<T extends LXComponent> implements LXClipboardItem {

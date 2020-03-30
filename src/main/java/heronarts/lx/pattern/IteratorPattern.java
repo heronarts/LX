@@ -20,7 +20,6 @@ package heronarts.lx.pattern;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
-import heronarts.lx.LXPattern;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.modulator.SawLFO;
 import heronarts.lx.parameter.CompoundParameter;

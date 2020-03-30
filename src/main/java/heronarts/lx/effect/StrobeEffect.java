@@ -19,7 +19,6 @@
 package heronarts.lx.effect;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXEffect;
 import heronarts.lx.LXUtils;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.modulator.LXWaveshape;

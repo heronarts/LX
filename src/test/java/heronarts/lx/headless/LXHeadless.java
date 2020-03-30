@@ -19,13 +19,13 @@ package heronarts.lx.headless;
 
 import java.io.File;
 import heronarts.lx.LX;
-import heronarts.lx.LXPattern;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.FadecandyOutput;
 import heronarts.lx.output.LXDatagramOutput;
 import heronarts.lx.output.OPCOutput;
+import heronarts.lx.pattern.LXPattern;
 
 /**
  * Example headless CLI for the LX engine. Just write a bit of scaffolding code

@@ -34,11 +34,11 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXBus;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXEffect;
 import heronarts.lx.LXRunnableComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.effect.LXEffect;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;

@@ -25,7 +25,7 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXGroup;
+import heronarts.lx.mixer.LXGroup;
 
 public class LXGroupClip extends LXChannelBusClip {
 

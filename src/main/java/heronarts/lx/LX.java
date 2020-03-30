@@ -30,11 +30,15 @@ import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.clipboard.LXClipboard;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.command.LXCommandEngine;
+import heronarts.lx.effect.LXEffect;
+import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.pattern.IteratorPattern;
+import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
 import java.io.File;
@@ -57,33 +61,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
 /**
- * Core controller for a LX instance. Each instance drives a grid of nodes with
- * a fixed width and height. The nodes are indexed using typical computer
- * graphics coordinates, with the x-axis going from left to right, y-axis from
- * top to bottom.
- *
- * <pre>
- *    x
- *  y 0 1 2 .
- *    1 . . .
- *    2 . . .
- *    . . . .
- * </pre>
- *
- * Note that the grid layout is just a helper. The node buffer is actually a 1-d
- * array and can be used to represent any type of layout. The library just
- * provides helpful accessors for grid layouts.
- *
- * The instance manages rotation amongst a set of patterns. There may be
- * multiple channels, each with its own list of patterns. These channels are then
- * blended together.
- *
- * The color-space used is HSB, with H ranging from 0-360, S from 0-100, and B
- * from 0-100.
+ * Core controller for a LX instance. Each instance drives a 3-d collection of
+ * nodes defined by a dynamic model.
  */
 public class LX {
 
-  public static final String VERSION = "0.1.3-SNAPSHOT";
+  public static final String VERSION = "0.2.0-SNAPSHOT";
 
   public static class InstantiationException extends Exception {
 
@@ -272,19 +255,19 @@ public class LX {
   /**
    * The list of globally registered channel blend classes
    */
-  private final List<Class<? extends LXBlend>> registeredChannelBlends =
+  public final List<Class<? extends LXBlend>> registeredChannelBlends =
     new ArrayList<Class<? extends LXBlend>>();
 
   /**
    * The list of globally registered transition blend classes
    */
-  private final List<Class<? extends LXBlend>> registeredTransitionBlends =
+  public final List<Class<? extends LXBlend>> registeredTransitionBlends =
     new ArrayList<Class<? extends LXBlend>>();
 
   /**
    * The list of globally registered crossfader blend classes
    */
-  private final List<Class<? extends LXBlend>> registeredCrossfaderBlends =
+  public final List<Class<? extends LXBlend>> registeredCrossfaderBlends =
     new ArrayList<Class<? extends LXBlend>>();
 
   protected LXClassLoader contentLoader;
@@ -353,7 +336,7 @@ public class LX {
     this.engine.midi.initialize();
 
     // Add a default channel
-    this.engine.addChannel(new LXPattern[] { new IteratorPattern(this) }).fader.setValue(1);
+    this.engine.mixer.addChannel(new LXPattern[] { new IteratorPattern(this) }).fader.setValue(1);
     LX.initTimer.log("Default Channel");
 
     // Load the global preferences before plugin initialization
@@ -625,7 +608,7 @@ public class LX {
    * @return this
    */
   public LX addEffect(LXEffect effect) {
-    this.engine.masterChannel.addEffect(effect);
+    this.engine.mixer.masterBus.addEffect(effect);
     return this;
   }
 
@@ -636,7 +619,7 @@ public class LX {
    * @return this
    */
   public LX removeEffect(LXEffect effect) {
-    this.engine.masterChannel.removeEffect(effect);
+    this.engine.mixer.masterBus.removeEffect(effect);
     return this;
   }
 
@@ -669,13 +652,25 @@ public class LX {
     return setPaused(!this.engine.isPaused());
   }
 
+  private LXChannel getChannel() {
+    for (LXAbstractChannel channel : this.engine.mixer.channels) {
+      if (channel instanceof LXChannel) {
+        return (LXChannel) channel;
+      }
+    }
+    return null;
+  }
+
   /**
    * Sets the main channel to the previous pattern.
    *
    * @return this
    */
   public LX goPrev() {
-    this.engine.goPrev();
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      channel.goPrev();
+    }
     return this;
   }
 
@@ -685,7 +680,10 @@ public class LX {
    * @return this
    */
   public LX goNext() {
-    this.engine.goNext();
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      channel.goNext();
+    }
     return this;
   }
 
@@ -696,7 +694,10 @@ public class LX {
    * @return this
    */
   public LX goPattern(LXPattern pattern) {
-    this.engine.goPattern(pattern);
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      channel.goPattern(pattern);
+    }
     return this;
   }
 
@@ -707,7 +708,10 @@ public class LX {
    * @return this
    */
   public LX goIndex(int i) {
-    this.engine.goIndex(i);
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      channel.goIndex(i);
+    }
     return this;
   }
 
@@ -717,7 +721,10 @@ public class LX {
    * @return this
    */
   public LX disableAutoCycle() {
-    this.engine.disableAutoCycle();
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      channel.disableAutoCycle();
+    }
     return this;
   }
 
@@ -728,7 +735,10 @@ public class LX {
    * @return this
    */
   public LX enableAutoCycle(int autoCycleThreshold) {
-    this.engine.enableAutoCycle(autoCycleThreshold);
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      channel.enableAutoCycle(autoCycleThreshold);
+    }
     return this;
   }
 
@@ -750,7 +760,10 @@ public class LX {
    * @return this
    */
   public LX setPatterns(LXPattern[] patterns) {
-    this.engine.setPatterns(patterns);
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      channel.setPatterns(patterns);
+    }
     return this;
   }
 
@@ -760,7 +773,11 @@ public class LX {
    * @return The list of patters
    */
   public List<LXPattern> getPatterns() {
-    return this.engine.getPatterns();
+    LXChannel channel = getChannel();
+    if (channel != null) {
+      return channel.getPatterns();
+    }
+    return null;
   }
 
   public void checkRegistration() {
@@ -919,7 +936,7 @@ public class LX {
   public LX registerChannelBlend(Class<? extends LXBlend> blend) {
     checkRegistration();
     this.registeredChannelBlends.add(blend);
-    this.engine.updateChannelBlendOptions();
+    this.engine.mixer.updateChannelBlendOptions();
     return this;
   }
 
@@ -932,7 +949,7 @@ public class LX {
   public LX registerTransitionBlend(Class<? extends LXBlend> blend) {
     checkRegistration();
     this.registeredTransitionBlends.add(blend);
-    this.engine.updateTransitionBlendOptions();
+    this.engine.mixer.updateTransitionBlendOptions();
     return this;
   }
 
@@ -947,7 +964,7 @@ public class LX {
     for (Class<LXBlend> blend : blends) {
       this.registeredChannelBlends.add(blend);
     }
-    this.engine.updateChannelBlendOptions();
+    this.engine.mixer.updateChannelBlendOptions();
     return this;
   }
 
@@ -962,7 +979,7 @@ public class LX {
     for (Class<LXBlend> blend : blends) {
       this.registeredTransitionBlends.add(blend);
     }
-    this.engine.updateTransitionBlendOptions();
+    this.engine.mixer.updateTransitionBlendOptions();
     return this;
   }
 
@@ -984,7 +1001,7 @@ public class LX {
   public LX registerCrossfaderBlend(Class<? extends LXBlend> blend) {
     checkRegistration();
     this.registeredCrossfaderBlends.add(blend);
-    this.engine.updateCrossfaderBlendOptions();
+    this.engine.mixer.updateCrossfaderBlendOptions();
     return this;
   }
 
@@ -999,7 +1016,7 @@ public class LX {
     for (Class<LXBlend> blend : blends) {
       this.registeredCrossfaderBlends.add(blend);
     }
-    this.engine.updateCrossfaderBlendOptions();
+    this.engine.mixer.updateCrossfaderBlendOptions();
     return this;
   }
 
@@ -1010,30 +1027,6 @@ public class LX {
    */
   public List<Class<? extends LXBlend>> getRegisteredCrossfaderBlends() {
     return this.registeredCrossfaderBlends;
-  }
-
-  private LXBlend[] instantiateBlends(List<Class<? extends LXBlend>> blendTypes) {
-    List<LXBlend> blends = new ArrayList<LXBlend>(blendTypes.size());
-    for (Class<? extends LXBlend> blend : blendTypes) {
-      try {
-        blends.add(instantiateBlend(blend));
-      } catch (LX.InstantiationException x) {
-        this.command.pushError("Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?", x);
-      }
-    }
-    return blends.toArray(new LXBlend[0]);
-  }
-
-  protected LXBlend[] instantiateChannelBlends() {
-    return instantiateBlends(this.registeredChannelBlends);
-  }
-
-  protected LXBlend[] instantiateTransitionBlends() {
-    return instantiateBlends(this.registeredTransitionBlends);
-  }
-
-  protected LXBlend[] instantiateCrossfaderBlends() {
-    return instantiateBlends(this.registeredCrossfaderBlends);
   }
 
   public List<LXClassLoader.Plugin> getPlugins() {
@@ -1450,7 +1443,7 @@ public class LX {
     if (projectFile != null) {
       lx.openProject(projectFile);
     }
-    LX.log("Starting headless engine");
+    LX.log("Starting headless engine...");
     lx.engine.start();
   }
 }

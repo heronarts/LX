@@ -3,8 +3,8 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXChannel;
 import heronarts.lx.midi.MidiNote;
+import heronarts.lx.mixer.LXChannel;
 
 public class MidiNoteClipEvent extends LXClipEvent {
 

@@ -16,9 +16,14 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.mixer;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXModelComponent;
+import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
@@ -98,6 +103,10 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   public abstract int getIndex();
+
+  protected void setMixer(LXMixerEngine mixer) {
+    setParent(mixer);
+  }
 
   @Override
   protected void onModelChanged(LXModel model) {

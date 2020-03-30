@@ -33,9 +33,9 @@ import javax.script.SimpleScriptContext;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXPattern;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.pattern.LXPattern;
 
 public class LXScriptPattern extends LXPattern {
 

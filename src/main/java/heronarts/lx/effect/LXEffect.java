@@ -16,7 +16,7 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.effect;
 
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
@@ -26,11 +26,15 @@ import java.util.Map;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.midi.MidiPitchBend;
 import heronarts.lx.midi.MidiProgramChange;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -140,7 +144,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
    * @param index
    * @return
    */
-  final LXEffect setIndex(int index) {
+  public final LXEffect setIndex(int index) {
     this.index = index;
     return this;
   }
@@ -154,7 +158,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     return this.index;
   }
 
-  final LXEffect setBus(LXBus bus) {
+  public final LXEffect setBus(LXBus bus) {
     setParent(bus);
     return this;
   }

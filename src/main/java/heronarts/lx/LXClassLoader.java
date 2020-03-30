@@ -33,7 +33,9 @@ import java.util.jar.JarFile;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.pattern.LXPattern;
 
 /**
  * The LX class loader parses JAR files in the LX content directory. Any

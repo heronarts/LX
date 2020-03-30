@@ -18,15 +18,15 @@
 
 package heronarts.lx.midi.remote;
 
-import heronarts.lx.LXBus;
-import heronarts.lx.LXChannel;
 import heronarts.lx.LXEngine;
-import heronarts.lx.LXPattern;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
+import heronarts.lx.mixer.LXBus;
+import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.pattern.LXPattern;
 
 /**
  * Note and CC constants for all the APC40 controls
@@ -154,15 +154,15 @@ public class APC40 extends LXMidiRemote {
   };
 
   public APC40 bindDeviceControlKnobs(final LXEngine engine) {
-    engine.focusedChannel.addListener(new LXParameterListener() {
+    engine.mixer.focusedChannel.addListener(new LXParameterListener() {
       public void onParameterChanged(LXParameter parameter) {
-        LXBus bus = engine.getFocusedChannel();
+        LXBus bus = engine.mixer.getFocusedChannel();
         if (bus instanceof LXChannel) {
           bindDeviceControlKnobs((LXChannel) bus);
         }
       }
     });
-    LXBus bus = engine.getFocusedChannel();
+    LXBus bus = engine.mixer.getFocusedChannel();
     if (bus instanceof LXChannel) {
       bindDeviceControlKnobs((LXChannel) bus);
     }

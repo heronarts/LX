@@ -16,23 +16,20 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.effect;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXModelComponent;
 import heronarts.lx.model.LXModel;
 
-/**
- * Templatized version of the LXPattern class, which strongly types a particular model.
- *
- * @param <T> Type of LXModel class that is always expected
- */
-public abstract class LXModelPattern<T extends LXModel> extends LXPattern {
+public abstract class LXModelEffect<T extends LXModel> extends LXEffect {
 
   protected T model;
 
   @SuppressWarnings("unchecked")
-  protected LXModelPattern(LX lx) {
+  protected LXModelEffect(LX lx) {
     super(lx);
-    this.model = (T) lx.model;
+    this.model = (T) lx.getModel();
   }
 
   @Override
@@ -47,4 +44,5 @@ public abstract class LXModelPattern<T extends LXModel> extends LXPattern {
     super.setModel(model);
     return this;
   }
+
 }

@@ -19,11 +19,11 @@
 package heronarts.lx.headless;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXPattern;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.modulator.SawLFO;
 import heronarts.lx.modulator.SinLFO;
+import heronarts.lx.pattern.LXPattern;
 
 public class ExamplePattern extends LXPattern {
 

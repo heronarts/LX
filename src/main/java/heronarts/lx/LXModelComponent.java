@@ -20,6 +20,10 @@ package heronarts.lx;
 
 import heronarts.lx.model.LXModel;
 
+/**
+ * A component that keeps a reference to a particular model, which may
+ * potentially be different than the global model.
+ */
 public abstract class LXModelComponent extends LXModulatorComponent {
 
   protected LXModel model;

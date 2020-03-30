@@ -28,8 +28,8 @@ import heronarts.lx.LX;
 
 public class LXMasterClip extends LXClip {
   public LXMasterClip(LX lx, int index) {
-    super(lx, lx.engine.masterChannel, index);
-    lx.engine.crossfader.addListener(this.parameterRecorder);
+    super(lx, lx.engine.mixer.masterBus, index);
+    lx.engine.mixer.crossfader.addListener(this.parameterRecorder);
     registerComponent(lx.engine.palette);
   }
 }

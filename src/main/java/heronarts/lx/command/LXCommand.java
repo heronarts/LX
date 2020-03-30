@@ -30,19 +30,18 @@ import java.util.List;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXBus;
-import heronarts.lx.LXChannel;
-import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXEffect;
-import heronarts.lx.LXGroup;
-import heronarts.lx.LXPattern;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.LXUtils;
 import heronarts.lx.clipboard.LXNormalizedValue;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiMapping;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.mixer.LXBus;
+import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.modulation.LXCompoundModulation;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.modulation.LXParameterModulation;
@@ -54,6 +53,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.JsonFixture;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
@@ -821,20 +821,20 @@ public abstract class LXCommand {
         LXChannel channel;
         if (this.patternClass != null) {
           try {
-            channel = lx.engine.addChannel(new LXPattern[] { lx.instantiatePattern(this.patternClass) });
+            channel = lx.engine.mixer.addChannel(new LXPattern[] { lx.instantiatePattern(this.patternClass) });
           } catch (LX.InstantiationException x) {
             throw new InvalidCommandException(x);
           }
         } else {
-          channel = lx.engine.addChannel();
+          channel = lx.engine.mixer.addChannel();
         }
         if (this.channelObj != null) {
           channel.load(lx, this.channelObj);
         }
         this.channelObj = LXSerializable.Utils.toObject(channel);
         this.channel = new ComponentReference<LXChannel>(channel);
-        lx.engine.setFocusedChannel(channel);
-        lx.engine.selectChannel(channel);
+        lx.engine.mixer.setFocusedChannel(channel);
+        lx.engine.mixer.selectChannel(channel);
       }
 
       @Override
@@ -843,18 +843,18 @@ public abstract class LXCommand {
           throw new IllegalStateException(
             "Channel was not successfully added, cannot undo");
         }
-        lx.engine.removeChannel(this.channel.get());
+        lx.engine.mixer.removeChannel(this.channel.get());
       }
 
     }
 
     public static class MoveChannel extends LXCommand {
 
-      private final ComponentReference<LXChannelBus> channel;
+      private final ComponentReference<LXAbstractChannel> channel;
       private final int delta;
 
-      public MoveChannel(LXChannelBus channel, int delta) {
-        this.channel = new ComponentReference<LXChannelBus>(channel);
+      public MoveChannel(LXAbstractChannel channel, int delta) {
+        this.channel = new ComponentReference<LXAbstractChannel>(channel);
         this.delta = delta;
       }
 
@@ -865,30 +865,30 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        lx.engine.moveChannel(this.channel.get(), delta);
+        lx.engine.mixer.moveChannel(this.channel.get(), delta);
       }
 
       @Override
       public void undo(LX lx) {
-        lx.engine.moveChannel(this.channel.get(), -delta);
+        lx.engine.mixer.moveChannel(this.channel.get(), -delta);
       }
 
     }
 
     public static class RemoveChannel extends RemoveComponent {
-      private final ComponentReference<LXChannelBus> channel;
+      private final ComponentReference<LXAbstractChannel> channel;
       private final JsonObject channelObj;
       private final int index;
 
       private Parameter.SetNormalized focusedChannel;
       private final List<RemoveChannel> groupChildren = new ArrayList<RemoveChannel>();
 
-      public RemoveChannel(LXChannelBus channel) {
+      public RemoveChannel(LXAbstractChannel channel) {
         super(channel);
-        this.channel = new ComponentReference<LXChannelBus>(channel);
+        this.channel = new ComponentReference<LXAbstractChannel>(channel);
         this.channelObj = LXSerializable.Utils.toObject(channel);
         this.index = channel.getIndex();
-        this.focusedChannel = new Parameter.SetNormalized(channel.getLX().engine.focusedChannel);
+        this.focusedChannel = new Parameter.SetNormalized(channel.getLX().engine.mixer.focusedChannel);
 
         // Are we a group? We'll need to bring our children back as well...
         if (channel instanceof LXGroup) {
@@ -917,7 +917,7 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         // Note: this automatically removes group children as well
-        lx.engine.removeChannel(this.channel.get());
+        lx.engine.mixer.removeChannel(this.channel.get());
       }
 
       @Override
@@ -927,7 +927,7 @@ public abstract class LXCommand {
 
       public void undo(LX lx, boolean multiRemove) throws InvalidCommandException {
         // Re-load the removed channel
-        lx.engine.loadChannel(this.channelObj, this.index);
+        lx.engine.mixer.loadChannel(this.channelObj, this.index);
 
         // Restore all the group children
         for (RemoveChannel child : this.groupChildren) {
@@ -938,7 +938,7 @@ public abstract class LXCommand {
         this.focusedChannel.undo(lx);
 
         if (!multiRemove) {
-          lx.engine.selectChannel(this.channel.get());
+          lx.engine.mixer.selectChannel(this.channel.get());
         }
 
         // Bring back modulations on all patterns and effects
@@ -954,13 +954,13 @@ public abstract class LXCommand {
       public RemoveSelectedChannels(LX lx) {
         // Serialize a list of all the channels that will end up removed, so we
         // can undo properly
-        List<LXChannelBus> removeChannels = new ArrayList<LXChannelBus>();
-        for (LXChannelBus channel : lx.engine.channels) {
+        List<LXAbstractChannel> removeChannels = new ArrayList<LXAbstractChannel>();
+        for (LXAbstractChannel channel : lx.engine.mixer.channels) {
           if (channel.selected.isOn() && !removeChannels.contains(channel.getGroup())) {
             removeChannels.add(channel);
           }
         }
-        for (LXChannelBus removeChannel : removeChannels) {
+        for (LXAbstractChannel removeChannel : removeChannels) {
           this.removedChannels.add(new RemoveChannel(removeChannel));
         }
       }
@@ -979,10 +979,10 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        for (LXBus bus : lx.engine.channels) {
+        for (LXBus bus : lx.engine.mixer.channels) {
           bus.selected.setValue(false);
         }
-        lx.engine.masterChannel.selected.setValue(false);
+        lx.engine.mixer.masterBus.selected.setValue(false);
 
         for (RemoveChannel removedChannel : this.removedChannels) {
           removedChannel.undo(lx, true);
@@ -1019,7 +1019,7 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) {
-        LXGroup group = lx.engine.addGroup(this.index);
+        LXGroup group = lx.engine.mixer.addGroup(this.index);
         group.load(lx, this.groupObj);
         for (ComponentReference<LXChannel> channel : this.groupChannels) {
           group.addChannel(channel.get());
@@ -1046,13 +1046,13 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        lx.engine.ungroup(this.channel.get());
+        lx.engine.mixer.ungroup(this.channel.get());
 
       }
 
       @Override
       public void undo(LX lx) {
-        lx.engine.group(this.group.get(), this.channel.get(), this.index);
+        lx.engine.mixer.group(this.group.get(), this.channel.get(), this.index);
       }
 
     }
@@ -1065,7 +1065,7 @@ public abstract class LXCommand {
       private ComponentReference<LXGroup> group;
 
       public GroupSelectedChannels(LX lx) {
-        List<LXChannel> channels = lx.engine.getSelectedChannelsForGroup();
+        List<LXChannel> channels = lx.engine.mixer.getSelectedChannelsForGroup();
         for (LXChannel channel : channels) {
           groupChannels.add(new ComponentReference<LXChannel>(channel));
         }
@@ -1082,7 +1082,7 @@ public abstract class LXCommand {
         for (ComponentReference<LXChannel> channel : this.groupChannels) {
           channels.add(channel.get());
         }
-        this.group = new ComponentReference<LXGroup>(lx.engine.addGroup(channels));
+        this.group = new ComponentReference<LXGroup>(lx.engine.mixer.addGroup(channels));
       }
 
       @Override

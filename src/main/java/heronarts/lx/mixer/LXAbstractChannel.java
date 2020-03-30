@@ -16,12 +16,17 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.mixer;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -31,10 +36,10 @@ import heronarts.lx.parameter.ObjectParameter;
 /**
  * Abstract subclass for both groups and channels
  */
-public abstract class LXChannelBus extends LXBus implements LXComponent.Renamable {
+public abstract class LXAbstractChannel extends LXBus implements LXComponent.Renamable {
 
   public interface Listener extends LXBus.Listener {
-    public void indexChanged(LXChannelBus channel);
+    public void indexChanged(LXAbstractChannel channel);
   }
 
   /**
@@ -42,7 +47,7 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
    */
   public abstract static class AbstractListener implements Listener {
     @Override
-    public void indexChanged(LXChannelBus channel) {}
+    public void indexChanged(LXAbstractChannel channel) {}
 
     @Override
     public void effectAdded(LXBus channel, LXEffect effect) {}
@@ -116,7 +121,7 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
 
   private LXBlend activeBlend;
 
-  ChannelThread thread = new ChannelThread();
+  final ChannelThread thread = new ChannelThread();
 
   private static int channelThreadCount = 1;
 
@@ -161,7 +166,7 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     }
   };
 
-  protected LXChannelBus(LX lx, int index, String label) {
+  protected LXAbstractChannel(LX lx, int index, String label) {
     super(lx, label);
     this.index = index;
     this.label.setDescription("The name of this channel");
@@ -185,14 +190,14 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
         blend.dispose();
       }
     }
-    this.blendMode.setObjects(lx.instantiateChannelBlends());
+    this.blendMode.setObjects(lx.engine.mixer.instantiateChannelBlends());
     this.activeBlend = this.blendMode.getObject();
     this.activeBlend.onActive();
   }
 
   @Override
   public String getPath() {
-    return LXEngine.PATH_CHANNEL + "/" + (this.index+1);
+    return LXMixerEngine.PATH_CHANNEL + "/" + (this.index+1);
   }
 
   @Override
@@ -200,11 +205,11 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     super.onParameterChanged(p);
     if (p == this.cueActive) {
       if (this.cueActive.isOn()) {
-        this.lx.engine.cueA.setValue(false);
-        this.lx.engine.cueB.setValue(false);
+        this.lx.engine.mixer.cueA.setValue(false);
+        this.lx.engine.mixer.cueB.setValue(false);
         if (this.lx.flags.focusChannelOnCue) {
-          this.lx.engine.selectChannel(this);
-          this.lx.engine.setFocusedChannel(this);
+          this.lx.engine.mixer.selectChannel(this);
+          this.lx.engine.mixer.setFocusedChannel(this);
         }
       }
     } else if (p == this.blendMode) {
@@ -250,10 +255,10 @@ public abstract class LXChannelBus extends LXBus implements LXComponent.Renamabl
     this.listeners.remove(listener);
   }
 
-  final LXChannelBus setIndex(int index) {
+  final LXAbstractChannel setIndex(int index) {
     if (this.index != index) {
       this.index = index;
-      for (LXChannelBus.Listener listener : this.listeners) {
+      for (LXAbstractChannel.Listener listener : this.listeners) {
         listener.indexChanged(this);
       }
     }

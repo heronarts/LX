@@ -19,8 +19,6 @@
 package heronarts.lx.midi;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXChannel;
-import heronarts.lx.LXChannelBus;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXMappingEngine;
 import heronarts.lx.LXSerializable;
@@ -29,6 +27,8 @@ import heronarts.lx.command.LXCommand;
 import heronarts.lx.midi.surface.APC40Mk2;
 import heronarts.lx.midi.surface.DJM900nxs2;
 import heronarts.lx.midi.surface.LXMidiSurface;
+import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
@@ -821,7 +821,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }
 
     if (input == null || input.channelEnabled.isOn()) {
-      for (LXChannelBus channelBus : this.lx.engine.channels) {
+      for (LXAbstractChannel channelBus : this.lx.engine.mixer.channels) {
         if (channelBus instanceof LXChannel) {
           LXChannel channel = (LXChannel) channelBus;
           if (channel.midiMonitor.isOn() && channel.midiChannel.getEnum().matches(message)) {

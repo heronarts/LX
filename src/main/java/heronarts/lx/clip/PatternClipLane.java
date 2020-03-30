@@ -27,8 +27,8 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXChannel;
-import heronarts.lx.LXPattern;
+import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.pattern.LXPattern;
 
 public class PatternClipLane extends LXClipLane {
   PatternClipLane(LXClip clip) {
