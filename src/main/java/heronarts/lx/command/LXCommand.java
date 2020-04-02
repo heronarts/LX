@@ -896,17 +896,6 @@ public abstract class LXCommand {
             this.groupChildren.add(new RemoveChannel(child));
           }
         }
-
-        LXModulationEngine modulation = channel.getLX().engine.modulation;
-        for (LXEffect effect : channel.effects) {
-          removeMappings(modulation, effect);
-        }
-
-        if (channel instanceof LXChannel) {
-          for (LXPattern pattern : ((LXChannel)channel).patterns) {
-            removeMappings(modulation, pattern);
-          }
-        }
       }
 
       @Override
