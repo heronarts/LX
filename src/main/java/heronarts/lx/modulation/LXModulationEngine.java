@@ -27,6 +27,7 @@ package heronarts.lx.modulation;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -97,18 +98,25 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   public LXModulationEngine addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXModulationEngine.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate LXModulationEngine.Listener: " + listener);
+    }
     this.listeners.add(listener);
     return this;
   }
 
   public LXModulationEngine removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-existent LXModulationEngine.Listener: " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }
 
   public LXModulationEngine addModulation(LXCompoundModulation modulation) {
     if (this.mutableModulations.contains(modulation)) {
-      throw new IllegalStateException("Cannot add same modulation twice");
+      throw new IllegalStateException("Cannot add duplicate LXCompoundModulation: " + modulation);
     }
     this.mutableModulations.add(modulation);
     _reindex(this.modulations);
@@ -119,6 +127,9 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   public LXModulationEngine removeModulation(LXCompoundModulation modulation) {
+    if (!this.mutableModulations.contains(modulation)) {
+      throw new IllegalStateException("Cannot remove non-registered LXCompoundModulation: " + modulation);
+    }
     this.mutableModulations.remove(modulation);
     for (Listener listener : this.listeners) {
       listener.modulationRemoved(this, modulation);
@@ -130,7 +141,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   public LXModulationEngine addTrigger(LXTriggerModulation trigger) {
     if (this.mutableTriggers.contains(trigger)) {
-      throw new IllegalStateException("Cannot add same trigger twice");
+      throw new IllegalStateException("Cannot add duplicate LXTriggerModulation: " + trigger);
     }
     this.mutableTriggers.add(trigger);
     _reindex(this.triggers);
@@ -141,6 +152,9 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   public LXModulationEngine removeTrigger(LXTriggerModulation trigger) {
+    if (!this.mutableTriggers.contains(trigger)) {
+      throw new IllegalStateException("Cannot remove non-registered LXTriggerModulation: " + trigger);
+    }
     this.mutableTriggers.remove(trigger);
     _reindex(this.triggers);
     for (Listener listener : this.listeners) {

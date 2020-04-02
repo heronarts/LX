@@ -21,6 +21,8 @@ package heronarts.lx;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+
 import heronarts.lx.modulator.LXModulator;
 
 public abstract class LXModulatorComponent extends LXComponent implements LXLoopTask {
@@ -49,9 +51,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
   }
 
   private void _addModulator(LXModulator modulator, int index) {
-    if (modulator == null) {
-      throw new IllegalArgumentException("Cannot add null modulator");
-    }
+    Objects.requireNonNull(modulator, "May not add null LXModulator: " + modulator);
     if (index > this.mutableModulators.size()) {
       throw new IllegalArgumentException("Invalid modulator index: " + index);
     }

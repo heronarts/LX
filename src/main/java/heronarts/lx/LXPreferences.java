@@ -32,7 +32,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
-public class LXPreferences implements LXSerializable, LXParameterListener, LX.Listener {
+public class LXPreferences implements LXSerializable, LXParameterListener {
 
   private static final String PREFERENCES_FILE_NAME = ".lxpreferences";
   private static final String DEFAULT_PROJECT_FILE = "default.lxp";
@@ -66,7 +66,12 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
     this.focusActivePattern.addListener(this);
     this.sendCueToOutput.addListener(this);
 
-    lx.addListener(this);
+    lx.registry.addListener(new LXRegistry.Listener() {
+      @Override
+      public void pluginChanged(LX lx, LXRegistry.Plugin plugin) {
+        save();
+      }
+    });
   }
 
   @Override
@@ -75,11 +80,6 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
     this.lx.flags.focusChannelOnCue = this.focusChannelOnCue.isOn();
     this.lx.flags.focusActivePattern = this.focusActivePattern.isOn();
     this.lx.flags.sendCueToOutput = this.sendCueToOutput.isOn();
-    save();
-  }
-
-  @Override
-  public void pluginChanged(LX lx, LXClassLoader.Plugin plugin) {
     save();
   }
 
@@ -112,7 +112,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
   private static final String KEY_FOCUS_CHANNEL_ON_CUE = "focusChannelOnCue";
   private static final String KEY_FOCUS_ACTIVE_PATTERN = "focusActivePattern";
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
-  private static final String KEY_CONTENT_LOADER = "contentLoader";
+  private static final String KEY_REGISTRY = "registry";
 
   @Override
   public void save(LX lx, JsonObject object) {
@@ -124,8 +124,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
     object.addProperty(KEY_FOCUS_CHANNEL_ON_CUE, this.focusChannelOnCue.isOn());
     object.addProperty(KEY_FOCUS_ACTIVE_PATTERN, this.focusActivePattern.isOn());
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
-    object.add(KEY_CONTENT_LOADER, LXSerializable.Utils.toObject(this.lx, this.lx.contentLoader));
 
+    object.add(KEY_REGISTRY, LXSerializable.Utils.toObject(this.lx, this.lx.registry));
   }
 
   @Override
@@ -144,7 +144,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener, LX.Li
     } else {
       this.projectFileName = null;
     }
-    LXSerializable.Utils.loadObject(this.lx, this.lx.contentLoader, object, KEY_CONTENT_LOADER);
+
+    LXSerializable.Utils.loadObject(this.lx, this.lx.registry, object, KEY_REGISTRY);
   }
 
   private void save() {

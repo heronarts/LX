@@ -20,6 +20,7 @@ package heronarts.lx;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import heronarts.lx.modulator.Click;
 import heronarts.lx.osc.LXOscComponent;
@@ -221,11 +222,18 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   }
 
   public Tempo addListener(Listener listener) {
+    Objects.requireNonNull("May not add null Tempo.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate Tempo.Listener: " + listener);
+    }
     this.listeners.add(listener);
     return this;
   }
 
   public Tempo removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-existent Tempo.Listener: " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }

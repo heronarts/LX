@@ -105,6 +105,9 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
    * @return this
    */
   public LXMidiInput addListener(LXMidiListener listener) {
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate LXMidiInput.LXMidiListener: " + listener);
+    }
     this.listeners.add(listener);
     return this;
   }
@@ -116,6 +119,9 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
    * @return this
    */
   public LXMidiInput removeListener(LXMidiListener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-existent LXMidiInput.LXMidiListener: " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }

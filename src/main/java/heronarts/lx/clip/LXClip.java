@@ -153,13 +153,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXComponent.
 
   public LXClip addListener(Listener listener) {
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Already registered listener: " + listener);
+      throw new IllegalStateException("Already registered LXClip.Listener: " + listener);
     }
     this.listeners.add(listener);
     return this;
   }
 
   public LXClip removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-registered LXClip.Listener: " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }

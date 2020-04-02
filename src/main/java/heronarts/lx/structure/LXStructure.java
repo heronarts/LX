@@ -100,6 +100,7 @@ public class LXStructure extends LXComponent {
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
+
   public final List<LXFixture> fixtures = Collections.unmodifiableList(this.mutableFixtures);
 
   private LXModel model;
@@ -138,16 +139,6 @@ public class LXStructure extends LXComponent {
 
   public File getModelFile() {
     return this.modelFile;
-  }
-
-  public void registerFixtures(File fixtureDir) {
-    if (fixtureDir.exists() && fixtureDir.isDirectory()) {
-      for (String fixture : fixtureDir.list()) {
-        if (fixture.endsWith(".lxf")) {
-          this.lx.registerFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
-        }
-      }
-    }
   }
 
   public LXModel getModel() {

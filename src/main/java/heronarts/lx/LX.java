@@ -18,15 +18,7 @@
 
 package heronarts.lx;
 
-import heronarts.lx.blend.AddBlend;
-import heronarts.lx.blend.DarkestBlend;
-import heronarts.lx.blend.DifferenceBlend;
-import heronarts.lx.blend.DissolveBlend;
 import heronarts.lx.blend.LXBlend;
-import heronarts.lx.blend.LightestBlend;
-import heronarts.lx.blend.MultiplyBlend;
-import heronarts.lx.blend.NormalBlend;
-import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.clipboard.LXClipboard;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.command.LXCommandEngine;
@@ -148,8 +140,6 @@ public class LX {
    */
   public interface Listener {
     default public void modelChanged(LX lx, LXModel model) {}
-    default public void contentChanged(LX lx) {}
-    default public void pluginChanged(LX lx, LXClassLoader.Plugin plugin) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -207,43 +197,9 @@ public class LX {
   public final LXCommandEngine command;
 
   /**
-   * The list of globally registered pattern classes
+   * Registry for classes
    */
-  private final List<Class<? extends LXPattern>> registeredPatterns =
-    new ArrayList<Class<? extends LXPattern>>();
-
-  /**
-   * The list of globally registered effects
-   */
-  private final List<Class<? extends LXEffect>> registeredEffects =
-    new ArrayList<Class<? extends LXEffect>>();
-
-  /**
-   * The list of globally registered fixture types
-   */
-  private final List<String> registeredFixtures =
-    new ArrayList<String>();
-
-  /**
-   * The list of globally registered channel blend classes
-   */
-  public final List<Class<? extends LXBlend>> registeredChannelBlends =
-    new ArrayList<Class<? extends LXBlend>>();
-
-  /**
-   * The list of globally registered transition blend classes
-   */
-  public final List<Class<? extends LXBlend>> registeredTransitionBlends =
-    new ArrayList<Class<? extends LXBlend>>();
-
-  /**
-   * The list of globally registered crossfader blend classes
-   */
-  public final List<Class<? extends LXBlend>> registeredCrossfaderBlends =
-    new ArrayList<Class<? extends LXBlend>>();
-
-  protected LXClassLoader contentLoader;
-  private boolean contentReloading = false;
+  public final LXRegistry registry;
 
   /**
    * Creates an LX instance with no nodes.
@@ -279,18 +235,14 @@ public class LX {
     }
     LX.initTimer.log("Model");
 
-    // Default blends
-    registerDefaultBlends();
+    // Custom content loader
+    this.registry = new LXRegistry(this);
+    LX.initTimer.log("Registry");
 
     // Construct the engine
     this.engine = new LXEngine(this);
     this.command = new LXCommandEngine(this);
     LX.initTimer.log("Engine");
-
-    // Custom content loader
-    this.contentLoader = LXClassLoader.createNew(this);
-    this.structure.registerFixtures(getMediaFolder(LX.Media.FIXTURES, false));
-    LX.initTimer.log("Custom Content");
 
     // Midi
     this.engine.midi.initialize();
@@ -304,42 +256,37 @@ public class LX {
     this.preferences.load();
 
     // Initialize plugins!
-    this.contentLoader.initializePlugins();
-  }
-
-  private void registerDefaultBlends() {
-    this.registeredChannelBlends.add(AddBlend.class);
-    this.registeredChannelBlends.add(MultiplyBlend.class);
-    this.registeredChannelBlends.add(SubtractBlend.class);
-    this.registeredChannelBlends.add(DifferenceBlend.class);
-    this.registeredChannelBlends.add(NormalBlend.class);
-
-    this.registeredTransitionBlends.add(DissolveBlend.class);
-    this.registeredTransitionBlends.add(AddBlend.class);
-    this.registeredTransitionBlends.add(MultiplyBlend.class);
-    this.registeredTransitionBlends.add(LightestBlend.class);
-    this.registeredTransitionBlends.add(DarkestBlend.class);
-    this.registeredTransitionBlends.add(DifferenceBlend.class);
-
-    this.registeredCrossfaderBlends.addAll(this.registeredTransitionBlends);
+    this.registry.initializePlugins();
   }
 
   public LX addListener(Listener listener) {
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add same LX.Listener twice: " + listener);
+    }
     this.listeners.add(listener);
     return this;
   }
 
   public LX removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Trying to remove non-LX.Listener: " + listener);
+    }
     this.listeners.add(listener);
     return this;
   }
 
   public LX addProjectListener(ProjectListener listener) {
+    if (this.projectListeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add same LX.ProjectListener twice: " + listener);
+    }
     this.projectListeners.add(listener);
     return this;
   }
 
   public LX removeProjectListener(ProjectListener listener) {
+    if (!this.projectListeners.contains(listener)) {
+      throw new IllegalStateException("Trying to remove non-LX.ProjectListener: " + listener);
+    }
     this.projectListeners.remove(listener);
     return this;
   }
@@ -383,20 +330,20 @@ public class LX {
     if (this.model == model) {
       throw new IllegalStateException("Cannot reset same model instance: " + model);
     }
-    if (this.model != null) {
-      this.model.dispose();
-    }
+    LXModel oldModel = this.model;
+
+    LX.log("Setting new model: " + model);
     this.model = model;
     for (Listener listener : this.listeners) {
       listener.modelChanged(this, model);
     }
-    return this;
-  }
 
-  protected void pluginChanged(LXClassLoader.Plugin plugin) {
-    for (Listener listener : this.listeners) {
-      listener.pluginChanged(this, plugin);
+    // Dispose of the old model!
+    if (oldModel != null) {
+      LX.log("Disposing old model: " + oldModel);
+      oldModel.dispose();
     }
+    return this;
   }
 
   /**
@@ -648,259 +595,6 @@ public class LX {
     return null;
   }
 
-  public void checkRegistration() {
-    if (!this.contentReloading && this.engine.hasStarted) {
-      throw new IllegalStateException("May not register components outside of initialize() callback");
-    }
-  }
-
-  /**
-   * Register a pattern class with the engine
-   *
-   * @param pattern Pattern class
-   * @return this
-   */
-  public LX registerPattern(Class<? extends LXPattern> pattern) {
-    checkRegistration();
-    this.registeredPatterns.add(pattern);
-    return this;
-  }
-
-  /**
-   * Register a pattern class with the engine
-   *
-   * @param patterns List of pattern classes
-   * @return this
-   */
-  public LX registerPatterns(Class<LXPattern>[] patterns) {
-    checkRegistration();
-    for (Class<LXPattern> pattern : patterns) {
-      registerPattern(pattern);
-    }
-    return this;
-  }
-
-  /**
-   * Unregister pattern classes with the engine
-   *
-   * @param patterns Pattern classes
-   * @return this
-   */
-  public LX unregisterPatterns(List<Class<? extends LXPattern>> patterns) {
-    for (Class<? extends LXPattern> pattern : patterns) {
-      this.registeredPatterns.remove(pattern);
-    }
-    return this;
-  }
-
-  /**
-   * Gets the list of registered pattern classes
-   *
-   * @return Pattern classes
-   */
-  public List<Class<? extends LXPattern>> getRegisteredPatterns() {
-    return this.registeredPatterns;
-  }
-
-  /**
-   * Register an effect class with the engine
-   *
-   * @param effect Effect class
-   * @return this
-   */
-  public LX registerEffect(Class<? extends LXEffect> effect) {
-    checkRegistration();
-    this.registeredEffects.add(effect);
-    return this;
-  }
-
-  /**
-   * Register an effect class with the engine
-   *
-   * @param effects List of effect classes
-   * @return this
-   */
-  public LX registerEffects(Class<? extends LXEffect>[] effects) {
-    checkRegistration();
-    for (Class<? extends LXEffect> effect : effects) {
-      registerEffect(effect);
-    }
-    return this;
-  }
-
-  /**
-   * Unregister effect classes with the engine
-   *
-   * @param effects Effect classes
-   * @return this
-   */
-  public LX unregisterEffects(List<Class<? extends LXEffect>> effects) {
-    for (Class<? extends LXEffect> effect : effects) {
-      this.registeredEffects.remove(effect);
-    }
-    return this;
-  }
-
-  /**
-   * Gets the list of registered effect classes
-   *
-   * @return Effect classes
-   */
-  public List<Class<? extends LXEffect>> getRegisteredEffects() {
-    return this.registeredEffects;
-  }
-
-  public LX registerFixture(String fixtureName) {
-    checkRegistration();
-    if (this.registeredFixtures.contains(fixtureName)) {
-      throw new IllegalStateException("Cannot double-register fixture: " + fixtureName);
-    }
-    this.registeredFixtures.add(fixtureName);
-    return this;
-  }
-
-  public List<String> getRegisteredFixtures() {
-    return this.registeredFixtures;
-  }
-
-  public List<Class<? extends LXModel>> getRegisteredModels() {
-    return this.contentLoader.getRegisteredModels();
-  }
-
-  /**
-   * Register a [channel and crossfader] blend class with the engine
-   *
-   * @param blend Blend class
-   * @return this
-   */
-  public LX registerBlend(Class<? extends LXBlend> blend) {
-    checkRegistration();
-    registerChannelBlend(blend);
-    registerTransitionBlend(blend);
-    registerCrossfaderBlend(blend);
-    return this;
-  }
-
-  /**
-   * Register multiple [channel and crossfader] blend classes with the engine
-   *
-   * @param blends List of blend classes
-   * @return this
-   */
-  public LX registerBlends(Class<LXBlend>[] blends) {
-    checkRegistration();
-    registerChannelBlends(blends);
-    registerTransitionBlends(blends);
-    registerCrossfaderBlends(blends);
-    return this;
-  }
-
-  /**
-   * Register a channel blend class with the engine
-   *
-   * @param blend Blend class
-   * @return this
-   */
-  public LX registerChannelBlend(Class<? extends LXBlend> blend) {
-    checkRegistration();
-    this.registeredChannelBlends.add(blend);
-    this.engine.mixer.updateChannelBlendOptions();
-    return this;
-  }
-
-  /**
-   * Register a transition blend class with the engine
-   *
-   * @param blend Blend class
-   * @return this
-   */
-  public LX registerTransitionBlend(Class<? extends LXBlend> blend) {
-    checkRegistration();
-    this.registeredTransitionBlends.add(blend);
-    this.engine.mixer.updateTransitionBlendOptions();
-    return this;
-  }
-
-  /**
-   * Register multiple channel blend classes with the engine
-   *
-   * @param blends List of blend classes
-   * @return this
-   */
-  public LX registerChannelBlends(Class<LXBlend>[] blends) {
-    checkRegistration();
-    for (Class<LXBlend> blend : blends) {
-      this.registeredChannelBlends.add(blend);
-    }
-    this.engine.mixer.updateChannelBlendOptions();
-    return this;
-  }
-
-  /**
-   * Register multiple channel blend classes with the engine
-   *
-   * @param blends List of blend classes
-   * @return this
-   */
-  public LX registerTransitionBlends(Class<LXBlend>[] blends) {
-    checkRegistration();
-    for (Class<LXBlend> blend : blends) {
-      this.registeredTransitionBlends.add(blend);
-    }
-    this.engine.mixer.updateTransitionBlendOptions();
-    return this;
-  }
-
-  /**
-   * Gets the list of registered channel blend classes
-   *
-   * @return Blend classes
-   */
-  public List<Class<? extends LXBlend>> getRegisteredChannelBlends() {
-    return this.registeredChannelBlends;
-  }
-
-  /**
-   * Register a crossfader blend class with the engine
-   *
-   * @param blend Blend class
-   * @return this
-   */
-  public LX registerCrossfaderBlend(Class<? extends LXBlend> blend) {
-    checkRegistration();
-    this.registeredCrossfaderBlends.add(blend);
-    this.engine.mixer.updateCrossfaderBlendOptions();
-    return this;
-  }
-
-  /**
-   * Register multiple crossfader blend classes with the engine
-   *
-   * @param blends List of blend classes
-   * @return this
-   */
-  public LX registerCrossfaderBlends(Class<LXBlend>[] blends) {
-    checkRegistration();
-    for (Class<LXBlend> blend : blends) {
-      this.registeredCrossfaderBlends.add(blend);
-    }
-    this.engine.mixer.updateCrossfaderBlendOptions();
-    return this;
-  }
-
-  /**
-   * Gets the list of registered crossfader blend classes
-   *
-   * @return Blend classes
-   */
-  public List<Class<? extends LXBlend>> getRegisteredCrossfaderBlends() {
-    return this.registeredCrossfaderBlends;
-  }
-
-  public List<LXClassLoader.Plugin> getPlugins() {
-    return this.contentLoader.getPlugins();
-  }
-
   private final Map<String, LXSerializable> externals = new HashMap<String, LXSerializable>();
 
   private final static String KEY_VERSION = "version";
@@ -1128,7 +822,7 @@ public class LX {
 
   public LXModel instantiateModel(String className) throws InstantiationException {
     try {
-      Class<? extends LXModel> cls = Class.forName(className, true, this.contentLoader).asSubclass(LXModel.class);
+      Class<? extends LXModel> cls = Class.forName(className, true, this.registry.classLoader).asSubclass(LXModel.class);
       return cls.getConstructor().newInstance();
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateModel: " + x.getMessage());
@@ -1138,7 +832,7 @@ public class LX {
 
   public <T extends LXComponent> T instantiateComponent(String className, Class<T> type) throws InstantiationException {
     try {
-      Class<? extends T> cls = Class.forName(className, true, this.contentLoader).asSubclass(type);
+      Class<? extends T> cls = Class.forName(className, true, this.registry.classLoader).asSubclass(type);
       return instantiateComponent(cls, type);
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
@@ -1197,23 +891,6 @@ public class LX {
 
   public LXBlend instantiateBlend(Class<? extends LXBlend> cls) throws InstantiationException {
     return instantiateComponent(cls, LXBlend.class);
-  }
-
-  public void reloadContent() {
-    LX.log("Reloading custom content folders");
-    this.contentLoader.dispose();
-    this.contentReloading = true;
-
-    // The previous contentLoader is now disposed. Note that the classes it defined
-    // may still be in use, e.g. via live patterns or effects. But we've released our
-    // handle to it. Those classes will be garbage collected when they have no more
-    // references. And all our new instantiations will use the new version of the Class
-    // objects defined by a new instance of the LXClassLoader.
-    this.contentLoader = LXClassLoader.createNew(this);
-    this.contentReloading = false;
-    for (Listener listener : this.listeners) {
-      listener.contentChanged(this);
-    }
   }
 
   public void setSystemClipboardString(String str) {

@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.sound.midi.InvalidMidiDataException;
@@ -148,7 +149,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public LXMidiEngine registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
-    this.lx.checkRegistration();
+    this.lx.registry.checkRegistration();
     if (this.registeredSurfaces.containsKey(deviceName)) {
       throw new IllegalStateException("Existing midi device name " + deviceName + " cannot be remapped to " + surfaceClass);
     }
@@ -617,31 +618,52 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public LXMidiEngine addListener(LXMidiListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXMidiEngine.LXMidiListener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate LXMidiEngine.Listener: " + listener);
+    }
     this.listeners.add(listener);
     return this;
   }
 
   public LXMidiEngine removeListener(LXMidiListener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-existent LXMidiEngine.Listener: " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }
 
   public LXMidiEngine addDeviceListener(DeviceListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXMidiEngine.DeviceListener");
+    if (this.deviceListeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate LXMidiEngine.DeviceListener: " + listener);
+    }
     this.deviceListeners.add(listener);
     return this;
   }
 
   public LXMidiEngine removeDeviceListener(DeviceListener listener) {
+    if (!this.deviceListeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-registered LXMidiEngine.DeviceListener: " + listener);
+    }
     this.deviceListeners.remove(listener);
     return this;
   }
 
   public LXMidiEngine addMappingListener(MappingListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXMidiEngine.MappingListener");
+    if (this.mappingListeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate LXMidiEngine.MappingListener: " + listener);
+    }
     this.mappingListeners.add(listener);
     return this;
   }
 
   public LXMidiEngine removeMappingListener(MappingListener listener) {
+    if (!this.mappingListeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-registered LXMidiEngine.MappingListener: " + listener);
+    }
     this.mappingListeners.remove(listener);
     return this;
   }

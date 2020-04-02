@@ -30,9 +30,6 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.pattern.LXPattern;
@@ -49,87 +46,18 @@ import heronarts.lx.pattern.LXPattern;
  * classloader ensures that the loaded classes will get proper behavior from methods
  * like getResourceAsStream().
  */
-public class LXClassLoader extends URLClassLoader implements LXSerializable {
-
-  public class Plugin implements LXSerializable {
-    public final Class<? extends LXPlugin> clazz;
-    public LXPlugin instance;
-    private boolean hasError = false;
-    private boolean isEnabled = true;
-
-    private Plugin(Class<? extends LXPlugin> clazz) {
-      this.clazz = clazz;
-    }
-
-    public LXPlugin getInstance() {
-      return this.instance;
-    }
-
-    public boolean hasInstance() {
-      return (this.instance != null);
-    }
-
-    public boolean isEnabled() {
-      return this.isEnabled;
-    }
-
-    public Plugin setEnabled(boolean enabled) {
-      this.isEnabled = enabled;
-      lx.pluginChanged(this);
-      return this;
-    }
-
-    private void initialize(LX lx) {
-      if (!this.isEnabled) {
-        return;
-      }
-      try {
-        this.instance = clazz.getConstructor().newInstance();
-        this.instance.initialize(lx);
-      } catch (Exception x) {
-        LX.error(x, "Unhandled exception in plugin initialize: " + clazz.getName());
-        this.hasError = true;
-      }
-    }
-
-    public Plugin setException(Exception x) {
-      this.hasError = true;
-      lx.pluginChanged(this);
-      return this;
-    }
-
-    public boolean hasError() {
-      return this.hasError;
-    }
-
-    private static final String KEY_CLASS = "class";
-    private static final String KEY_ENABLED = "enabled";
-
-    @Override
-    public void save(LX lx, JsonObject object) {
-      object.addProperty(KEY_CLASS, this.clazz.getName());
-      object.addProperty(KEY_ENABLED, this.isEnabled);
-    }
-
-    @Override
-    public void load(LX lx, JsonObject object) {
-      if (object.has(KEY_ENABLED)) {
-        this.isEnabled = object.get(KEY_ENABLED).getAsBoolean();
-      }
-    }
-  }
+public class LXClassLoader extends URLClassLoader {
 
   private final LX lx;
 
   private final List<Class<? extends LXPattern>> patterns = new ArrayList<Class<? extends LXPattern>>();
   private final List<Class<? extends LXEffect>> effects = new ArrayList<Class<? extends LXEffect>>();
   private final List<Class<? extends LXModel>> models = new ArrayList<Class<? extends LXModel>>();
-  private final List<Plugin> plugins = new ArrayList<Plugin>();
 
-  public static LXClassLoader createNew(LX lx) {
+  private static List<File> defaultJarFiles(LX lx) {
     List<File> jarFiles = new ArrayList<File>();
     collectJarFiles(jarFiles, lx.getMediaFolder(LX.Media.CONTENT, false));
-    return new LXClassLoader(lx, jarFiles);
+    return jarFiles;
   }
 
   private static void collectJarFiles(List<File> jarFiles, File folder) {
@@ -167,7 +95,11 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
 
   private final List<File> jarFiles;
 
-  private LXClassLoader(LX lx, List<File> jarFiles) {
+  protected LXClassLoader(LX lx) {
+    this(lx, defaultJarFiles(lx));
+  }
+
+  protected LXClassLoader(LX lx, List<File> jarFiles) {
     super(fileListToURLArray(jarFiles), lx.getClass().getClassLoader());
     this.lx = lx;
     this.jarFiles = jarFiles;
@@ -177,8 +109,9 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
   }
 
   protected void dispose() {
-    this.lx.unregisterPatterns(this.patterns);
-    this.lx.unregisterEffects(this.effects);
+    this.lx.registry.removePatterns(this.patterns);
+    this.lx.registry.removeEffects(this.effects);
+    this.lx.registry.removeModels(this.models);
   }
 
   private void loadJarFile(File file) {
@@ -214,18 +147,20 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
         if (LXPattern.class.isAssignableFrom(clz)) {
           Class<? extends LXPattern> patternClz = clz.asSubclass(LXPattern.class);
           this.patterns.add(patternClz);
-          this.lx.registerPattern(patternClz);
+          this.lx.registry.addPattern(patternClz);
         }
         if (LXEffect.class.isAssignableFrom(clz)) {
           Class<? extends LXEffect> effectClz = clz.asSubclass(LXEffect.class);
           this.effects.add(effectClz);
-          this.lx.registerEffect(effectClz);
+          this.lx.registry.addEffect(effectClz);
         }
         if (LXModel.class.isAssignableFrom(clz)) {
-          this.models.add(clz.asSubclass(LXModel.class));
+          Class<? extends LXModel> modelClz = clz.asSubclass(LXModel.class);
+          this.models.add(modelClz);
+          this.lx.registry.addModel(modelClz);
         }
         if (LXPlugin.class.isAssignableFrom(clz)) {
-          this.plugins.add(new Plugin(clz.asSubclass(LXPlugin.class)));
+          this.lx.registry.addPlugin(clz.asSubclass(LXPlugin.class));
         }
       }
     } catch (ClassNotFoundException cnfx) {
@@ -235,51 +170,4 @@ public class LXClassLoader extends URLClassLoader implements LXSerializable {
     }
   }
 
-  protected List<Class<? extends LXModel>> getRegisteredModels() {
-    return this.models;
-  }
-
-  protected void initializePlugins() {
-    for (Plugin plugin : this.plugins) {
-      try {
-        plugin.initialize(this.lx);
-      } catch (Exception x) {
-        LX.error(x, "Exception in plugin initialization callback: " + plugin.getClass().getName());
-      }
-    }
-  }
-
-  public List<Plugin> getPlugins() {
-    return this.plugins;
-  }
-
-  private Plugin findPlugin(String clazz) {
-    for (Plugin plugin : this.plugins) {
-      if (plugin.clazz.getName().equals(clazz)) {
-        return plugin;
-      }
-    }
-    return null;
-  }
-
-  private static final String KEY_PLUGINS = "plugins";
-
-  @Override
-  public void save(LX lx, JsonObject object) {
-    object.add(KEY_PLUGINS, LXSerializable.Utils.toArray(lx, this.plugins));
-  }
-
-  @Override
-  public void load(LX lx, JsonObject object) {
-    if (object.has(KEY_PLUGINS)) {
-      for (JsonElement pluginElement : object.get(KEY_PLUGINS).getAsJsonArray()) {
-        JsonObject pluginObj = pluginElement.getAsJsonObject();
-        Plugin plugin = findPlugin(pluginObj.get(Plugin.KEY_CLASS).getAsString());
-        if (plugin != null) {
-          plugin.load(lx, pluginObj);
-        }
-      }
-    }
-
-  }
 }

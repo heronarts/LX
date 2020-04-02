@@ -27,6 +27,7 @@ public class ModelBuffer implements LXBuffer {
   private final int defaultColor;
 
   private final LX.Listener modelListener = new LX.Listener() {
+    @Override
     public void modelChanged(LX lx, LXModel model) {
       if (array.length != model.size) {
         initArray(model);

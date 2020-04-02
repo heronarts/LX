@@ -29,6 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
@@ -274,11 +275,18 @@ public class LXOscEngine extends LXComponent {
     }
 
     public Receiver addListener(LXOscListener listener) {
+      Objects.requireNonNull("May not add null LXOscListener");
+      if (this.listeners.contains(listener)) {
+        throw new IllegalStateException("Cannot add duplicate LXOscEngine.Receiver.LXOscListener: " + listener);
+      }
       this.listeners.add(listener);
       return this;
     }
 
     public Receiver removeListener(LXOscListener listener) {
+      if (!this.listeners.contains(listener)) {
+        throw new IllegalStateException("Cannot remove non-existent LXOscEngine.Receiver.LXOscListener: " + listener);
+      }
       this.listeners.remove(listener);
       return this;
     }
