@@ -18,7 +18,7 @@
 
 package heronarts.lx.parameter;
 
-import java.util.ArrayList;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Collections;
 import java.util.List;
 import heronarts.lx.LXUtils;
@@ -26,9 +26,14 @@ import heronarts.lx.modulation.LXCompoundModulation;
 
 public class CompoundParameter extends BoundedParameter {
 
-  private final List<LXCompoundModulation> mutableModulations = new ArrayList<LXCompoundModulation>();
+  // Note that the thread-safe CopyOnWriteArrayList is used here because the UI
+  // thread may also need to access these modulations to draw animated knobs and controls
+  // while the engine thread may make modifications
+  private final List<LXCompoundModulation> mutableModulations =
+    new CopyOnWriteArrayList<LXCompoundModulation>();
 
-  public final List<LXCompoundModulation> modulations = Collections.unmodifiableList(this.mutableModulations);
+  public final List<LXCompoundModulation> modulations =
+    Collections.unmodifiableList(this.mutableModulations);
 
   /**
    * Labeled parameter with value of 0 and range of 0-1
