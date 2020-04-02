@@ -23,6 +23,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.google.gson.JsonObject;
 
@@ -41,8 +42,9 @@ import heronarts.lx.output.LXDatagram;
 public class LXModel implements LXSerializable {
 
   public interface Listener {
-    public void onModelUpdated(LXModel model);
+    public void modelGeometryUpdated(LXModel model);
   }
+
   /**
    * An immutable list of all the points in this model
    */
@@ -64,6 +66,8 @@ public class LXModel implements LXSerializable {
   private String[] keys = { "model" };
 
   private LXModel parent;
+
+  private int geometryRevision = 0;
 
   /**
    * Number of points in the model
@@ -324,17 +328,18 @@ public class LXModel implements LXSerializable {
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   public final LXModel addListener(Listener listener) {
-    if (listener == null) {
-      throw new IllegalArgumentException("Cannot add null modellistener");
-    }
+    Objects.requireNonNull(listener);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add duplicate listener to model " + listener);
+      throw new IllegalStateException("Cannot add duplicate LXModel.Listener: " + listener);
     }
     this.listeners.add(listener);
     return this;
   }
 
   public final LXModel removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-registered LXModel.Listener: " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }
@@ -383,12 +388,30 @@ public class LXModel implements LXSerializable {
     return this;
   }
 
+  /**
+   * Should be invoked when some of the geometry inside a model has been changed, but the
+   * total point count and structure is the same. Will increment a sentinel value and notify
+   * listeners of the change.
+   *
+   * @return this
+   */
   public LXModel bang() {
+    ++this.geometryRevision;
     // Notify the listeners of this model that it has changed
     for (Listener listener : this.listeners) {
-      listener.onModelUpdated(this);
+      listener.modelGeometryUpdated(this);
     }
     return this;
+  }
+
+  /**
+   * Returns an integer identifying the geometry version of this model. Each time geometry in the model is
+   * changed, this value is incremented;
+   *
+   * @return Integer
+   */
+  public int getGeometryRevision() {
+    return this.geometryRevision;
   }
 
   /**

@@ -45,6 +45,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -327,20 +329,19 @@ public class LX {
    * @return this
    */
   public LX setModel(LXModel model) {
+    Objects.requireNonNull(model, "May not set null model on LX instance");
     if (this.model == model) {
       throw new IllegalStateException("Cannot reset same model instance: " + model);
     }
     LXModel oldModel = this.model;
 
-    LX.log("Setting new model: " + model);
     this.model = model;
     for (Listener listener : this.listeners) {
       listener.modelChanged(this, model);
     }
 
-    // Dispose of the old model!
+    // Dispose of the old model after notifying listeners
     if (oldModel != null) {
-      LX.log("Disposing old model: " + oldModel);
       oldModel.dispose();
     }
     return this;
