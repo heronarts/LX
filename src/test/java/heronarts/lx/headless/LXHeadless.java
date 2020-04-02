@@ -34,7 +34,7 @@ import heronarts.lx.pattern.LXPattern;
 public class LXHeadless {
 
   public static LXModel buildModel() {
-    // TODO: implement code that loads and builds your model here
+    // NOTE: you can implement code that loads and builds your model here
     return new GridModel(30, 30);
   }
 
@@ -60,7 +60,7 @@ public class LXHeadless {
       LXModel model = buildModel();
       LX lx = new LX(model);
 
-      // TODO: add your own output code here
+      // NOTE: add your own output code here
       // addArtNetOutput(lx);
       // addFadecandyOutput(lx);
       addOPCOutput(lx);
