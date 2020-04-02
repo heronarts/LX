@@ -262,8 +262,9 @@ public class LX {
   }
 
   public LX addListener(Listener listener) {
+    Objects.requireNonNull(listener);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add same LX.Listener twice: " + listener);
+      throw new IllegalStateException("Cannot add duplicate LX.Listener: " + listener);
     }
     this.listeners.add(listener);
     return this;
@@ -271,15 +272,16 @@ public class LX {
 
   public LX removeListener(Listener listener) {
     if (!this.listeners.contains(listener)) {
-      throw new IllegalStateException("Trying to remove non-LX.Listener: " + listener);
+      throw new IllegalStateException("May not remove non-registered LX.Listener: " + listener);
     }
     this.listeners.add(listener);
     return this;
   }
 
   public LX addProjectListener(ProjectListener listener) {
+    Objects.requireNonNull(listener);
     if (this.projectListeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add same LX.ProjectListener twice: " + listener);
+      throw new IllegalStateException("Cannot add duplicate LX.ProjectListener: " + listener);
     }
     this.projectListeners.add(listener);
     return this;
@@ -287,7 +289,7 @@ public class LX {
 
   public LX removeProjectListener(ProjectListener listener) {
     if (!this.projectListeners.contains(listener)) {
-      throw new IllegalStateException("Trying to remove non-LX.ProjectListener: " + listener);
+      throw new IllegalStateException("Trying to remove non-registered LX.ProjectListener: " + listener);
     }
     this.projectListeners.remove(listener);
     return this;
@@ -340,10 +342,11 @@ public class LX {
       listener.modelChanged(this, model);
     }
 
-    // Dispose of the old model after notifying listeners
+    // Dispose of the old model after notifying listeners of model change
     if (oldModel != null) {
       oldModel.dispose();
     }
+
     return this;
   }
 

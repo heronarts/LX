@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -152,6 +153,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXComponent.
   }
 
   public LXClip addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXClip.Listener");
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException("Already registered LXClip.Listener: " + listener);
     }

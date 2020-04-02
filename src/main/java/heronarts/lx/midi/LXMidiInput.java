@@ -20,6 +20,7 @@ package heronarts.lx.midi;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import javax.sound.midi.MidiDevice;
 import javax.sound.midi.MidiMessage;
@@ -105,6 +106,7 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
    * @return this
    */
   public LXMidiInput addListener(LXMidiListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXMidiInput.LXMidiListener");
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannot add duplicate LXMidiInput.LXMidiListener: " + listener);
     }

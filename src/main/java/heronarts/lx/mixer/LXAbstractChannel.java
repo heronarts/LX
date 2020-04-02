@@ -20,6 +20,7 @@ package heronarts.lx.mixer;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
@@ -246,11 +247,18 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   }
 
   public final void addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXAbstractChannel.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXAbstractChannel.Listener: " + listener);
+    }
     super.addListener(listener);
     this.listeners.add(listener);
   }
 
   public final void removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXAbstractChannel.Listener: " + listener);
+    }
     super.removeListener(listener);
     this.listeners.remove(listener);
   }
@@ -276,8 +284,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   @Override
   public void dispose() {
-    super.dispose();
     this.blendBuffer.dispose();
+    this.listeners.clear();
+    super.dispose();
   }
 
 }

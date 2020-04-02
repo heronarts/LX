@@ -33,6 +33,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -116,19 +117,33 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   public final void addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXBus.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXBus.Listener: " + listener);
+    }
     this.listeners.add(listener);
   }
 
   public final void removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered Bus.Listener: " + listener);
+    }
     this.listeners.remove(listener);
   }
 
   public LXBus addClipListener(ClipListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXBus.ClipListener");
+    if (this.clipListeners.contains(listener)) {
+      throw new IllegalStateException("May not remove add duplicate LXBus.ClipListener: " + listener);
+    }
     this.clipListeners.add(listener);
     return this;
   }
 
   public LXBus removeClipListener(ClipListener listener) {
+    if (!this.clipListeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXBus.ClipListener: " + listener);
+    }
     this.clipListeners.remove(listener);
     return this;
   }
@@ -375,6 +390,8 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
       effect.dispose();
     }
     this.mutableEffects.clear();
+    this.listeners.clear();
+    this.clipListeners.clear();
     super.dispose();
   }
 

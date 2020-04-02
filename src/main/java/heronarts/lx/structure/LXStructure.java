@@ -27,6 +27,7 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -146,14 +147,18 @@ public class LXStructure extends LXComponent {
   }
 
   public LXStructure addListener(Listener listener) {
+    Objects.requireNonNull(listener);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add same LXStructure listener twice: " + listener);
+      throw new IllegalStateException("Cannot add duplicate LXStructure.Listener: " + listener);
     }
     this.listeners.add(listener);
     return this;
   }
 
   public LXStructure removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-registered LXStructure.Listener: " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }

@@ -21,6 +21,7 @@ package heronarts.lx.mixer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -62,6 +63,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   public final LXMixerEngine addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXMixerEngine.Listener");
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannod add mixer listener twice: " + listener);
     }

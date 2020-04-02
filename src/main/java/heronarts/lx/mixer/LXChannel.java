@@ -41,6 +41,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -284,21 +285,35 @@ public class LXChannel extends LXAbstractChannel {
   }
 
   public final void addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXChannel.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXChannel.Listener: " + listener);
+    }
     super.addListener(listener);
     this.listeners.add(listener);
   }
 
   public final void removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXChannel.Listener: " + listener);
+    }
     super.removeListener(listener);
     this.listeners.remove(listener);
   }
 
   public LXChannel addMidiListener(MidiListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXChannel.MidiListener");
+    if (this.midiListeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXChannel.MidiListener: " + listener);
+    }
     this.midiListeners.add(listener);
     return this;
   }
 
   public LXChannel removeMidiListener(MidiListener listener) {
+    if (!this.midiListeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXChannel.MidiListener: " + listener);
+    }
     this.midiListeners.remove(listener);
     return this;
   }
@@ -908,6 +923,8 @@ public class LXChannel extends LXAbstractChannel {
     if (this.thread.hasStarted) {
       this.thread.interrupt();
     }
+    this.listeners.clear();
+    this.midiListeners.clear();
     super.dispose();
   }
 

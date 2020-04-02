@@ -20,6 +20,7 @@ package heronarts.lx.parameter;
 
 import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 
@@ -94,17 +95,18 @@ public abstract class LXListenableParameter implements LXParameter {
   }
 
   public LXListenableParameter addListener(LXParameterListener listener) {
-    if (listener == null) {
-      throw new IllegalArgumentException("Cannot add null parameter listener");
-    }
+    Objects.requireNonNull(listener, "May add null LXParameterListener: " + this);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add duplicate listener " + getLabel() + " " + listener);
+      throw new IllegalStateException("Cannot add duplicate LXParameterListener " + getLabel() + " " + listener);
     }
     this.listeners.add(listener);
     return this;
   }
 
   public final LXListenableParameter removeListener(LXParameterListener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove unregistered LXParameterListener " + listener);
+    }
     this.listeners.remove(listener);
     return this;
   }
