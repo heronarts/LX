@@ -678,37 +678,27 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     });
 
-    this.lx.engine.mixer.focusedChannel.addListener(new LXParameterListener() {
-      public void onParameterChanged(LXParameter p) {
-        sendChannelFocus();
-        deviceListener.registerChannel(lx.engine.mixer.getFocusedChannel());
-      }
+    this.lx.engine.mixer.focusedChannel.addListener((p) -> {
+      sendChannelFocus();
+      this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
     });
 
-    deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
 
-    this.lx.engine.mixer.cueA.addListener(new LXParameterListener() {
-      @Override
-      public void onParameterChanged(LXParameter parameter) {
-        sendNoteOn(0, CLIP_DEVICE_VIEW, lx.engine.mixer.cueA.isOn() ? 1 : 0);
-      }
+    this.lx.engine.mixer.cueA.addListener((p) -> {
+      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
     });
-    sendNoteOn(0, CLIP_DEVICE_VIEW, lx.engine.mixer.cueA.isOn() ? 1 : 0);
+    sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
 
-    this.lx.engine.mixer.cueB.addListener(new LXParameterListener() {
-      @Override
-      public void onParameterChanged(LXParameter parameter) {
-        sendNoteOn(0, DETAIL_VIEW, lx.engine.mixer.cueB.isOn() ? 1 : 0);
-      }
+    this.lx.engine.mixer.cueB.addListener((p) -> {
+      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
     });
-    sendNoteOn(0, DETAIL_VIEW, lx.engine.mixer.cueB.isOn() ? 1 : 0);
+    sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
 
-    this.lx.engine.tempo.enabled.addListener(new LXParameterListener() {
-      public void onParameterChanged(LXParameter parameter) {
-        sendNoteOn(0, METRONOME, lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
-      }
+    this.lx.engine.tempo.enabled.addListener((p) -> {
+      sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
     });
-    sendNoteOn(0, METRONOME, lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
+    sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
 
   }
 

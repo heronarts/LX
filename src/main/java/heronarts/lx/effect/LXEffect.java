@@ -38,8 +38,6 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 
 /**
@@ -116,15 +114,13 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     super(lx);
     this.label.setDescription("The name of this effect");
 
-    this.enabled.addListener(new LXParameterListener() {
-      public void onParameterChanged(LXParameter parameter) {
-        if (LXEffect.this.enabled.isOn()) {
-          enabledDamped.setRangeFromHereTo(1, enabledDampingAttack.getValue()).start();
-          onEnable();
-        } else {
-          enabledDamped.setRangeFromHereTo(0, enabledDampingRelease.getValue()).start();
-          onDisable();
-        }
+    this.enabled.addListener((p) -> {
+      if (this.enabled.isOn()) {
+        this.enabledDamped.setRangeFromHereTo(1, this.enabledDampingAttack.getValue()).start();
+        onEnable();
+      } else {
+        this.enabledDamped.setRangeFromHereTo(0, this.enabledDampingRelease.getValue()).start();
+        onDisable();
       }
     });
 

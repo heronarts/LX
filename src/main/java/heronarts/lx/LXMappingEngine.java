@@ -26,7 +26,6 @@ package heronarts.lx;
 
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.LXParameterListener;
 
 public class LXMappingEngine {
 
@@ -44,10 +43,8 @@ public class LXMappingEngine {
   public final EnumParameter<Mode> mode = new EnumParameter<Mode>("Mode", Mode.OFF);
 
   LXMappingEngine() {
-    mode.addListener(new LXParameterListener() {
-      public void onParameterChanged(LXParameter p) {
-        controlTarget = null;
-      }
+    this.mode.addListener((p) -> {
+      this.controlTarget = null;
     });
   }
 

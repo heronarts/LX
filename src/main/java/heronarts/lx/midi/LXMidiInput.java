@@ -34,7 +34,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
 public class LXMidiInput extends LXMidiDevice implements LXSerializable {
@@ -60,10 +59,8 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
   LXMidiInput(LXMidiEngine engine, MidiDevice device) {
     super(engine, device);
 
-    LXParameterListener enabledListener = new LXParameterListener() {
-      public void onParameterChanged(LXParameter p) {
-        enabled.setValue(channelEnabled.isOn() || controlEnabled.isOn() || syncEnabled.isOn());
-      }
+    LXParameterListener enabledListener = (p) -> {
+      this.enabled.setValue(this.channelEnabled.isOn() || this.controlEnabled.isOn() || this.syncEnabled.isOn());
     };
     this.channelEnabled.addListener(enabledListener);
     this.controlEnabled.addListener(enabledListener);

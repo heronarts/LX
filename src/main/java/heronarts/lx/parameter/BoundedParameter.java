@@ -160,14 +160,12 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     this.range = new Range(v0, v1);
     this.underlying = underlying;
     if (this.underlying != null) {
-      this.underlying.addListener(new LXParameterListener() {
-        public void onParameterChanged(LXParameter p) {
-          // NOTE: if the MutableParameter is set to a value outside our range, we ignore it
-          // and the values diverge.
-          double v = p.getValue();
-          if (v >= range.min && v <= range.max) {
-            setValue(v);
-          }
+      this.underlying.addListener((p) -> {
+        // NOTE: if the MutableParameter is set to a value outside our range, we ignore it
+        // and the values diverge.
+        double v = p.getValue();
+        if (v >= this.range.min && v <= this.range.max) {
+          setValue(v);
         }
       });
     }

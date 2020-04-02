@@ -582,19 +582,17 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     return this.parameters.get(path);
   }
 
-  private final LXParameterListener oscListener = new LXParameterListener() {
-    public void onParameterChanged(LXParameter parameter) {
-      // This check is necessary for bootstrapping, before the OSC engine is
-      // spun up
-      if (lx != null && lx.engine != null && lx.engine.osc != null) {
-        lx.engine.osc.sendParameter(parameter);
-      }
+  private final LXParameterListener oscListener = (p) -> {
+    // This check is necessary for bootstrapping, before the OSC engine is spun up
+    if ((this.lx != null) && (this.lx.engine != null) && (this.lx.engine.osc != null)) {
+      this.lx.engine.osc.sendParameter(p);
     }
   };
 
   /**
    * Subclasses are free to override this if desired
    */
+  @Override
   public void onParameterChanged(LXParameter parameter) {
   }
 
