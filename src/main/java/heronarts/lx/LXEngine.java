@@ -82,8 +82,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final Output output;
 
-  private final List<MessageListener> messageListeners = new ArrayList<MessageListener>();
-
   public final BoundedParameter framesPerSecond =
     new BoundedParameter("FPS", 60, 0, 300)
     .setDescription("Number of frames per second the engine runs at");
@@ -175,31 +173,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public interface Dispatch {
     public void dispatch();
-  }
-
-  @Deprecated
-  public interface MessageListener {
-    public void onMessage(LXEngine engine, String message);
-  }
-
-  @Deprecated
-  public final LXEngine addMessageListener(MessageListener listener) {
-    this.messageListeners.add(listener);
-    return this;
-  }
-
-  @Deprecated
-  public final LXEngine removeMessageListener(MessageListener listener) {
-    this.messageListeners.remove(listener);
-    return this;
-  }
-
-  @Deprecated
-  public LXEngine broadcastMessage(String message) {
-    for (MessageListener listener : this.messageListeners) {
-      listener.onMessage(this, message);
-    }
-    return this;
   }
 
   public class Timer {
