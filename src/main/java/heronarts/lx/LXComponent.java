@@ -470,16 +470,16 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       path = "[" + getCanonicalPath() + "]";
     } catch (Exception x) {
     }
-    return getClass().getSimpleName() + path;
+    return getClass().getSimpleName() + "[#" + this.id + "]" + path;
   }
 
   public String toString(LXComponent root) {
     String path = "";
     try {
-      path = "[" + getCanonicalPath() + "]";
+      path = "[" + getCanonicalPath(root) + "]";
     } catch (Exception x) {
     }
-    return getClass().getSimpleName() + path;
+    return getClass().getSimpleName() + "[#" + this.id + "]" + path;
   }
 
   public void dispose() {
