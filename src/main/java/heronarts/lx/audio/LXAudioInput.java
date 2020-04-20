@@ -171,6 +171,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
     if (this.line == null) {
       Device device = this.device.getObject();
       if (!device.isAvailable()) {
+        LX.error("LXAudioInput device is not available, audio input will not work: " + device);
         return;
       }
 
@@ -188,6 +189,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
       try {
         this.line = (TargetDataLine) device.mixer.getLine(info);
         this.line.addLineListener(this);
+
         this.line.open(this.format, 2 * (this.format == MONO ? MONO_BUFFER_SIZE : STEREO_BUFFER_SIZE));
         this.line.start();
         this.stopped = false;
