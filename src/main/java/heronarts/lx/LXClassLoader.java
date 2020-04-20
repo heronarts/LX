@@ -30,10 +30,6 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import heronarts.lx.effect.LXEffect;
-import heronarts.lx.model.LXModel;
-import heronarts.lx.pattern.LXPattern;
-
 /**
  * The LX class loader parses JAR files in the LX content directory. Any
  * valid extension components are automatically registered with the engine as
@@ -50,9 +46,7 @@ public class LXClassLoader extends URLClassLoader {
 
   private final LX lx;
 
-  private final List<Class<? extends LXPattern>> patterns = new ArrayList<Class<? extends LXPattern>>();
-  private final List<Class<? extends LXEffect>> effects = new ArrayList<Class<? extends LXEffect>>();
-  private final List<Class<? extends LXModel>> models = new ArrayList<Class<? extends LXModel>>();
+  private final List<Class<?>> classes = new ArrayList<Class<?>>();
 
   private static List<File> defaultJarFiles(LX lx) {
     List<File> jarFiles = new ArrayList<File>();
@@ -103,15 +97,19 @@ public class LXClassLoader extends URLClassLoader {
     super(fileListToURLArray(jarFiles), lx.getClass().getClassLoader());
     this.lx = lx;
     this.jarFiles = jarFiles;
+  }
+
+  protected void load() {
     for (File jarFile : this.jarFiles) {
       loadJarFile(jarFile);
     }
   }
 
   protected void dispose() {
-    this.lx.registry.removePatterns(this.patterns);
-    this.lx.registry.removeEffects(this.effects);
-    this.lx.registry.removeModels(this.models);
+    for (Class<?> clz : this.classes) {
+      this.lx.registry.removeClass(clz);
+    }
+    this.classes.clear();
   }
 
   private void loadJarFile(File file) {
@@ -144,24 +142,8 @@ public class LXClassLoader extends URLClassLoader {
 
       // Register all non-abstract components that we discover!
       if (!Modifier.isAbstract(clz.getModifiers())) {
-        if (LXPattern.class.isAssignableFrom(clz)) {
-          Class<? extends LXPattern> patternClz = clz.asSubclass(LXPattern.class);
-          this.patterns.add(patternClz);
-          this.lx.registry.addPattern(patternClz);
-        }
-        if (LXEffect.class.isAssignableFrom(clz)) {
-          Class<? extends LXEffect> effectClz = clz.asSubclass(LXEffect.class);
-          this.effects.add(effectClz);
-          this.lx.registry.addEffect(effectClz);
-        }
-        if (LXModel.class.isAssignableFrom(clz)) {
-          Class<? extends LXModel> modelClz = clz.asSubclass(LXModel.class);
-          this.models.add(modelClz);
-          this.lx.registry.addModel(modelClz);
-        }
-        if (LXPlugin.class.isAssignableFrom(clz)) {
-          this.lx.registry.addPlugin(clz.asSubclass(LXPlugin.class));
-        }
+        this.classes.add(clz);
+        this.lx.registry.addClass(clz);
       }
     } catch (ClassNotFoundException cnfx) {
       LX.error(cnfx, "Class not actually found, expected in JAR file: " + className + " " + jarFile.getName());

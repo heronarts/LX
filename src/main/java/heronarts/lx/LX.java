@@ -238,7 +238,8 @@ public class LX {
     LX.initTimer.log("Model");
 
     // Custom content loader
-    this.registry = new LXRegistry(this);
+    this.registry = instantiateRegistry(this);
+    this.registry.initialize();
     LX.initTimer.log("Registry");
 
     // Construct the engine
@@ -259,6 +260,16 @@ public class LX {
 
     // Initialize plugins!
     this.registry.initializePlugins();
+  }
+
+  /**
+   * Subclasses may override to provide an enhanced registry with support for more types
+   *
+   * @param lx LX instance
+   * @return LXRegistry to use for dynamic class stuff
+   */
+  protected LXRegistry instantiateRegistry(LX lx) {
+    return new LXRegistry(this);
   }
 
   public LX addListener(Listener listener) {

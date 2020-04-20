@@ -304,9 +304,16 @@ public class LXRegistry implements LXSerializable {
 
   public LXRegistry(LX lx) {
     this.lx = lx;
-    this.contentReloading = true;
     this.classLoader = new LXClassLoader(lx);
+  }
+
+  protected void initialize() {
+    this.contentReloading = true;
+    this.classLoader.load();
+
+    // TODO(mcslee): should get fixtures in the reload cycle as well?
     addFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
+
     this.contentReloading = false;
   }
 
@@ -321,12 +328,13 @@ public class LXRegistry implements LXSerializable {
     this.classLoader.dispose();
     this.contentReloading = true;
 
-    // The previous contentLoader is now disposed. Note that the classes it defined
+    // The previous classLoader is now disposed. Note that the classes it defined
     // may still be in use, e.g. via live patterns or effects. But we've released our
     // handle to it. Those classes will be garbage collected when they have no more
     // references. And all our new instantiations will use the new version of the Class
     // objects defined by a new instance of the LXClassLoader.
     this.classLoader = new LXClassLoader(this.lx);
+    this.classLoader.load();
 
     // We are done reloading
     this.contentReloading = false;
@@ -337,6 +345,36 @@ public class LXRegistry implements LXSerializable {
     }
   }
 
+  protected void addClass(Class<?> clz) {
+    if (LXPattern.class.isAssignableFrom(clz)) {
+      addPattern(clz.asSubclass(LXPattern.class));
+    }
+    if (LXEffect.class.isAssignableFrom(clz)) {
+      addEffect(clz.asSubclass(LXEffect.class));
+    }
+    if (LXModel.class.isAssignableFrom(clz)) {
+      addModel(clz.asSubclass(LXModel.class));
+    }
+    if (LXPlugin.class.isAssignableFrom(clz)) {
+      addPlugin(clz.asSubclass(LXPlugin.class));
+    }
+  }
+
+  protected void removeClass(Class<?> clz) {
+    if (LXPattern.class.isAssignableFrom(clz)) {
+      removePattern(clz.asSubclass(LXPattern.class));
+    }
+    if (LXEffect.class.isAssignableFrom(clz)) {
+      removeEffect(clz.asSubclass(LXEffect.class));
+    }
+    if (LXModel.class.isAssignableFrom(clz)) {
+      removeModel(clz.asSubclass(LXModel.class));
+    }
+    // NOTE: plugin classes are not removed, they can only be dealt with once at initialization
+    // and if already running you can not "undo" their work until the next restart, so they should
+    // remain visible
+  }
+
   /**
    * Register a pattern class with the engine
    *
@@ -344,6 +382,7 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addPattern(Class<? extends LXPattern> pattern) {
+    Objects.requireNonNull(pattern, "May not add null LXRegistry.addPattern");
     checkRegistration();
     if (this.mutablePatterns.contains(pattern)) {
       throw new IllegalStateException("Attemping to register pattern twice: " + pattern);
@@ -367,6 +406,20 @@ public class LXRegistry implements LXSerializable {
   }
 
   /**
+   * Unregister pattern class with the engine
+   *
+   * @param pattern Pattern class
+   * @return this
+   */
+  public LXRegistry removePattern(Class<? extends LXPattern> pattern) {
+    if (!this.mutablePatterns.contains(pattern)) {
+      throw new IllegalStateException("Attemping to unregister pattern that does not exist: " + pattern);
+    }
+    this.mutablePatterns.remove(pattern);
+    return this;
+  }
+
+  /**
    * Unregister pattern classes with the engine
    *
    * @param patterns Pattern classes
@@ -382,6 +435,7 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
+
   /**
    * Register an effect class with the engine
    *
@@ -389,6 +443,7 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addEffect(Class<? extends LXEffect> effect) {
+    Objects.requireNonNull(effect, "May not add null LXRegistry.addEffect");
     checkRegistration();
     if (this.mutableEffects.contains(effect)) {
       throw new IllegalStateException("Attemping to register effect twice: " + effect);
@@ -408,6 +463,20 @@ public class LXRegistry implements LXSerializable {
     for (Class<? extends LXEffect> effect : effects) {
       addEffect(effect);
     }
+    return this;
+  }
+
+  /**
+   * Unregister effect class with the engine
+   *
+   * @param pattern Pattern class
+   * @return this
+   */
+  public LXRegistry removeEffect(Class<? extends LXEffect> effect) {
+    if (!this.mutableEffects.contains(effect)) {
+      throw new IllegalStateException("Attemping to unregister effect that does not exist: " + effect);
+    }
+    this.mutableEffects.remove(effect);
     return this;
   }
 
@@ -434,6 +503,7 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addModel(Class<? extends LXModel> model) {
+    Objects.requireNonNull(model, "May not add null LXRegistry.addModel");
     checkRegistration();
     if (this.mutableModels.contains(model)) {
       throw new IllegalStateException("Attemping to register model twice: " + model);
@@ -457,9 +527,23 @@ public class LXRegistry implements LXSerializable {
   }
 
   /**
-   * Unregister pattern classes with the engine
+   * Unregister model class with the engine
    *
-   * @param patterns Pattern classes
+   * @param model Model class
+   * @return this
+   */
+  public LXRegistry removeModel(Class<? extends LXModel> model) {
+    if (!this.mutableModels.contains(model)) {
+      throw new IllegalStateException("Attemping to unregister model that does not exist: " + model);
+    }
+    this.mutableModels.remove(model);
+    return this;
+  }
+
+  /**
+   * Unregister model classes with the engine
+   *
+   * @param models Model classes
    * @return this
    */
   public LXRegistry removeModels(List<Class<? extends LXModel>> models) {
@@ -473,12 +557,23 @@ public class LXRegistry implements LXSerializable {
   }
 
   public LXRegistry addFixture(String fixtureName) {
+    Objects.requireNonNull(fixtureName, "May not add null LXRegistry.addFixture");
     checkRegistration();
     if (this.mutableFixtures.contains(fixtureName)) {
       throw new IllegalStateException("Cannot double-register fixture: " + fixtureName);
     }
     this.mutableFixtures.add(fixtureName);
     return this;
+  }
+
+  public void addFixtures(File fixtureDir) {
+    if (fixtureDir.exists() && fixtureDir.isDirectory()) {
+      for (String fixture : fixtureDir.list()) {
+        if (fixture.endsWith(".lxf")) {
+          addFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
+        }
+      }
+    }
   }
 
   /**
@@ -488,6 +583,7 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addBlend(Class<? extends LXBlend> blend) {
+    Objects.requireNonNull(blend, "May not add null LXRegistry.addBlend");
     checkRegistration();
     addChannelBlend(blend);
     addTransitionBlend(blend);
@@ -516,6 +612,7 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addChannelBlend(Class<? extends LXBlend> blend) {
+    Objects.requireNonNull(blend, "May not add null LXRegistry.addChannelBlend");
     checkRegistration();
     if (this.mutableChannelBlends.contains(blend)) {
       throw new IllegalStateException("Attemping to register channel blend twice: " + blend);
@@ -554,6 +651,7 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addTransitionBlend(Class<? extends LXBlend> blend) {
+    Objects.requireNonNull(blend, "May not add null LXRegistry.addTransitionBlend");
     checkRegistration();
     if (this.mutableTransitionBlends.contains(blend)) {
       throw new IllegalStateException("Attemping to register transition blend twice: " + blend);
@@ -592,6 +690,7 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addCrossfaderBlend(Class<? extends LXBlend> blend) {
+    Objects.requireNonNull(blend, "May not add null LXRegistry.addCrossfaderBlend");
     checkRegistration();
     if (this.mutableCrossfaderBlends.contains(blend)) {
       throw new IllegalStateException("Attemping to register crossfader blend twice: " + blend);
@@ -624,17 +723,8 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
-  public void addFixtures(File fixtureDir) {
-    if (fixtureDir.exists() && fixtureDir.isDirectory()) {
-      for (String fixture : fixtureDir.list()) {
-        if (fixture.endsWith(".lxf")) {
-          addFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
-        }
-      }
-    }
-  }
-
   protected void addPlugin(Class<? extends LXPlugin> plugin) {
+    Objects.requireNonNull(plugin, "May not add null LXRegistry.addPlugin");
     this.mutablePlugins.add(new Plugin(plugin));
   }
 
