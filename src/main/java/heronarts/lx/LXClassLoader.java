@@ -124,9 +124,9 @@ public class LXClassLoader extends URLClassLoader {
         }
       }
     } catch (IOException iox) {
-      LX.error(iox, "Exception unpacking JAR file " + file);
+      LX.error(iox, "IOException unpacking JAR file " + file + " - " + iox.getLocalizedMessage());
     } catch (Exception | Error e) {
-      LX.error(e, "Unhandled exception loading JAR file " + file);
+      LX.error(e, "Unhandled exception loading JAR file " + file + " - " + e.getLocalizedMessage());
     }
   }
 
