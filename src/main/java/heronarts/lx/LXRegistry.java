@@ -77,7 +77,8 @@ public class LXRegistry implements LXSerializable {
     /**
      * Invoked when the state of an available plugin has changed
      *
-     * @param lx instance
+     * @param lx LX instance
+     * @param plugin Plugin wrapper
      */
     default public void pluginChanged(LX lx, Plugin plugin) {}
   }
@@ -469,7 +470,7 @@ public class LXRegistry implements LXSerializable {
   /**
    * Unregister effect class with the engine
    *
-   * @param pattern Pattern class
+   * @param effect Effect class
    * @return this
    */
   public LXRegistry removeEffect(Class<? extends LXEffect> effect) {
@@ -499,7 +500,7 @@ public class LXRegistry implements LXSerializable {
   /**
    * Register a pattern class with the engine
    *
-   * @param pattern Pattern class
+   * @param model Model class
    * @return this
    */
   public LXRegistry addModel(Class<? extends LXModel> model) {
@@ -513,9 +514,9 @@ public class LXRegistry implements LXSerializable {
   }
 
   /**
-   * Register a pattern class with the engine
+   * Register a set of model classes with the engine
    *
-   * @param patterns List of pattern classes
+   * @param models List of model classes
    * @return this
    */
   public LXRegistry addModels(Class<? extends LXModel>[] models) {

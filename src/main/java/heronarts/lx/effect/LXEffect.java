@@ -137,8 +137,8 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
    * Called by the engine to assign index on this effect. Should never
    * be called otherwise.
    *
-   * @param index
-   * @return
+   * @param index Effect index
+   * @return this
    */
   public final LXEffect setIndex(int index) {
     this.index = index;
