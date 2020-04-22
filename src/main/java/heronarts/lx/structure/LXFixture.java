@@ -235,6 +235,11 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     addParameter("solo", this.solo);
   }
 
+  @Override
+  public String getPath() {
+    return "fixture/" + (this.index + 1);
+  }
+
   void setIndex(int index) {
     this.index = index;
   }

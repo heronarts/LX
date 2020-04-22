@@ -159,6 +159,11 @@ public class LXStructure extends LXComponent {
     this.output = output;
   }
 
+  @Override
+  public String getPath() {
+    return "structure";
+  }
+
   public File getModelFile() {
     return this.modelFile;
   }
