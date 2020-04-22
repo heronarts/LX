@@ -18,6 +18,7 @@
 
 package heronarts.lx;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -224,8 +225,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
   }
 
-  protected LXComponent addArray(String path,
-    List<? extends LXComponent> childArray) {
+  protected LXComponent addArray(String path, List<? extends LXComponent> childArray) {
     _checkPath(path, "array");
     this.childArrays.put(path, childArray);
     return this;
@@ -492,8 +492,9 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
     this.lx.engine.midi.removeMappings(this);
     this.lx.engine.modulation.removeModulations(this);
-    for (LXParameter parameter : this.parameters.values()) {
-      parameter.dispose();
+
+    for (LXParameter parameter : new ArrayList<LXParameter>(this.parameters.values())) {
+      removeParameter(parameter);
     }
     this.parameters.clear();
     this.parent = null;
@@ -563,8 +564,13 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
 
   public LXComponent removeParameter(LXParameter parameter) {
     if (parameter.getParent() != this) {
-      throw new IllegalStateException(
-        "Cannot remove parameter not owned by component");
+      throw new IllegalStateException("Cannot remove parameter not owned by component");
+    }
+    if (parameter instanceof LXListenableParameter) {
+      ((LXListenableParameter) parameter).removeListener(this);
+      if (this instanceof LXOscComponent) {
+        ((LXListenableParameter) parameter).removeListener(this.oscListener);
+      }
     }
     this.parameters.remove(parameter.getPath());
     parameter.dispose();

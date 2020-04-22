@@ -24,7 +24,9 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 
+import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXPath;
 
 /**
  * This is a parameter instance that can be listened to, meaning we are able to
@@ -105,7 +107,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   public final LXListenableParameter removeListener(LXParameterListener listener) {
     if (!this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot remove unregistered LXParameterListener " + listener);
+      throw new IllegalStateException("Cannot remove unregistered LXParameterListener " + LXPath.getCanonicalPath(this) + " " + listener);
     }
     this.listeners.remove(listener);
     return this;
@@ -146,6 +148,14 @@ public abstract class LXListenableParameter implements LXParameter {
 
   @Override
   public void dispose() {
+    for (LXParameterListener listener : this.listeners) {
+      String className = listener.getClass().getName();
+      if (className.contains(".ui.")) {
+        LX.warning("Stranded UI listener on parameter: " + LXPath.getCanonicalPath(this) + " - " + className);
+      } else {
+        LX.error("Stranded listener on parameter: " + LXPath.getCanonicalPath(this) + " - " + className);
+      }
+    }
     this.listeners.clear();
   }
 

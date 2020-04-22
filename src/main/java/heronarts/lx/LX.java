@@ -941,6 +941,14 @@ public class LX {
     _log(System.out, message);
   }
 
+  public static boolean LOG_WARNINGS = false;
+
+  public static void warning(String message) {
+    if (LOG_WARNINGS) {
+      _log(System.out, "<WARNING> " + message);
+    }
+  }
+
   public static void error(String message) {
     _log(System.err, message);
   }
