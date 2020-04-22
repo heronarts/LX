@@ -19,13 +19,14 @@
 package heronarts.lx.structure;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXTransform;
 
-public class Strip extends LXFixture {
+public class StripFixture extends LXFixture {
 
   public final DiscreteParameter numPoints = (DiscreteParameter)
     new DiscreteParameter("Num", 30, 1, 4097)
@@ -36,7 +37,7 @@ public class Strip extends LXFixture {
     new BoundedParameter("Spacing", 10, 0, 1000000)
     .setDescription("Spacing between points in the strip");
 
-  public Strip(LX lx) {
+  public StripFixture(LX lx) {
     super(lx);
     addMetricsParameter("numPoints", this.numPoints);
     addGeometryParameter("spacing", this.spacing);
@@ -54,5 +55,10 @@ public class Strip extends LXFixture {
   @Override
   protected int size() {
     return this.numPoints.getValuei();
+  }
+
+  @Override
+  public String getModelKey() {
+    return LXModel.Key.STRIP;
   }
 }

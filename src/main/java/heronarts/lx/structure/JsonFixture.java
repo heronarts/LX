@@ -60,7 +60,7 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
-  protected String getModelType() {
+  protected String getModelKey() {
     return this.fixtureType.getString();
   }
 
@@ -165,7 +165,7 @@ public class JsonFixture extends LXFixture {
       for (int i = 0; i < this.jsonStrips.size(); ++i) {
         JsonObject stripObj = this.jsonStrips.get(i).getAsJsonObject();
         int numPoints = stripObj.get(KEY_NUM_POINTS).getAsInt();
-        submodels[i] = toSubmodel(startIndex, numPoints, 1).setKeys(new String[] { "strip" });
+        submodels[i] = toSubmodel(startIndex, numPoints, 1, LXModel.Key.STRIP);
         startIndex += numPoints;
       }
       return submodels;

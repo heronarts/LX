@@ -19,13 +19,14 @@
 package heronarts.lx.structure;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXTransform;
 
-public class Arc extends LXFixture {
+public class ArcFixture extends LXFixture {
 
   public final DiscreteParameter numPoints = (DiscreteParameter)
     new DiscreteParameter("Num", 10, 1, 4097)
@@ -41,7 +42,7 @@ public class Arc extends LXFixture {
     .setUnits(LXParameter.Units.DEGREES)
     .setDescription("Number of degrees the arc covers");
 
-  public Arc(LX lx) {
+  public ArcFixture(LX lx) {
     super(lx);
     addMetricsParameter("numPoints", this.numPoints);
     addGeometryParameter("radius", this.radius);
@@ -67,5 +68,10 @@ public class Arc extends LXFixture {
     return this.numPoints.getValuei();
   }
 
+  @Override
+  protected String getModelKey() {
+    return LXModel.Key.ARC;
+  }
 
 }
+

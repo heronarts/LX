@@ -29,7 +29,9 @@ import heronarts.lx.transform.LXVector;
 public class StripModel extends LXModel {
 
   public static class Metrics {
+
     public final int length;
+
     private final LXVector origin = new LXVector(0, 0, 0);
     private final LXVector spacing = new LXVector(1, 0, 0);
 
@@ -63,8 +65,7 @@ public class StripModel extends LXModel {
   public final int length;
 
   public StripModel(Metrics metrics) {
-    super(makePoints(metrics));
-    setKey("strip");
+    super(makePoints(metrics), LXModel.Key.STRIP);
     this.metrics = metrics;
     this.length = metrics.length;
   }

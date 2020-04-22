@@ -23,44 +23,56 @@ import heronarts.lx.transform.LXTransform;
 import heronarts.lx.transform.LXVector;
 
 /**
- * A point is a node with an immutable position in space and a location in
+ * A point is a node with a position in space. In addition to basic
+ * x/y/z coordinates, it also keeps track of some helper values that
+ * are commonly useful during animation. These include normalized values
+ * relative to a containing model, as well as polar versions of the
+ * xyz coordinates relative to the origin.
+ *
+ * A point is also assumed to be a member of a larger set of points
+ * for which there is an array buffer of color values. The {@link #index}
+ * field refers to this points position in that buffer.
+ *
+ * Generally speaking, point geometry should be treated as immutable.
+ * Direct modifications to the values are permitted, but will not
+ * trigger updates to the geometry of a containing {@link LXModel}.
  */
 public class LXPoint {
 
-  static int counter = 0;
+  private static int counter = 0;
 
   /**
-   * x coordinate of this point
+   * X coordinate of this point (absolute)
    */
   public float x;
 
   /**
-   * y coordinate of this point
+   * Y coordinate of this point (absolute)
    */
   public float y;
 
   /**
-   * z coordinate of this point
+   * Z coordinate of this point (absolute)
    */
   public float z;
 
   /**
-   * Radius of this point from origin in 3 dimensions
+   * Radius of this point from the origin (0, 0, 0) in 3 dimensions
    */
   public float r;
 
   /**
-   * Radius of this point from origin in the x-y plane
+   * Radius of this point from origin (0, 0) in the x-y plane
    */
   public float rxy;
 
   /**
-   * Radius of this point from origin in the x-z plane
+   * Radius of this point from origin (0, 0) in the x-z plane
    */
   public float rxz;
 
   /**
-   * angle of this point about the origin in the x-y plane
+   * Angle of this point about the origin in the x-y plane
    */
   public float theta;
 
@@ -76,32 +88,39 @@ public class LXPoint {
   public float elevation;
 
   /**
-   * normalized position of point in x-space (0-1);
+   * Normalized position of point in x-space (0-1);
    */
   public float xn = 0;
 
   /**
-   * normalized position of point in y-space (0-1);
+   * Normalized position of point in y-space (0-1);
    */
   public float yn = 0;
 
   /**
-   * normalized position of point in z-space (0-1);
+   * Normalized position of point in z-space (0-1);
    */
   public float zn = 0;
 
   /**
-   * normalized position of point in radial space (0-1), 0 is origin, 1 is max radius
+   * Normalized position of point in radial space (0-1), 0 is origin, 1 is max radius
    */
   public float rn = 0;
 
   /**
-   * Index of this point in the colors array
+   * Index of this point into color buffer
    */
   public int index;
 
   /**
-   * Construct a point in 2-d space, z-val is 0
+   * Construct an empty point, value 0, 0, 0
+   */
+  public LXPoint() {
+    this(0, 0, 0);
+  }
+
+  /**
+   * Construct a point in 2-d space, z will be 0
    *
    * @param x X-coordinate
    * @param y Y-coordinate
@@ -125,6 +144,11 @@ public class LXPoint {
     set();
   }
 
+  /**
+   * Construct a copy of another point
+   *
+   * @param that Point to copy
+   */
   public LXPoint(LXPoint that) {
     set(that);
   }
@@ -141,7 +165,7 @@ public class LXPoint {
   }
 
   /**
-   * Construct a point in 3-d space
+   * Construct a point in 3-d space based upon a vector
    *
    * @param v LXVector
    */
@@ -183,37 +207,61 @@ public class LXPoint {
     return set(transform.x(), transform.y(), transform.z());
   }
 
-  public LXPoint set(LXPoint p) {
-    this.x = p.x;
-    this.y = p.y;
-    this.z = p.z;
-    this.index = p.index;
+  /**
+   * Sets the values of this point based upon another point
+   *
+   * @param that Other point to copy into this point
+   * @return this
+   */
+  public LXPoint set(LXPoint that) {
+    this.x = that.x;
+    this.y = that.y;
+    this.z = that.z;
+    this.index = that.index;
 
-    this.r = p.r;
-    this.rxy = p.rxy;
-    this.rxz = p.rxz;
-    this.theta = p.theta;
-    this.azimuth = p.azimuth;
-    this.elevation = p.elevation;
+    this.r = that.r;
+    this.rxy = that.rxy;
+    this.rxz = that.rxz;
+    this.theta = that.theta;
+    this.azimuth = that.azimuth;
+    this.elevation = that.elevation;
 
-    this.xn = p.xn;
-    this.yn = p.yn;
-    this.zn = p.zn;
-    this.rn = p.rn;
+    this.xn = that.xn;
+    this.yn = that.yn;
+    this.zn = that.zn;
+    this.rn = that.rn;
 
     return this;
   }
 
+  /**
+   * Sets the X coordinate of the point
+   *
+   * @param x X-coordinate
+   * @return this
+   */
   public LXPoint setX(float x) {
     this.x = x;
     return set();
   }
 
+  /**
+   * Sets the Y coordinate of the point
+   *
+   * @param y Y-coordinate
+   * @return this
+   */
   public LXPoint setY(float y) {
     this.y = y;
     return set();
   }
 
+  /**
+   * Sets the Z coordinate of the point
+   *
+   * @param z Z-coordinate
+   * @return this
+   */
   public LXPoint setZ(float z) {
     this.z = z;
     return set();
@@ -224,7 +272,7 @@ public class LXPoint {
    *
    * @return this
    */
-  public LXPoint set() {
+  protected LXPoint set() {
     this.r = (float) Math.sqrt(x * x + y * y + z * z);
     this.rxy = (float) Math.sqrt(x * x + y * y);
     this.rxz = (float) Math.sqrt(x * x + z * z);
@@ -234,6 +282,11 @@ public class LXPoint {
     return this;
   }
 
+  /**
+   * Sets the normalized values on this point, relative to a model
+   *
+   * @param model Model to normalize points relative to
+   */
   void normalize(LXModel model) {
     this.xn = (model.xRange == 0) ? .5f : (this.x - model.xMin) / model.xRange;
     this.yn = (model.yRange == 0) ? .5f : (this.y - model.yMin) / model.yRange;

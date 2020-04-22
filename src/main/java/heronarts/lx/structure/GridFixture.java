@@ -25,7 +25,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXTransform;
 
-public class Grid extends LXFixture {
+public class GridFixture extends LXFixture {
 
   public final DiscreteParameter numRows = (DiscreteParameter)
     new DiscreteParameter("Rows", 10, 1, 1025)
@@ -45,7 +45,7 @@ public class Grid extends LXFixture {
     new BoundedParameter("Column Spacing", 10, 0, 1000000)
     .setDescription("Spacing between columns in the grid");
 
-  public Grid(LX lx) {
+  public GridFixture(LX lx) {
     super(lx);
     addMetricsParameter("numRows", this.numRows);
     addMetricsParameter("numColumns", this.numColumns);
@@ -61,10 +61,10 @@ public class Grid extends LXFixture {
     int i = 0;
     LXModel[] submodels = new LXModel[numRows + numColumns];
     for (int r = 0; r < numRows; ++r) {
-      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1).setKeys(new String[] { "strip", "row" });
+      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1, LXModel.Key.STRIP, LXModel.Key.ROW);
     }
     for (int c = 0; c < numColumns; ++c) {
-      submodels[i++] = toSubmodel(c, numRows, numColumns).setKeys(new String[] { "strip", "column" });
+      submodels[i++] = toSubmodel(c, numRows, numColumns, LXModel.Key.STRIP, LXModel.Key.COLUMN);
     }
     return submodels;
   }
@@ -90,6 +90,11 @@ public class Grid extends LXFixture {
   @Override
   protected int size() {
     return this.numRows.getValuei() * this.numColumns.getValuei();
+  }
+
+  @Override
+  protected String getModelKey() {
+    return LXModel.Key.GRID;
   }
 
 }

@@ -31,17 +31,40 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.output.LXDatagram;
+import heronarts.lx.transform.LXVector;
 
 /**
- * An LXModel is a representation of a set of points in 3-d space. Each LXPoint
- * corresponds to a single point. Models are comprised of Fixtures. An LXFixture
- * specifies a set of points, the Model object takes some number of these and
- * wraps them up with a few useful additional fields, such as the center
- * position of all points and the min/max/range on each axis.
+ * An LXModel is a representation of a set of points in 3D space. Each LXPoint
+ * corresponds to a single point. Though the positions of points may be updated,
+ * a model is immutable. Its overall structure, number of points, and hierarchy
+ * of submodels may not be changed once it has been created.
  */
 public class LXModel implements LXSerializable {
 
+  /**
+   * A collection of helpful pre-defined constants for the most common model
+   * key types.
+   */
+  public static class Key {
+    public final static String MODEL = "model";
+    public final static String GRID = "grid";
+    public final static String ROW = "row";
+    public final static String COLUMN = "column";
+    public final static String STRIP = "strip";
+    public final static String ARC = "arc";
+  }
+
+  /**
+   * Listener interface for changes to the location of points in a model
+   */
   public interface Listener {
+    /**
+     * Invoked when the geometry of a model has been updated. Note that its
+     * structure may not be changed, only the position of points may be
+     * different. The hierarchy of submodels and children is always unchanged.
+     *
+     * @param model Model
+     */
     public void modelGeometryUpdated(LXModel model);
   }
 
@@ -49,8 +72,12 @@ public class LXModel implements LXSerializable {
    * An immutable list of all the points in this model
    */
   public final LXPoint[] points;
+
   private final List<LXPoint> pointList;
 
+  /**
+   * An immutable list of all the children of this model
+   */
   public final LXModel[] children;
 
   private final Map<String, List<LXModel>> childDict =
@@ -61,18 +88,36 @@ public class LXModel implements LXSerializable {
 
   private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
 
+  /**
+   * An ordered list of datagrams that should be sent for this model.
+   */
   public final List<LXDatagram> datagrams = Collections.unmodifiableList(this.mutableDatagrams);
 
-  private String[] keys = { "model" };
+  /**
+   * A list of String keys by which this model type can be identified. Keys must be lowercase strings.
+   * These keys can be used with the {@link LXModel#children(String)} and {@link LXModel#sub(String)}
+   * methods to dynamically naviate this model's hierarchy.
+   */
+  public final List<String> keys;
 
   private LXModel parent;
 
   private int geometryRevision = 0;
 
   /**
-   * Number of points in the model
+   * Total number of points in the model
    */
   public final int size;
+
+  /**
+   * Center position in the model (half-way between extremes)
+   */
+  public final LXVector center = new LXVector(0, 0, 0);
+
+  /**
+   * Average position in the model (weighted by point density)
+   */
+  public final LXVector average = new LXVector(0, 0, 0);
 
   /**
    * Center of the model in x space
@@ -100,7 +145,7 @@ public class LXModel implements LXSerializable {
   public float ay;
 
   /**
-   * Average z points
+   * Average z point
    */
   public float az;
 
@@ -174,10 +219,32 @@ public class LXModel implements LXSerializable {
   /**
    * Constructs a model from a list of points
    *
-   * @param points Points
+   * @param points Points in the model
    */
   public LXModel(List<LXPoint> points) {
     this(points, new LXModel[0]);
+  }
+
+  /**
+   * Constructs a model from a list of points
+   *
+   * @param points Points in the model
+   * @param keys Key identifiers for the model type
+   */
+  public LXModel(List<LXPoint> points, String ... keys) {
+    this(points, new LXModel[0], keys);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed children. In this case, points
+   * from the children are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct child model array
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children) {
+    this(points, children, LXModel.Key.MODEL);
   }
 
   /**
@@ -186,25 +253,41 @@ public class LXModel implements LXSerializable {
    * the points list.
    *
    * @param points Points in this model
-   * @param submodels Pre-built direct submodel child array
+   * @param children Pre-built direct submodel child array
+   * @param keys Key identifier for this model
    */
-  public LXModel(List<LXPoint> points, LXModel[] submodels) {
-    List<LXPoint> _points = new ArrayList<LXPoint>(points);
-    addChildren(submodels);
-    this.children = submodels;
-    this.points = _points.toArray(new LXPoint[0]);
-    this.pointList = Collections.unmodifiableList(_points);
+  public LXModel(List<LXPoint> points, LXModel[] children, String ... keys) {
+    this.keys = validateKeys(keys);
+    this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
+    addChildren(children);
+    this.children = children.clone();
+    this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
-    computeAverages();
+    recomputeGeometry();
   }
 
   /**
    * Constructs a model from the given submodels. The point list is generated from
-   * all points in the submodels.
+   * all points in the submodels, on the assumption that they have not yet been
+   * added.
    *
-   * @param children Submodels
+   * @param children Sub-models
    */
   public LXModel(LXModel[] children) {
+    this(children, LXModel.Key.MODEL);
+  }
+
+  /**
+   *
+   * Constructs a model from the given submodels. The point list is generated from
+   * all points in the submodels, on the assumption that they have not yet been
+   * added.
+   *
+   * @param children Pre-built sub-models
+   * @param keys Key identifier for this model
+   */
+  private LXModel(LXModel[] children, String ... keys) {
+    this.keys = validateKeys(keys);
     List<LXPoint> _points = new ArrayList<LXPoint>();
     addChildren(children);
     for (LXModel child : children) {
@@ -212,11 +295,50 @@ public class LXModel implements LXSerializable {
         _points.add(p);
       }
     }
-    this.children = children;
+    this.children = children.clone();
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = _points.size();
-    computeAverages();
+    recomputeGeometry();
+  }
+
+  public LXModel(LXModelBuilder builder) {
+    this(builder, true);
+  }
+
+  protected LXModel(LXModelBuilder builder, boolean isRoot) {
+    this.keys = validateKeys(builder.keys.toArray(new String[0]));
+    this.children = new LXModel[builder.children.size()];
+    List<LXPoint> _points = new ArrayList<LXPoint>(builder.points);
+    int ci = 0;
+    for (LXModelBuilder child : builder.children) {
+      this.children[ci++] = new LXModel(child, false);
+      for (LXPoint p : child.points) {
+        _points.add(p);
+      }
+    }
+    addChildren(children);
+    this.points = _points.toArray(new LXPoint[0]);
+    this.pointList = Collections.unmodifiableList(_points);
+    this.size = this.points.length;
+    recomputeGeometry();
+    if (isRoot) {
+      reindexPoints();
+      normalizePoints();
+    }
+    builder.model = this;
+  }
+
+  private static List<String> validateKeys(String[] keys) {
+    Objects.requireNonNull(keys, "May not construct LXModel with null keys");
+    List<String> _keys = new ArrayList<String>(keys.length);
+    for (String key : keys) {
+      if (key == null) {
+        throw new IllegalArgumentException("May not pass null key to LXModel");
+      }
+      _keys.add(key.toLowerCase());
+    }
+    return Collections.unmodifiableList(_keys);
   }
 
   public LXModel getParent() {
@@ -226,16 +348,27 @@ public class LXModel implements LXSerializable {
   public String getPath() {
     LXModel parent = this.parent;
     if (parent == null) {
-      return "/" + this.keys[0];
+      return "/" + this.keys.get(0);
     }
     int index = 0;
-    for (LXModel child : parent.childDict.get(this.keys[0])) {
+    for (LXModel child : parent.childDict.get(this.keys.get(0))) {
       if (child == this) {
         break;
       }
       ++index;
     }
-    return parent.getPath() + "/" + this.keys[0] + "[" + index + "]";
+    return parent.getPath() + "/" + this.keys.get(0) + "[" + index + "]";
+  }
+
+  public LXModel reindexPoints() {
+    return reindexPoints(0);
+  }
+
+  protected LXModel reindexPoints(int startIndex) {
+    for (LXPoint p : this.points) {
+      p.index = startIndex++;
+    }
+    return this;
   }
 
   /**
@@ -263,7 +396,7 @@ public class LXModel implements LXSerializable {
 
   private void addSubmodels(LXModel[] submodels, Map<String, List<LXModel>> dict, boolean recurse) {
     for (LXModel submodel : submodels) {
-      for (String key : submodel.getKeys()) {
+      for (String key : submodel.keys) {
         List<LXModel> sub = dict.get(key);
         if (sub == null) {
           dict.put(key, sub = new ArrayList<LXModel>());
@@ -276,41 +409,18 @@ public class LXModel implements LXSerializable {
     }
   }
 
-  /**
-   * Gets a set of keys by which this model type can be identified. Keys must be lowercase strings.
-   * These keys can be used with the {@link LXModel#children(String)} and {@link LXModel#sub(String)} methods to dynamically
-   * retrieve submodels from this model.
-   *
-   * @return Array of keys that identify this model type
-   */
-  public String[] getKeys() {
-    return this.keys;
-  }
-
-  public LXModel setKey(String key) {
-    return setKeys(new String[] { key });
-  }
-
-  public LXModel setKeys(String[] keys) {
-    this.keys = keys;
-    for (int i = 0; i < keys.length; ++i) {
-      keys[i] = keys[i].toLowerCase();
-    }
-    return this;
-  }
-
-  private static final List<LXModel> emptyList = Collections.unmodifiableList(new ArrayList<LXModel>());
+  private static final List<LXModel> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<LXModel>());
 
   /**
    * Returns a list of all the direct child components by particular key. Children are only one-level
    * deep.
    *
-   * @param key Child key type , must be all lowercase
+   * @param key Child key type, must be lowercase
    * @return List of direct children by type
    */
   public List<LXModel> children(String key) {
     List<LXModel> children = this.childDict.get(key);
-    return (children == null) ? emptyList : children;
+    return (children == null) ? EMPTY_LIST : children;
   }
 
   /**
@@ -322,7 +432,7 @@ public class LXModel implements LXSerializable {
    */
   public List<LXModel> sub(String key) {
     List<LXModel> sub = this.subDict.get(key);
-    return (sub == null) ? emptyList : sub;
+    return (sub == null) ? EMPTY_LIST : sub;
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -380,7 +490,7 @@ public class LXModel implements LXSerializable {
         submodel.update(false, true);
       }
     }
-    computeAverages();
+    recomputeGeometry();
     if (normalize) {
       normalizePoints();
     }
@@ -408,7 +518,7 @@ public class LXModel implements LXSerializable {
    * Returns an integer identifying the geometry version of this model. Each time geometry in the model is
    * changed, this value is incremented;
    *
-   * @return Integer
+   * @return Monotonically increasing integer verson number of the geometry revision
    */
   public int getGeometryRevision() {
     return this.geometryRevision;
@@ -445,11 +555,9 @@ public class LXModel implements LXSerializable {
   }
 
   /**
-   * Recompute the averages in this model
-   *
-   * @return this
+   * Recompute the geometry values of the model
    */
-  public LXModel computeAverages() {
+  private void recomputeGeometry() {
     float ax = 0, ay = 0, az = 0;
     float xMin = 0, xMax = 0, yMin = 0, yMax = 0, zMin = 0, zMax = 0, rMin = 0, rMax = 0;
 
@@ -464,22 +572,30 @@ public class LXModel implements LXSerializable {
         zMin = zMax = p.z;
         rMin = rMax = p.r;
       } else {
-        if (p.x < xMin)
+        if (p.x < xMin) {
           xMin = p.x;
-        if (p.x > xMax)
+        }
+        if (p.x > xMax) {
           xMax = p.x;
-        if (p.y < yMin)
+        }
+        if (p.y < yMin) {
           yMin = p.y;
-        if (p.y > yMax)
+        }
+        if (p.y > yMax) {
           yMax = p.y;
-        if (p.z < zMin)
+        }
+        if (p.z < zMin) {
           zMin = p.z;
-        if (p.z > zMax)
+        }
+        if (p.z > zMax) {
           zMax = p.z;
-        if (p.r < rMin)
+        }
+        if (p.r < rMin) {
           rMin = p.r;
-        if (p.r > rMax)
+        }
+        if (p.r > rMax) {
           rMax = p.r;
+        }
       }
       firstPoint = false;
     }
@@ -501,16 +617,15 @@ public class LXModel implements LXSerializable {
     this.cx = xMin + xRange / 2.f;
     this.cy = yMin + yRange / 2.f;
     this.cz = zMin + zRange / 2.f;
-
-    return this;
+    this.center.set(this.cx, this.cy, this.cz);
+    this.average.set(this.ax, this.ay, this.az);
   }
 
   /**
    * Sets the normalized values of all the points in this model (xn, yn, zn)
    * relative to this model's absolute bounds.
    *
-   * @return this for chaining method calls
-   *
+   * @return this
    */
   public LXModel normalizePoints() {
     for (LXPoint p : this.points) {
@@ -519,6 +634,13 @@ public class LXModel implements LXSerializable {
     return this;
   }
 
+  /**
+   * Accessor for a list of all points in the model. Generally preferable
+   * to directly access the points array when iterating over a full buffer,
+   * but this is useful for situations where a container is needed.
+   *
+   * @return List of all points
+   */
   public List<LXPoint> getPoints() {
     return this.pointList;
   }

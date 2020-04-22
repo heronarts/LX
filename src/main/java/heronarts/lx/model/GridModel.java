@@ -29,17 +29,27 @@ import java.util.List;
  */
 public class GridModel extends LXModel {
 
+  public static class Point extends LXPoint {
+
+    public final int xi;
+    public final int yi;
+
+    public Point(int xi, int yi, float x, float y, float z) {
+      super(x, y, z);
+      this.xi = xi;
+      this.yi = yi;
+    }
+
+  }
+
   public static class Metrics {
 
     public final int width;
 
     public final int height;
 
-    private float xSpacing = 1;
-
-    private float ySpacing = 1;
-
-    private LXVector origin = new LXVector(0, 0, 0);
+    private final LXVector origin = new LXVector(0, 0, 0);
+    private final LXVector spacing = new LXVector(1, 1, 0);
 
     public Metrics(int width, int height) {
       this.width = width;
@@ -47,18 +57,18 @@ public class GridModel extends LXModel {
     }
 
     public Metrics setXSpacing(float xSpacing) {
-      this.xSpacing = xSpacing;
+      this.spacing.x = xSpacing;
       return this;
     }
 
     public Metrics setYSpacing(float ySpacing) {
-      this.ySpacing = ySpacing;
+      this.spacing.y = ySpacing;
       return this;
     }
 
     public Metrics setSpacing(float xSpacing, float ySpacing) {
-      this.xSpacing = xSpacing;
-      this.ySpacing = ySpacing;
+      this.spacing.x = xSpacing;
+      this.spacing.y = ySpacing;
       return this;
     }
 
@@ -79,19 +89,34 @@ public class GridModel extends LXModel {
       this.origin.set(v);
       return this;
     }
+
+    private List<LXPoint> toPoints() {
+      List<LXPoint> points = new ArrayList<LXPoint>(this.width * this.height);
+      for (int y = 0; y < this.height; ++y) {
+        for (int x = 0; x < this.width; ++x) {
+          points.add(new Point(
+            x, y,
+            this.origin.x + x * this.spacing.x,
+            this.origin.y + y * this.spacing.y,
+            this.origin.z
+          ));
+        }
+      }
+      return points;
+    }
   }
 
   public class Strip extends LXModel {
 
     public int index;
 
-    public final GridPoint[] points;
+    public final Point[] points;
 
     public Strip(int index, List<LXPoint> pointList) {
       super(pointList);
       this.index = index;
       LXPoint[] points = ((LXModel) this).points;
-      this.points = new GridPoint[points.length];
+      this.points = new Point[points.length];
       System.arraycopy(points, 0, this.points, 0, points.length);
     }
   }
@@ -99,7 +124,7 @@ public class GridModel extends LXModel {
   /**
    * Points in the model
    */
-  public final GridPoint[] points;
+  public final Point[] points;
 
   /**
    * All the rows in this model
@@ -142,17 +167,16 @@ public class GridModel extends LXModel {
    * @param metrics Metrics
    */
   public GridModel(Metrics metrics) {
-    super(makePoints(metrics));
-    setKey("grid");
+    super(metrics.toPoints(), LXModel.Key.GRID);
     this.metrics = metrics;
     this.width = metrics.width;
     this.height = metrics.height;
-    this.xSpacing = metrics.xSpacing;
-    this.ySpacing = metrics.ySpacing;
+    this.xSpacing = metrics.spacing.x;
+    this.ySpacing = metrics.spacing.y;
 
-    LXPoint[] points = ((LXModel) this).points;
-    this.points = new GridPoint[points.length];
-    System.arraycopy(points, 0, this.points, 0, points.length);
+    // Shadow the parent class array and make our own strongly-typed one
+    this.points = new Point[super.points.length];
+    System.arraycopy(super.points, 0, this.points, 0, super.points.length);
 
     List<Strip> rows = new ArrayList<Strip>();
     for (int y = 0; y < height; ++y) {
@@ -198,23 +222,8 @@ public class GridModel extends LXModel {
     this(new Metrics(width, height).setSpacing(xSpacing, ySpacing));
   }
 
-  public GridPoint getPoint(int x, int y) {
+  public Point getPoint(int x, int y) {
     return this.points[y * this.width + x];
-  }
-
-  private static List<LXPoint> makePoints(Metrics metrics) {
-    List<LXPoint> points = new ArrayList<LXPoint>(metrics.width * metrics.height);
-    for (int y = 0; y < metrics.height; ++y) {
-      for (int x = 0; x < metrics.width; ++x) {
-        points.add(new GridPoint(
-          x, y,
-          metrics.origin.x + x * metrics.xSpacing,
-          metrics.origin.y + y * metrics.ySpacing,
-          metrics.origin.z
-        ));
-      }
-    }
-    return points;
   }
 
 }

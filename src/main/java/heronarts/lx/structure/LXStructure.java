@@ -56,12 +56,12 @@ public class LXStructure extends LXComponent {
 
     @Override
     public LXDatagramOutput addDatagram(LXDatagram datagram) {
-      throw new UnsupportedOperationException("No adding custom datagrams to LXStructure output");
+      throw new UnsupportedOperationException("Adding custom datagrams to LXStructure output is not allowed");
     }
 
     @Override
     public LXDatagramOutput addDatagrams(LXDatagram[] datagram) {
-      throw new UnsupportedOperationException("No adding custom datagrams to LXStructure output");
+      throw new UnsupportedOperationException("Adding custom datagrams to LXStructure output is not allowed");
     }
 
     @Override
@@ -78,13 +78,34 @@ public class LXStructure extends LXComponent {
     }
   }
 
+  /**
+   * Listener interface for the top-level structure
+   */
   public interface Listener {
+    /**
+     * Invoked when a fixture has been added to the structure
+     *
+     * @param fixture Fixture added
+     */
     public void fixtureAdded(LXFixture fixture);
+
+    /**
+     * Invoked when a fixture has been removed from the structure
+     *
+     * @param fixture Fixture removed
+     */
     public void fixtureRemoved(LXFixture fixture);
+
+    /**
+     * Invoked when a fixture has been moved in the structure's fixture list
+     *
+     * @param fixture Fixture moved
+     * @param index New index of the fixture
+     */
     public void fixtureMoved(LXFixture fixture, int index);
   }
 
-  public File modelFile = null;
+  private File modelFile = null;
 
   public final StringParameter modelName =
     new StringParameter("Model Name", PROJECT_MODEL)
@@ -420,12 +441,11 @@ public class LXStructure extends LXComponent {
   }
 
   public LXStructure setStaticModel(LXModel model) {
-    // Ensure that all the points in this model are properly indexed...
-    int pi = 0;
-    for (LXPoint p : model.points) {
-      p.index = pi++;
-    }
-    this.lx.setModel(this.model = this.staticModel = model.normalizePoints());
+    // Ensure that all the points in this model are properly indexed and normalized
+    // to the top level...
+    model.reindexPoints();
+    model.normalizePoints();
+    this.lx.setModel(this.model = this.staticModel = model);
     this.modelFile = null;
     this.modelName.setValue(model.getClass().getSimpleName() + ".class");
     this.isStatic.setValue(true);
@@ -451,8 +471,8 @@ public class LXStructure extends LXComponent {
     }
   }
 
-  protected void fixtureRegenerated(LXFixture fixture) {
-    // No indices have changed, only the fixture has been regenerated
+  protected void fixtureGeometryRegenerated(LXFixture fixture) {
+    // No point indices shall have changed, only the fixture's geometry
     for (LXPoint p : fixture.points) {
       this.model.points[p.index].set(p);
     }
@@ -480,7 +500,7 @@ public class LXStructure extends LXComponent {
     super.load(lx, obj);
 
     LXModel staticModel = null;
-    File modelFile = null;
+    File loadModelFile = null;
     if (obj.has(KEY_STATIC_MODEL)) {
       JsonObject modelObj = obj.get(KEY_STATIC_MODEL).getAsJsonObject();
       String className = modelObj.get(LXComponent.KEY_CLASS).getAsString();
@@ -493,7 +513,7 @@ public class LXStructure extends LXComponent {
     }
     loadFixtures(lx, obj);
     if (obj.has(KEY_FILE)) {
-      modelFile = this.lx.getMediaFile(LX.Media.MODELS, obj.get(KEY_FILE).getAsString());
+      loadModelFile = this.lx.getMediaFile(LX.Media.MODELS, obj.get(KEY_FILE).getAsString());
     }
 
     this.isLoading = false;
@@ -502,8 +522,8 @@ public class LXStructure extends LXComponent {
       this.needsRegenerate = false;
     } else {
       this.isStatic.setValue(false);
-      if ((modelFile != null) && this.syncModelFile.isOn()) {
-        importModel(modelFile, true);
+      if ((loadModelFile != null) && this.syncModelFile.isOn()) {
+        importModel(loadModelFile, true);
       } else {
         this.modelName.setValue(PROJECT_MODEL);
         if (this.needsRegenerate) {

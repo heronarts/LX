@@ -47,14 +47,46 @@ import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
+/**
+ * An LXFixture is a rich LXComponent representing a physical lighting fixture which is
+ * addressed by a datagram packet. This class encapsulates the ability to configure the
+ * dimensions and location of the lighting fixture as well as to specify its otuput modes
+ * and protocol.
+ */
 public abstract class LXFixture extends LXComponent implements LXComponent.Renamable {
 
+  /**
+   * Output datagram protocols
+   */
   public enum Protocol {
+    /**
+     * No network output
+     */
     NONE("None"),
+
+    /**
+     * Art-Net - <a href="https://art-net.org.uk/">https://art-net.org.uk/</a>
+     */
     ARTNET("Art-Net"),
+
+    /**
+     * E1.31 Streaming ACN - <a href="https://opendmx.net/index.php/E1.31">https://opendmx.net/index.php/E1.31/</a>
+     */
     SACN("E1.31 Streaming ACN"),
+
+    /**
+     * Open Pixel Control - <a href="http://openpixelcontrol.org/">http://openpixelcontrol.org/</a>
+     */
     OPC("OPC"),
+
+    /**
+     * Distributed Display Protocol - <a href="http://www.3waylabs.com/ddp/">http://www.3waylabs.com/ddp/</a>
+     */
     DDP("DDP"),
+
+    /**
+     * Color Kinetics KiNET - <a href="https://www.colorkinetics.com/">https://www.colorkinetics.com/</a>
+     */
     KINET("KiNET");
 
     private final String label;
@@ -155,11 +187,23 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
 
   private final List<LXPoint> mutablePoints = new ArrayList<LXPoint>();
 
+  /**
+   * Publicly accessible immutable view of the points in this fixture. Should not
+   * be directly modified.
+   */
   public final List<LXPoint> points = Collections.unmodifiableList(this.mutablePoints);
+
+  /**
+   * A deep copy of the points array used for passing to the model layer. We need a separate copy there
+   * because the model is passed to the UI layer which runs on a separate thread. That copy of the points
+   * shouldn't be modified by re-indexing that occurs when we modify this.
+   */
+  private List<LXPoint> modelPoints;
 
   private LXDatagram datagram = null;
 
   private final Set<LXParameter> metricsParameters = new HashSet<LXParameter>();
+
   private final Set<LXParameter> geometryParameters = new HashSet<LXParameter>();
 
   private int index = 0;
@@ -229,6 +273,12 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     return this;
   }
 
+  /**
+   * To be used in a future hierarchical fixture system
+   *
+   * @param parentTransformMatrix Transform matrix of the parent fixture or group
+   * @return this
+   */
   protected LXFixture setParentTransformMatrix(LXMatrix parentTransformMatrix) {
     this.parentTransformMatrix = parentTransformMatrix;
     regeneratePoints();
@@ -239,6 +289,11 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     return this.transform.getMatrix();
   }
 
+  /**
+   * Accessor for the datagram that corresponds to this fixture
+   *
+   * @return Datagram that sends data for this fixture
+   */
   public LXDatagram getDatagram() {
     return this.datagram;
   }
@@ -254,11 +309,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     }
 
     // Build index buffer
-    int[] indexBuffer = new int[this.points.size()];
-    int i = 0;
-    for (LXPoint point : this.points) {
-      indexBuffer[i++] = point.index;
-    }
+    int[] indexBuffer = toIndexBuffer();
 
     LXDatagram datagram;
     switch (protocol) {
@@ -308,7 +359,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
       // just re-generate
       if (!this.isLoading) {
         regenerateGeometry();
-        this.lx.structure.fixtureRegenerated(this);
+        this.lx.structure.fixtureGeometryRegenerated(this);
       }
     }
     if (p == this.protocol) {
@@ -365,7 +416,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     int numPoints = size();
     this.mutablePoints.clear();
     for (int i = 0; i < numPoints; ++i) {
-      this.mutablePoints.add(new LXPoint(0, 0, 0));
+      this.mutablePoints.add(new LXPoint());
     }
     regenerateGeometry();
   }
@@ -382,35 +433,73 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     this.transform.pop();
   }
 
+  /**
+   * This method should be implemented by subclasses to generate the geometry of the
+   * fixture any time its geometry parameters have changed. The correct number of points
+   * will have already been computed, and merely need to have their positions set.
+   *
+   * @param transform A transform matrix representing the fixture's position in the structure
+   */
   protected abstract void computePointGeometry(LXTransform transform);
+
+  private void reindexPoints(int startIndex) {
+    for (LXPoint p : this.points) {
+      p.index = startIndex++;
+    }
+  }
+
+  /**
+   * Get an index buffer version of this fixture
+   *
+   * @return Index buffer of the points in this fixture
+   */
+  public int[] toIndexBuffer() {
+    int[] indexBuffer = new int[this.points.size()];
+    int i = 0;
+    for (LXPoint p : this.points) {
+      indexBuffer[i++] = p.index;
+    }
+    return indexBuffer;
+  }
 
   /**
    * Constructs an LXModel object for this Fixture
    *
-   * @param firstPointIndex
+   * @param startIndex Global index position for the first point in this fixture model
    * @return Model representation of this fixture
    */
-  final LXModel toModel(int firstPointIndex) {
-    List<LXPoint> points = new ArrayList<LXPoint>();
+  final LXModel toModel(int startIndex) {
+    // Reindex the points in this fixture from the given start
+    reindexPoints(startIndex);
+
+    // Our point indices may have changed... we'll need to update the datagram
+    updateDatagram();
+
+    // Generate a deep copy of all our points
+    this.modelPoints = new ArrayList<LXPoint>(this.points.size());
     for (LXPoint p : this.points) {
-      p.index = firstPointIndex++;
       // Note: we make a deep copy here because a change to the number of points in one
       // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
       // mode, that point might have been passed to the UI, which holds a reference to the model.
       // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
       // points here to stay safe.
-      points.add(new LXPoint(p));
+      this.modelPoints.add(new LXPoint(p));
     }
-    // Our point indices may have changed... we'll need to update the datagram
-    updateDatagram();
+
+    // Generate our submodels
+    LXModel[] submodels = toSubmodels();
 
     // Okay, good to go
-    return new LXModel(points, toSubmodels()).setKeys(new String[] { getModelType() });
+    return new LXModel(this.modelPoints, submodels, getModelKey());
   }
 
-  protected String getModelType() {
-    return getClass().getSimpleName();
-  }
+  /**
+   * Subclasses should impelment, specifying the type key of this fixture in the model
+   * hierarchy.
+   *
+   * @return String key for the model type
+   */
+  protected abstract String getModelKey();
 
   protected final static LXModel[] NO_SUBMODELS = new LXModel[0];
 
@@ -423,12 +512,35 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     return NO_SUBMODELS;
   }
 
+  /**
+   * Subclasses may use this helper to construct a submodel object from a set of
+   * points in this model.
+   *
+   * @param start Start index
+   * @param n Number of points in the submodel
+   * @param stride Stride size for selecting submodel points
+   * @return Submodel object
+   */
   protected LXModel toSubmodel(int start, int n, int stride) {
+    return toSubmodel(start, n, stride, LXModel.Key.MODEL);
+  }
+
+  /**
+   * Subclasses may use this helper to construct a submodel object from a set of
+   * points in this model.
+   *
+   * @param start Start index
+   * @param n Number of points in the submodel
+   * @param stride Stride size for selecting submodel points
+   * @param keys Model type key identifier for submodel
+   * @return Submodel object
+   */
+  protected LXModel toSubmodel(int start, int n, int stride, String ... keys) {
     List<LXPoint> submodel = new ArrayList<LXPoint>(n);
     for (int i = 0; i < n; ++i) {
-      submodel.add(this.points.get(start + i*stride));
+      submodel.add(this.modelPoints.get(start + i*stride));
     }
-    return new LXModel(submodel);
+    return new LXModel(submodel, keys);
   }
 
   /**
