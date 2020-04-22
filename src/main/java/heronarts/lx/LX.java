@@ -772,11 +772,24 @@ public class LX {
    * @return File handle to file that can be saved
    */
   public File getMediaFile(Media type, String path) {
+    return getMediaFile(type, path, true);
+  }
+
+  /**
+   * Retrieves a file handle to a file that can be saved. Path is given relative
+   * to the root LX media directory, unless the given path is absolute.
+   *
+   * @param type Media type
+   * @param path File path relative to LX media dir, or absolute
+   * @param create Create folder if true
+   * @return File handle to file that can be saved
+   */
+  public File getMediaFile(Media type, String path, boolean create) {
     File file = new File(path);
     if (file.isAbsolute()) {
       return file;
     }
-    return new File(getMediaFolder(type), path);
+    return new File(getMediaFolder(type, create), path);
   }
 
   /**
