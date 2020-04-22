@@ -82,6 +82,7 @@ public class LX {
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
     public String mediaPath = ".";
+    public LXPlugin initialize = null;
   }
 
   public static enum Media {
@@ -259,6 +260,9 @@ public class LX {
     this.preferences.load();
 
     // Initialize plugins!
+    if (this.flags.initialize != null) {
+      this.flags.initialize.initialize(this);
+    }
     this.registry.initializePlugins();
   }
 
@@ -989,19 +993,20 @@ public class LX {
     for (String arg : args) {
       if (arg.endsWith(".lxp")) {
         projectFile = new File(arg);
-        if (!projectFile.exists()) {
-          LX.error("Project file does not exist: " + projectFile);
-          projectFile = null;
-        }
       }
     }
     headless(flags, projectFile);
   }
 
-  protected static void headless(Flags flags, File projectFile) {
+  public static void headless(Flags flags, File projectFile) {
     LX lx = new LX(flags);
     if (projectFile != null) {
-      lx.openProject(projectFile);
+      if (!projectFile.exists()) {
+        LX.error("Project file does not exist: " + projectFile);
+      } else {
+        LX.log("Opening initial project file: " + projectFile);
+        lx.openProject(projectFile);
+      }
     }
     LX.log("Starting headless engine...");
     lx.engine.start();

@@ -44,7 +44,8 @@ public interface LXPlugin {
   /**
    * This method is invoked on the plugin object after LX has been initialized. Note
    * that this happens before any project files have been loaded. The plugin can
-   * register listeners if it is going to take actions based upon those.
+   * add components to the LX hierarchy and register listeners if it is going to
+   * take actions based upon those.
    *
    * @param lx LX instance
    */
