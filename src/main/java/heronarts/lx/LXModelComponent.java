@@ -28,6 +28,8 @@ public abstract class LXModelComponent extends LXModulatorComponent {
 
   protected LXModel model;
 
+  private boolean modelChanged = false;
+
   protected LXModelComponent(LX lx) {
     this(lx, null);
   }
@@ -47,14 +49,26 @@ public abstract class LXModelComponent extends LXModulatorComponent {
     }
     if (this.model != model) {
       this.model = model;
-      onModelChanged(model);
+      this.modelChanged = true;
+
     }
     return this;
   }
 
+  @Override
+  public void loop(double deltaMs) {
+    super.loop(deltaMs);
+    if (this.modelChanged) {
+      onModelChanged(this.model);
+      this.modelChanged = false;
+    }
+  }
+
   /**
    * Subclasses should override to handle changes to which model
-   * they are addressing.
+   * they are addressing. This method will be invoked at the start
+   * of the next core loop invocation, after the buffer has been
+   * updated.
    *
    * @param model New model
    */
