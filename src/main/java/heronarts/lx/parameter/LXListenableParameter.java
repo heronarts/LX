@@ -99,7 +99,7 @@ public abstract class LXListenableParameter implements LXParameter {
   public LXListenableParameter addListener(LXParameterListener listener) {
     Objects.requireNonNull(listener, "May add null LXParameterListener: " + this);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add duplicate LXParameterListener " + getLabel() + " " + listener);
+      throw new IllegalStateException("Cannot add duplicate LXParameterListener " + LXPath.getCanonicalPath(this) + " " + listener.getClass().getName());
     }
     this.listeners.add(listener);
     return this;
@@ -107,7 +107,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   public final LXListenableParameter removeListener(LXParameterListener listener) {
     if (!this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot remove unregistered LXParameterListener " + LXPath.getCanonicalPath(this) + " " + listener);
+      LX.error("Trying to remove unregistered LXParameterListener " + LXPath.getCanonicalPath(this) + " " + listener.getClass().getName());
     }
     this.listeners.remove(listener);
     return this;
