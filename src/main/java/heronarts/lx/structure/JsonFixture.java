@@ -30,7 +30,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXTransform;
 
-public class JsonFixture extends LXFixture {
+public class JsonFixture extends LXBasicFixture {
 
   private static final String KEY_FIXTURE_TYPE = "fixtureType";
   private static final String KEY_POINTS = "points";
@@ -77,9 +77,14 @@ public class JsonFixture extends LXFixture {
     this.jsonPoints = null;
     this.jsonStrips = null;
 
-    File fixtureFile = new File(this.lx.getMediaFolder(LX.Media.FIXTURES, false), this.fixtureType.getString() + ".lxf");
-    if (!fixtureFile.exists() || !fixtureFile.isFile()) {
-      LX.error("Invalid fixture type, could not find file: " + this.fixtureType.getString());
+    File fixtureFile = this.lx.getMediaFile(LX.Media.FIXTURES, this.fixtureType.getString() + ".lxf", false);
+    if (!fixtureFile.exists()) {
+      // TODO(mcslee): get an error to the UI here
+      LX.error("Invalid fixture type, could not find file: " + fixtureFile);
+      return;
+    } else if (!fixtureFile.isFile()) {
+      // TODO(mcslee): get an error to the UI here
+      LX.error("Invalid fixture type, not a normal file: " + fixtureFile);
       return;
     }
 
@@ -152,7 +157,7 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
-  protected LXModel[] toSubmodels() {
+  protected Submodel[] toSubmodels() {
     if (this.jsonStrips == null) {
       return NO_SUBMODELS;
     }
@@ -161,11 +166,11 @@ public class JsonFixture extends LXFixture {
       startIndex = this.jsonPoints.size();
     }
     try {
-      LXModel[] submodels = new LXModel[this.jsonStrips.size()];
+      Submodel[] submodels = new Submodel[this.jsonStrips.size()];
       for (int i = 0; i < this.jsonStrips.size(); ++i) {
         JsonObject stripObj = this.jsonStrips.get(i).getAsJsonObject();
         int numPoints = stripObj.get(KEY_NUM_POINTS).getAsInt();
-        submodels[i] = toSubmodel(startIndex, numPoints, 1, LXModel.Key.STRIP);
+        submodels[i] = new Submodel(startIndex, numPoints, 1, LXModel.Key.STRIP);
         startIndex += numPoints;
       }
       return submodels;

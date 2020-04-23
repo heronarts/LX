@@ -69,8 +69,7 @@ public class LXStructure extends LXComponent {
       long now = System.currentTimeMillis();
       beforeSend(colors);
       for (LXFixture fixture : fixtures) {
-        LXDatagram datagram = fixture.getDatagram();
-        if (datagram != null) {
+        for (LXDatagram datagram : fixture.datagrams) {
           onSendDatagram(datagram, now, colors, brightness);
         }
       }

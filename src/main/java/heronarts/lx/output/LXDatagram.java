@@ -272,4 +272,10 @@ public abstract class LXDatagram {
    * @param glut Look-up table with gamma-adjusted brightness values
    */
   public abstract void onSend(int[] colors, byte[] glut);
+
+  /**
+   * Invoked when the datagram is no longer needed. Typically a no-op, but subclasses
+   * may override if cleanup work is necessary.
+   */
+  public void dispose() {}
 }

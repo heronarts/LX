@@ -25,7 +25,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXTransform;
 
-public class GridFixture extends LXFixture {
+public class GridFixture extends LXBasicFixture {
 
   public final DiscreteParameter numRows = (DiscreteParameter)
     new DiscreteParameter("Rows", 10, 1, 1025)
@@ -54,17 +54,17 @@ public class GridFixture extends LXFixture {
   }
 
   @Override
-  public LXModel[] toSubmodels() {
+  public Submodel[] toSubmodels() {
     int numRows = this.numRows.getValuei();
     int numColumns = this.numColumns.getValuei();
 
     int i = 0;
-    LXModel[] submodels = new LXModel[numRows + numColumns];
+    Submodel[] submodels = new Submodel[numRows + numColumns];
     for (int r = 0; r < numRows; ++r) {
-      submodels[i++] = toSubmodel(r * numColumns, numColumns, 1, LXModel.Key.STRIP, LXModel.Key.ROW);
+      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, LXModel.Key.STRIP, LXModel.Key.ROW);
     }
     for (int c = 0; c < numColumns; ++c) {
-      submodels[i++] = toSubmodel(c, numRows, numColumns, LXModel.Key.STRIP, LXModel.Key.COLUMN);
+      submodels[i++] = new Submodel(c, numRows, numColumns, LXModel.Key.STRIP, LXModel.Key.COLUMN);
     }
     return submodels;
   }

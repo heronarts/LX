@@ -47,35 +47,42 @@ public class KinetDatagram extends LXDatagram {
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
-   * @param kinetPort Number of the output port on the kinet power supply
    * @param model Model to output points for
+   * @param kinetPort Number of the output port on the kinet power supply
    */
-  public KinetDatagram(int kinetPort, LXModel model) {
-    this(kinetPort, model, Version.PORTOUT);
+  public KinetDatagram(LXModel model, int kinetPort ) {
+    this(model, kinetPort, Version.PORTOUT);
   }
 
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
-   * @param kinetPort Number of the output port on the kinet power supply
    * @param model Model that this datagram outputs points for
+   * @param kinetPort Number of the output port on the kinet power supply
    * @param version Version of Kinet Protocol
    */
-  public KinetDatagram(int kinetPort, LXModel model, Version version) {
-    this(kinetPort, model.toIndexBuffer(), version);
+  public KinetDatagram(LXModel model, int kinetPort, Version version) {
+    this(model.toIndexBuffer(), kinetPort, version);
   }
 
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
-   * @param kinetPort Number of the output port on the kinet power supply
    * @param indexBuffer A list of the point indices that should be sent on this port
+   * @param kinetPort Number of the output port on the kinet power supply
    */
-  public KinetDatagram(int kinetPort, int[] indexBuffer) {
-    this(kinetPort, indexBuffer, Version.PORTOUT);
+  public KinetDatagram(int[] indexBuffer, int kinetPort) {
+    this(indexBuffer, kinetPort, Version.PORTOUT);
   }
 
-  public KinetDatagram(int kinetPort, int[] indexBuffer, Version version) {
+  /**
+   * Constructs a datagram that sends on the given kinet supply output port
+   *
+   * @param indexBuffer Index buffer that this datagram outputs points for
+   * @param kinetPort Number of the output port on the kinet power supply
+   * @param version Version of Kinet Protocol
+   */
+  public KinetDatagram(int[] indexBuffer, int kinetPort, Version version) {
     super(PACKET_LENGTH, ByteOrder.RGB);
     setPort(KINET_PORT);
 

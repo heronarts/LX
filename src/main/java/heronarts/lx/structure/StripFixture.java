@@ -26,7 +26,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXTransform;
 
-public class StripFixture extends LXFixture {
+public class StripFixture extends LXBasicFixture {
 
   public final DiscreteParameter numPoints = (DiscreteParameter)
     new DiscreteParameter("Num", 30, 1, 4097)

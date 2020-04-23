@@ -18,11 +18,11 @@
 
 package heronarts.lx.structure;
 
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import com.google.gson.JsonObject;
@@ -31,19 +31,10 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
-import heronarts.lx.output.ArtNetDatagram;
-import heronarts.lx.output.DDPDatagram;
-import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXDatagram;
-import heronarts.lx.output.LXOutput;
-import heronarts.lx.output.OPCDatagram;
-import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
-import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
@@ -154,32 +145,13 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     new BooleanParameter("Solo", false)
     .setDescription("Solos this fixture, no other fixtures illuminated");
 
-  public final EnumParameter<Protocol> protocol =
-    new EnumParameter<Protocol>("Protocol", Protocol.NONE)
-    .setDescription("Which lighting data protocol this fixture uses");
 
-  public final StringParameter host =
-    new StringParameter("Host", "127.0.0.1")
-    .setDescription("Host/IP this fixture transmits to");
+  private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
 
-  public final DiscreteParameter artNetUniverse = (DiscreteParameter)
-    new DiscreteParameter("ArtNet Universe", 0, 0, 32768).setUnits(LXParameter.Units.INTEGER)
-    .setDescription("Which ArtNet universe is used");
-
-  public final DiscreteParameter opcChannel = (DiscreteParameter)
-    new DiscreteParameter("OPC Channel", 0, 0, 256)
-    .setUnits(LXParameter.Units.INTEGER)
-    .setDescription("Which OPC channel is used");
-
-  public final DiscreteParameter ddpDataOffset = (DiscreteParameter)
-    new DiscreteParameter("DDP Offset", 0, 0, 32768)
-    .setUnits(LXParameter.Units.INTEGER)
-    .setDescription("The DDP data offset for this packet");
-
-  public final DiscreteParameter kinetPort = (DiscreteParameter)
-    new DiscreteParameter("KiNET Port", 1, 0, 256)
-    .setUnits(LXParameter.Units.INTEGER)
-    .setDescription("Which KiNET physical output port is used");
+  /**
+   * Publicly accessible list of the datagrams that should be sent to this fixture
+   */
+  public final List<LXDatagram> datagrams = Collections.unmodifiableList(this.mutableDatagrams);
 
   protected LXMatrix parentTransformMatrix = new LXMatrix();
 
@@ -200,11 +172,11 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    */
   private List<LXPoint> modelPoints;
 
-  private LXDatagram datagram = null;
-
   private final Set<LXParameter> metricsParameters = new HashSet<LXParameter>();
 
   private final Set<LXParameter> geometryParameters = new HashSet<LXParameter>();
+
+  private final Set<LXParameter> datagramParameters = new HashSet<LXParameter>();
 
   private int index = 0;
 
@@ -224,12 +196,6 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     addParameter("selected", this.selected);
     addParameter("enabled", this.enabled);
     addParameter("brightness", this.brightness);
-    addParameter("protocol", this.protocol);
-    addParameter("host", this.host);
-    addParameter("artNetUniverse", this.artNetUniverse);
-    addParameter("opcChannel", this.opcChannel);
-    addParameter("ddpDataOffset", this.ddpDataOffset);
-    addParameter("kinetPort", this.kinetPort);
     addParameter("identify", this.identify);
     addParameter("mute", this.mute);
     addParameter("solo", this.solo);
@@ -250,7 +216,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
 
   /**
    * Adds a parameter which impacts the number of LEDs that are in the fixture.
-   * Changes to these parameters require re-generating the points array.
+   * Changes to these parameters require re-generating the whole points array.
    *
    * @param path Path to parameter
    * @param parameter Parameter
@@ -279,6 +245,20 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   }
 
   /**
+   * Adds a parameter which impacts the output datagrams of the fixture. Whenever
+   * one is changed, the datagrams will be regenerated.
+   *
+   * @param path Path to parameter
+   * @param parameter Parameter
+   * @return this
+   */
+  protected LXFixture addDatagramParameter(String path, LXParameter parameter) {
+    super.addParameter(path, parameter);
+    this.datagramParameters.add(parameter);
+    return this;
+  }
+
+  /**
    * To be used in a future hierarchical fixture system
    *
    * @param parentTransformMatrix Transform matrix of the parent fixture or group
@@ -294,127 +274,75 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     return this.transform.getMatrix();
   }
 
-  /**
-   * Accessor for the datagram that corresponds to this fixture
-   *
-   * @return Datagram that sends data for this fixture
-   */
-  public LXDatagram getDatagram() {
-    return this.datagram;
-  }
-
-  protected void updateDatagram() {
-    this.datagram = makeDatagram();
-  }
-
-  private LXDatagram makeDatagram() {
-    Protocol protocol = this.protocol.getEnum();
-    if (protocol == Protocol.NONE) {
-      return null;
-    }
-
-    // Build index buffer
-    int[] indexBuffer = toIndexBuffer();
-
-    LXDatagram datagram;
-    switch (protocol) {
-    case ARTNET:
-      datagram = new ArtNetDatagram(indexBuffer, this.artNetUniverse.getValuei());
-      break;
-    case SACN:
-      datagram = new StreamingACNDatagram(indexBuffer, this.artNetUniverse.getValuei());
-      break;
-    case OPC:
-      datagram = new OPCDatagram(indexBuffer, (byte) this.opcChannel.getValuei());
-      break;
-    case DDP:
-      datagram = new DDPDatagram(indexBuffer).setDataOffset(this.ddpDataOffset.getValuei());
-      break;
-    case KINET:
-      datagram = new KinetDatagram(this.kinetPort.getValuei(), indexBuffer);
-      break;
-    default:
-    case NONE:
-      throw new IllegalStateException("Unhandled protocol type: " + protocol);
-    }
-
-    datagram.brightness.setValue(this.brightness.getValue());
-    datagram.enabled.setValue(this.enabled.isOn());
-
-    try {
-      datagram.setAddress(this.host.getString());
-    } catch (UnknownHostException uhx) {
-      // TODO(mcslee): get an error to the UI...
-      datagram.enabled.setValue(false);
-      LXOutput.error(uhx, "Unkown host for fixture datagram: " + this.host.getString());
-    }
-
-    return datagram;
-  }
-
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (this.metricsParameters.contains(p)) {
-      if (!this.isLoading) {
+    super.onParameterChanged(p);
+    if (!this.isLoading) {
+      if (this.metricsParameters.contains(p)) {
         regeneratePoints();
+
+        // TODO: find better / cleaner way of handling this, including in
+        // hierarchical subfixtures
         this.lx.structure.regenerateModel();
-      }
-    } else if (this.geometryParameters.contains(p)) {
-      // If only geometry has changed, we can be a little more clever here and
-      // just re-generate
-      if (!this.isLoading) {
+
+      } else if (this.geometryParameters.contains(p)) {
+        // If only geometry has changed, we can be a little more clever here and
+        // just re-generate
         regenerateGeometry();
         this.lx.structure.fixtureGeometryRegenerated(this);
+      } else if (this.datagramParameters.contains(p)) {
+        regenerateDatagrams();
       }
     }
-    if (p == this.protocol) {
-      updateDatagram();
-    } else if (p == this.enabled) {
-      if (this.datagram != null) {
-        this.datagram.enabled.setValue(this.enabled.isOn());
-      }
-    } else if (p == this.brightness) {
-      if (this.datagram != null) {
-        this.datagram.brightness.setValue(this.brightness.getValue());
-      }
-    } else if (p == this.artNetUniverse) {
-      if (this.datagram instanceof ArtNetDatagram) {
-        ((ArtNetDatagram) this.datagram)
-          .setUniverseNumber(this.artNetUniverse.getValuei());
-      } else if (this.datagram instanceof StreamingACNDatagram) {
-        ((StreamingACNDatagram) this.datagram)
-          .setUniverseNumber(this.artNetUniverse.getValuei());
-      }
-    } else if (p == this.ddpDataOffset) {
-      if (this.datagram instanceof DDPDatagram) {
-        ((DDPDatagram) this.datagram)
-          .setDataOffset(this.ddpDataOffset.getValuei());
-      }
-    } else if (p == this.opcChannel) {
-      if (this.datagram instanceof OPCDatagram) {
-        ((OPCDatagram) this.datagram)
-          .setChannel((byte) this.opcChannel.getValuei());
-      }
-    } else if (p == this.kinetPort) {
-      if (this.datagram instanceof KinetDatagram) {
-        ((KinetDatagram) this.datagram)
-          .setKinetPort((byte) this.kinetPort.getValuei());
-      }
-    } else if (p == this.host) {
-      if (this.datagram != null) {
-        try {
-          this.datagram.setAddress(this.host.getString());
-        } catch (UnknownHostException uhx) {
-          this.datagram.enabled.setValue(false);
-          // TODO(mcslee): get an error to the UI...
-          LXOutput.error(uhx, "Unkown host for fixture datagram: " + this.host.getString());
-        }
-      }
-    } else if (p == this.solo) {
+    if (p == this.solo) {
       if (this.solo.isOn()) {
         this.lx.structure.soloFixture(this);
       }
+    } else if (p == this.enabled) {
+      for (LXDatagram datagram : this.datagrams) {
+        datagram.enabled.setValue(this.enabled.isOn());
+      }
+    } else if (p == this.brightness) {
+      for (LXDatagram datagram : this.datagrams) {
+        datagram.enabled.setValue(this.brightness.getValue());
+      }
     }
+  }
+
+  private void regenerateDatagrams() {
+    for (LXDatagram datagram : this.datagrams) {
+      datagram.dispose();
+    }
+    this.mutableDatagrams.clear();
+    this.isInBuildDatagrams = true;
+    buildDatagrams();
+    this.isInBuildDatagrams = false;
+  }
+
+  private boolean isInBuildDatagrams = false;
+
+  /**
+   * Subclasses must override this method to provide an implementation that
+   * produces the necessary set of datagrams for this fixture to be sent.
+   * The subclass should call {@link addDatagram(LXDatagram)} for each datagram.
+   */
+  protected abstract void buildDatagrams();
+
+  /**
+   * Subclasses call this method to add a datagram to thix fixture. This may only
+   * be called from within the buildDatagrams() function.
+   *
+   * @param datagram
+   */
+  protected void addDatagram(LXDatagram datagram) {
+    if (!this.isInBuildDatagrams) {
+      throw new IllegalStateException("May not add add datagrams from outside buildDatagrams() method");
+    }
+    Objects.requireNonNull(datagram, "Cannot add null datagram to LXFixture.addDatagram");
+    if (this.mutableDatagrams.contains(datagram)) {
+      throw new IllegalStateException("May not add duplicate LXDatagram to LXFixture: " + datagram);
+    }
+    this.mutableDatagrams.add(datagram);
   }
 
   void regeneratePoints() {
@@ -447,12 +375,6 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    */
   protected abstract void computePointGeometry(LXTransform transform);
 
-  private void reindexPoints(int startIndex) {
-    for (LXPoint p : this.points) {
-      p.index = startIndex++;
-    }
-  }
-
   /**
    * Get an index buffer version of this fixture
    *
@@ -475,77 +397,87 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    */
   final LXModel toModel(int startIndex) {
     // Reindex the points in this fixture from the given start
-    reindexPoints(startIndex);
+    for (LXPoint p : this.points) {
+      p.index = startIndex++;
+    }
+    // Our point indices may have changed... we'll need to rebuild our datagrams
+    regenerateDatagrams();
 
-    // Our point indices may have changed... we'll need to update the datagram
-    updateDatagram();
-
-    // Generate a deep copy of all our points
+    // Note: we make a deep copy here because a change to the number of points in one
+    // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
+    // mode, that point might have been passed to the UI, which holds a reference to the model.
+    // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
+    // points here to stay safe.
     this.modelPoints = new ArrayList<LXPoint>(this.points.size());
     for (LXPoint p : this.points) {
-      // Note: we make a deep copy here because a change to the number of points in one
-      // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
-      // mode, that point might have been passed to the UI, which holds a reference to the model.
-      // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
-      // points here to stay safe.
       this.modelPoints.add(new LXPoint(p));
     }
 
-    // Generate our submodels
+    // Generate any submodels references into of this fixture
     LXModel[] submodels = toSubmodels();
 
-    // Okay, good to go
+    // Okay, good to go, construct the model
     return new LXModel(this.modelPoints, submodels, getModelKey());
   }
 
+  private List<LXPoint> subpoints(int start, int n, int stride) {
+    List<LXPoint> subpoints = new ArrayList<LXPoint>(n);
+    for (int i = 0; i < n; ++i) {
+      subpoints.add(this.modelPoints.get(start + i*stride));
+    }
+    return subpoints;
+  }
+
   /**
-   * Subclasses should impelment, specifying the type key of this fixture in the model
+   * Helper class to ensure that Submodels are *only* constructed
+   * using the points from the produced LXModel array. No other
+   * constructors are allowed.
+   */
+  public class Submodel extends LXModel {
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     * @param stride Stride size for selecting submodel points
+     */
+    public Submodel(int start, int n, int stride) {
+      this(start, n, stride, LXModel.Key.MODEL);
+    }
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     * @param stride Stride size for selecting submodel points
+     * @param keys Model type key identifier for submodel
+     */
+    public Submodel(int start, int n, int stride, String ... keys) {
+      super(subpoints(start, n, stride), keys);
+    }
+  }
+
+  /**
+   * Subclasses should implement, specifying the type key of this fixture in the model
    * hierarchy.
    *
    * @return String key for the model type
    */
   protected abstract String getModelKey();
 
-  protected final static LXModel[] NO_SUBMODELS = new LXModel[0];
+  protected final static Submodel[] NO_SUBMODELS = new Submodel[0];
 
   /**
-   * Subclasses may override when they contain submodels
+   * Subclasses may override when they specify submodels
    *
    * @return Array of submodel objects
    */
-  protected LXModel[] toSubmodels() {
+  protected Submodel[] toSubmodels() {
     return NO_SUBMODELS;
-  }
-
-  /**
-   * Subclasses may use this helper to construct a submodel object from a set of
-   * points in this model.
-   *
-   * @param start Start index
-   * @param n Number of points in the submodel
-   * @param stride Stride size for selecting submodel points
-   * @return Submodel object
-   */
-  protected LXModel toSubmodel(int start, int n, int stride) {
-    return toSubmodel(start, n, stride, LXModel.Key.MODEL);
-  }
-
-  /**
-   * Subclasses may use this helper to construct a submodel object from a set of
-   * points in this model.
-   *
-   * @param start Start index
-   * @param n Number of points in the submodel
-   * @param stride Stride size for selecting submodel points
-   * @param keys Model type key identifier for submodel
-   * @return Submodel object
-   */
-  protected LXModel toSubmodel(int start, int n, int stride, String ... keys) {
-    List<LXPoint> submodel = new ArrayList<LXPoint>(n);
-    for (int i = 0; i < n; ++i) {
-      submodel.add(this.modelPoints.get(start + i*stride));
-    }
-    return new LXModel(submodel, keys);
   }
 
   /**
@@ -555,6 +487,8 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    */
   protected abstract int size();
 
+  // Flag to avoid unnecessary work while parameters are being loaded... we'll fix
+  // everything *after* the parameters are all loaded.
   private boolean isLoading = false;
 
   @Override
@@ -562,8 +496,14 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     this.isLoading = true;
     super.load(lx, obj);
     this.isLoading = false;
+
     regeneratePoints();
+
+    // TODO: work this out, probably doesn't belong in this base class...
     this.lx.structure.regenerateModel();
-    updateDatagram();
+
+    // TODO(mcslee): maybe not completely necessary, the datagrams will be
+    // regenerated by structure.regenerateModel call?
+    regenerateDatagrams();
   }
 }

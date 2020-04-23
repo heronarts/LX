@@ -360,13 +360,15 @@ public class LXModel implements LXSerializable {
     return parent.getPath() + "/" + this.keys.get(0) + "[" + index + "]";
   }
 
+  /**
+   * Reindexes all the points in this model from 0 up to the number of points.
+   *
+   * @return this
+   */
   public LXModel reindexPoints() {
-    return reindexPoints(0);
-  }
-
-  protected LXModel reindexPoints(int startIndex) {
+    int index = 0;
     for (LXPoint p : this.points) {
-      p.index = startIndex++;
+      p.index = index++;
     }
     return this;
   }
