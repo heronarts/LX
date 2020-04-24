@@ -19,6 +19,7 @@
 package heronarts.lx.model;
 
 import heronarts.lx.LX;
+import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 import heronarts.lx.transform.LXVector;
 
@@ -205,6 +206,16 @@ public class LXPoint {
    */
   public LXPoint set(LXTransform transform) {
     return set(transform.x(), transform.y(), transform.z());
+  }
+
+  /**
+   * Set the x, y, and z values based upon the position of a transform matrix
+   *
+   * @param matrix Transform matrix object
+   * @return this
+   */
+  public LXPoint set(LXMatrix matrix) {
+    return set(matrix.x(), matrix.y(), matrix.z());
   }
 
   /**

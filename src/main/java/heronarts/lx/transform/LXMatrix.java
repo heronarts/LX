@@ -23,6 +23,13 @@ package heronarts.lx.transform;
  */
 public class LXMatrix {
 
+  private final static float[] IDENTITY = {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  };
+
   public float
     m11 = 1, m12 = 0, m13 = 0, m14 = 0,
     m21 = 0, m22 = 1, m23 = 0, m24 = 0,
@@ -35,25 +42,7 @@ public class LXMatrix {
   public LXMatrix() {}
 
   public LXMatrix(float[] m) {
-    if (m.length != 16) {
-      throw new IllegalArgumentException("LXMatrix must have 16 values");
-    }
-    this.m11 = m[0];
-    this.m12 = m[1];
-    this.m13 = m[2];
-    this.m14 = m[3];
-    this.m21 = m[4];
-    this.m22 = m[5];
-    this.m23 = m[6];
-    this.m24 = m[7];
-    this.m31 = m[8];
-    this.m32 = m[9];
-    this.m33 = m[10];
-    this.m34 = m[11];
-    this.m41 = m[12];
-    this.m42 = m[13];
-    this.m43 = m[14];
-    this.m44 = m[15];
+    set(m);
   }
 
   public LXMatrix(float m11, float m12, float m13, float m14,
@@ -81,25 +70,25 @@ public class LXMatrix {
   /**
    * Copies the existing matrix
    *
-   * @param m matrix
+   * @param that matrix
    */
-  public LXMatrix(LXMatrix m) {
-    m11 = m.m11;
-    m12 = m.m12;
-    m13 = m.m13;
-    m14 = m.m14;
-    m21 = m.m21;
-    m22 = m.m22;
-    m23 = m.m23;
-    m24 = m.m24;
-    m31 = m.m31;
-    m32 = m.m32;
-    m33 = m.m33;
-    m34 = m.m34;
-    m41 = m.m41;
-    m42 = m.m42;
-    m43 = m.m43;
-    m44 = m.m44;
+  public LXMatrix(LXMatrix that) {
+    this.m11 = that.m11;
+    this.m12 = that.m12;
+    this.m13 = that.m13;
+    this.m14 = that.m14;
+    this.m21 = that.m21;
+    this.m22 = that.m22;
+    this.m23 = that.m23;
+    this.m24 = that.m24;
+    this.m31 = that.m31;
+    this.m32 = that.m32;
+    this.m33 = that.m33;
+    this.m34 = that.m34;
+    this.m41 = that.m41;
+    this.m42 = that.m42;
+    this.m43 = that.m43;
+    this.m44 = that.m44;
   }
 
   /**
@@ -142,22 +131,22 @@ public class LXMatrix {
     float a43 = m41 * b13 + m42 * b23 + m43 * b33 + m44 * b43;
     float a44 = m41 * b14 + m42 * b24 + m43 * b34 + m44 * b44;
 
-    m11 = a11;
-    m12 = a12;
-    m13 = a13;
-    m14 = a14;
-    m21 = a21;
-    m22 = a22;
-    m23 = a23;
-    m24 = a24;
-    m31 = a31;
-    m32 = a32;
-    m33 = a33;
-    m34 = a34;
-    m41 = a41;
-    m42 = a42;
-    m43 = a43;
-    m44 = a44;
+    this.m11 = a11;
+    this.m12 = a12;
+    this.m13 = a13;
+    this.m14 = a14;
+    this.m21 = a21;
+    this.m22 = a22;
+    this.m23 = a23;
+    this.m24 = a24;
+    this.m31 = a31;
+    this.m32 = a32;
+    this.m33 = a33;
+    this.m34 = a34;
+    this.m41 = a41;
+    this.m42 = a42;
+    this.m43 = a43;
+    this.m44 = a44;
 
     return this;
   }
@@ -197,6 +186,18 @@ public class LXMatrix {
        0,  0, sz,  0,
        0,  0,  0,  1
     );
+  }
+
+  public LXMatrix translateX(float tx) {
+    return translate(tx, 0, 0);
+  }
+
+  public LXMatrix translateY(float ty) {
+    return translate(0, ty, 0);
+  }
+
+  public LXMatrix translateZ(float tz) {
+    return translate(0, 0, tz);
   }
 
   public LXMatrix translate(float tx, float ty, float tz) {
@@ -240,4 +241,57 @@ public class LXMatrix {
         0,    0,  0,  1
     );
   }
+
+  public LXMatrix set(LXMatrix that) {
+    this.m11 = that.m11;
+    this.m12 = that.m12;
+    this.m13 = that.m13;
+    this.m14 = that.m14;
+    this.m21 = that.m21;
+    this.m22 = that.m22;
+    this.m23 = that.m23;
+    this.m24 = that.m24;
+    this.m31 = that.m31;
+    this.m32 = that.m32;
+    this.m33 = that.m33;
+    this.m34 = that.m34;
+    this.m41 = that.m41;
+    this.m42 = that.m42;
+    this.m43 = that.m43;
+    this.m44 = that.m44;
+    return this;
+  }
+
+  public LXMatrix set(float[] m) {
+    if (m.length != 16) {
+      throw new IllegalArgumentException("LXMatrix must have 16 values");
+    }
+    this.m11 = m[0];
+    this.m12 = m[1];
+    this.m13 = m[2];
+    this.m14 = m[3];
+    this.m21 = m[4];
+    this.m22 = m[5];
+    this.m23 = m[6];
+    this.m24 = m[7];
+    this.m31 = m[8];
+    this.m32 = m[9];
+    this.m33 = m[10];
+    this.m34 = m[11];
+    this.m41 = m[12];
+    this.m42 = m[13];
+    this.m43 = m[14];
+    this.m44 = m[15];
+    return this;
+  }
+
+  /**
+   * Resets this matrix to the identity matrix
+   *
+   * @return this
+   */
+  public LXMatrix identity() {
+    return set(IDENTITY);
+  }
+
 }
