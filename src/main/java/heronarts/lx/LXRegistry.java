@@ -372,6 +372,9 @@ public class LXRegistry implements LXSerializable {
     if (LXEffect.class.isAssignableFrom(clz)) {
       addEffect(clz.asSubclass(LXEffect.class));
     }
+    if (LXFixture.class.isAssignableFrom(clz)) {
+      addFixture(clz.asSubclass(LXFixture.class));
+    }
     if (LXModel.class.isAssignableFrom(clz)) {
       addModel(clz.asSubclass(LXModel.class));
     }
@@ -386,6 +389,9 @@ public class LXRegistry implements LXSerializable {
     }
     if (LXEffect.class.isAssignableFrom(clz)) {
       removeEffect(clz.asSubclass(LXEffect.class));
+    }
+    if (LXFixture.class.isAssignableFrom(clz)) {
+      removeFixture(clz.asSubclass(LXFixture.class));
     }
     if (LXModel.class.isAssignableFrom(clz)) {
       removeModel(clz.asSubclass(LXModel.class));
