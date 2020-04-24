@@ -48,7 +48,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   /**
    * Output datagram protocols
    */
-  public enum Protocol {
+  public static enum Protocol {
     /**
      * No network output
      */
