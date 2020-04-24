@@ -20,14 +20,18 @@ package heronarts.lx.structure;
 
 import java.io.File;
 import java.io.FileReader;
+import java.util.List;
+
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
 public class JsonFixture extends LXBasicFixture {
@@ -113,7 +117,8 @@ public class JsonFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void computePointGeometry(LXTransform transform) {
+  protected void computePointGeometry(LXMatrix matrix, List<LXPoint> points) {
+    LXTransform transform = new LXTransform(matrix);
     int pi = 0;
     try {
       if (this.jsonPoints != null) {
@@ -124,7 +129,7 @@ public class JsonFixture extends LXBasicFixture {
           float z = getFloat(pointObj, KEY_Z, 0);
           transform.push();
           transform.translate(x, y, z);
-          this.points.get(pi++).set(transform);
+          points.get(pi++).set(transform);
           transform.pop();
         }
       }
@@ -145,7 +150,7 @@ public class JsonFixture extends LXBasicFixture {
           transform.rotateX(Math.toRadians(pitch));
           transform.rotateZ(Math.toRadians(roll));
           for (int p = 0; p < numPoints; ++p) {
-            this.points.get(pi++).set(transform);
+            points.get(pi++).set(transform);
             transform.translate(spacing, 0);
           }
           transform.pop();

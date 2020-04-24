@@ -39,6 +39,7 @@ import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.structure.LXFixture;
 
 /**
  * Registry container for content classes used by the LX implementation
@@ -150,6 +151,14 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_CROSSFADER_BLENDS.add(DifferenceBlend.class);
   }
 
+  private static final List<Class<? extends LXFixture>> DEFAULT_FIXTURES;
+  static {
+    DEFAULT_FIXTURES = new ArrayList<Class<? extends LXFixture>>();
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.StripFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.GridFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.ArcFixture.class);
+  };
+
   /**
    * The list of globally registered pattern classes
    */
@@ -194,6 +203,24 @@ public class LXRegistry implements LXSerializable {
   public final List<Class<? extends LXBlend>> crossfaderBlends =
     Collections.unmodifiableList(this.mutableCrossfaderBlends);
 
+  private final List<Class<? extends LXFixture>> mutableFixtures =
+    new ArrayList<Class<? extends LXFixture>>(DEFAULT_FIXTURES);
+
+  /**
+   * List of globally registered fixtures.
+   */
+  public final List<Class<? extends LXFixture>> fixtures =
+    Collections.unmodifiableList(this.mutableFixtures);
+
+
+  private final List<String> mutableJsonFixtures = new ArrayList<String>();
+
+  /**
+   * The list of globally registered JSON fixture types
+   */
+  public final List<String> jsonFixtures =
+   Collections.unmodifiableList(this.mutableJsonFixtures);
+
   private final List<Class<? extends LXModel>> mutableModels =
     new ArrayList<Class<? extends LXModel>>();
 
@@ -202,14 +229,6 @@ public class LXRegistry implements LXSerializable {
    */
   public final List<Class<? extends LXModel>> models =
     Collections.unmodifiableList(this.mutableModels);
-
-  private final List<String> mutableFixtures = new ArrayList<String>();
-
-  /**
-   * The list of globally registered fixture types
-   */
-  public final List<String> fixtures =
-    Collections.unmodifiableList(this.mutableFixtures);
 
   private final List<Plugin> mutablePlugins = new ArrayList<Plugin>();
 
@@ -313,7 +332,7 @@ public class LXRegistry implements LXSerializable {
     this.classLoader.load();
 
     // TODO(mcslee): should get fixtures in the reload cycle as well?
-    addFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
+    addJsonFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
 
     this.contentReloading = false;
   }
@@ -557,21 +576,81 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
-  public LXRegistry addFixture(String fixtureName) {
-    Objects.requireNonNull(fixtureName, "May not add null LXRegistry.addFixture");
+  /**
+   * Register a fixture class with the engine
+   *
+   * @param fixture Fixture class
+   * @return this
+   */
+  public LXRegistry addFixture(Class<? extends LXFixture> fixture) {
+    Objects.requireNonNull(fixture, "May not add null LXRegistry.addFixture");
     checkRegistration();
-    if (this.mutableFixtures.contains(fixtureName)) {
-      throw new IllegalStateException("Cannot double-register fixture: " + fixtureName);
+    if (this.mutableFixtures.contains(fixture)) {
+      throw new IllegalStateException("Cannot double-register fixture: " + fixture);
     }
-    this.mutableFixtures.add(fixtureName);
+    this.mutableFixtures.add(fixture);
     return this;
   }
 
-  public void addFixtures(File fixtureDir) {
+  /**
+   * Register a set of fixture classes with the engine
+   *
+   * @param fixtures List of fixture classes
+   * @return this
+   */
+  public LXRegistry addFixtures(List<Class<? extends LXFixture>> fixtures) {
+    checkRegistration();
+    for (Class<? extends LXFixture> fixture : fixtures) {
+      addFixture(fixture);
+    }
+    return this;
+  }
+
+  /**
+   * Unregister fixture class with the engine
+   *
+   * @param fixture Fixture class
+   * @return this
+   */
+  public LXRegistry removeFixture(Class<? extends LXFixture> fixture) {
+    if (!this.mutableFixtures.contains(fixture)) {
+      throw new IllegalStateException("Attemping to unregister fixture that does not exist: " + fixture);
+    }
+    this.mutableFixtures.remove(fixture);
+    return this;
+  }
+
+  /**
+   * Unregister fixture classes with the engine
+   *
+   * @param fixtures Fixture classes
+   * @return this
+   */
+  public LXRegistry removeFixtures(List<Class<? extends LXFixture>> fixtures) {
+    for (Class<? extends LXFixture> fixture : fixtures) {
+      if (!this.mutableFixtures.contains(fixture)) {
+        throw new IllegalStateException("Attemping to unregister fixture that does not exist: " + fixture);
+      }
+      this.mutableFixtures.remove(fixture);
+    }
+    return this;
+  }
+
+  public LXRegistry addJsonFixture(String fixture) {
+    Objects.requireNonNull(fixture, "May not add null LXRegistry.addJsonFixture");
+    checkRegistration();
+    if (this.mutableJsonFixtures.contains(fixture)) {
+      throw new IllegalStateException("Cannot double-register JSON fixture: " + fixture);
+    }
+    this.mutableJsonFixtures.add(fixture);
+    return this;
+  }
+
+  public void addJsonFixtures(File fixtureDir) {
     if (fixtureDir.exists() && fixtureDir.isDirectory()) {
       for (String fixture : fixtureDir.list()) {
         if (fixture.endsWith(".lxf")) {
-          addFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
+          addJsonFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
         }
       }
     }

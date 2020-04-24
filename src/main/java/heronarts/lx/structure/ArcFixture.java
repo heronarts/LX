@@ -18,13 +18,15 @@
 
 package heronarts.lx.structure;
 
+import java.util.List;
+
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.transform.LXTransform;
+import heronarts.lx.transform.LXMatrix;
 
 public class ArcFixture extends LXBasicFixture {
 
@@ -50,16 +52,15 @@ public class ArcFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void computePointGeometry(LXTransform transform) {
-    int numPoints = size();
+  protected void computePointGeometry(LXMatrix transform, List<LXPoint> points) {
     float radius = this.radius.getValuef();
     float degrees = this.degrees.getValuef();
-    float rotation = (float) (degrees / (numPoints-1) * Math.PI / 180);
+    float rotation = (float) (degrees / (this.points.size() - 1) * Math.PI / 180);
     for (LXPoint p : this.points) {
       p.set(transform);
-      transform.translate(0, radius, 0);
+      transform.translateY(radius);
       transform.rotateZ(rotation);
-      transform.translate(0, -radius, 0);
+      transform.translateY(-radius);
     }
   }
 

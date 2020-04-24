@@ -39,13 +39,12 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.model.LXModel;
-import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXDatagramOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.StringParameter;
 
-public class LXStructure extends LXComponent {
+public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   private static final String PROJECT_MODEL = "<Embedded in Project>";
 
@@ -69,11 +68,26 @@ public class LXStructure extends LXComponent {
       long now = System.currentTimeMillis();
       beforeSend(colors);
       for (LXFixture fixture : fixtures) {
+        onSendFixture(colors, now, brightness, fixture);
+      }
+      afterSend(colors);
+    }
+
+    private void onSendFixture(int[] colors, long now, double brightness, LXFixture fixture) {
+      // Check enabled state of fixture
+      if (fixture.enabled.isOn()) {
+        // Adjust by fixture brightness
+        brightness *= fixture.brightness.getValue();
+
+        // Recursively send all the fixture's children
+        for (LXFixture child : fixture.children) {
+          onSendFixture(colors, now, brightness, child);
+        }
+        // Then send the fixture's own direct packets
         for (LXDatagram datagram : fixture.datagrams) {
           onSendDatagram(datagram, now, colors, brightness);
         }
       }
-      afterSend(colors);
     }
   }
 
@@ -153,6 +167,7 @@ public class LXStructure extends LXComponent {
     try {
       output = new Output(lx);
     } catch (SocketException sx) {
+      // TODO(mcslee): get a severe error up to the UI
       LX.error(sx, "Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getMessage());
     }
     this.output = output;
@@ -211,8 +226,11 @@ public class LXStructure extends LXComponent {
     }
     this.mutableFixtures.add(index, fixture);
     _reindexFixtures();
-    fixture.regeneratePoints();
-    regenerateModel();
+
+    // This will trigger regeneration of the fixture and models
+    fixture.setStructure(this);
+
+    // Notify listeners of the new fixture
     for (Listener l : this.listeners) {
       l.fixtureAdded(fixture);
     }
@@ -238,8 +256,12 @@ public class LXStructure extends LXComponent {
       l.fixtureMoved(fixture, index);
     }
 
-    // The point ordering is changed - regenerate the model!
-    regenerateModel();
+    // The point ordering is changed - we need to regenerate the model to avoid
+    // a flicker-frame where the UI thread's indices do not correspond with those
+    // in the fixture
+
+    reindexModel();
+
     return this;
   }
 
@@ -370,15 +392,22 @@ public class LXStructure extends LXComponent {
       }
       fixture.dispose();
     }
+
     regenerateModel();
   }
 
   public LXStructure translateSelectedFixtures(float tx, float ty, float tz) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
-        fixture.x.incrementValue(tx);
-        fixture.y.incrementValue(ty);
-        fixture.z.incrementValue(tz);
+        if (tx != 0) {
+          fixture.x.incrementValue(tx);
+        }
+        if (ty != 0) {
+          fixture.y.incrementValue(ty);
+        }
+        if (tz != 0) {
+          fixture.z.incrementValue(tz);
+        }
       }
     }
     return this;
@@ -387,8 +416,12 @@ public class LXStructure extends LXComponent {
   public LXStructure rotateSelectedFixtures(float theta, float phi) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
-        fixture.yaw.incrementValue(theta * 180 / Math.PI);
-        fixture.pitch.incrementValue(phi * 180 / Math.PI);
+        if (theta != 0) {
+          fixture.yaw.incrementValue(theta * 180 / Math.PI);
+        }
+        if (phi != 0) {
+          fixture.pitch.incrementValue(phi * 180 / Math.PI);
+        }
       }
     }
     return this;
@@ -456,11 +489,17 @@ public class LXStructure extends LXComponent {
     return this;
   }
 
+  protected void reindexModel() {
+    // TODO(mcslee): fix this to be smarter
+    regenerateModel();
+  }
+
   protected void regenerateModel() {
     if (this.isLoading) {
       this.needsRegenerate = true;
       return;
     }
+
     LXModel[] submodels = new LXModel[this.fixtures.size()];
     int pointIndex = 0;
     int fixtureIndex = 0;
@@ -475,12 +514,12 @@ public class LXStructure extends LXComponent {
     }
   }
 
-  protected void fixtureGeometryRegenerated(LXFixture fixture) {
-    // No point indices shall have changed, only the fixture's geometry
-    for (LXPoint p : fixture.points) {
-      this.model.points[p.index].set(p);
-    }
-    // We need to re-normalize the points in the model, since some have changed
+  public void fixtureGenerationChanged(LXFixture fixture) {
+    regenerateModel();
+  }
+
+  public void fixtureGeometryChanged(LXFixture fixture) {
+    // We need to re-normalize our model, things have changed
     this.model.update();
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");

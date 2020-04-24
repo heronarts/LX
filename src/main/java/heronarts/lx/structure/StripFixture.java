@@ -18,13 +18,15 @@
 
 package heronarts.lx.structure;
 
+import java.util.List;
+
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.transform.LXTransform;
+import heronarts.lx.transform.LXMatrix;
 
 public class StripFixture extends LXBasicFixture {
 
@@ -44,11 +46,11 @@ public class StripFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void computePointGeometry(LXTransform transform) {
+  protected void computePointGeometry(LXMatrix transform, List<LXPoint> points) {
     float spacing = this.spacing.getValuef();
-    for (LXPoint p : this.points) {
+    for (LXPoint p : points) {
       p.set(transform);
-      transform.translate(spacing, 0);
+      transform.translateX(spacing);
     }
   }
 

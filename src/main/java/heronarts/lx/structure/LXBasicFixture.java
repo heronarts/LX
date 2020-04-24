@@ -125,9 +125,6 @@ public abstract class LXBasicFixture extends LXFixture {
       throw new IllegalStateException("Unhandled protocol type: " + protocol);
     }
 
-    datagram.brightness.setValue(this.brightness.getValue());
-    datagram.enabled.setValue(this.enabled.isOn());
-
     try {
       datagram.setAddress(this.host.getString());
     } catch (UnknownHostException uhx) {

@@ -48,7 +48,7 @@ public class LXHeadless {
   }
 
   public static void addFadeCandyOutput(LX lx) throws Exception {
-    lx.engine.addOutput(new FadecandyOutput(lx, "localhost", 9090, lx.getModel()));
+    lx.engine.addOutput(new FadecandyOutput(lx, lx.getModel(), "localhost", 9090));
   }
 
   public static void addOPCOutput(LX lx) throws Exception {

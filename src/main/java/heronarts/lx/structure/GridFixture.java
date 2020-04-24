@@ -18,11 +18,15 @@
 
 package heronarts.lx.structure;
 
+import java.util.List;
+
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
 public class GridFixture extends LXBasicFixture {
@@ -70,7 +74,8 @@ public class GridFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void computePointGeometry(LXTransform transform) {
+  protected void computePointGeometry(LXMatrix matrix, List<LXPoint> points) {
+    LXTransform transform = new LXTransform(matrix);
     int numRows = this.numRows.getValuei();
     int numColumns = this.numColumns.getValuei();
     float rowSpacing = this.rowSpacing.getValuef();
@@ -79,11 +84,11 @@ public class GridFixture extends LXBasicFixture {
     for (int r = 0; r < numRows; ++r) {
       transform.push();
       for (int c = 0; c < numColumns; ++c) {
-        this.points.get(pi++).set(transform);
-        transform.translate(columnSpacing, 0);
+        points.get(pi++).set(transform);
+        transform.translateX(columnSpacing);
       }
       transform.pop();
-      transform.translate(0, rowSpacing);
+      transform.translateY(rowSpacing);
     }
   }
 

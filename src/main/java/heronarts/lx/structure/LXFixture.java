@@ -36,7 +36,6 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
-import heronarts.lx.transform.LXTransform;
 
 /**
  * An LXFixture is a rich LXComponent representing a physical lighting fixture which is
@@ -44,7 +43,7 @@ import heronarts.lx.transform.LXTransform;
  * dimensions and location of the lighting fixture as well as to specify its otuput modes
  * and protocol.
  */
-public abstract class LXFixture extends LXComponent implements LXComponent.Renamable {
+public abstract class LXFixture extends LXComponent implements LXFixtureContainer, LXComponent.Renamable {
 
   /**
    * Output datagram protocols
@@ -145,6 +144,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     new BooleanParameter("Solo", false)
     .setDescription("Solos this fixture, no other fixtures illuminated");
 
+  protected List<LXFixture> children = new ArrayList<LXFixture>();
 
   private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
 
@@ -153,15 +153,18 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    */
   public final List<LXDatagram> datagrams = Collections.unmodifiableList(this.mutableDatagrams);
 
-  protected LXMatrix parentTransformMatrix = new LXMatrix();
+  private final LXMatrix parentTransformMatrix = new LXMatrix();
 
-  private LXTransform transform = new LXTransform();
+  private final LXMatrix geometryMatrix = new LXMatrix();
 
   private final List<LXPoint> mutablePoints = new ArrayList<LXPoint>();
 
+  private LXFixtureContainer container = null;
+
   /**
    * Publicly accessible immutable view of the points in this fixture. Should not
-   * be directly modified.
+   * be directly modified. Only contains this fixture's direct points, not any of
+   * its children.
    */
   public final List<LXPoint> points = Collections.unmodifiableList(this.mutablePoints);
 
@@ -170,7 +173,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    * because the model is passed to the UI layer which runs on a separate thread. That copy of the points
    * shouldn't be modified by re-indexing that occurs when we modify this.
    */
-  private List<LXPoint> modelPoints;
+  private final List<LXPoint> modelPoints = new ArrayList<LXPoint>();
 
   private final Set<LXParameter> metricsParameters = new HashSet<LXParameter>();
 
@@ -180,9 +183,10 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
 
   private int index = 0;
 
+  private int firstPointIndex = 0;
+
   protected LXFixture(LX lx) {
     super(lx);
-    setParent(lx.structure);
 
     // Geometry parameters
     addGeometryParameter("x", this.x);
@@ -203,7 +207,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
 
   @Override
   public String getPath() {
-    return "fixture/" + (this.index + 1);
+    return getModelKey() + "/" + (this.index + 1);
   }
 
   void setIndex(int index) {
@@ -212,6 +216,69 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
 
   public int getIndex() {
     return this.index;
+  }
+
+  private void setContainer(LXFixtureContainer container) {
+    Objects.requireNonNull(container, "Cannot set null on LXFixture.setContainer");
+    if (this.container != null) {
+      throw new IllegalStateException("LXFixture already has container set: " + this + " " + this.container);
+    }
+    this.container = container;
+  }
+
+  protected void setStructure(LXStructure structure) {
+    setParent(structure);
+    setContainer(structure);
+    regenerate();
+  }
+
+  private void _reindexChildren() {
+    int i = 0;
+    for (LXFixture child : this.children) {
+      child.setIndex(i++);
+    }
+  }
+
+  protected void addChild(LXFixture child) {
+    Objects.requireNonNull(child, "Cannot add null child to LXFixture");
+    if (this.children.contains(child)) {
+      throw new IllegalStateException("Cannot add duplicate child to LXFixture: " + child);
+    }
+    this.children.add(child);
+    _reindexChildren();
+
+    // It's acceptable to remove and re-add a child to the same container
+    if (child.container != this) {
+      child.setParent(this);
+      child.setContainer(this);
+    }
+
+    child.regenerate();
+  }
+
+  protected void removeChild(LXFixture child) {
+    if (!this.children.contains(child)) {
+      throw new IllegalStateException("Cannot remove non-existend child from LXFixture: " + this + " " + child);
+    }
+    this.children.remove(child);
+    _reindexChildren();
+
+    // Notify the structure of change, rebuild will occur
+    this.lx.structure.fixtureGenerationChanged(this);
+  }
+
+  // Invoked when a child fixture has been altered
+  public final void fixtureGenerationChanged(LXFixture fixture) {
+    if (this.container != null) {
+      this.container.fixtureGenerationChanged(fixture);
+    }
+  }
+
+  // Invoked when a child fixture has had its geometry altered
+  public final void fixtureGeometryChanged(LXFixture fixture) {
+    if (this.container != null) {
+      this.container.fixtureGeometryChanged(fixture);
+    }
   }
 
   /**
@@ -258,38 +325,18 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     return this;
   }
 
-  /**
-   * To be used in a future hierarchical fixture system
-   *
-   * @param parentTransformMatrix Transform matrix of the parent fixture or group
-   * @return this
-   */
-  protected LXFixture setParentTransformMatrix(LXMatrix parentTransformMatrix) {
-    this.parentTransformMatrix = parentTransformMatrix;
-    regeneratePoints();
-    return this;
-  }
-
-  protected LXMatrix getTransformMatrix() {
-    return this.transform.getMatrix();
-  }
-
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
-    if (!this.isLoading) {
+    if ((this.container != null) && !this.isLoading) {
       if (this.metricsParameters.contains(p)) {
-        regeneratePoints();
-
-        // TODO: find better / cleaner way of handling this, including in
-        // hierarchical subfixtures
-        this.lx.structure.regenerateModel();
-
+        // Note: this will rebuild this fixture and trigger the structure
+        // to rebuild as well
+        regenerate();
       } else if (this.geometryParameters.contains(p)) {
-        // If only geometry has changed, we can be a little more clever here and
-        // just re-generate
+        // We don't need to rebuild the whole model here, just update the
+        // geometry for affected fixtures
         regenerateGeometry();
-        this.lx.structure.fixtureGeometryRegenerated(this);
       } else if (this.datagramParameters.contains(p)) {
         regenerateDatagrams();
       }
@@ -297,14 +344,6 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     if (p == this.solo) {
       if (this.solo.isOn()) {
         this.lx.structure.soloFixture(this);
-      }
-    } else if (p == this.enabled) {
-      for (LXDatagram datagram : this.datagrams) {
-        datagram.enabled.setValue(this.enabled.isOn());
-      }
-    } else if (p == this.brightness) {
-      for (LXDatagram datagram : this.datagrams) {
-        datagram.enabled.setValue(this.brightness.getValue());
       }
     }
   }
@@ -324,7 +363,7 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   /**
    * Subclasses must override this method to provide an implementation that
    * produces the necessary set of datagrams for this fixture to be sent.
-   * The subclass should call {@link addDatagram(LXDatagram)} for each datagram.
+   * The subclass should call {@link #addDatagram(LXDatagram)} for each datagram.
    */
   protected abstract void buildDatagrams();
 
@@ -345,25 +384,84 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     this.mutableDatagrams.add(datagram);
   }
 
-  void regeneratePoints() {
+  /**
+   * Invoked when this fixture has been loaded or added to some container. Will
+   * rebuild the points and the metrics, and notify container of the change to
+   * this fixture's generation
+   */
+  private void regenerate() {
+    // We may have a totally new size, blow out the points array and rebuild
     int numPoints = size();
     this.mutablePoints.clear();
     for (int i = 0; i < numPoints; ++i) {
       this.mutablePoints.add(new LXPoint());
     }
-    regenerateGeometry();
+
+    // Regenerate our geometry, note that we bypass regenerateGeometry()
+    // here because we don't need to notify our container about the change. We're
+    // going to notify them after this of even more substantive generation change.
+    _regenerateGeometry();
+
+    // Let our container know that our structural generation has changed
+    if (this.container != null) {
+      this.container.fixtureGenerationChanged(this);
+    }
   }
 
   private void regenerateGeometry() {
-    double degreesToRadians = Math.PI / 180;
-    this.transform.reset(this.parentTransformMatrix);
-    this.transform.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
-    this.transform.rotateY(this.yaw.getValuef() * degreesToRadians);
-    this.transform.rotateX(this.pitch.getValuef() * degreesToRadians);
-    this.transform.rotateZ(this.roll.getValuef() * degreesToRadians);
-    this.transform.push();
-    computePointGeometry(this.transform);
-    this.transform.pop();
+    _regenerateGeometry();
+    if (this.container != null) {
+      this.container.fixtureGeometryChanged(this);
+    }
+  }
+
+  /**
+   * Subclasses may override this if they perform geometric transformations in a
+   * different order or using totally different parameters. The supplied parameter is a
+   * mutable matrix which will initially hold the value of the parent transformation matrix.
+   * It can then be further manipulated based upon the parameters.
+   *
+   * @param geometryMarix The geometry transformation matrix for this object
+   */
+  protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
+    float degreesToRadians = (float) Math.PI / 180;
+    geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
+    geometryMatrix.rotateY(this.yaw.getValuef() * degreesToRadians);
+    geometryMatrix.rotateX(this.pitch.getValuef() * degreesToRadians);
+    geometryMatrix.rotateZ(this.roll.getValuef() * degreesToRadians);
+  }
+
+  private void _regenerateGeometry() {
+    // Reset and compute the transformation matrix based upon geometry parameters
+    this.geometryMatrix.set(this.parentTransformMatrix);
+    computeGeometryMatrix(this.geometryMatrix);
+
+    // Regenerate the
+    regeneratePointGeometry();
+
+    // No indices have changed but points may have moved, we are not going
+    // to rebuilt the entire model, but we do need to update the locations
+    // of these points in their reflected deep copies, if those have already
+    // been made
+    if (!this.modelPoints.isEmpty()) {
+      int i = 0;
+      for (LXPoint p : this.points) {
+        this.modelPoints.get(i++).set(p);
+      }
+    }
+  }
+
+  private final LXMatrix _computePointGeometryMatrix = new LXMatrix();
+
+  private void regeneratePointGeometry() {
+    this._computePointGeometryMatrix.set(this.geometryMatrix);
+    computePointGeometry(this._computePointGeometryMatrix, this.points);
+
+    // Regenerate children
+    for (LXFixture child : this.children) {
+      child.parentTransformMatrix.set(this.geometryMatrix);
+      child._regenerateGeometry();
+    }
   }
 
   /**
@@ -371,9 +469,10 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    * fixture any time its geometry parameters have changed. The correct number of points
    * will have already been computed, and merely need to have their positions set.
    *
-   * @param transform A transform matrix representing the fixture's position in the structure
+   * @param transform A transform matrix representing the fixture's position
+   * @param points The list of points that need to have their positions set
    */
-  protected abstract void computePointGeometry(LXTransform transform);
+  protected abstract void computePointGeometry(LXMatrix transform, List<LXPoint> points);
 
   /**
    * Get an index buffer version of this fixture
@@ -396,28 +495,44 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
    * @return Model representation of this fixture
    */
   final LXModel toModel(int startIndex) {
-    // Reindex the points in this fixture from the given start
-    for (LXPoint p : this.points) {
-      p.index = startIndex++;
-    }
-    // Our point indices may have changed... we'll need to rebuild our datagrams
-    regenerateDatagrams();
+    // Creating a new model, clear our set of points
+    this.modelPoints.clear();
+
+    this.firstPointIndex = startIndex;
 
     // Note: we make a deep copy here because a change to the number of points in one
     // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
     // mode, that point might have been passed to the UI, which holds a reference to the model.
     // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
     // points here to stay safe.
-    this.modelPoints = new ArrayList<LXPoint>(this.points.size());
     for (LXPoint p : this.points) {
+      p.index = startIndex++;
       this.modelPoints.add(new LXPoint(p));
     }
 
+    // Now iterate over our children and add their points too
+    List<LXModel> childModels = new ArrayList<LXModel>();
+    for (LXFixture child : this.children) {
+      LXModel childModel = child.toModel(startIndex);
+      startIndex += childModel.size;
+      for (LXPoint p : childModel.points) {
+        this.modelPoints.add(p);
+      }
+      childModels.add(childModel);
+    }
+
+    // TODO(mcslee): determine whether datagrams have been generated? is this the first
+    // model build? if so then they definitely do. if our indices haven't changed
+    // Our point indices may have changed... we'll need to rebuild our datagrams
+    regenerateDatagrams();
+
     // Generate any submodels references into of this fixture
-    LXModel[] submodels = toSubmodels();
+    for (Submodel submodel : toSubmodels()) {
+      childModels.add(submodel);
+    }
 
     // Okay, good to go, construct the model
-    return new LXModel(this.modelPoints, submodels, getModelKey());
+    return new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKey());
   }
 
   private List<LXPoint> subpoints(int start, int n, int stride) {
@@ -481,11 +596,53 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
   }
 
   /**
-   * Subclasses must implement to specify the number of points in the fixture
+   * Subclasses must implement to specify the number of points in the fixture.
+   * This does not include the number of points that are in children.
    *
-   * @return number of points in the fixture
+   * @return number of points immediately in the fixture
    */
   protected abstract int size();
+
+  /**
+   * Returns the offset of this fixture in the index buffer
+   *
+   * @return Offset into the index buffer
+   */
+  public final int getIndexBufferOffset() {
+    return this.firstPointIndex;
+  }
+
+  /**
+   * Returns a copy of the geometry matrix for this fixture
+   *
+   * @return Copy of geometry matrix
+   */
+  public LXMatrix getGeometryMatrix() {
+    return new LXMatrix(this.geometryMatrix);
+  }
+
+  /**
+   * Returns the geometry transformation matrix, copied into the given matrix
+   *
+   * @parameter m LXMatrix object to copy into
+   * @return Geometric transformation matrix, copied into parameter value
+   */
+  public LXMatrix getGeometryMatrix(LXMatrix m) {
+    return m.set(this.geometryMatrix);
+  }
+
+  /**
+   * Total points in this model and all its submodels
+   *
+   * @return Total number of points in this model and all submodels
+   */
+  public final int totalSize() {
+    int sum = size();
+    for (LXFixture child : this.children) {
+      sum += child.totalSize();
+    }
+    return sum;
+  }
 
   // Flag to avoid unnecessary work while parameters are being loaded... we'll fix
   // everything *after* the parameters are all loaded.
@@ -497,10 +654,8 @@ public abstract class LXFixture extends LXComponent implements LXComponent.Renam
     super.load(lx, obj);
     this.isLoading = false;
 
-    regeneratePoints();
-
-    // TODO: work this out, probably doesn't belong in this base class...
-    this.lx.structure.regenerateModel();
+    // Regenerate the whole thing once
+    regenerate();
 
     // TODO(mcslee): maybe not completely necessary, the datagrams will be
     // regenerated by structure.regenerateModel call?
