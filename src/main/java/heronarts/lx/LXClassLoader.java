@@ -140,8 +140,9 @@ public class LXClassLoader extends URLClassLoader {
       // Let's not re-invent the wheel on parsing JAR files and all that
       Class<?> clz = loadClass(className, false);
 
-      // Register all non-abstract components that we discover!
-      if (!Modifier.isAbstract(clz.getModifiers())) {
+      // Register all public, non-abstract components that we discover
+      int modifiers = clz.getModifiers();
+      if (Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers)) {
         this.classes.add(clz);
         this.lx.registry.addClass(clz);
       }
