@@ -33,12 +33,12 @@ public class FadecandyOutput extends OPCOutput {
     super(lx, host, port);
   }
 
-  public FadecandyOutput(LX lx, String host, int port, LXModel model) {
-    this(lx, host, port, model.toIndexBuffer());
+  public FadecandyOutput(LX lx, LXModel model, String host, int port) {
+    this(lx, model.toIndexBuffer(), host, port);
   }
 
-  public FadecandyOutput(LX lx, String host, int port, int[] pointIndices) {
-    super(lx, host, port, pointIndices);
+  public FadecandyOutput(LX lx, int[] indexBuffer, String host, int port) {
+    super(lx, indexBuffer, host, port);
   }
 
   @Override
@@ -105,7 +105,7 @@ public class FadecandyOutput extends OPCOutput {
     try {
       this.output.write(this.firmwarePacket);
     } catch (IOException iox) {
-      dispose(iox);
+      disconnect(iox);
     }
   }
 
@@ -142,7 +142,7 @@ public class FadecandyOutput extends OPCOutput {
       this.output.write(header);
       this.output.write(content);
     } catch (IOException iox) {
-      dispose(iox);
+      disconnect(iox);
     }
   }
 

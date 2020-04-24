@@ -34,7 +34,7 @@ public class DDPDatagram extends LXDatagram {
   private static final int FLAGS_INDEX = 0;
   private static final int OFFSET_DATA_OFFSET = 4;
 
-  private final int[] pointIndices;
+  private final int[] indexBuffer;
 
   public DDPDatagram(LXModel model) {
     this(model.toIndexBuffer());
@@ -44,7 +44,7 @@ public class DDPDatagram extends LXDatagram {
     super(HEADER_LENGTH + indexBuffer.length * 3, ByteOrder.RGB);
     setPort(DEFAULT_PORT);
     int dataLen = indexBuffer.length * 3;
-    this.pointIndices = indexBuffer;
+    this.indexBuffer = indexBuffer;
 
     // Flags: V V x T S R Q P
     this.buffer[0] = 0x41;
@@ -100,6 +100,6 @@ public class DDPDatagram extends LXDatagram {
 
   @Override
   public void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.pointIndices, HEADER_LENGTH);
+    copyPoints(colors, glut, this.indexBuffer, HEADER_LENGTH);
   }
 }

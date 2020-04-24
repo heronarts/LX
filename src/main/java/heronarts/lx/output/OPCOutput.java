@@ -35,18 +35,18 @@ public class OPCOutput extends LXSocketOutput implements OPCConstants {
   private final int[] indexBuffer;
 
   public OPCOutput(LX lx, String host, int port) {
-    this(lx, host, port, lx.getModel());
+    this(lx, lx.getModel(), host, port);
   }
 
-  public OPCOutput(LX lx, String host, int port, LXModel model) {
-    this(lx, host, port, model.toIndexBuffer());
+  public OPCOutput(LX lx, LXModel model, String host, int port) {
+    this(lx, model.toIndexBuffer(), host, port);
   }
 
-  public OPCOutput(LX lx, String host, int port, int[] pointIndices) {
+  public OPCOutput(LX lx, int[] indexBuffer, String host, int port) {
     super(lx, host, port);
-    this.indexBuffer = pointIndices;
+    this.indexBuffer = indexBuffer;
 
-    int dataLength = BYTES_PER_PIXEL * pointIndices.length;
+    int dataLength = BYTES_PER_PIXEL * indexBuffer.length;
     this.packetData = new byte[HEADER_LEN + dataLength];
     this.packetData[OFFSET_CHANNEL] = CHANNEL_BROADCAST;
     this.packetData[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;

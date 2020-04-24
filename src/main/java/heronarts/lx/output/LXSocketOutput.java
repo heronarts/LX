@@ -53,9 +53,9 @@ public abstract class LXSocketOutput extends LXOutput {
         this.output = this.socket.getOutputStream();
         didConnect();
       } catch (ConnectException cx) {
-        dispose(cx);
+        disconnect(cx);
       } catch (IOException iox) {
-        dispose(iox);
+        disconnect(iox);
       }
     }
   }
@@ -64,13 +64,14 @@ public abstract class LXSocketOutput extends LXOutput {
 
   }
 
-  protected void dispose(Exception x) {
+  protected void disconnect(Exception x) {
     this.socket = null;
     this.output = null;
-    didDispose(x);
+    didDisconnect(x);
   }
 
-  protected void didDispose(Exception x) {
+  protected void didDisconnect(Exception x) {
+
   }
 
   @Override
@@ -80,7 +81,7 @@ public abstract class LXSocketOutput extends LXOutput {
       try {
         this.output.write(getPacketData(colors, glut));
       } catch (IOException iox) {
-        dispose(iox);
+        disconnect(iox);
       }
     }
   }

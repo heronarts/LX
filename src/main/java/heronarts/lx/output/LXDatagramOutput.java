@@ -28,6 +28,7 @@ import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * An output stage that functions by sending datagram packets.
@@ -59,6 +60,10 @@ public class LXDatagramOutput extends LXOutput {
   }
 
   public LXDatagramOutput addDatagram(LXDatagram datagram) {
+    Objects.requireNonNull(datagram, "May not add null datagram to LXDatagramOutput");
+    if (this.datagrams.contains(datagram)) {
+      throw new IllegalStateException("May not add duplicate datagram to LXDatagramOutput: " + datagram);
+    }
     this.datagrams.add(datagram);
     return this;
   }
