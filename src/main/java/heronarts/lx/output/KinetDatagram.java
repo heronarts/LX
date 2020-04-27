@@ -26,20 +26,42 @@ import heronarts.lx.model.LXModel;
  * number on the output device is specified, distinct from the UDP port. For
  * instance, an sPDS-480 has 16 outputs.
  */
-public class KinetDatagram extends LXDatagram {
+public class KinetDatagram extends LXBufferDatagram {
 
   private final static int DMXOUT_HEADER_LENGTH = 21;
-  private final static int HEADER_LENGTH = 24;
+  private final static int PORTOUT_HEADER_LENGTH = 24;
   private final static int DATA_LENGTH = 512;
-  private final static int PACKET_LENGTH = HEADER_LENGTH + DATA_LENGTH;
+
+  private final static int PORTOUT_PACKET_LENGTH = PORTOUT_HEADER_LENGTH + DATA_LENGTH;
+  private final static int DMXOUT_PACKET_LENGTH = DMXOUT_HEADER_LENGTH + DATA_LENGTH;
 
   private final static int KINET_PORT = 6038;
 
-  private final int[] indexBuffer;
-
   public enum Version {
     DMXOUT,
-    PORTOUT
+    PORTOUT;
+
+    public int getDataOffset() {
+      switch (this) {
+      case PORTOUT:
+        return PORTOUT_HEADER_LENGTH;
+
+      case DMXOUT:
+      default:
+        return DMXOUT_HEADER_LENGTH;
+      }
+    }
+
+    public int getPacketLength() {
+      switch (this) {
+      case PORTOUT:
+        return PORTOUT_PACKET_LENGTH;
+
+      case DMXOUT:
+      default:
+        return DMXOUT_PACKET_LENGTH;
+      }
+    }
   };
 
   private final Version version;
@@ -50,7 +72,7 @@ public class KinetDatagram extends LXDatagram {
    * @param model Model to output points for
    * @param kinetPort Number of the output port on the kinet power supply
    */
-  public KinetDatagram(LXModel model, int kinetPort ) {
+  public KinetDatagram(LXModel model, int kinetPort) {
     this(model, kinetPort, Version.PORTOUT);
   }
 
@@ -83,10 +105,9 @@ public class KinetDatagram extends LXDatagram {
    * @param version Version of Kinet Protocol
    */
   public KinetDatagram(int[] indexBuffer, int kinetPort, Version version) {
-    super(PACKET_LENGTH, ByteOrder.RGB);
+    super(indexBuffer, version.getPacketLength(), ByteOrder.RGB);
     setPort(KINET_PORT);
 
-    this.indexBuffer = indexBuffer;
     this.version = version;
 
     // Kinet Header
@@ -160,19 +181,16 @@ public class KinetDatagram extends LXDatagram {
   }
 
   public KinetDatagram setKinetPort(byte kinetPort) {
+    if (this.version != Version.PORTOUT) {
+      throw new IllegalStateException("Cannot set kinetPort on DMXOUT KinetDatagram");
+    }
     this.buffer[16] = kinetPort;
     return this;
   }
 
   @Override
-  public void onSend(int[] colors, byte[] glut) {
-    switch (this.version) {
-    case DMXOUT:
-      copyPoints(colors, glut, this.indexBuffer, DMXOUT_HEADER_LENGTH);
-      break;
-    case PORTOUT:
-      copyPoints(colors, glut, this.indexBuffer, HEADER_LENGTH);
-      break;
-    }
+  protected int getDataOffset() {
+    return this.version.getDataOffset();
   }
+
 }

@@ -20,15 +20,13 @@ package heronarts.lx.output;
 
 import heronarts.lx.model.LXModel;
 
-public class ArtNetDatagram extends LXDatagram {
+public class ArtNetDatagram extends LXBufferDatagram {
 
   public final static int ARTNET_PORT = 6454;
 
   private final static int DEFAULT_UNIVERSE = 0;
   private final static int ARTNET_HEADER_LENGTH = 18;
   private final static int SEQUENCE_INDEX = 12;
-
-  private final int[] indexBuffer;
 
   private boolean sequenceEnabled = false;
 
@@ -151,12 +149,11 @@ public class ArtNetDatagram extends LXDatagram {
    * @param byteOrder Byte order
    */
   public ArtNetDatagram(int[] indexBuffer, int dataLength, int universeNumber, ByteOrder byteOrder) {
-    super(ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2), byteOrder);
+    super(indexBuffer, ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2), byteOrder);
 
     // DMX alignment requirement, ensure data length is even number of bytes
     this.dataLength = dataLength + (dataLength % 2);
 
-    this.indexBuffer = indexBuffer;
     setPort(ARTNET_PORT);
 
     this.buffer[0] = 'A';
@@ -212,8 +209,12 @@ public class ArtNetDatagram extends LXDatagram {
   }
 
   @Override
-  public void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.indexBuffer, ARTNET_HEADER_LENGTH);
+  protected int getDataOffset() {
+    return ARTNET_HEADER_LENGTH;
+  }
+
+  @Override
+  protected void updateSequenceNumber() {
     if (this.sequenceEnabled) {
       if (++this.sequence == 0) {
         ++this.sequence;

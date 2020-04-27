@@ -27,7 +27,7 @@ import heronarts.lx.model.LXModel;
  *
  * See: http://tsp.plasa.org/tsp/documents/docs/E1-31_2009.pdf
  */
-public class StreamingACNDatagram extends LXDatagram {
+public class StreamingACNDatagram extends LXBufferDatagram {
 
   protected final static int OFFSET_DMX_DATA = 126;
   protected final static int OFFSET_SEQUENCE_NUMBER = 111;
@@ -36,8 +36,6 @@ public class StreamingACNDatagram extends LXDatagram {
   private final static int DEFAULT_PORT = 5568;
 
   private final static int DEFAULT_UNIVERSE_NUMBER = 1;
-
-  private final int[] indexBuffer;
 
   /**
    * The universe number that this packet sends to.
@@ -110,10 +108,9 @@ public class StreamingACNDatagram extends LXDatagram {
   }
 
   private StreamingACNDatagram(int[] indexBuffer, int dataSize, int universeNumber, ByteOrder byteOrder) {
-    super(OFFSET_DMX_DATA + dataSize, byteOrder);
+    super(indexBuffer, OFFSET_DMX_DATA + dataSize, byteOrder);
     setPort(DEFAULT_PORT);
     setUniverseNumber(universeNumber);
-    this.indexBuffer = indexBuffer;
 
     int flagLength;
 
@@ -253,13 +250,14 @@ public class StreamingACNDatagram extends LXDatagram {
     System.arraycopy(data, 0, this.buffer, OFFSET_DMX_DATA, data.length);
   }
 
-  protected void advanceFrame() {
-    this.buffer[OFFSET_SEQUENCE_NUMBER]++;
+  @Override
+  protected int getDataOffset() {
+    return OFFSET_DMX_DATA;
   }
 
   @Override
-  public void onSend(int[] colors, byte[] glut) {
-    advanceFrame();
-    copyPoints(colors, glut, this.indexBuffer, OFFSET_DMX_DATA);
+  protected void updateSequenceNumber() {
+    this.buffer[OFFSET_SEQUENCE_NUMBER]++;
   }
+
 }

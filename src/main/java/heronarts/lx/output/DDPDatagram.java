@@ -26,7 +26,7 @@ import heronarts.lx.model.LXModel;
  *
  * The specification is available at http://www.3waylabs.com/ddp/
  */
-public class DDPDatagram extends LXDatagram {
+public class DDPDatagram extends LXBufferDatagram {
 
   private static final int HEADER_LENGTH = 10;
   private static final int DEFAULT_PORT = 4048;
@@ -34,17 +34,14 @@ public class DDPDatagram extends LXDatagram {
   private static final int FLAGS_INDEX = 0;
   private static final int OFFSET_DATA_OFFSET = 4;
 
-  private final int[] indexBuffer;
-
   public DDPDatagram(LXModel model) {
     this(model.toIndexBuffer());
   }
 
   public DDPDatagram(int[] indexBuffer) {
-    super(HEADER_LENGTH + indexBuffer.length * 3, ByteOrder.RGB);
+    super(indexBuffer, HEADER_LENGTH + indexBuffer.length * 3, ByteOrder.RGB);
     setPort(DEFAULT_PORT);
     int dataLen = indexBuffer.length * 3;
-    this.indexBuffer = indexBuffer;
 
     // Flags: V V x T S R Q P
     this.buffer[0] = 0x41;
@@ -99,7 +96,7 @@ public class DDPDatagram extends LXDatagram {
   }
 
   @Override
-  public void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.indexBuffer, HEADER_LENGTH);
+  protected int getDataOffset() {
+    return HEADER_LENGTH;
   }
 }

@@ -23,9 +23,7 @@ import heronarts.lx.model.LXModel;
 /**
  * UDP implementation of http://openpixelcontrol.org/
  */
-public class OPCDatagram extends LXDatagram implements OPCConstants {
-
-  private final int[] indexBuffer;
+public class OPCDatagram extends LXBufferDatagram implements OPCConstants {
 
   public OPCDatagram(LXModel model) {
     this(model, CHANNEL_BROADCAST);
@@ -40,8 +38,7 @@ public class OPCDatagram extends LXDatagram implements OPCConstants {
   }
 
   public OPCDatagram(int[] indexBuffer, byte channel) {
-    super(OPCOutput.HEADER_LEN + OPCOutput.BYTES_PER_PIXEL * indexBuffer.length, ByteOrder.RGB);
-    this.indexBuffer = indexBuffer;
+    super(indexBuffer, OPCOutput.HEADER_LEN + OPCOutput.BYTES_PER_PIXEL * indexBuffer.length, ByteOrder.RGB);
     int dataLength = BYTES_PER_PIXEL * indexBuffer.length;
     this.buffer[OFFSET_CHANNEL] = channel;
     this.buffer[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;
@@ -59,8 +56,8 @@ public class OPCDatagram extends LXDatagram implements OPCConstants {
   }
 
   @Override
-  public void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.indexBuffer, OFFSET_DATA);
+  protected int getDataOffset() {
+    return OFFSET_DATA;
   }
 
 }
