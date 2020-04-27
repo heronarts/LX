@@ -18,6 +18,7 @@
 
 package heronarts.lx.output;
 
+import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 
 /**
@@ -25,7 +26,7 @@ import heronarts.lx.model.LXModel;
  * streaming DMX data over ACN protocol. It's a fairly simple UDP-based wrapper
  * on 512 bytes of data with a 16-bit universe number.
  *
- * See: http://tsp.plasa.org/tsp/documents/docs/E1-31_2009.pdf
+ * See: https://tsp.esta.org/tsp/documents/docs/ANSI_E1-31-2018.pdf
  */
 public class StreamingACNDatagram extends LXBufferDatagram {
 
@@ -142,12 +143,13 @@ public class StreamingACNDatagram extends LXBufferDatagram {
     this.buffer[17] = (byte) (flagLength & 0xff);
 
     // RLP 1.31 Protocol PDU Identifier
+    // VECTOR_ROOT_E131_DATA
     this.buffer[18] = (byte) 0x00;
     this.buffer[19] = (byte) 0x00;
     this.buffer[20] = (byte) 0x00;
     this.buffer[21] = (byte) 0x04;
 
-    // Sender's CID
+    // Sender's CID - unique number
     for (int i = 22; i < 38; ++i) {
       this.buffer[i] = (byte) i;
     }
@@ -158,6 +160,7 @@ public class StreamingACNDatagram extends LXBufferDatagram {
     this.buffer[39] = (byte) (flagLength & 0xff);
 
     // DMP Protocol PDU Identifier
+    // VECTOR_E131_DATA_PACKET
     this.buffer[40] = (byte) 0x00;
     this.buffer[41] = (byte) 0x00;
     this.buffer[42] = (byte) 0x00;
@@ -166,7 +169,10 @@ public class StreamingACNDatagram extends LXBufferDatagram {
     // Source name
     this.buffer[44] = 'L';
     this.buffer[45] = 'X';
-    for (int i = 46; i < 108; ++i) {
+    this.buffer[46] = '-';
+    byte[] versionBytes = LX.VERSION.getBytes();
+    System.arraycopy(versionBytes, 0, this.buffer, 47, versionBytes.length);
+    for (int i = 47 + versionBytes.length; i < 108; ++i) {
       this.buffer[i] = 0;
     }
 
