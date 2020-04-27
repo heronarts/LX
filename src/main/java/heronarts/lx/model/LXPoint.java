@@ -294,6 +294,19 @@ public class LXPoint {
   }
 
   /**
+   * Multiplies the points coordinates by the given transformation matrix
+   *
+   * @param matrix Transformation matrix
+   * @return This point, with updated coordinates
+   */
+  public LXPoint multiply(LXMatrix matrix) {
+    float x2 = matrix.m11 * this.x + matrix.m12 * this.y + matrix.m13 * this.z + matrix.m14;
+    float y2 = matrix.m21 * this.x + matrix.m22 * this.y + matrix.m23 * this.z + matrix.m24;
+    float z2 = matrix.m31 * this.x + matrix.m32 * this.y + matrix.m33 * this.z + matrix.m34;
+    return set(x2, y2, z2);
+  }
+
+  /**
    * Sets the normalized values on this point, relative to a model
    *
    * @param model Model to normalize points relative to
