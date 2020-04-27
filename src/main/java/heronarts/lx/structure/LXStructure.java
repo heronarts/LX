@@ -227,6 +227,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.mutableFixtures.add(index, fixture);
     _reindexFixtures();
 
+    // De-select all other fixtures, select this one
+    selectFixture(fixture);
+
     // This will trigger regeneration of the fixture and models
     fixture.setStructure(this);
 
@@ -234,6 +237,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     for (Listener l : this.listeners) {
       l.fixtureAdded(fixture);
     }
+
     return this;
   }
 

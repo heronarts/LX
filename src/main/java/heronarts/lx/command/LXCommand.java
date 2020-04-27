@@ -1532,6 +1532,9 @@ public abstract class LXCommand {
         for (RemoveFixture remove : this.removeFixtures) {
           remove.undo(lx);
         }
+        for (RemoveFixture remove : this.removeFixtures) {
+          remove.fixture.get().selected.setValue(true);
+        }
       }
 
     }
