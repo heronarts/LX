@@ -256,11 +256,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       l.fixtureMoved(fixture, index);
     }
 
-    // The point ordering is changed - we need to regenerate the model to avoid
-    // a flicker-frame where the UI thread's indices do not correspond with those
-    // in the fixture
-
-    reindexModel();
+    // The point ordering is changed, rebuild the model
+    regenerateModel();
 
     return this;
   }
@@ -474,11 +471,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     return this;
   }
 
-  protected void reindexModel() {
-    // TODO(mcslee): fix this to be smarter
-    regenerateModel();
-  }
-
   private LXStructure reset(boolean fromSync) {
     this.staticModel = null;
     removeAllFixtures();
@@ -507,7 +499,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     int pointIndex = 0;
     int fixtureIndex = 0;
     for (LXFixture fixture : this.fixtures) {
-      LXModel fixtureModel = fixture.toModel(pointIndex);
+      fixture.reindex(pointIndex);
+      LXModel fixtureModel = fixture.toModel();
       pointIndex += fixtureModel.size;
       submodels[fixtureIndex++] = fixtureModel;
     }

@@ -23,6 +23,7 @@ import heronarts.lx.LX;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
+import heronarts.lx.output.LXBufferDatagram;
 import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
@@ -65,7 +66,7 @@ public abstract class LXBasicFixture extends LXFixture {
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which KiNET physical output port is used");
 
-  private LXDatagram datagram = null;
+  private LXBufferDatagram datagram = null;
 
   protected LXBasicFixture(LX lx, String label) {
     super(lx, label);
@@ -94,31 +95,35 @@ public abstract class LXBasicFixture extends LXFixture {
     }
   }
 
-  protected LXDatagram buildDatagram() {
+  @Override
+  protected void reindexDatagrams() {
+    if (this.datagram != null) {
+      this.datagram.setIndexBuffer(toIndexBuffer());
+    }
+  }
+
+  protected LXBufferDatagram buildDatagram() {
     Protocol protocol = this.protocol.getEnum();
     if (protocol == Protocol.NONE) {
       return null;
     }
 
-    // Build index buffer
-    int[] indexBuffer = toIndexBuffer();
-
-    LXDatagram datagram;
+    LXBufferDatagram datagram;
     switch (protocol) {
     case ARTNET:
-      datagram = new ArtNetDatagram(indexBuffer, this.artNetUniverse.getValuei());
+      datagram = new ArtNetDatagram(toIndexBuffer(), this.artNetUniverse.getValuei());
       break;
     case SACN:
-      datagram = new StreamingACNDatagram(indexBuffer, this.artNetUniverse.getValuei());
+      datagram = new StreamingACNDatagram(toIndexBuffer(), this.artNetUniverse.getValuei());
       break;
     case OPC:
-      datagram = new OPCDatagram(indexBuffer, (byte) this.opcChannel.getValuei());
+      datagram = new OPCDatagram(toIndexBuffer(), (byte) this.opcChannel.getValuei());
       break;
     case DDP:
-      datagram = new DDPDatagram(indexBuffer).setDataOffset(this.ddpDataOffset.getValuei());
+      datagram = new DDPDatagram(toIndexBuffer()).setDataOffset(this.ddpDataOffset.getValuei());
       break;
     case KINET:
-      datagram = new KinetDatagram(indexBuffer, this.kinetPort.getValuei());
+      datagram = new KinetDatagram(toIndexBuffer(), this.kinetPort.getValuei());
       break;
     default:
     case NONE:

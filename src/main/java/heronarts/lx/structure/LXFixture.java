@@ -374,6 +374,13 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   protected abstract void buildDatagrams();
 
   /**
+   * Subclasses must override this method to update their datagrams in the
+   * case that the point indexing of this fixture has changed. Datagrams
+   * may be removed and readded inside this method if necessary.
+   */
+  protected abstract void reindexDatagrams();
+
+  /**
    * Subclasses call this method to add a datagram to thix fixture. This may only
    * be called from within the buildDatagrams() function.
    *
@@ -381,13 +388,29 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    */
   protected void addDatagram(LXDatagram datagram) {
     if (!this.isInBuildDatagrams) {
-      throw new IllegalStateException("May not add add datagrams from outside buildDatagrams() method");
+      throw new IllegalStateException("May not add datagrams from outside buildDatagrams() method");
     }
     Objects.requireNonNull(datagram, "Cannot add null datagram to LXFixture.addDatagram");
     if (this.mutableDatagrams.contains(datagram)) {
       throw new IllegalStateException("May not add duplicate LXDatagram to LXFixture: " + datagram);
     }
     this.mutableDatagrams.add(datagram);
+  }
+
+  /**
+   * Subclasses call this method to remove a datagram from the fixture. This may only
+   * be performed from within the reindexDatagrams or buildDatagrams methods.
+   *
+   * @param datagram Datagram to remove
+   */
+  protected void removeDatagram(LXDatagram datagram) {
+    if (!this.isInBuildDatagrams) {
+      throw new IllegalStateException("May not remove datagrams from outside reindexDatagrams() method");
+    }
+    if (!this.mutableDatagrams.contains(datagram)) {
+      throw new IllegalStateException("May not remove non-existent LXDatagram from LXFixture: " + datagram + " " + this);
+    }
+    this.mutableDatagrams.remove(datagram);
   }
 
   /**
@@ -400,7 +423,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     int numPoints = size();
     this.mutablePoints.clear();
     for (int i = 0; i < numPoints; ++i) {
-      this.mutablePoints.add(new LXPoint());
+      LXPoint p = new LXPoint();
+      p.index = this.firstPointIndex + i;
+      this.mutablePoints.add(p);
     }
 
     // A new model will have to be created, forget these points
@@ -410,6 +435,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // here because we don't need to notify our container about the change. We're
     // going to notify them after this of even more substantive generation change.
     _regenerateGeometry();
+
+    // Rebuild datagram objects
+    regenerateDatagrams();
 
     // Let our container know that our structural generation has changed
     if (this.container != null) {
@@ -498,16 +526,32 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   }
 
   /**
+   * Reindex the points in this fixture.
+   *
+   * @param startIndex Buffer index for the start of this fixture
+   */
+  final void reindex(int startIndex) {
+    if (this.firstPointIndex != startIndex) {
+      this.firstPointIndex = startIndex;
+      for (LXPoint p : this.points) {
+        p.index = startIndex++;
+      }
+      for (LXFixture child : this.children) {
+        child.reindex(startIndex);
+        startIndex += child.totalSize();
+      }
+      reindexDatagrams();
+    }
+  }
+
+  /**
    * Constructs an LXModel object for this Fixture
    *
-   * @param startIndex Global index position for the first point in this fixture model
    * @return Model representation of this fixture
    */
-  final LXModel toModel(int startIndex) {
+  final LXModel toModel() {
     // Creating a new model, clear our set of points
     this.modelPoints.clear();
-
-    this.firstPointIndex = startIndex;
 
     // Note: we make a deep copy here because a change to the number of points in one
     // fixture will alter point indices in all fixtures after it. When we're in multi-threaded
@@ -515,25 +559,18 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
     // points here to stay safe.
     for (LXPoint p : this.points) {
-      p.index = startIndex++;
       this.modelPoints.add(new LXPoint(p));
     }
 
     // Now iterate over our children and add their points too
     List<LXModel> childModels = new ArrayList<LXModel>();
     for (LXFixture child : this.children) {
-      LXModel childModel = child.toModel(startIndex);
-      startIndex += childModel.size;
+      LXModel childModel = child.toModel();
       for (LXPoint p : childModel.points) {
         this.modelPoints.add(p);
       }
       childModels.add(childModel);
     }
-
-    // TODO(mcslee): determine whether datagrams have been generated? is this the first
-    // model build? if so then they definitely do. if our indices haven't changed
-    // Our point indices may have changed... we'll need to rebuild our datagrams
-    regenerateDatagrams();
 
     // Generate any submodels references into of this fixture
     for (Submodel submodel : toSubmodels()) {
@@ -665,9 +702,5 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
     // Regenerate the whole thing once
     regenerate();
-
-    // TODO(mcslee): maybe not completely necessary, the datagrams will be
-    // regenerated by structure.regenerateModel call?
-    regenerateDatagrams();
   }
 }
