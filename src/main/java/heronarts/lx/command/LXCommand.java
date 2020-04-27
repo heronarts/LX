@@ -1449,6 +1449,7 @@ public abstract class LXCommand {
         } else if (this.fixtureType != null) {
           fixture = new JsonFixture(lx);
           ((JsonFixture) fixture).fixtureType.setValue(this.fixtureType);
+          fixture.label.setValue(fixture.label.getString() + " " + (lx.structure.fixtures.size() + 1));
         } else {
           throw new InvalidCommandException("No fixture type specified for AddFixture");
         }

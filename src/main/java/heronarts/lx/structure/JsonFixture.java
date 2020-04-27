@@ -59,7 +59,7 @@ public class JsonFixture extends LXBasicFixture {
   private int sz;
 
   public JsonFixture(LX lx) {
-    super(lx);
+    super(lx, "Custom");
     addMetricsParameter("fixtureType", this.fixtureType);
   }
 

@@ -219,7 +219,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       throw new IllegalStateException("LXStructure may not contain two copies of same fixture");
     }
     if (index > this.fixtures.size()) {
-      throw new IllegalArgumentException("Illegal fixture index: " + index);
+      throw new IllegalArgumentException("Illegal LXStructure.addFixture() index: " + index + " > " + this.fixtures.size());
     }
     if (index < 0) {
       index = this.fixtures.size();
@@ -454,25 +454,10 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     return this;
   }
 
-  public LXStructure reset() {
-    return reset(false);
-  }
-
-  private LXStructure reset(boolean fromSync) {
-    this.staticModel = null;
-    removeAllFixtures();
-    if (!fromSync) {
-      this.syncModelFile.setValue(false);
-      this.modelFile = null;
-      this.modelName.setValue(PROJECT_MODEL);
-    }
-    this.isStatic.setValue(false);
-    return this;
-  }
-
-  public LXStructure setDynamicModel() {
-    this.staticModel = null;
-    this.isStatic.setValue(false);
+  public LXStructure newDynamicModel() {
+    this.isLoading = true;
+    reset(false);
+    this.isLoading = false;
     regenerateModel();
     return this;
   }
@@ -494,9 +479,27 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     regenerateModel();
   }
 
-  protected void regenerateModel() {
+  private LXStructure reset(boolean fromSync) {
+    this.staticModel = null;
+    removeAllFixtures();
+    if (!fromSync) {
+      this.syncModelFile.setValue(false);
+      this.modelFile = null;
+      this.modelName.setValue(PROJECT_MODEL);
+    }
+    this.isStatic.setValue(false);
+    return this;
+  }
+
+  private void regenerateModel() {
+    if (this.isImmutable) {
+      throw new IllegalStateException("Cannot regenerate LXStructure model when in immutable mode");
+    }
+    if (this.staticModel != null) {
+      throw new IllegalStateException("Cannot regenerate LXStructure model when static model is set: " + this.staticModel);
+    }
+
     if (this.isLoading) {
-      this.needsRegenerate = true;
       return;
     }
 
@@ -509,6 +512,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       submodels[fixtureIndex++] = fixtureModel;
     }
     this.lx.setModel(this.model = new LXModel(submodels).normalizePoints());
+
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");
     }
@@ -521,13 +525,14 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public void fixtureGeometryChanged(LXFixture fixture) {
     // We need to re-normalize our model, things have changed
     this.model.update();
+
+    // Denote that file is modified
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");
     }
   }
 
   private boolean isLoading = false;
-  private boolean needsRegenerate = false;
 
   private static final String KEY_FIXTURES = "fixtures";
   private static final String KEY_STATIC_MODEL = "staticModel";
@@ -538,43 +543,63 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     if (this.isImmutable) {
       return;
     }
+
     this.isLoading = true;
-    reset();
+
+    // Reset everything to complete scratch!
+    reset(false);
+
+    // Load parameter values
     super.load(lx, obj);
 
-    LXModel staticModel = null;
-    File loadModelFile = null;
+    // Are we in static model mode? Load that.
     if (obj.has(KEY_STATIC_MODEL)) {
+
       JsonObject modelObj = obj.get(KEY_STATIC_MODEL).getAsJsonObject();
       String className = modelObj.get(LXComponent.KEY_CLASS).getAsString();
+      LXModel model = null;
       try {
-        staticModel = lx.instantiateModel(className);
-        staticModel.load(lx, modelObj);
+        model = lx.instantiateModel(className);
+        model.load(lx, modelObj);
       } catch (LX.InstantiationException x) {
         lx.command.pushError("Could not instantiate model class " + className + ". Check that content files are present?", x);
       }
-    }
-    loadFixtures(lx, obj);
-    if (obj.has(KEY_FILE)) {
-      loadModelFile = this.lx.getMediaFile(LX.Media.MODELS, obj.get(KEY_FILE).getAsString());
-    }
+      // There was an error... just use an empty static model
+      if (model == null) {
+        // TODO(mcslee): get an error placeholder in here?
+        model = new LXModel();
+      }
+      setStaticModel(model);
 
-    this.isLoading = false;
-    if (staticModel != null) {
-      setStaticModel(staticModel);
-      this.needsRegenerate = false;
     } else {
-      this.isStatic.setValue(false);
-      if ((loadModelFile != null) && this.syncModelFile.isOn()) {
-        importModel(loadModelFile, true);
+
+      // We're using a fixture-driven model
+      File loadModelFile = null;
+      if (obj.has(KEY_FILE)) {
+        loadModelFile = this.lx.getMediaFile(LX.Media.MODELS, obj.get(KEY_FILE).getAsString(), false);
+      }
+      if (this.syncModelFile.isOn()) {
+        if (loadModelFile == null) {
+          LX.error("Project specifies external model sync, but no file name was found");
+        } else if (!loadModelFile.exists()) {
+          LX.error("Referenced external model file does not exist: " + loadModelFile.toURI());
+        } else {
+          importModel(loadModelFile, true);
+        }
       } else {
         this.modelName.setValue(PROJECT_MODEL);
-        if (this.needsRegenerate) {
-          this.needsRegenerate = false;
-          regenerateModel();
-        }
+        loadFixtures(lx, obj);
       }
     }
+
+    // We're done loading
+    this.isLoading = false;
+
+    // Unless a static model was set, we need to regenerate
+    if (this.staticModel == null) {
+      regenerateModel();
+    }
+
   }
 
   private void loadFixtures(LX lx, JsonObject obj) {
@@ -619,6 +644,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   private LXStructure importModel(File file, boolean fromSync) {
+    this.lx.setModelImportFlag(true);
     try (FileReader fr = new FileReader(file)) {
       reset(fromSync);
       loadFixtures(this.lx, new Gson().fromJson(fr, JsonObject.class));
@@ -630,6 +656,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     } catch (IOException iox) {
       LX.error(iox, "Exception loading model file: " + file);
     }
+    this.lx.setModelImportFlag(false);
     return this;
   }
 

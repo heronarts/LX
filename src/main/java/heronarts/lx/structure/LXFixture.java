@@ -144,7 +144,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     new BooleanParameter("Solo", false)
     .setDescription("Solos this fixture, no other fixtures illuminated");
 
-  protected List<LXFixture> children = new ArrayList<LXFixture>();
+  private final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
+
+  protected final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
 
   private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
 
@@ -186,7 +188,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   private int firstPointIndex = 0;
 
   protected LXFixture(LX lx) {
-    super(lx);
+    this(lx, "Fixture");
+  }
+
+  protected LXFixture(LX lx, String label) {
+    super(lx, label);
 
     // Geometry parameters
     addGeometryParameter("x", this.x);
@@ -244,7 +250,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     if (this.children.contains(child)) {
       throw new IllegalStateException("Cannot add duplicate child to LXFixture: " + child);
     }
-    this.children.add(child);
+    this.mutableChildren.add(child);
     _reindexChildren();
 
     // It's acceptable to remove and re-add a child to the same container
@@ -260,7 +266,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     if (!this.children.contains(child)) {
       throw new IllegalStateException("Cannot remove non-existend child from LXFixture: " + this + " " + child);
     }
-    this.children.remove(child);
+    this.mutableChildren.remove(child);
     _reindexChildren();
 
     // Notify the structure of change, rebuild will occur
@@ -396,6 +402,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     for (int i = 0; i < numPoints; ++i) {
       this.mutablePoints.add(new LXPoint());
     }
+
+    // A new model will have to be created, forget these points
+    this.modelPoints.clear();
 
     // Regenerate our geometry, note that we bypass regenerateGeometry()
     // here because we don't need to notify our container about the change. We're

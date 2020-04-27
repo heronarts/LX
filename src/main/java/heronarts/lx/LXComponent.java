@@ -94,7 +94,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
 
   static class Registry {
     private int idCounter = ID_ENGINE + 1;
-    boolean loading = false;
+    boolean projectLoading = false;
+    boolean modelImporting = false;
     private final Map<Integer, LXComponent> components = new HashMap<Integer, LXComponent>();
     private final Map<Integer, LXComponent> projectIdMap = new HashMap<Integer, LXComponent>();
 
@@ -156,13 +157,16 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         return;
       }
       if (this.components.containsKey(id)) {
-        if (!this.loading) {
-          throw new IllegalStateException("ID collision outside of project load: " + component + " trying to clobber " + this.components.get(id));
+        if (this.projectLoading) {
+          // Check for an ID collision, which can happen if the engine
+          // has new components, for instance. In that case record in a map
+          // what the IDs in the project file refer to.
+          this.projectIdMap.put(id, component);
+        } else if (this.modelImporting) {
+          // We ignore ID assignment collisions from external model files, a new ID is fine
+        } else {
+          throw new IllegalStateException("ID collision outside of project load or model import: " + component + " trying to clobber " + this.components.get(id));
         }
-        // Check for an ID collision, which can happen if the engine
-        // has new components, for instance. In that case record in a map
-        // what the IDs in the project file refer to.
-        this.projectIdMap.put(id, component);
       } else {
         if (component.id > 0) {
           this.components.remove(component.id);

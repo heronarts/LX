@@ -40,7 +40,7 @@ public class StripFixture extends LXBasicFixture {
     .setDescription("Spacing between points in the strip");
 
   public StripFixture(LX lx) {
-    super(lx);
+    super(lx, "Strip");
     addMetricsParameter("numPoints", this.numPoints);
     addGeometryParameter("spacing", this.spacing);
   }

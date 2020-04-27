@@ -28,7 +28,6 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.model.LXModel;
-import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -719,14 +718,22 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     int identifyColor = LXColor.hsb(0, 100, Math.abs(-100 + (runStart / 8000000) % 200));
     for (LXFixture fixture : this.lx.structure.fixtures) {
       if (fixture.mute.isOn()) {
-        for (LXPoint p : fixture.points) {
-          this.buffer.render.main[p.index] = LXColor.BLACK;
-          this.buffer.render.cue[p.index] = LXColor.BLACK;
+        int start = fixture.getIndexBufferOffset();
+        int end = start + fixture.totalSize();
+        if (end > start) {
+          for (int i = start; i < end; ++i) {
+            this.buffer.render.main[i] = LXColor.BLACK;
+            this.buffer.render.cue[i] = LXColor.BLACK;
+          }
         }
       } else if (fixture.identify.isOn()) {
-        for (LXPoint p : fixture.points) {
-          this.buffer.render.main[p.index] = identifyColor;
-          this.buffer.render.cue[p.index] = identifyColor;
+        int start = fixture.getIndexBufferOffset();
+        int end = start + fixture.totalSize();
+        if (end > start) {
+          for (int i = start; i < end; ++i) {
+            this.buffer.render.main[i] = identifyColor;
+            this.buffer.render.cue[i] = identifyColor;
+          }
         }
       }
       if (fixture.solo.isOn()) {

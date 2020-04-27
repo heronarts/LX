@@ -67,8 +67,8 @@ public abstract class LXBasicFixture extends LXFixture {
 
   private LXDatagram datagram = null;
 
-  protected LXBasicFixture(LX lx) {
-    super(lx);
+  protected LXBasicFixture(LX lx, String label) {
+    super(lx, label);
     addDatagramParameter("protocol", this.protocol);
     addParameter("host", this.host);
     addParameter("artNetUniverse", this.artNetUniverse);

@@ -95,6 +95,13 @@ public class LXVector {
     return this;
   }
 
+  public LXVector set(LXPoint that) {
+    this.x = that.x;
+    this.y = that.y;
+    this.z = that.z;
+    return this;
+  }
+
   public LXVector copy() {
     return new LXVector(this);
   }

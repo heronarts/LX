@@ -32,6 +32,7 @@ import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -693,10 +694,58 @@ public class LX {
     return max;
   }
 
+  public void newProject() {
+    confirmChangesSaved("create a new project", () -> {
+      closeProject();
+      if (!this.flags.immutableModel) {
+        this.structure.load(this, new JsonObject());
+      }
+      this.engine.load(this, new JsonObject());
+      setProject(null, ProjectListener.Change.NEW);
+    });
+  }
+
+  public void openProject(File file) {
+    for (ProjectListener projectListener : this.projectListeners) {
+      projectListener.projectChanged(file, ProjectListener.Change.TRY);
+    }
+    try (FileReader fr = new FileReader(file)) {
+      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      closeProject();
+      this.componentRegistry.projectLoading = true;
+      this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
+      if (!this.flags.immutableModel) {
+        LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL, true);
+      }
+      this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
+      if (obj.has(KEY_EXTERNALS)) {
+        JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
+        for (String key : this.externals.keySet()) {
+          if (externalsObj.has(key)) {
+            this.externals.get(key).load(this, externalsObj.getAsJsonObject(key));
+          }
+        }
+      }
+      this.componentRegistry.projectLoading = false;
+      setProject(file, ProjectListener.Change.OPEN);
+      LX.log("Project loaded successfully from " + file.toString());
+    } catch (IOException iox) {
+      LX.error("Could not load project file: " + iox.getLocalizedMessage());
+      this.command.pushError("Could not load project file: " + iox.getLocalizedMessage(), iox);
+    } catch (Exception x) {
+      LX.error(x, "Exception in openProject: " + x.getLocalizedMessage());
+      this.command.pushError("Exception in openProject: " + x.getLocalizedMessage(), x);
+    }
+  }
+
   private void closeProject() {
     this.command.clear();
     this.command.setDirty(false);
     this.componentRegistry.resetProject();
+  }
+
+  public void setModelImportFlag(boolean modelImport) {
+    this.componentRegistry.modelImporting = modelImport;
   }
 
   protected final void confirmChangesSaved(String message, Runnable confirm) {
@@ -805,51 +854,6 @@ public class LX {
       return file;
     }
     return new File(getMediaPath(), path);
-  }
-
-  public void newProject() {
-    confirmChangesSaved("create a new project", () -> {
-      closeProject();
-      if (!this.flags.immutableModel) {
-        this.structure.load(this, new JsonObject());
-      }
-      this.engine.load(this, new JsonObject());
-      setProject(null, ProjectListener.Change.NEW);
-    });
-  }
-
-  public void openProject(File file) {
-    for (ProjectListener projectListener : this.projectListeners) {
-      projectListener.projectChanged(file, ProjectListener.Change.TRY);
-    }
-
-    try (FileReader fr = new FileReader(file)) {
-      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
-      closeProject();
-      this.componentRegistry.loading = true;
-      this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
-      if (!this.flags.immutableModel) {
-        LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL, true);
-      }
-      this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
-      if (obj.has(KEY_EXTERNALS)) {
-        JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
-        for (String key : this.externals.keySet()) {
-          if (externalsObj.has(key)) {
-            this.externals.get(key).load(this, externalsObj.getAsJsonObject(key));
-          }
-        }
-      }
-      this.componentRegistry.loading = false;
-      setProject(file, ProjectListener.Change.OPEN);
-      LX.log("Project loaded successfully from " + file.toString());
-    } catch (IOException iox) {
-      LX.error("Could not load project file: " + iox.getLocalizedMessage());
-      this.command.pushError("Could not load project file: " + iox.getLocalizedMessage(), iox);
-    } catch (Exception x) {
-      LX.error(x, "Exception in openProject: " + x.getLocalizedMessage());
-      this.command.pushError("Exception in openProject: " + x.getLocalizedMessage(), x);
-    }
   }
 
   public LXModel instantiateModel(String className) throws InstantiationException {

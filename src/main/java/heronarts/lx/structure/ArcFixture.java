@@ -45,7 +45,7 @@ public class ArcFixture extends LXBasicFixture {
     .setDescription("Number of degrees the arc covers");
 
   public ArcFixture(LX lx) {
-    super(lx);
+    super(lx, "Arc");
     addMetricsParameter("numPoints", this.numPoints);
     addGeometryParameter("radius", this.radius);
     addGeometryParameter("degrees", this.degrees);

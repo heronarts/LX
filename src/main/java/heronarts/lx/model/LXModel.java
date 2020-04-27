@@ -65,7 +65,7 @@ public class LXModel implements LXSerializable {
      *
      * @param model Model
      */
-    public void modelGeometryUpdated(LXModel model);
+    public void modelGenerationUpdated(LXModel model);
   }
 
   /**
@@ -102,7 +102,7 @@ public class LXModel implements LXSerializable {
 
   private LXModel parent;
 
-  private int geometryRevision = 0;
+  private int generation = 0;
 
   /**
    * Total number of points in the model
@@ -508,22 +508,22 @@ public class LXModel implements LXSerializable {
    * @return this
    */
   public LXModel bang() {
-    ++this.geometryRevision;
+    ++this.generation;
     // Notify the listeners of this model that it has changed
     for (Listener listener : this.listeners) {
-      listener.modelGeometryUpdated(this);
+      listener.modelGenerationUpdated(this);
     }
     return this;
   }
 
   /**
-   * Returns an integer identifying the geometry version of this model. Each time geometry in the model is
+   * Returns an integer identifying the generation of this model. Each time geometry in the model is
    * changed, this value is incremented;
    *
    * @return Monotonically increasing integer verson number of the geometry revision
    */
-  public int getGeometryRevision() {
-    return this.geometryRevision;
+  public int getGeneration() {
+    return this.generation;
   }
 
   /**

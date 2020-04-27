@@ -50,7 +50,7 @@ public class GridFixture extends LXBasicFixture {
     .setDescription("Spacing between columns in the grid");
 
   public GridFixture(LX lx) {
-    super(lx);
+    super(lx, "Grid");
     addMetricsParameter("numRows", this.numRows);
     addMetricsParameter("numColumns", this.numColumns);
     addGeometryParameter("rowSpacing", this.rowSpacing);
