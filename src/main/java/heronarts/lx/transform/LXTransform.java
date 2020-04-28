@@ -38,6 +38,8 @@ public class LXTransform {
 
   /**
    * Constructs a new transform with the given base matrix
+   *
+   * @param matrix Base matrix
    */
   public LXTransform(LXMatrix matrix) {
     this.matrices.push(matrix);
@@ -45,6 +47,8 @@ public class LXTransform {
 
   /**
    * Returns the current state of the transformation matrix
+   *
+   * @return Top of the transformation matrix stack
    */
   public LXMatrix getMatrix() {
     return this.matrices.peek();

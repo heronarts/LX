@@ -384,7 +384,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * Subclasses call this method to add a datagram to thix fixture. This may only
    * be called from within the buildDatagrams() function.
    *
-   * @param datagram
+   * @param datagram Datagram to add
    */
   protected void addDatagram(LXDatagram datagram) {
     if (!this.isInBuildDatagrams) {
@@ -458,7 +458,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * mutable matrix which will initially hold the value of the parent transformation matrix.
    * It can then be further manipulated based upon the parameters.
    *
-   * @param geometryMarix The geometry transformation matrix for this object
+   * @param geometryMatrix The geometry transformation matrix for this object
    */
   protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
     float degreesToRadians = (float) Math.PI / 180;
@@ -670,7 +670,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   /**
    * Returns the geometry transformation matrix, copied into the given matrix
    *
-   * @parameter m LXMatrix object to copy into
+   * @param m LXMatrix object to copy into
    * @return Geometric transformation matrix, copied into parameter value
    */
   public LXMatrix getGeometryMatrix(LXMatrix m) {

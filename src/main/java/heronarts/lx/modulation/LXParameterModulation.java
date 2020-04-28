@@ -197,13 +197,13 @@ public abstract class LXParameterModulation extends LXComponent {
       sourceObj.addProperty(KEY_COMPONENT_ID, this.source.getParent().getId());
       sourceObj.addProperty(KEY_PARAMETER_PATH, this.source.getPath());
     }
-    sourceObj.addProperty(KEY_PATH, LXPath.getCanonicalPath(this.scope.getParent(), this.source));
+    sourceObj.addProperty(KEY_PATH, this.source.getCanonicalPath(this.scope.getParent()));
 
     obj.add(KEY_SOURCE, sourceObj);
     JsonObject targetObj = new JsonObject();
     targetObj.addProperty(KEY_COMPONENT_ID, this.target.getParent().getId());
     targetObj.addProperty(KEY_PARAMETER_PATH, this.target.getPath());
-    targetObj.addProperty(KEY_PATH, LXPath.getCanonicalPath(this.scope.getParent(), this.target));
+    targetObj.addProperty(KEY_PATH, this.target.getCanonicalPath(this.scope.getParent()));
     obj.add(KEY_TARGET, targetObj);
     super.save(lx, obj);
   }

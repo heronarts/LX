@@ -94,7 +94,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
         return modulator.handleOscMessage(message, parts, index+1);
       }
     }
-    return false;
+    return super.handleOscMessage(message, parts, index);
   }
 
   public LXModulationEngine addListener(Listener listener) {

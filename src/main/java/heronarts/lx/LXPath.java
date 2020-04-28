@@ -33,6 +33,13 @@ public interface LXPath {
   public String getPath();
 
   /**
+   * Returns the user-facing label of this component
+   *
+   * @return User-facing label for this component
+   */
+  public String getLabel();
+
+  /**
    * Returns the component that this object belongs to
    *
    * @return Parent component of this path object, or null if it is unowned
@@ -43,13 +50,12 @@ public interface LXPath {
    * Gets the canonical path of a Path object up to a given root
    *
    * @param root Root component
-   * @param path Path object
    * @return Canonical path
    */
-  public static String getCanonicalPath(LXComponent root, LXPath path) {
-    String pathStr = "/" + path.getPath();
-    LXComponent parent = path.getParent();
-    while (parent != null && parent != root) {
+  public default String getCanonicalPath(LXComponent root) {
+    String pathStr = "/" + getPath();
+    LXComponent parent = getParent();
+    while ((parent != null) && (parent != root)) {
       pathStr = "/" + parent.getPath() + pathStr;
       parent = parent.getParent();
     }
@@ -59,11 +65,39 @@ public interface LXPath {
   /**
    * Gets the canonical path of a Path object all the way up its chain
    *
-   * @param path Any object implementing the LXPath interface
-   * @return Canonical paths
+   * @return Canonical path
    */
-  public static String getCanonicalPath(LXPath path) {
-    return getCanonicalPath(null, path);
+  public default String getCanonicalPath() {
+    return getCanonicalPath(null);
+  }
+
+  /**
+   * Returns the canonical user-facing label of this object. The label
+   * is different from the path, it's a human-readable name that takes
+   * into account how the user may have re-labeled components.
+   *
+   * @return Canonical label for this component
+   */
+  public default String getCanonicalLabel() {
+    return getCanonicalLabel(null);
+  }
+
+  /**
+   * Returns the canonical user-facing label of this component. The label
+   * is different from the path, it's a human-readable name that takes
+   * into account how the user may have re-labeled components.
+   *
+   * @param root Root object to get label relative to
+   * @return Canonical label for this component
+   */
+  public default String getCanonicalLabel(LXComponent root) {
+    String label = getLabel();
+    LXComponent parent = getParent();
+    while ((parent != null) && (parent != root) && !(parent instanceof LXEngine)) {
+      label = parent.getLabel() + " \u2022 " + label;
+      parent = parent.getParent();
+    }
+    return label;
   }
 
   /**

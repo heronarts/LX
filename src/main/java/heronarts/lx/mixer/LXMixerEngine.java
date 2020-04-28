@@ -151,7 +151,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Scenes
     for (int i = 0; i < this.scenes.length; ++i) {
       final int sceneIndex = i;
-      this.scenes[i] = new BooleanParameter("Scene-" + (i+1));
+      this.scenes[i] = new BooleanParameter("Scene-" + (i+1)).setMode(BooleanParameter.Mode.MOMENTARY);
       addParameter("scene-" + (i+1), this.scenes[i]);
       this.scenes[i].addListener((p) -> {
         BooleanParameter scene = (BooleanParameter) p;

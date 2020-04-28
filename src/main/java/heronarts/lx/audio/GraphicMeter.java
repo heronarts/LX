@@ -108,8 +108,9 @@ public class GraphicMeter extends DecibelMeter {
     this.fft.setNumBands(this.numBands = numBands);
     this.impl = new LXMeterImpl(this.numBands, this.fft.getBandOctaveRatio());
     this.bands = this.impl.bands;
+    int i = 1;
     for (NormalizedParameter band : this.bands) {
-      addParameter(band);
+      addParameter("band-" + i, band);
     }
   }
 

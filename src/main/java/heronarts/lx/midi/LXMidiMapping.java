@@ -135,7 +135,7 @@ public abstract class LXMidiMapping implements LXSerializable {
   public void save(LX lx, JsonObject object) {
     object.addProperty(KEY_CHANNEL, this.channel);
     object.addProperty(KEY_TYPE, this.type.toString());
-    object.addProperty(LXComponent.KEY_PATH, LXPath.getCanonicalPath(this.parameter));
+    object.addProperty(LXComponent.KEY_PATH, this.parameter.getCanonicalPath());
     object.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getParent().getId());
     object.addProperty(LXComponent.KEY_PARAMETER_PATH, this.parameter.getPath());
   }

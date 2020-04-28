@@ -206,4 +206,5 @@ public interface LXParameter extends LXPath {
    * @return Label of parameter
    */
   public String getLabel();
+
 }

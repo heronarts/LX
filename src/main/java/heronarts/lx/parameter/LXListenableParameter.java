@@ -26,7 +26,6 @@ import java.util.Set;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXPath;
 
 /**
  * This is a parameter instance that can be listened to, meaning we are able to
@@ -99,7 +98,7 @@ public abstract class LXListenableParameter implements LXParameter {
   public LXListenableParameter addListener(LXParameterListener listener) {
     Objects.requireNonNull(listener, "May add null LXParameterListener: " + this);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add duplicate LXParameterListener " + LXPath.getCanonicalPath(this) + " " + listener.getClass().getName());
+      throw new IllegalStateException("Cannot add duplicate LXParameterListener " + this.getCanonicalPath() + " " + listener.getClass().getName());
     }
     this.listeners.add(listener);
     return this;
@@ -107,7 +106,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   public final LXListenableParameter removeListener(LXParameterListener listener) {
     if (!this.listeners.contains(listener)) {
-      LX.error("Trying to remove unregistered LXParameterListener " + LXPath.getCanonicalPath(this) + " " + listener.getClass().getName());
+      LX.error("Trying to remove unregistered LXParameterListener " + this.getCanonicalPath() + " " + listener.getClass().getName());
     }
     this.listeners.remove(listener);
     return this;
@@ -151,9 +150,9 @@ public abstract class LXListenableParameter implements LXParameter {
     for (LXParameterListener listener : this.listeners) {
       String className = listener.getClass().getName();
       if (className.contains(".ui.")) {
-        LX.warning("Stranded UI listener on parameter: " + LXPath.getCanonicalPath(this) + " - " + className);
+        LX.warning("Stranded UI listener on parameter: " + getCanonicalPath() + " - " + className);
       } else {
-        LX.error("Stranded listener on parameter: " + LXPath.getCanonicalPath(this) + " - " + className);
+        LX.error("Stranded listener on parameter: " + getCanonicalPath() + " - " + className);
       }
     }
     this.listeners.clear();
