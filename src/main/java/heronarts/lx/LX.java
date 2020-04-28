@@ -90,7 +90,8 @@ public class LX {
     CONTENT("Content"),
     FIXTURES("Fixtures"),
     PROJECTS("Projects"),
-    MODELS("Models");
+    MODELS("Models"),
+    LOGS("Logs");
 
     private final String dirName;
 
@@ -979,31 +980,58 @@ public class LX {
   }
 
   public static void error(Throwable x, String message) {
-    _log(System.err, message);
-    x.printStackTrace(System.err);
+    _log(System.err, x, LOG_PREFIX, message);
   }
 
   private static final DateFormat logDateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
+  protected static final DateFormat logFilenameFormat = new SimpleDateFormat("'LX-'yyyy.MM.dd-HH.mm.ss'.log'");
+
+  private static final String LOG_PREFIX = "LX";
+
   protected static void _log(String prefix, String message) {
-    _log(System.out, prefix, message);
+    _log(System.out, null, prefix, message);
   }
 
   protected static void _error(String prefix, Exception x, String message) {
-    _log(System.err, prefix, message);
-    x.printStackTrace(System.err);
+    _log(System.err, x, prefix, message);
   }
 
   protected static void _error(String prefix, String message) {
-    _log(System.err, prefix, message);
+    _log(System.err, null, prefix, message);
   }
 
   protected static void _log(PrintStream stream, String message) {
-    _log(stream, "LX", message);
+    _log(stream, null, LOG_PREFIX, message);
   }
 
-  protected static void _log(PrintStream stream, String prefix, String message) {
-    stream.println("[" + prefix + " " + logDateFormat.format(Calendar.getInstance().getTime()) + "] " + message);
+  protected static void _log(PrintStream stream, Throwable throwable, String prefix, String message) {
+    String logMsg = "[" + prefix + " " + logDateFormat.format(Calendar.getInstance().getTime()) + "] " + message;
+    stream.println(logMsg);
+    if (throwable != null) {
+      throwable.printStackTrace(stream);
+    }
+    if (logFile != null) {
+      try {
+        logFile.println(logMsg);
+        if (throwable != null) {
+          throwable.printStackTrace(logFile);
+        }
+      } catch (Exception x) {
+        logFile = null;
+        error(x, "Exception writing log file to disk: " + x.getLocalizedMessage());
+      }
+    }
+  }
+
+  private static PrintStream logFile = null;
+
+  protected static void setLogFile(File file) {
+    try {
+      logFile = new PrintStream(file);
+    } catch (Exception x) {
+      error(x, "Log file cannot be used: " + file.toURI() + " - " + x.getLocalizedMessage());
+    }
   }
 
   /**
@@ -1014,12 +1042,18 @@ public class LX {
   public static void main(String[] args) {
     Flags flags = new Flags();
     bootstrapMediaPath(flags);
+
     File projectFile = null;
-    for (String arg : args) {
-      if (arg.endsWith(".lxp")) {
-        projectFile = new File(arg);
+    for (int i = 0; i < args.length; ++i) {
+      if ("--log".equals(args[i])) {
+        if (++i < args.length) {
+          setLogFile(new File(args[i]));
+        }
+      } else if (args[i].endsWith(".lxp")) {
+        projectFile = new File(args[i]);
       }
     }
+
     headless(flags, projectFile);
   }
 
