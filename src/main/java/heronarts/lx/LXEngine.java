@@ -40,7 +40,6 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.pattern.LXPattern;
-import heronarts.lx.script.LXScriptEngine;
 import heronarts.lx.structure.LXFixture;
 
 import java.net.SocketException;
@@ -70,8 +69,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final LXMappingEngine mapping = new LXMappingEngine();
 
   public final LXOscEngine osc;
-
-  public final LXScriptEngine script;
 
   private Dispatch inputDispatch = null;
 
@@ -351,11 +348,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // OSC engine
     addChild("osc", this.osc = new LXOscEngine(lx));
     LX.initTimer.log("Engine: Osc");
-
-    // Script engine
-    this.script = new LXScriptEngine(lx);
-    LX.initTimer.log("Engine: Script");
-
 
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
