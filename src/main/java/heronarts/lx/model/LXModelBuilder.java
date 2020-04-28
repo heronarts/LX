@@ -20,6 +20,9 @@ package heronarts.lx.model;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
+import heronarts.lx.output.LXDatagram;
 
 /**
  * A utility class with a simple interface, used to procedurally construct
@@ -27,17 +30,20 @@ import java.util.List;
  * model. After it's been produced, methods cannot be called to modify the
  * contents anymore. This class is significantly simpler than {@link LXModel}
  * in the amount of functionality exported, with only the components needed
- * for construction. It is also mutable.
+ * for construction. It is mutable up until the moment it has been converted
+ * into a model, at which point no further modifications are allowed.
  */
 public class LXModelBuilder {
 
-  protected final List<LXPoint> points = new ArrayList<LXPoint>();
+  final List<LXPoint> points = new ArrayList<LXPoint>();
 
-  protected final List<LXModelBuilder> children = new ArrayList<LXModelBuilder>();
+  final List<LXModelBuilder> children = new ArrayList<LXModelBuilder>();
 
-  protected List<String> keys = new ArrayList<String>();
+  List<String> keys = new ArrayList<String>();
 
-  protected LXModel model = null;
+  LXModel model = null;
+
+  final List<LXDatagram> datagrams = new ArrayList<LXDatagram>();
 
   /**
    * Construct a model-builder with the default model key
@@ -117,7 +123,7 @@ public class LXModelBuilder {
   }
 
   /**
-   * Add a child builder to this model
+   * Add a child builder to this model.
    *
    * @param child Child
    * @return this
@@ -129,6 +135,19 @@ public class LXModelBuilder {
       p.index = this.points.size();
       this.points.add(p);
     }
+    return this;
+  }
+
+  /**
+   * Add a datagram to this model
+   *
+   * @param datagram Datagram object
+   * @return this
+   */
+  public LXModelBuilder addDatagram(LXDatagram datagram) {
+    checkEditState();
+    Objects.requireNonNull(datagram, "May not add null LXModelBuilder.addDatagram()");
+    this.datagrams.add(datagram);
     return this;
   }
 

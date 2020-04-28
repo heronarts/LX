@@ -83,6 +83,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         for (LXFixture child : fixture.children) {
           onSendFixture(colors, now, brightness, child);
         }
+
         // Then send the fixture's own direct packets
         for (LXDatagram datagram : fixture.datagrams) {
           onSendDatagram(datagram, now, colors, brightness);
@@ -90,6 +91,17 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
     }
   }
+
+  /**
+   * Implementation-only interface to relay model changes back to the core LX instance. This
+   * is not a user-facing API.
+   */
+  public interface ModelListener {
+    public void modelChanged(LXModel model);
+  }
+
+  // Internal implementation only
+  private ModelListener modelListener;
 
   /**
    * Listener interface for the top-level structure
@@ -171,6 +183,21 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       LX.error(sx, "Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getMessage());
     }
     this.output = output;
+  }
+
+  /**
+   * Internal implementation-only helper to set a listener for notification on changes to the structure's model.
+   * This is used by the LX class to relay model-changes from the structure back to the top-level LX object while
+   * keeping that functionality private on the core LX API.
+   *
+   * @param listener Listener
+   */
+  public void setModelListener(ModelListener listener) {
+    Objects.requireNonNull("LXStructure.setModelListener() cannot be null");
+    if (this.modelListener != null) {
+      throw new IllegalStateException("Cannot overwrite setModelListener() - should only called once by LX parent object");
+    }
+    this.modelListener = listener;
   }
 
   @Override
@@ -468,10 +495,12 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     // to the top level...
     model.reindexPoints();
     model.normalizePoints();
-    this.lx.setModel(this.model = this.staticModel = model);
+    this.model = this.staticModel = model;
     this.modelFile = null;
     this.modelName.setValue(model.getClass().getSimpleName() + ".class");
     this.isStatic.setValue(true);
+    this.modelListener.modelChanged(this.model);
+
     return this;
   }
 
@@ -508,7 +537,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       pointIndex += fixtureModel.size;
       submodels[fixtureIndex++] = fixtureModel;
     }
-    this.lx.setModel(this.model = new LXModel(submodels).normalizePoints());
+    this.model = new LXModel(submodels).normalizePoints();
+    this.modelListener.modelChanged(this.model);
 
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");

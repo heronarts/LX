@@ -239,6 +239,7 @@ public class LX {
     } else {
       this.model = model;
     }
+    this.structure.setModelListener((newModel) -> { setModel(newModel); });
     LX.initTimer.log("Model");
 
     // Custom content loader
@@ -342,13 +343,8 @@ public class LX {
     return this.model;
   }
 
-  /**
-   * Updates the geometric model that is being rendered to
-   *
-   * @param model Model to be set
-   * @return this
-   */
-  public LX setModel(LXModel model) {
+  // Private internal-only API. User-facing APIs are on LXStructure
+  private LX setModel(LXModel model) {
     Objects.requireNonNull(model, "May not set null model on LX instance");
     if (this.model == model) {
       throw new IllegalStateException("Cannot reset same model instance: " + model);

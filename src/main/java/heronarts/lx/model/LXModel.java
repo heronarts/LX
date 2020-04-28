@@ -38,6 +38,14 @@ import heronarts.lx.transform.LXVector;
  * corresponds to a single point. Though the positions of points may be updated,
  * a model is immutable. Its overall structure, number of points, and hierarchy
  * of submodels may not be changed once it has been created.
+ *
+ * This class should generally not be used directly to construct model objects.
+ * It is heavily preferred to use the {@link heronarts.lx.structure.LXStructure}
+ * and {@link heronarts.lx.structure.LXFixture} APIs to dynamically generate
+ * a model.
+ *
+ * In cases where fixed-model programming is preferred, it is recommended to use
+ * the {@link LXModelBuilder} class to aid in model construction.
  */
 public class LXModel implements LXSerializable {
 
@@ -86,12 +94,10 @@ public class LXModel implements LXSerializable {
   private final Map<String, List<LXModel>> subDict =
     new HashMap<String, List<LXModel>>();
 
-  private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
-
   /**
    * An ordered list of datagrams that should be sent for this model.
    */
-  public final List<LXDatagram> datagrams = Collections.unmodifiableList(this.mutableDatagrams);
+  public final List<LXDatagram> datagrams;
 
   /**
    * A list of String keys by which this model type can be identified. Keys must be lowercase strings.
@@ -263,6 +269,7 @@ public class LXModel implements LXSerializable {
     this.children = children.clone();
     this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
+    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>());
     recomputeGeometry();
   }
 
@@ -299,6 +306,7 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = _points.size();
+    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>());
     recomputeGeometry();
   }
 
@@ -307,6 +315,9 @@ public class LXModel implements LXSerializable {
   }
 
   protected LXModel(LXModelBuilder builder, boolean isRoot) {
+    if (builder.model != null) {
+      throw new IllegalStateException("LXModelBuilder may only be used once: " + builder);
+    }
     this.keys = validateKeys(builder.keys.toArray(new String[0]));
     this.children = new LXModel[builder.children.size()];
     List<LXPoint> _points = new ArrayList<LXPoint>(builder.points);
@@ -321,6 +332,7 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = this.points.length;
+    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>(builder.datagrams));
     recomputeGeometry();
     if (isRoot) {
       reindexPoints();
@@ -370,21 +382,6 @@ public class LXModel implements LXSerializable {
     for (LXPoint p : this.points) {
       p.index = index++;
     }
-    return this;
-  }
-
-  /**
-   * Custom LXModel subclasses may want to directly implement their output functionality.
-   * Any datagrams added by this call will be sent
-   *
-   * @param datagram the datagram to add
-   * @return this for chaining method calls.
-   */
-  public LXModel addDatagram(LXDatagram datagram) {
-    if (this.mutableDatagrams.contains(datagram)) {
-      throw new IllegalStateException("Cannot add datagram twice: " + datagram);
-    }
-    this.mutableDatagrams.add(datagram);
     return this;
   }
 
