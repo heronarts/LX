@@ -34,6 +34,7 @@ import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -1028,7 +1029,7 @@ public class LX {
 
   protected static void setLogFile(File file) {
     try {
-      logFile = new PrintStream(file);
+      logFile = new PrintStream(new FileOutputStream(file, true));
     } catch (Exception x) {
       error(x, "Log file cannot be used: " + file.toURI() + " - " + x.getLocalizedMessage());
     }
