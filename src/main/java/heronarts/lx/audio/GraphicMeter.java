@@ -110,7 +110,7 @@ public class GraphicMeter extends DecibelMeter {
     this.bands = this.impl.bands;
     int i = 1;
     for (NormalizedParameter band : this.bands) {
-      addParameter("band-" + i, band);
+      addParameter("band-" + (i++), band);
     }
   }
 
