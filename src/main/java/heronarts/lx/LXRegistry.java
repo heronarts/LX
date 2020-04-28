@@ -37,7 +37,6 @@ import heronarts.lx.blend.MultiplyBlend;
 import heronarts.lx.blend.NormalBlend;
 import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.model.LXModel;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
 
@@ -221,15 +220,6 @@ public class LXRegistry implements LXSerializable {
   public final List<String> jsonFixtures =
    Collections.unmodifiableList(this.mutableJsonFixtures);
 
-  private final List<Class<? extends LXModel>> mutableModels =
-    new ArrayList<Class<? extends LXModel>>();
-
-  /**
-   * List of globally registered models.
-   */
-  public final List<Class<? extends LXModel>> models =
-    Collections.unmodifiableList(this.mutableModels);
-
   private final List<Plugin> mutablePlugins = new ArrayList<Plugin>();
 
   /**
@@ -375,9 +365,6 @@ public class LXRegistry implements LXSerializable {
     if (LXFixture.class.isAssignableFrom(clz)) {
       addFixture(clz.asSubclass(LXFixture.class));
     }
-    if (LXModel.class.isAssignableFrom(clz)) {
-      addModel(clz.asSubclass(LXModel.class));
-    }
     if (LXPlugin.class.isAssignableFrom(clz)) {
       addPlugin(clz.asSubclass(LXPlugin.class));
     }
@@ -392,9 +379,6 @@ public class LXRegistry implements LXSerializable {
     }
     if (LXFixture.class.isAssignableFrom(clz)) {
       removeFixture(clz.asSubclass(LXFixture.class));
-    }
-    if (LXModel.class.isAssignableFrom(clz)) {
-      removeModel(clz.asSubclass(LXModel.class));
     }
     // NOTE: plugin classes are not removed, they can only be dealt with once at initialization
     // and if already running you can not "undo" their work until the next restart, so they should
@@ -518,66 +502,6 @@ public class LXRegistry implements LXSerializable {
         throw new IllegalStateException("Attemping to unregister effect that does not exist: " + effect);
       }
       this.mutableEffects.remove(effect);
-    }
-    return this;
-  }
-
-  /**
-   * Register a pattern class with the engine
-   *
-   * @param model Model class
-   * @return this
-   */
-  public LXRegistry addModel(Class<? extends LXModel> model) {
-    Objects.requireNonNull(model, "May not add null LXRegistry.addModel");
-    checkRegistration();
-    if (this.mutableModels.contains(model)) {
-      throw new IllegalStateException("Attemping to register model twice: " + model);
-    }
-    this.mutableModels.add(model);
-    return this;
-  }
-
-  /**
-   * Register a set of model classes with the engine
-   *
-   * @param models List of model classes
-   * @return this
-   */
-  public LXRegistry addModels(Class<? extends LXModel>[] models) {
-    checkRegistration();
-    for (Class<? extends LXModel> model : models) {
-      addModel(model);
-    }
-    return this;
-  }
-
-  /**
-   * Unregister model class with the engine
-   *
-   * @param model Model class
-   * @return this
-   */
-  public LXRegistry removeModel(Class<? extends LXModel> model) {
-    if (!this.mutableModels.contains(model)) {
-      throw new IllegalStateException("Attemping to unregister model that does not exist: " + model);
-    }
-    this.mutableModels.remove(model);
-    return this;
-  }
-
-  /**
-   * Unregister model classes with the engine
-   *
-   * @param models Model classes
-   * @return this
-   */
-  public LXRegistry removeModels(List<Class<? extends LXModel>> models) {
-    for (Class<? extends LXModel> model : models) {
-      if (!this.mutableModels.contains(model)) {
-        throw new IllegalStateException("Attemping to unregister model that does not exist: " + model);
-      }
-      this.mutableModels.remove(model);
     }
     return this;
   }
