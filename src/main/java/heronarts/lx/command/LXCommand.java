@@ -1566,6 +1566,35 @@ public abstract class LXCommand {
         lx.structure.moveFixture(this.fixture.get(), this.originalIndex);
       }
     }
+
+    public static class NewModel extends LXCommand {
+
+      private final List<RemoveFixture> removeFixtures =
+        new ArrayList<RemoveFixture>();
+
+      public NewModel(LXStructure structure) {
+        for (LXFixture fixture : structure.fixtures) {
+          this.removeFixtures.add(new RemoveFixture(fixture));
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "New Model";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.structure.newDynamicModel();
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (RemoveFixture remove : this.removeFixtures) {
+          remove.undo(lx);
+        }
+      }
+    }
   }
 
   public static class Midi {
