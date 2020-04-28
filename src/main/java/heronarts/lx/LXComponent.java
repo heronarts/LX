@@ -529,7 +529,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     return this;
   }
 
-  public LXComponent addParameter(String path, LXParameter parameter) {
+  protected LXComponent addParameter(String path, LXParameter parameter) {
     _checkPath(path, "parameter");
     if (this.parameters.containsValue(parameter)) {
       throw new IllegalStateException(
@@ -548,25 +548,32 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         ((LXListenableParameter) parameter).addListener(this.oscListener);
       }
     }
+    if (parameter instanceof ColorParameter) {
+      // NOTE: order is important, brightness must be saved/loaded first
+      ColorParameter colorParameter = (ColorParameter) parameter;
+      addParameter(path + "/" + ColorParameter.PATH_BRIGHTNESS, colorParameter.brightness);
+      addParameter(path + "/" + ColorParameter.PATH_SATURATION, colorParameter.saturation);
+      addParameter(path + "/" + ColorParameter.PATH_HUE, colorParameter.hue);
+    }
     return this;
   }
 
-  public final LXComponent addParameters(List<LXParameter> parameters) {
+  protected final LXComponent addParameters(List<LXParameter> parameters) {
     for (LXParameter parameter : parameters) {
       addParameter(parameter);
     }
     return this;
   }
 
-  public LXComponent removeParameter(String path) {
+  protected LXComponent removeParameter(String path) {
     LXParameter parameter = this.parameters.get(path);
     if (parameter == null) {
-      throw new IllegalStateException("No parameter at path: " + path);
+      throw new IllegalStateException("Cannot remove parameter at non-existent path: " + path + " " + this);
     }
     return removeParameter(parameter);
   }
 
-  public LXComponent removeParameter(LXParameter parameter) {
+  protected LXComponent removeParameter(LXParameter parameter) {
     if (parameter.getParent() != this) {
       throw new IllegalStateException("Cannot remove parameter not owned by component");
     }

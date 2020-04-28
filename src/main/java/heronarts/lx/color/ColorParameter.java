@@ -1,6 +1,5 @@
 package heronarts.lx.color;
 
-import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -42,16 +41,6 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
   @Override
   public ColorParameter setDescription(String description) {
     return (ColorParameter) super.setDescription(description);
-  }
-
-  @Override
-  public LXParameter setComponent(LXComponent component, String path) {
-    super.setComponent(component, path);
-    // NOTE: order is important, brightness should be loaded first
-    component.addParameter(path + "/" + PATH_BRIGHTNESS, this.brightness);
-    component.addParameter(path + "/" + PATH_SATURATION, this.saturation);
-    component.addParameter(path + "/" + PATH_HUE, this.hue);
-    return this;
   }
 
   public int getColor() {
@@ -97,6 +86,14 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
       );
       this.internalHsbUpdate = false;
     }
+  }
+
+  @Override
+  public void dispose() {
+    this.hue.removeListener(this);
+    this.saturation.removeListener(this);
+    this.brightness.removeListener(this);
+    super.dispose();
   }
 
 }
