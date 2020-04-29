@@ -28,6 +28,7 @@ import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -66,11 +67,16 @@ public abstract class LXBasicFixture extends LXFixture {
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which KiNET physical output port is used");
 
+  public final BooleanParameter reverse =
+    new BooleanParameter("Reverse", false)
+    .setDescription("Whether the output wiring of this fixture is reversed");
+
   private LXBufferDatagram datagram = null;
 
   protected LXBasicFixture(LX lx, String label) {
     super(lx, label);
     addDatagramParameter("protocol", this.protocol);
+    addDatagramParameter("reverse", this.reverse);
     addParameter("host", this.host);
     addParameter("artNetUniverse", this.artNetUniverse);
     addParameter("opcChannel", this.opcChannel);
@@ -92,6 +98,15 @@ public abstract class LXBasicFixture extends LXFixture {
     this.datagram = buildDatagram();
     if (this.datagram != null) {
       addDatagram(this.datagram);
+    }
+  }
+
+  @Override
+  protected int[] toDynamicIndexBuffer() {
+    if (this.reverse.isOn()) {
+      return super.toDynamicIndexBuffer(size() - 1, size(), -1);
+    } else {
+      return super.toDynamicIndexBuffer();
     }
   }
 
