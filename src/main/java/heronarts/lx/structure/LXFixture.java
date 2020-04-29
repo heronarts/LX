@@ -354,11 +354,94 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
   }
 
+  /**
+   * An internal utility class which dynamically keeps the index values inside
+   * an index buffer up to date and in sync with this fixture. Custom fixture
+   * classes should use this construct via {@link #toDynamicIndexBuffer()}
+   * in order to keep their datagram indices in sync with the
+   */
+  private class DynamicIndexBuffer {
+
+    private final int start;
+    private final int num;
+    private final int stride;
+    private final int[] indexBuffer;
+
+    private DynamicIndexBuffer(int start, int num, int stride) {
+      this.start = start;
+      this.num = num;
+      this.stride = stride;
+      this.indexBuffer = new int[this.num];
+      update();
+    }
+
+    private void update() {
+      for (int i = 0; i < this.num; ++i) {
+        this.indexBuffer[i] = points.get(this.start + i * this.stride).index;
+      }
+    }
+  }
+
+  /**
+   * Get an index buffer version of this fixture. The index buffer will be dynamic
+   * and have its point indices updated automatically anytime this fixture is moved
+   * or the larger structure is rearranged. The buffer will stop being updated
+   * if this fixture's metrics are changed or if it is regenerated for any other
+   * reason.
+   *
+   * @return Index buffer of the points in this fixture
+   */
+  protected int[] toDynamicIndexBuffer() {
+    return toDynamicIndexBuffer(0, size());
+  }
+
+  /**
+   * Get an index buffer version of this fixture. The index buffer will be dynamic
+   * and have its point indices updated automatically anytime this fixture is moved
+   * or the larger structure is rearranged. The buffer will stop being updated
+   * if this fixture's metrics are changed or if it is regenerated for any other
+   * reason.
+   *
+   * @param start Start index relative to this fixture
+   * @param num Total number of points
+   * @param stride How many points to stride over for each step
+   * @return Index buffer of the points in this fixture
+   */
+  protected int[] toDynamicIndexBuffer(int start, int num) {
+    return toDynamicIndexBuffer(0, num, 1);
+  }
+
+  /**
+   * Get an index buffer version of this fixture. The index buffer will be dynamic
+   * and have its point indices updated automatically anytime this fixture is moved
+   * or the larger structure is rearranged. The buffer will stop being updated
+   * if this fixture's metrics are changed or if it is regenerated for any other
+   * reason.
+   *
+   * @param start Start index relative to this fixture
+   * @param num Total number of points
+   * @param stride How many points to stride over for each step
+   * @return Index buffer of the points in this fixture
+   */
+  protected int[] toDynamicIndexBuffer(int start, int num, int stride) {
+    DynamicIndexBuffer dynamicIndexBuffer = new DynamicIndexBuffer(start, num, stride);
+    this.dynamicIndexBuffers.add(dynamicIndexBuffer);
+    return dynamicIndexBuffer.indexBuffer;
+  }
+
+  private final List<DynamicIndexBuffer> dynamicIndexBuffers = new ArrayList<DynamicIndexBuffer>();
+
   private void regenerateDatagrams() {
+    // Dispose of all these datagrams
     for (LXDatagram datagram : this.datagrams) {
       datagram.dispose();
     }
     this.mutableDatagrams.clear();
+
+    // Dynamic index buffers are no good anymore
+    this.dynamicIndexBuffers.clear();
+
+    // Rebuild
     this.isInBuildDatagrams = true;
     buildDatagrams();
     this.isInBuildDatagrams = false;
@@ -374,11 +457,13 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   protected abstract void buildDatagrams();
 
   /**
-   * Subclasses must override this method to update their datagrams in the
+   * Subclasses may override this method to update their datagrams in the
    * case that the point indexing of this fixture has changed. Datagrams
-   * may be removed and readded inside this method if necessary.
+   * may be removed and readded inside this method if necessary. If the
+   * {@link DynamicIndexBuffer} class has been used to construct indices for
+   * datagrams, then no action should typically be necessary.
    */
-  protected abstract void reindexDatagrams();
+  protected void reindexDatagrams() {}
 
   /**
    * Subclasses call this method to add a datagram to thix fixture. This may only
@@ -512,20 +597,6 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   protected abstract void computePointGeometry(LXMatrix transform, List<LXPoint> points);
 
   /**
-   * Get an index buffer version of this fixture
-   *
-   * @return Index buffer of the points in this fixture
-   */
-  public int[] toIndexBuffer() {
-    int[] indexBuffer = new int[this.points.size()];
-    int i = 0;
-    for (LXPoint p : this.points) {
-      indexBuffer[i++] = p.index;
-    }
-    return indexBuffer;
-  }
-
-  /**
    * Reindex the points in this fixture.
    *
    * @param startIndex Buffer index for the start of this fixture
@@ -540,6 +611,13 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         child.reindex(startIndex);
         startIndex += child.totalSize();
       }
+
+      // Update our dynamic index buffers
+      for (DynamicIndexBuffer dynamicIndexBuffer : this.dynamicIndexBuffers) {
+        dynamicIndexBuffer.update();
+      }
+
+      // Reindex all the datagrams
       reindexDatagrams();
     }
   }

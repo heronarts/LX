@@ -95,13 +95,6 @@ public abstract class LXBasicFixture extends LXFixture {
     }
   }
 
-  @Override
-  protected void reindexDatagrams() {
-    if (this.datagram != null) {
-      this.datagram.setIndexBuffer(toIndexBuffer());
-    }
-  }
-
   protected LXBufferDatagram buildDatagram() {
     Protocol protocol = this.protocol.getEnum();
     if (protocol == Protocol.NONE) {
@@ -111,19 +104,19 @@ public abstract class LXBasicFixture extends LXFixture {
     LXBufferDatagram datagram;
     switch (protocol) {
     case ARTNET:
-      datagram = new ArtNetDatagram(toIndexBuffer(), this.artNetUniverse.getValuei());
+      datagram = new ArtNetDatagram(toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
       break;
     case SACN:
-      datagram = new StreamingACNDatagram(toIndexBuffer(), this.artNetUniverse.getValuei());
+      datagram = new StreamingACNDatagram(toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
       break;
     case OPC:
-      datagram = new OPCDatagram(toIndexBuffer(), (byte) this.opcChannel.getValuei());
+      datagram = new OPCDatagram(toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
       break;
     case DDP:
-      datagram = new DDPDatagram(toIndexBuffer()).setDataOffset(this.ddpDataOffset.getValuei());
+      datagram = new DDPDatagram(toDynamicIndexBuffer()).setDataOffset(this.ddpDataOffset.getValuei());
       break;
     case KINET:
-      datagram = new KinetDatagram(toIndexBuffer(), this.kinetPort.getValuei());
+      datagram = new KinetDatagram(toDynamicIndexBuffer(), this.kinetPort.getValuei());
       break;
     default:
     case NONE:

@@ -86,13 +86,14 @@ public abstract class LXBufferDatagram extends LXDatagram {
   }
 
   /**
-   * Updates the values int he index buffer for this datagram. The indices can change but the size
-   * of the datagram cannot, the indexBuffer must have the same length.
+   * Updates the values in the index buffer for this datagram. The indices can change but the size
+   * of the datagram cannot, the indexBuffer must have the same length. It will be copied into the
+   * index buffer object held by the datagram.
    *
-   * @param indexBuffer New index buffer, must have same length as existing
+   * @param indexBuffer New index buffer values, must have same length as existing
    * @return this
    */
-  public LXBufferDatagram setIndexBuffer(int[] indexBuffer) {
+  public LXBufferDatagram updateIndexBuffer(int[] indexBuffer) {
     Objects.requireNonNull(indexBuffer, "May not set null LXBufferDatagram.setIndexBuffer()");
     if (indexBuffer.length != this.indexBuffer.length) {
       throw new IllegalArgumentException("May not change length of LXBufferDatagram indexBuffer, must make a new Datagram: " + this.indexBuffer.length + " != " + indexBuffer.length);
