@@ -39,6 +39,10 @@ public class DDPDatagram extends LXBufferDatagram {
   }
 
   public DDPDatagram(int[] indexBuffer) {
+    this(indexBuffer, 0);
+  }
+
+  public DDPDatagram(int[] indexBuffer, int dataOffset) {
     super(indexBuffer, HEADER_LENGTH + indexBuffer.length * 3, ByteOrder.RGB);
     setPort(DEFAULT_PORT);
     int dataLen = indexBuffer.length * 3;
@@ -56,10 +60,7 @@ public class DDPDatagram extends LXBufferDatagram {
     this.buffer[3] = 0x01;
 
     // Data offset
-    this.buffer[4] = 0x00;
-    this.buffer[5] = 0x00;
-    this.buffer[6] = 0x00;
-    this.buffer[7] = 0x00;
+    setDataOffset(dataOffset);
 
     // Data length
     this.buffer[8] = (byte) (0xff & (dataLen >> 8));

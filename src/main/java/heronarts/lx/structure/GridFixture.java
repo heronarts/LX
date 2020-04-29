@@ -18,18 +18,62 @@
 
 package heronarts.lx.structure;
 
+import java.net.UnknownHostException;
 import java.util.List;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.output.ArtNetDatagram;
+import heronarts.lx.output.DDPDatagram;
+import heronarts.lx.output.KinetDatagram;
+import heronarts.lx.output.LXBufferDatagram;
+import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
+import heronarts.lx.output.OPCDatagram;
+import heronarts.lx.output.StreamingACNDatagram;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
-public class GridFixture extends LXBasicFixture {
+public class GridFixture extends LXProtocolFixture {
+
+  public enum Wiring {
+    ROWS_L2R_B2T("Rows - Left→Right - Bottom→Top"),
+    ROWS_L2R_T2B("Rows - Left→Right - Top→Bottom"),
+    ROWS_R2L_B2T("Rows - Right→Left - Bottom→Top"),
+    ROWS_R2L_T2B("Rows - Right→Left - Top→Bottom"),
+
+    COLUMNS_B2T_L2R("Cols - Bottom→Top - Left→Right"),
+    COLUMNS_B2T_R2L("Cols - Bottom→Top - Right→Left"),
+    COLUMNS_T2B_L2R("Cols - Top→Bottom - Left→Right"),
+    COLUMNS_T2B_R2L("Cols - Top→Bottom - Right→Left"),
+
+    ZIGZAG_HORIZ_BL("ZigZag - Horiz - Bottom Left"),
+    ZIGZAG_HORIZ_TL("ZigZag - Horiz - Top Left"),
+    ZIGZAG_HORIZ_BR("ZigZag - Horiz - Bottom Right"),
+    ZIGZAG_HORIZ_TR("ZigZag - Horiz - Top Right"),
+
+    ZIGZAG_VERT_BL("ZigZag - Vert - Bottom Left"),
+    ZIGZAG_VERT_TL("ZigZag - Vert - Top Left"),
+    ZIGZAG_VERT_BR("ZigZag - Vert - Bottom Right"),
+    ZIGZAG_VERT_TR("ZigZag - Vert - Top Right");
+
+    private final String description;
+
+    Wiring(String description) {
+      this.description = description;
+    }
+
+    @Override
+    public String toString() {
+      return this.description;
+    }
+  }
 
   public final DiscreteParameter numRows = (DiscreteParameter)
     new DiscreteParameter("Rows", 10, 1, 1025)
@@ -49,12 +93,50 @@ public class GridFixture extends LXBasicFixture {
     new BoundedParameter("Column Spacing", 10, 0, 1000000)
     .setDescription("Spacing between columns in the grid");
 
+  public final EnumParameter<Wiring> wiring =
+    new EnumParameter<Wiring>("Wiring", Wiring.ROWS_L2R_B2T)
+    .setDescription("How the strips in the grid are sequentially wired");
+
+  public final BooleanParameter splitPacket =
+    new BooleanParameter("Split Packet", false)
+    .setDescription("Whether to break a large grid into multiple datagrams on separate channels");
+
+  public final DiscreteParameter pointsPerPacket =
+    new DiscreteParameter("Points Per Packet", 170, 1, 21845)
+    .setDescription("Number of LED points per packet");
+
   public GridFixture(LX lx) {
     super(lx, "Grid");
+    addParameter("host", this.host);
+    addDatagramParameter("protocol", this.protocol);
+    addDatagramParameter("artNetUniverse", this.artNetUniverse);
+    addDatagramParameter("opcChannel", this.opcChannel);
+    addDatagramParameter("ddpDataOffset", this.ddpDataOffset);
+    addDatagramParameter("kinetPort", this.kinetPort);
+
     addMetricsParameter("numRows", this.numRows);
     addMetricsParameter("numColumns", this.numColumns);
     addGeometryParameter("rowSpacing", this.rowSpacing);
     addGeometryParameter("columnSpacing", this.columnSpacing);
+    addDatagramParameter("wiring", this.wiring);
+    addDatagramParameter("splitPacket", this.splitPacket);
+    addDatagramParameter("pointsPerPacket", this.pointsPerPacket);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (p == this.host) {
+      for (LXDatagram datagram : this.datagrams) {
+        try {
+          datagram.setAddress(this.host.getString());
+        } catch (UnknownHostException uhx) {
+          datagram.enabled.setValue(false);
+          // TODO(mcslee): get an error to the UI...
+          LXOutput.error(uhx, "Unkown host for fixture datagram: " + this.host.getString());
+        }
+      }
+    }
   }
 
   @Override
@@ -75,6 +157,7 @@ public class GridFixture extends LXBasicFixture {
 
   @Override
   protected void computePointGeometry(LXMatrix matrix, List<LXPoint> points) {
+    // We create the points from left-to-right (increasing X), bottom-to-top (increasing Y)
     LXTransform transform = new LXTransform(matrix);
     int numRows = this.numRows.getValuei();
     int numColumns = this.numColumns.getValuei();
@@ -100,6 +183,245 @@ public class GridFixture extends LXBasicFixture {
   @Override
   protected String getModelKey() {
     return LXModel.Key.GRID;
+  }
+
+  private int[] getWiringIndexBuffer() {
+    int size = size();
+    int numRows = this.numRows.getValuei();
+    int numColumns = this.numColumns.getValuei();
+
+    int[] indexBuffer = new int[size];
+    int i = 0;
+
+    // Note: this code could certainly be more clever and less repetitive,
+    // but erring on the side of transparency here.
+    switch (this.wiring.getEnum()) {
+    case COLUMNS_B2T_L2R:
+      for (int x = 0; x < numColumns; ++x) {
+        for (int y = 0; y < numRows; ++y) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case COLUMNS_B2T_R2L:
+      for (int x = 0; x < numColumns; ++x) {
+        for (int y = numRows - 1; y >= 0; --y) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case COLUMNS_T2B_L2R:
+      for (int x = numColumns - 1; x >= 0; --x) {
+        for (int y = 0; y < numRows; ++y) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case COLUMNS_T2B_R2L:
+      for (int x = numColumns - 1; x >= 0; --x) {
+        for (int y = numRows - 1; y >= 0; --y) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case ROWS_L2R_B2T:
+      for (int y = 0; y < numRows; ++y) {
+        for (int x = 0; x < numColumns; ++x) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case ROWS_L2R_T2B:
+      for (int y = numRows - 1; y >= 0; --y) {
+        for (int x = 0; x < numColumns; ++x) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case ROWS_R2L_B2T:
+      for (int y = 0; y < numRows; ++y) {
+        for (int x = numColumns - 1; x >= 0; --x) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case ROWS_R2L_T2B:
+      for (int y = numRows - 1; y >= 0; --y) {
+        for (int x = numColumns - 1; x >= 0; --x) {
+          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+        }
+      }
+      break;
+    case ZIGZAG_HORIZ_BL:
+      for (int y = 0; y < numRows; ++y) {
+        if (y % 2 == 0) {
+          for (int x = 0; x < numColumns; ++x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int x = numColumns - 1; x >= 0; --x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    case ZIGZAG_HORIZ_BR:
+      for (int y = 0; y < numRows; ++y) {
+        if (y % 2 != 0) {
+          for (int x = 0; x < numColumns; ++x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int x = numColumns - 1; x >= 0; --x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    case ZIGZAG_HORIZ_TL:
+      for (int y = numRows - 1; y >= 0; --y) {
+        if ((y % 2) != (numRows % 2)) {
+          for (int x = 0; x < numColumns; ++x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int x = numColumns - 1; x >= 0; --x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    case ZIGZAG_HORIZ_TR:
+      for (int y = numRows - 1; y >= 0; --y) {
+        if ((y % 2) == (numRows % 2)) {
+          for (int x = 0; x < numColumns; ++x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int x = numColumns - 1; x >= 0; --x) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    case ZIGZAG_VERT_BL:
+      for (int x = 0; x < numColumns; ++x) {
+        if (x % 2 == 0) {
+          for (int y = 0; y < numRows; ++y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int y = numRows - 1; y >= 0; --y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    case ZIGZAG_VERT_BR:
+      for (int x = numColumns - 1; x >= 0; --x) {
+        if ((x % 2) != (numColumns % 2)) {
+          for (int y = 0; y < numRows; ++y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int y = numRows - 1; y >= 0; --y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    case ZIGZAG_VERT_TL:
+      for (int x = 0; x < numColumns; ++x) {
+        if (x % 2 == 0) {
+          for (int y = numRows - 1; y >= 0; --y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int y = 0; y < numRows; ++y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    case ZIGZAG_VERT_TR:
+      for (int x = numColumns - 1; x >= 0; --x) {
+        if ((x % 2) == (numColumns % 2)) {
+          for (int y = 0; y < numRows; ++y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        } else {
+          for (int y = numRows - 1; y >= 0; --y) {
+            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          }
+        }
+      }
+      break;
+    default:
+      throw new IllegalStateException("Grid Wiring has non-existed enum value: " + this.wiring);
+    }
+    return indexBuffer;
+  }
+
+  @Override
+  protected void buildDatagrams() {
+    Protocol protocol = this.protocol.getEnum();
+    if (protocol == Protocol.NONE) {
+      return;
+    }
+
+    int[] wiringIndexBuffer = getWiringIndexBuffer();
+    int pointsPerPacket = this.pointsPerPacket.getValuei();
+    if (this.splitPacket.isOn() && (wiringIndexBuffer.length > pointsPerPacket)) {
+      int i = 0;
+      int channel = getProtocolChannel();
+      while (i < wiringIndexBuffer.length) {
+        int chunkSize = Math.min(pointsPerPacket, wiringIndexBuffer.length - i);
+        int chunkIndexBuffer[] = new int[chunkSize];
+        System.arraycopy(wiringIndexBuffer, i, chunkIndexBuffer, 0, chunkSize);
+        addDatagram(chunkIndexBuffer, channel++);
+        i += chunkSize;
+      }
+    } else {
+      addDatagram(wiringIndexBuffer, getProtocolChannel());
+    }
+  }
+
+  private void addDatagram(int[] indexBuffer, int channel) {
+    LXBufferDatagram datagram = null;
+    switch (this.protocol.getEnum()) {
+    case ARTNET:
+      datagram = new ArtNetDatagram(indexBuffer, channel);
+      break;
+    case SACN:
+      datagram = new StreamingACNDatagram(indexBuffer, channel);
+      break;
+    case DDP:
+      datagram = new DDPDatagram(indexBuffer, channel);
+      break;
+    case KINET:
+      datagram = new KinetDatagram(indexBuffer, channel);
+      break;
+    case OPC:
+      datagram = new OPCDatagram(indexBuffer, (byte) channel);
+      break;
+    default:
+      break;
+    }
+    if (datagram != null) {
+      try {
+        datagram.setAddress(this.host.getString());
+      } catch (UnknownHostException uhx) {
+        LX.error(uhx, "Invalid host on datagram: "+ uhx.getLocalizedMessage());
+      }
+      addDatagram(datagram);
+
+    }
+
+  }
+
+  @Override
+  protected void reindexDatagrams() {
+
   }
 
 }

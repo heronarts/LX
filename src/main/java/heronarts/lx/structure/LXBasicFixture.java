@@ -28,48 +28,13 @@ import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
-import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.StringParameter;
 
 /**
  * Class that represents a basic fixture with a fixed number of points,
  * no hierarchy, and that is addressed with a single datagram packet.
  */
-public abstract class LXBasicFixture extends LXFixture {
-
-  public final EnumParameter<Protocol> protocol =
-    new EnumParameter<Protocol>("Protocol", Protocol.NONE)
-    .setDescription("Which lighting data protocol this fixture uses");
-
-  public final StringParameter host =
-    new StringParameter("Host", "127.0.0.1")
-    .setDescription("Host/IP this fixture transmits to");
-
-  public final DiscreteParameter artNetUniverse = (DiscreteParameter)
-    new DiscreteParameter("ArtNet Universe", 0, 0, 32768).setUnits(LXParameter.Units.INTEGER)
-    .setDescription("Which ArtNet universe is used");
-
-  public final DiscreteParameter opcChannel = (DiscreteParameter)
-    new DiscreteParameter("OPC Channel", 0, 0, 256)
-    .setUnits(LXParameter.Units.INTEGER)
-    .setDescription("Which OPC channel is used");
-
-  public final DiscreteParameter ddpDataOffset = (DiscreteParameter)
-    new DiscreteParameter("DDP Offset", 0, 0, 32768)
-    .setUnits(LXParameter.Units.INTEGER)
-    .setDescription("The DDP data offset for this packet");
-
-  public final DiscreteParameter kinetPort = (DiscreteParameter)
-    new DiscreteParameter("KiNET Port", 1, 0, 256)
-    .setUnits(LXParameter.Units.INTEGER)
-    .setDescription("Which KiNET physical output port is used");
-
-  public final BooleanParameter reverse =
-    new BooleanParameter("Reverse", false)
-    .setDescription("Whether the output wiring of this fixture is reversed");
+public abstract class LXBasicFixture extends LXProtocolFixture {
 
   private LXBufferDatagram datagram = null;
 
@@ -128,7 +93,7 @@ public abstract class LXBasicFixture extends LXFixture {
       datagram = new OPCDatagram(toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
       break;
     case DDP:
-      datagram = new DDPDatagram(toDynamicIndexBuffer()).setDataOffset(this.ddpDataOffset.getValuei());
+      datagram = new DDPDatagram(toDynamicIndexBuffer(), this.ddpDataOffset.getValuei());
       break;
     case KINET:
       datagram = new KinetDatagram(toDynamicIndexBuffer(), this.kinetPort.getValuei());
