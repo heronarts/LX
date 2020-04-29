@@ -43,24 +43,24 @@ import heronarts.lx.transform.LXTransform;
 public class GridFixture extends LXProtocolFixture {
 
   public enum Wiring {
-    ROWS_L2R_B2T("Rows - Left→Right - Bottom→Top"),
-    ROWS_L2R_T2B("Rows - Left→Right - Top→Bottom"),
-    ROWS_R2L_B2T("Rows - Right→Left - Bottom→Top"),
-    ROWS_R2L_T2B("Rows - Right→Left - Top→Bottom"),
+    ROWS_L2R_B2T("Rows - Left→Right - Bot→Top"),
+    ROWS_L2R_T2B("Rows - Left→Right - Top→Bot"),
+    ROWS_R2L_B2T("Rows - Right→Left - Bot→Top"),
+    ROWS_R2L_T2B("Rows - Right→Left - Top→Bot"),
 
-    COLUMNS_B2T_L2R("Cols - Bottom→Top - Left→Right"),
-    COLUMNS_B2T_R2L("Cols - Bottom→Top - Right→Left"),
-    COLUMNS_T2B_L2R("Cols - Top→Bottom - Left→Right"),
-    COLUMNS_T2B_R2L("Cols - Top→Bottom - Right→Left"),
+    COLUMNS_B2T_L2R("Cols - Bot→Top - Left→Right"),
+    COLUMNS_B2T_R2L("Cols - Bot→Top - Right→Left"),
+    COLUMNS_T2B_L2R("Cols - Top→Bot - Left→Right"),
+    COLUMNS_T2B_R2L("Cols - Top→Bot - Right→Left"),
 
-    ZIGZAG_HORIZ_BL("ZigZag - Horiz - Bottom Left"),
+    ZIGZAG_HORIZ_BL("ZigZag - Horiz - Bot Left"),
     ZIGZAG_HORIZ_TL("ZigZag - Horiz - Top Left"),
-    ZIGZAG_HORIZ_BR("ZigZag - Horiz - Bottom Right"),
+    ZIGZAG_HORIZ_BR("ZigZag - Horiz - Bot Right"),
     ZIGZAG_HORIZ_TR("ZigZag - Horiz - Top Right"),
 
-    ZIGZAG_VERT_BL("ZigZag - Vert - Bottom Left"),
+    ZIGZAG_VERT_BL("ZigZag - Vert - Bot Left"),
     ZIGZAG_VERT_TL("ZigZag - Vert - Top Left"),
-    ZIGZAG_VERT_BR("ZigZag - Vert - Bottom Right"),
+    ZIGZAG_VERT_BR("ZigZag - Vert - Bot Right"),
     ZIGZAG_VERT_TR("ZigZag - Vert - Top Right");
 
     private final String description;
