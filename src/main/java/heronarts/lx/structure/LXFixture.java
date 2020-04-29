@@ -690,6 +690,14 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     return sum;
   }
 
+  @Override
+  public void dispose() {
+    for (LXFixture child : this.children) {
+      child.dispose();
+    }
+    super.dispose();
+  }
+
   // Flag to avoid unnecessary work while parameters are being loaded... we'll fix
   // everything *after* the parameters are all loaded.
   private boolean isLoading = false;

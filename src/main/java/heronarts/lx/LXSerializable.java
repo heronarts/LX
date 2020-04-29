@@ -19,6 +19,7 @@
 package heronarts.lx;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 import com.google.gson.JsonArray;
@@ -125,6 +126,23 @@ public interface LXSerializable {
         serializable.load(lx, object.getAsJsonObject(key));
       } else if (defaultEmptyObj) {
         serializable.load(lx, new JsonObject());
+      }
+    }
+
+    /**
+     * Loads an array of sub-objects from the given key, if it is found
+     *
+     * @param lx LX instance
+     * @param serializables List of child objects to load
+     * @param object Object to load from
+     * @param key Key to check for
+     */
+    public static void loadArray(LX lx, List<? extends LXSerializable> serializables, JsonObject object, String key) {
+      if (object.has(key)) {
+        JsonArray array = object.getAsJsonArray(key);
+        for (int i = 0; i < array.size(); ++i) {
+          serializables.get(i).load(lx, array.get(i).getAsJsonObject());
+        }
       }
     }
 

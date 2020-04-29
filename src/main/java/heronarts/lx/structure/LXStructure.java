@@ -565,6 +565,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   private static final String KEY_STATIC_MODEL = "staticModel";
   private static final String KEY_FILE = "file";
 
+  private static final String KEY_OUTPUT = "output";
+
   @Override
   public void load(LX lx, JsonObject obj) {
     if (this.isImmutable) {
@@ -627,6 +629,10 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       regenerateModel();
     }
 
+    if (this.output != null) {
+      LXSerializable.Utils.loadObject(lx, this.output, obj, KEY_OUTPUT);
+    }
+
   }
 
   private void loadFixtures(LX lx, JsonObject obj) {
@@ -649,6 +655,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     super.save(lx, obj);
     if (this.isImmutable) {
       return;
+    }
+    if (this.output != null) {
+      obj.add(KEY_OUTPUT, LXSerializable.Utils.toObject(lx, this.output));
     }
     if (this.staticModel != null) {
       obj.add(KEY_STATIC_MODEL, LXSerializable.Utils.toObject(lx, this.staticModel));
