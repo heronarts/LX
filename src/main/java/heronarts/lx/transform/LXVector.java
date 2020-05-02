@@ -223,6 +223,13 @@ public class LXVector {
     );
   }
 
+  public boolean isZero() {
+    return
+      (this.x == 0) &&
+      (this.y == 0) &&
+      (this.z == 0);
+  }
+
   /**
    * Rotate in x-y plane
    *
