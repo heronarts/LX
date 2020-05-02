@@ -34,6 +34,8 @@ public class StreamingACNDatagram extends LXBufferDatagram {
   protected final static int OFFSET_SEQUENCE_NUMBER = 111;
   protected final static int OFFSET_UNIVERSE_NUMBER = 113;
 
+  public final static int MAX_DATA_LENGTH = 512;
+
   private final static int DEFAULT_PORT = 5568;
 
   private final static int DEFAULT_UNIVERSE_NUMBER = 1;
@@ -257,7 +259,7 @@ public class StreamingACNDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getDataOffset() {
+  protected int getColorBufferPosition() {
     return OFFSET_DMX_DATA;
   }
 

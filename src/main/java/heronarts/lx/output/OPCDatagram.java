@@ -25,6 +25,8 @@ import heronarts.lx.model.LXModel;
  */
 public class OPCDatagram extends LXBufferDatagram implements OPCConstants {
 
+  public final static int MAX_DATA_LENGTH = 65535;
+
   public OPCDatagram(LXModel model) {
     this(model, CHANNEL_BROADCAST);
   }
@@ -38,8 +40,12 @@ public class OPCDatagram extends LXBufferDatagram implements OPCConstants {
   }
 
   public OPCDatagram(int[] indexBuffer, byte channel) {
-    super(indexBuffer, OPCOutput.HEADER_LEN + OPCOutput.BYTES_PER_PIXEL * indexBuffer.length, ByteOrder.RGB);
-    int dataLength = BYTES_PER_PIXEL * indexBuffer.length;
+    this(indexBuffer, channel, ByteOrder.RGB);
+  }
+
+  public OPCDatagram(int[] indexBuffer, byte channel, ByteOrder byteOrder) {
+    super(indexBuffer, OPCOutput.HEADER_LEN + byteOrder.getNumBytes() * indexBuffer.length, byteOrder);
+    int dataLength = byteOrder.getNumBytes() * indexBuffer.length;
     this.buffer[OFFSET_CHANNEL] = channel;
     this.buffer[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;
     this.buffer[OFFSET_DATA_LEN_MSB] = (byte)(dataLength >>> 8);
@@ -56,7 +62,7 @@ public class OPCDatagram extends LXBufferDatagram implements OPCConstants {
   }
 
   @Override
-  protected int getDataOffset() {
+  protected int getColorBufferPosition() {
     return OFFSET_DATA;
   }
 

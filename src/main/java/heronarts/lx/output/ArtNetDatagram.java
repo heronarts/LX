@@ -23,6 +23,7 @@ import heronarts.lx.model.LXModel;
 public class ArtNetDatagram extends LXBufferDatagram {
 
   public final static int ARTNET_PORT = 6454;
+  public final static int MAX_DATA_LENGTH = 512;
 
   private final static int DEFAULT_UNIVERSE = 0;
   private final static int ARTNET_HEADER_LENGTH = 18;
@@ -209,7 +210,7 @@ public class ArtNetDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getDataOffset() {
+  protected int getColorBufferPosition() {
     return ARTNET_HEADER_LENGTH;
   }
 

@@ -32,6 +32,8 @@ public class KinetDatagram extends LXBufferDatagram {
   private final static int PORTOUT_HEADER_LENGTH = 24;
   private final static int DATA_LENGTH = 512;
 
+  public final static int MAX_DATA_LENGTH = DATA_LENGTH;
+
   private final static int PORTOUT_PACKET_LENGTH = PORTOUT_HEADER_LENGTH + DATA_LENGTH;
   private final static int DMXOUT_PACKET_LENGTH = DMXOUT_HEADER_LENGTH + DATA_LENGTH;
 
@@ -189,7 +191,7 @@ public class KinetDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getDataOffset() {
+  protected int getColorBufferPosition() {
     return this.version.getDataOffset();
   }
 

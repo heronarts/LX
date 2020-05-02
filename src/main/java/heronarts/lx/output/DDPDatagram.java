@@ -28,6 +28,8 @@ import heronarts.lx.model.LXModel;
  */
 public class DDPDatagram extends LXBufferDatagram {
 
+  public final static int MAX_DATA_LENGTH = 65535;
+
   private static final int HEADER_LENGTH = 10;
   private static final int DEFAULT_PORT = 4048;
 
@@ -97,7 +99,7 @@ public class DDPDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getDataOffset() {
+  protected int getColorBufferPosition() {
     return HEADER_LENGTH;
   }
 }

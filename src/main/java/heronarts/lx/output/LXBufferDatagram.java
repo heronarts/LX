@@ -165,7 +165,7 @@ public abstract class LXBufferDatagram extends LXDatagram {
    *
    * @return data offset position
    */
-  protected abstract int getDataOffset();
+  protected abstract int getColorBufferPosition();
 
   /**
    * Subclasses may override to update the sequence number, if one is being used.
@@ -174,7 +174,7 @@ public abstract class LXBufferDatagram extends LXDatagram {
 
   @Override
   public final void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.indexBuffer, getDataOffset());
+    copyPoints(colors, glut, this.indexBuffer, getColorBufferPosition());
     updateSequenceNumber();
   }
 
