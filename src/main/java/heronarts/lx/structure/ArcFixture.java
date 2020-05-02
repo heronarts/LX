@@ -70,8 +70,8 @@ public class ArcFixture extends LXBasicFixture {
   }
 
   @Override
-  protected String getModelKey() {
-    return LXModel.Key.ARC;
+  protected String[] getModelKeys() {
+    return new String[] { LXModel.Key.STRIP, LXModel.Key.ARC};
   }
 
 }
