@@ -219,6 +219,34 @@ public class LXPoint {
   }
 
   /**
+   * Set the x, y, and z values based upon another point multiplied by a transform matrix
+   *
+   * @param matrix Transform matrix object
+   * @param that Another point object
+   * @return this
+   */
+  public LXPoint set(LXMatrix matrix, LXPoint that) {
+    float x2 = matrix.m11 * that.x + matrix.m12 * that.y + matrix.m13 * that.z + matrix.m14;
+    float y2 = matrix.m21 * that.x + matrix.m22 * that.y + matrix.m23 * that.z + matrix.m24;
+    float z2 = matrix.m31 * that.x + matrix.m32 * that.y + matrix.m33 * that.z + matrix.m34;
+    return set(x2, y2, z2);
+  }
+
+  /**
+   * Set the x, y, and z values based upon another point multiplied by a transform matrix
+   *
+   * @param matrix Transform matrix object
+   * @param that Another vector object
+   * @return this
+   */
+  public LXPoint set(LXMatrix matrix, LXVector that) {
+    float x2 = matrix.m11 * that.x + matrix.m12 * that.y + matrix.m13 * that.z + matrix.m14;
+    float y2 = matrix.m21 * that.x + matrix.m22 * that.y + matrix.m23 * that.z + matrix.m24;
+    float z2 = matrix.m31 * that.x + matrix.m32 * that.y + matrix.m33 * that.z + matrix.m34;
+    return set(x2, y2, z2);
+  }
+
+  /**
    * Sets the values of this point based upon another point
    *
    * @param that Other point to copy into this point
