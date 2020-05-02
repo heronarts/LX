@@ -213,7 +213,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   @Override
   public String getPath() {
-    return getModelKey() + "/" + (this.index + 1);
+    return getModelKeys()[0] + "/" + (this.index + 1);
   }
 
   void setIndex(int index) {
@@ -270,7 +270,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     _reindexChildren();
 
     // Notify the structure of change, rebuild will occur
-    this.lx.structure.fixtureGenerationChanged(this);
+    fixtureGenerationChanged(this);
   }
 
   // Invoked when a child fixture has been altered
@@ -503,7 +503,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * rebuild the points and the metrics, and notify container of the change to
    * this fixture's generation
    */
-  private void regenerate() {
+  protected final void regenerate() {
     // We may have a totally new size, blow out the points array and rebuild
     int numPoints = size();
     this.mutablePoints.clear();
@@ -656,7 +656,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     // Okay, good to go, construct the model
-    return new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKey());
+    return new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKeys());
   }
 
   private List<LXPoint> subpoints(int start, int n, int stride) {
@@ -673,6 +673,29 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * constructors are allowed.
    */
   public class Submodel extends LXModel {
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     */
+    public Submodel(int start, int n) {
+      this(start, n, 1);
+    }
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     * @param keys Model type key identifier for submodel
+     */
+    public Submodel(int start, int n, String ... keys) {
+      this(start, n, 1, keys);
+    }
 
     /**
      * Subclasses may use this helper to construct a submodel object from a set of
@@ -706,7 +729,18 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    *
    * @return String key for the model type
    */
-  protected abstract String getModelKey();
+  protected String getModelKey() {
+    return "model";
+  }
+
+  /**
+   * Subclasses may override to return an array of multiple key types.
+   *
+   * @return List of model key types for this fixture
+   */
+  protected String[] getModelKeys() {
+    return new String[] { getModelKey() };
+  }
 
   protected final static Submodel[] NO_SUBMODELS = new Submodel[0];
 
@@ -787,6 +821,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     this.isLoading = false;
 
     // Regenerate the whole thing once
-    regenerate();
+    if (this.container != null) {
+      regenerate();
+    }
   }
 }
