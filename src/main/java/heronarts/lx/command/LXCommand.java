@@ -1504,14 +1504,11 @@ public abstract class LXCommand {
 
     public static class RemoveSelectedFixtures extends LXCommand {
 
-      private final List<LXFixture> selectedFixtures;
-
       private final List<RemoveFixture> removeFixtures =
         new ArrayList<RemoveFixture>();
 
       public RemoveSelectedFixtures(LXStructure structure) {
-        this.selectedFixtures = structure.getSelectedFixtures();
-        for (LXFixture fixture : this.selectedFixtures) {
+        for (LXFixture fixture : structure.getSelectedFixtures()) {
           this.removeFixtures.add(new RemoveFixture(fixture));
         }
       }
@@ -1523,7 +1520,11 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        lx.structure.removeFixtures(this.selectedFixtures);
+        List<LXFixture> selectedFixtures = new ArrayList<LXFixture>();
+        for (RemoveFixture remove : this.removeFixtures) {
+          selectedFixtures.add(remove.fixture.get());
+        }
+        lx.structure.removeFixtures(selectedFixtures);
       }
 
       @Override
