@@ -31,6 +31,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.output.LXDatagram;
+import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
 
 /**
@@ -75,6 +76,13 @@ public class LXModel implements LXSerializable {
      */
     public void modelGenerationUpdated(LXModel model);
   }
+
+  /**
+   * A transform matrix that represents the positioning of this model
+   * in the global space, if part of the structure. For manually constructed
+   * models this value is undefined.
+   */
+  public final LXMatrix transform = new LXMatrix();
 
   /**
    * An immutable list of all the points in this model

@@ -656,7 +656,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     // Okay, good to go, construct the model
-    return new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKeys());
+    LXModel model = new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKeys());
+    model.transform.set(this.geometryMatrix);
+    return model;
   }
 
   private List<LXPoint> subpoints(int start, int n, int stride) {
@@ -720,6 +722,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      */
     public Submodel(int start, int n, int stride, String ... keys) {
       super(subpoints(start, n, stride), keys);
+      this.transform.set(geometryMatrix);
     }
   }
 
@@ -807,6 +810,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     for (LXFixture child : this.children) {
       child.dispose();
     }
+    for (LXDatagram datagram : this.datagrams) {
+      datagram.dispose();
+    }
+    this.mutableDatagrams.clear();
     super.dispose();
   }
 
