@@ -144,7 +144,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     new BooleanParameter("Solo", false)
     .setDescription("Solos this fixture, no other fixtures illuminated");
 
-  private final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
+  final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
 
   protected final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
 
@@ -246,6 +246,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   }
 
   protected void addChild(LXFixture child) {
+    addChild(child, false);
+  }
+
+  void addChild(LXFixture child, boolean generateFirst) {
     Objects.requireNonNull(child, "Cannot add null child to LXFixture");
     if (this.children.contains(child)) {
       throw new IllegalStateException("Cannot add duplicate child to LXFixture: " + child);
@@ -253,13 +257,19 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     this.mutableChildren.add(child);
     _reindexChildren();
 
+    if (generateFirst) {
+      child.regenerate();
+    }
+
     // It's acceptable to remove and re-add a child to the same container
     if (child.container != this) {
       child.setParent(this);
       child.setContainer(this);
     }
 
-    child.regenerate();
+    if (!generateFirst) {
+      child.regenerate();
+    }
   }
 
   protected void removeChild(LXFixture child) {
@@ -597,29 +607,44 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   protected abstract void computePointGeometry(LXMatrix transform, List<LXPoint> points);
 
   /**
-   * Reindex the points in this fixture.
+   * Reindex the points in this fixture. Package-level access, should only ever
+   * be called by LXStructure. Subclasses should not use.
    *
    * @param startIndex Buffer index for the start of this fixture
    */
   final void reindex(int startIndex) {
+    _reindex(startIndex);
+  }
+
+  // Internal private recursive implementation
+  private boolean _reindex(int startIndex) {
+    boolean somethingChanged = false;
     if (this.firstPointIndex != startIndex) {
+      somethingChanged = true;
       this.firstPointIndex = startIndex;
       for (LXPoint p : this.points) {
         p.index = startIndex++;
       }
-      for (LXFixture child : this.children) {
-        child.reindex(startIndex);
-        startIndex += child.totalSize();
-      }
+    }
 
-      // Update our dynamic index buffers
+    // Reindex our children
+    startIndex = this.firstPointIndex + this.points.size();
+    for (LXFixture child : this.children) {
+      if (child._reindex(startIndex)) {
+        somethingChanged = true;
+      }
+      startIndex += child.totalSize();
+    }
+
+    // Only update index buffers and datagrams if any indices were changed
+    if (somethingChanged) {
       for (DynamicIndexBuffer dynamicIndexBuffer : this.dynamicIndexBuffers) {
         dynamicIndexBuffer.update();
       }
-
-      // Reindex all the datagrams
       reindexDatagrams();
     }
+
+    return somethingChanged;
   }
 
   /**

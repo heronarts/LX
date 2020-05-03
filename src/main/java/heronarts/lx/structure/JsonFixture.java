@@ -55,48 +55,66 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
 
 public class JsonFixture extends LXFixture {
 
+  // Label
   private static final String KEY_LABEL = "label";
+
+  // Model keys
   private static final String KEY_MODEL_KEY = "modelKey";
   private static final String KEY_MODEL_KEYS = "modelKeys";
 
-  private static final String KEY_POINTS = "points";
-  private static final String KEY_STRIPS = "strips";
-  private static final String KEY_ARCS = "arcs";
-
+  // Geometry
   private static final String KEY_X = "x";
   private static final String KEY_Y = "y";
   private static final String KEY_Z = "z";
   private static final String KEY_YAW = "yaw";
   private static final String KEY_PITCH = "pitch";
   private static final String KEY_ROLL = "roll";
+  private static final String KEY_SCALE = "scale";
   private static final String KEY_DIRECTION = "direction";
   private static final String KEY_NORMAL = "normal";
 
+  // Points
+  private static final String KEY_POINTS = "points";
+
+  // Strips
+  private static final String KEY_STRIPS = "strips";
+  private static final String KEY_NUM_POINTS = "numPoints";
+  private static final String KEY_SPACING = "spacing";
+
+  // Arcs
+  private static final String KEY_ARCS = "arcs";
   private static final String KEY_RADIUS = "radius";
   private static final String KEY_DEGREES = "degrees";
-
   private static final String KEY_ARC_MODE = "mode";
   private static final String VALUE_ARC_MODE_ORIGIN = "origin";
   private static final String VALUE_ARC_MODE_CENTER = "center";
 
-  private static final String KEY_NUM_POINTS = "numPoints";
-  private static final String KEY_SPACING = "spacing";
+  // Children
+  private static final String KEY_CHILDREN = "children";
+  private static final String KEY_TYPE = "type";
 
+  // Parameters
   private static final String KEY_PARAMETERS = "parameters";
   private static final String KEY_PARAMETER_LABEL = "label";
   private static final String KEY_PARAMETER_DESCRIPTION = "description";
   private static final String KEY_PARAMETER_TYPE = "type";
   private static final String KEY_PARAMETER_DEFAULT = "default";
+  private static final String KEY_PARAMETER_MIN = "min";
+  private static final String KEY_PARAMETER_MAX = "max";
 
+  // Outputs
   private static final String KEY_OUTPUT = "output";
   private static final String KEY_OUTPUTS = "outputs";
   private static final String KEY_PROTOCOL = "protocol";
+  private static final String KEY_HOST = "host";
+  private static final String KEY_PORT = "port";
   private static final String KEY_BYTE_ORDER = "byteOrder";
   private static final String KEY_UNIVERSE = "universe";
   private static final String KEY_DATA_OFFSET = "dataOffset";
@@ -107,12 +125,9 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_STRIDE = "stride";
   private static final String KEY_REVERSE = "reverse";
 
-  private static final String KEY_HOST = "host";
-  private static final String KEY_PORT = "port";
-
   private static final String LABEL_PLACEHOLDER = "UNKNOWN";
 
-  enum ProtocolDefinition {
+  private enum ProtocolDefinition {
     ARTNET(KEY_UNIVERSE, "artnet", "artdmx"),
     ARTSYNC(null, "artsync"),
     SACN(KEY_UNIVERSE, "sacn", "e131"),
@@ -123,7 +138,7 @@ public class JsonFixture extends LXFixture {
     private final String universeKey;
     private final String[] protocolKeys;
 
-    ProtocolDefinition(String universeKey, String ... protocolKeys) {
+    private ProtocolDefinition(String universeKey, String ... protocolKeys) {
       this.universeKey = universeKey;
       this.protocolKeys = protocolKeys;
     }
@@ -132,7 +147,7 @@ public class JsonFixture extends LXFixture {
       return this.universeKey;
     }
 
-    static ProtocolDefinition get(String key) {
+    private static ProtocolDefinition get(String key) {
       for (ProtocolDefinition protocol : values()) {
         for (String protocolKey : protocol.protocolKeys) {
           if (protocolKey.equals(key)) {
@@ -172,15 +187,15 @@ public class JsonFixture extends LXFixture {
 
     private final LXBufferDatagram.ByteOrder datagramByteOrder;
 
-    ByteOrderDefinition(LXBufferDatagram.ByteOrder datagramByteOrder) {
+    private ByteOrderDefinition(LXBufferDatagram.ByteOrder datagramByteOrder) {
       this.datagramByteOrder = datagramByteOrder;
     }
 
-    LXBufferDatagram.ByteOrder getDatagramByteOrder() {
+    private LXBufferDatagram.ByteOrder getDatagramByteOrder() {
       return this.datagramByteOrder;
     }
 
-    static ByteOrderDefinition get(String order) {
+    private static ByteOrderDefinition get(String order) {
       for (ByteOrderDefinition byteOrder : ByteOrderDefinition.values()) {
         if (order.toLowerCase().equals(byteOrder.name().toLowerCase())) {
           return byteOrder;
@@ -195,7 +210,7 @@ public class JsonFixture extends LXFixture {
     INT,
     FLOAT;
 
-    static ParameterType get(String str) {
+    private static ParameterType get(String str) {
       for (ParameterType type : values()) {
         if (type.name().toLowerCase().equals(str.toLowerCase())) {
           return type;
@@ -253,15 +268,15 @@ public class JsonFixture extends LXFixture {
       this(name, label, description, ParameterType.STRING, new StringParameter(name, defaultStr));
     }
 
-    ParameterDefinition(String name, String label, String description, int defaultInt) {
-      this(name, label, description, ParameterType.INT, new DiscreteParameter(name, defaultInt, 0, 1 << 16));
+    private ParameterDefinition(String name, String label, String description, int defaultInt, int minInt, int maxInt) {
+      this(name, label, description, ParameterType.INT, new DiscreteParameter(name, defaultInt, minInt, maxInt + 1));
     }
 
-    ParameterDefinition(String name, String label, String description, float defaultFloat) {
+    private ParameterDefinition(String name, String label, String description, float defaultFloat) {
       this(name, label, description, ParameterType.FLOAT, new BoundedParameter(name, defaultFloat, Float.MIN_VALUE, Float.MAX_VALUE));
     }
 
-    void dispose() {
+    private void dispose() {
       this.parameter.removeListener(this);
       this.parameter.dispose();
     }
@@ -269,7 +284,7 @@ public class JsonFixture extends LXFixture {
     @Override
     public void onParameterChanged(LXParameter p) {
       if (this.isReferenced) {
-        reload(true);
+        reload(false);
       }
     }
 
@@ -290,7 +305,7 @@ public class JsonFixture extends LXFixture {
     private final int stride;
     private final boolean reverse;
 
-    OutputDefinition(ProtocolDefinition protocol, ByteOrderDefinition byteOrder, String host, int port, int universe, int start, int num, int stride, boolean reverse) {
+    private OutputDefinition(ProtocolDefinition protocol, ByteOrderDefinition byteOrder, String host, int port, int universe, int start, int num, int stride, boolean reverse) {
       this.protocol = protocol;
       this.byteOrder = byteOrder;
       this.host = host;
@@ -352,7 +367,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private final StringParameter fixtureFile =
+  private final StringParameter fixtureType =
     new StringParameter("Fixture File")
     .setDescription("Fixture definition file name");
 
@@ -372,6 +387,10 @@ public class JsonFixture extends LXFixture {
     new BooleanParameter("Warning", false)
     .setDescription("Whether there are warnings from the loading of the JSON file");
 
+  public final MutableParameter parametersReloaded =
+    (MutableParameter) new MutableParameter("Reload", 0)
+    .setDescription("Monitor for when fixture parameters are reloaded");
+
   public final List<String> warnings = new CopyOnWriteArrayList<String>();
 
   private String[] modelKeys = { LXModel.Key.MODEL };
@@ -382,23 +401,35 @@ public class JsonFixture extends LXFixture {
   private final List<OutputDefinition> definedOutputs = new ArrayList<OutputDefinition>();
   private final LinkedHashMap<String, ParameterDefinition> definedParameters = new LinkedHashMap<String, ParameterDefinition>();
 
-  private JsonObject jsonParameterValues = new JsonObject();
-
   private int size = 0;
 
-  private final boolean isSubfixture = false;
+  private final JsonFixture jsonParameterContext;
+  private final boolean isJsonSubfixture;
+  private JsonObject jsonParameterValues = new JsonObject();
 
   public JsonFixture(LX lx) {
     this(lx, null);
   }
 
-  public JsonFixture(LX lx, String fixtureFile) {
+  public JsonFixture(LX lx, String fixtureType) {
     super(lx, LABEL_PLACEHOLDER);
-    addParameter("fixtureFile", this.fixtureFile);
+    this.isJsonSubfixture = false;
+    this.jsonParameterContext = this;
+    addParameter("fixtureType", this.fixtureType);
     addGeometryParameter("scale", this.scale);
-    if (fixtureFile != null) {
-      this.fixtureFile.setValue(fixtureFile);
+    if (fixtureType != null) {
+      this.fixtureType.setValue(fixtureType);
     }
+  }
+
+  private JsonFixture(LX lx, JsonFixture parentFixture, JsonObject subFixture, String fixtureType) {
+    super(lx, LABEL_PLACEHOLDER);
+    this.jsonParameterContext = parentFixture;
+    this.jsonParameterValues = subFixture;
+    this.isJsonSubfixture = true;
+    addParameter("fixtureType", this.fixtureType);
+    addGeometryParameter("scale", this.scale);
+    this.fixtureType.setValue(fixtureType);
   }
 
   @Override
@@ -408,8 +439,8 @@ public class JsonFixture extends LXFixture {
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (p == this.fixtureFile) {
-      loadFixture(false);
+    if (p == this.fixtureType) {
+      loadFixture(true);
     }
     super.onParameterChanged(p);
   }
@@ -438,13 +469,14 @@ public class JsonFixture extends LXFixture {
   private boolean isLoaded = false;
 
   public void reload() {
-    reload(false);
+    reload(true);
   }
 
-  private void reload(boolean fromParameterChange) {
-    if (!fromParameterChange) {
+  private void reload(boolean reloadParameters) {
+    if (reloadParameters) {
       removeJsonParameters();
     }
+
     this.warning.setValue(false);
     this.warnings.clear();
     this.error.setValue(false);
@@ -455,21 +487,27 @@ public class JsonFixture extends LXFixture {
     this.definedStrips.clear();
     this.definedArcs.clear();
     this.definedOutputs.clear();
-    // TODO(mcslee): Remove children as well...
+
+    // Clear the children
+    for (LXFixture child : this.children) {
+      child.dispose();
+    }
+    this.mutableChildren.clear();
 
     this.isLoaded = false;
-    loadFixture(fromParameterChange);
+    loadFixture(reloadParameters);
     regenerate();
+
   }
 
-  private void loadFixture(boolean fromParameterChange) {
+  private void loadFixture(boolean loadParameters) {
     if (this.isLoaded) {
       LX.error(new Exception(), "Trying to load JsonFixture twice, why?");
       return;
     }
     this.isLoaded = true;
 
-    File fixtureFile = this.lx.getMediaFile(LX.Media.FIXTURES, this.fixtureFile.getString() + ".lxf", false);
+    File fixtureFile = this.lx.getMediaFile(LX.Media.FIXTURES, this.fixtureType.getString() + ".lxf", false);
     if (!fixtureFile.exists()) {
       setError("Invalid fixture type, could not find file: " + fixtureFile);
       return;
@@ -481,22 +519,18 @@ public class JsonFixture extends LXFixture {
     try (FileReader fr = new FileReader(fixtureFile)) {
       JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
 
-      if (!fromParameterChange) {
+      if (loadParameters) {
         loadLabel(obj);
         this.modelKeys = loadModelKeys(obj, true, LXModel.Key.MODEL);
         loadParameters(obj);
-      }
-
-      if (this.isSubfixture) {
-        loadGeometry(obj);
+        this.parametersReloaded.bang();
       }
 
       loadPoints(obj);
       loadStrips(obj);
       loadArcs(obj);
 
-      // TODO: add ability to import children
-      // loadChildren();
+      loadChildren(obj);
 
       loadOutputs(this.definedOutputs, obj);
 
@@ -508,7 +542,7 @@ public class JsonFixture extends LXFixture {
       }
       setError(jpx, message);
     } catch (Exception x) {
-      setError(x, "Error loading fixture from " + fixtureFile + ": " + x.getLocalizedMessage());
+      setError(x, "Error loading fixture from " + fixtureFile.getName() + ": " + x.getLocalizedMessage());
     }
   }
 
@@ -519,7 +553,7 @@ public class JsonFixture extends LXFixture {
   private void setError(Exception x, String error) {
     this.errorMessage.setValue(error);
     this.error.setValue(true);
-    LX.error(x, "Fixture " + this.fixtureFile.getString() + ".lxf: " + error);
+    LX.error(x, "Fixture " + this.fixtureType.getString() + ".lxf: " + error);
   }
 
   private void addWarning(String warning) {
@@ -529,7 +563,7 @@ public class JsonFixture extends LXFixture {
     } else {
       this.warning.setValue(true);
     }
-    LX.error("Fixture " + this.fixtureFile.getString() + ".lxf: " + warning);
+    LX.error("Fixture " + this.fixtureType.getString() + ".lxf: " + warning);
   }
 
   private void warnDuplicateKeys(JsonObject obj, String key1, String key2) {
@@ -719,24 +753,27 @@ public class JsonFixture extends LXFixture {
     return null;
   }
 
-  private void loadGeometry(JsonObject obj) {
+  private void loadGeometry(JsonFixture fixture, JsonObject obj) {
     if (obj.has(KEY_X)) {
-      this.x.setValue(loadFloat(obj, KEY_X, true));
+      fixture.x.setValue(loadFloat(obj, KEY_X, true));
     }
     if (obj.has(KEY_Y)) {
-      this.x.setValue(loadFloat(obj, KEY_Y, true));
+      fixture.x.setValue(loadFloat(obj, KEY_Y, true));
     }
     if (obj.has(KEY_Z)) {
-      this.x.setValue(loadFloat(obj, KEY_Z, true));
+      fixture.x.setValue(loadFloat(obj, KEY_Z, true));
     }
     if (obj.has(KEY_YAW)) {
-      this.yaw.setValue(loadFloat(obj, KEY_YAW, true));
+      fixture.yaw.setValue(loadFloat(obj, KEY_YAW, true));
     }
     if (obj.has(KEY_PITCH)) {
-      this.pitch.setValue(loadFloat(obj, KEY_PITCH, true));
+      fixture.pitch.setValue(loadFloat(obj, KEY_PITCH, true));
     }
     if (obj.has(KEY_ROLL)) {
-      this.roll.setValue(loadFloat(obj, KEY_ROLL, true));
+      fixture.roll.setValue(loadFloat(obj, KEY_ROLL, true));
+    }
+    if (obj.has(KEY_SCALE)) {
+      fixture.scale.setValue(loadFloat(obj, KEY_SCALE, true));
     }
   }
 
@@ -745,7 +782,7 @@ public class JsonFixture extends LXFixture {
     if (!this.label.getString().equals(LABEL_PLACEHOLDER)) {
       return;
     }
-    String validLabel = this.fixtureFile.getString();
+    String validLabel = this.fixtureType.getString();
     String testLabel = loadString(obj, KEY_LABEL, false, KEY_LABEL + " should contain a string");
     if (testLabel != null) {
       testLabel = testLabel.trim();
@@ -844,20 +881,39 @@ public class JsonFixture extends LXFixture {
         continue;
       }
 
-      // Check if we actually already have a value specified for this parameter
-      if (this.jsonParameterValues.has(parameterName)) {
-        defaultElem = this.jsonParameterValues.get(parameterName);
-      }
-
       switch (type) {
       case FLOAT:
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, defaultElem.getAsFloat()));
+        float floatValue = defaultElem.getAsFloat();
+        if (this.jsonParameterValues.has(parameterName)) {
+          floatValue = this.jsonParameterContext.loadFloat(this.jsonParameterValues, parameterName, true);
+        }
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, floatValue));
         break;
       case INT:
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, defaultElem.getAsInt()));
+        int minInt = 0;
+        int maxInt = 1 << 16;
+        if (parameterObj.has(KEY_PARAMETER_MIN)) {
+          minInt = loadInt(parameterObj, KEY_PARAMETER_MIN, false, "Parameter min value must be an integer");
+        }
+        if (parameterObj.has(KEY_PARAMETER_MAX)) {
+          maxInt = loadInt(parameterObj, KEY_PARAMETER_MAX, false, "Parameter min value must be an integer");
+        }
+        if (minInt > maxInt) {
+          addWarning("Parameter minimum may not be greater than maximum: " + minInt + ">" + maxInt);
+          break;
+        }
+        int intValue = defaultElem.getAsInt();
+        if (this.jsonParameterValues.has(parameterName)) {
+          intValue = this.jsonParameterContext.loadInt(this.jsonParameterValues, parameterName, true, "Child parameter should be an int: " + parameterName);
+        }
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, intValue, minInt, maxInt));
         break;
       case STRING:
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, defaultElem.getAsString()));
+        String stringValue = defaultElem.getAsString();
+        if (this.jsonParameterValues.has(parameterName)) {
+          stringValue = this.jsonParameterContext.loadString(this.jsonParameterValues, parameterName, true, "Child parameter should be an string: " + parameterName);
+        }
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringValue));
         break;
       default:
         break;
@@ -1054,6 +1110,47 @@ public class JsonFixture extends LXFixture {
     loadOutputs(outputs, arcObj);
 
     this.definedArcs.add(new ArcDefinition(numPoints, radius, degrees, isCenter, transform, outputs, modelKeys));
+  }
+
+  private void loadChildren(JsonObject obj) {
+    JsonArray childrenArr = loadArray(obj, KEY_CHILDREN);
+    if (childrenArr == null) {
+      return;
+    }
+    for (JsonElement childElem : childrenArr) {
+      if (childElem.isJsonObject()) {
+        loadChild(childElem.getAsJsonObject());
+      } else if (!childElem.isJsonNull()) {
+        addWarning(KEY_CHILDREN + " should only contain childd elements in JSON object format, found invalid: " + childElem);
+      }
+    }
+  }
+
+  private void loadChild(JsonObject childObj) {
+    if (!childObj.has(KEY_TYPE)) {
+      addWarning("Child object must specify type");
+      return;
+    }
+    String type = loadString(childObj, KEY_TYPE, true, "Child object must specify string type");
+    if (type == null || type.isEmpty()) {
+      addWarning("Child object must specify valid non-empty type: " + type);
+      return;
+    }
+    JsonFixture child = new JsonFixture(this.lx, this, childObj, type);
+    if (child.error.isOn()) {
+      setError(child.errorMessage.getString());
+      return;
+    }
+    if (child.warning.isOn() ) {
+      this.warning.setValue(true);
+      this.warnings.addAll(child.warnings);
+    }
+    loadGeometry(child, childObj);
+
+    // TODO(mcslee): should we allow adding model keys and/or datagrams here? if so do they supercede
+    // those in the child?
+
+    addChild(child, true);
   }
 
   private void loadOutputs(List<OutputDefinition> outputs, JsonObject obj) {
@@ -1323,48 +1420,33 @@ public class JsonFixture extends LXFixture {
     return this.size;
   }
 
-  private static final String KEY_FIXTURE_FILE = "jsonFixtureFile";
+  private static final String KEY_FIXTURE_TYPE = "jsonFixtureType";
   private static final String KEY_JSON_PARAMETERS = "jsonParameters";
 
   @Override
   public void load(LX lx, JsonObject obj) {
+    if (this.isJsonSubfixture) {
+      throw new IllegalStateException("Should never be loading/saving a child JsonSubfixture");
+    }
+
     // This has been saved, let's call up the values for the JSON parameters we customized
     this.jsonParameterValues =
       obj.has(KEY_JSON_PARAMETERS) ? obj.get(KEY_JSON_PARAMETERS).getAsJsonObject() : new JsonObject();
-
-//
-//    if (obj.has(KEY_JSON_PARAMETERS)) {
-//      JsonObject parametersObj = obj.get(KEY_JSON_PARAMETERS).getAsJsonObject();
-//      for (ParameterDefinition parameter : this.definedParameters.values()) {
-//        if (parametersObj.has(parameter.name)) {
-//          switch (parameter.type) {
-//          case FLOAT:
-//            parameter.floatParameter.setValue(parametersObj.get(parameter.name).getAsFloat());
-//            break;
-//          case INT:
-//            parameter.intParameter.setValue(parametersObj.get(parameter.name).getAsInt());
-//            break;
-//          case STRING:
-//            parameter.stringParameter.setValue(parametersObj.get(parameter.name).getAsString());
-//            break;
-//          default:
-//            break;
-//          }
-//        }
-//      }
-//    }
 
     // Now do the normal LXFixture loading, which will trigger regeneration if
     // we're part of a hierarchy
     super.load(lx, obj);
 
-    // Now that we're done loading, forget these, parameters take over from here on out.
+    // Now get rid of this, don't want to interfere with manual reload()
     this.jsonParameterValues = new JsonObject();
   }
 
   @Override
   public void save(LX lx, JsonObject obj) {
-    obj.addProperty(KEY_FIXTURE_FILE, this.fixtureFile.getString());
+    if (this.isJsonSubfixture) {
+      throw new IllegalStateException("Should never be loading/saving a child JsonSubfixture");
+    }
+    obj.addProperty(KEY_FIXTURE_TYPE, this.fixtureType.getString());
     JsonObject jsonParameters = new JsonObject();
     for (ParameterDefinition parameter : this.definedParameters.values()) {
       switch (parameter.type) {
