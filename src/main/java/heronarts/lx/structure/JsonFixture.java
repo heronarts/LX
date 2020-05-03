@@ -1240,9 +1240,13 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
-  protected void computePointGeometry(LXMatrix matrix, List<LXPoint> points) {
-    matrix.scale(this.scale.getValuef());
+  protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
+    super.computeGeometryMatrix(geometryMatrix);
+    geometryMatrix.scale(this.scale.getValuef());
+  }
 
+  @Override
+  protected void computePointGeometry(LXMatrix matrix, List<LXPoint> points) {
     int i = 0;
     for (LXVector vector : this.definedPoints) {
       points.get(i++).set(matrix, vector);

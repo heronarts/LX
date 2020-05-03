@@ -42,6 +42,22 @@ import heronarts.lx.transform.LXTransform;
 
 public class GridFixture extends LXProtocolFixture {
 
+  public enum PositionMode {
+    CORNER("Corner"),
+    CENTER("Center");
+
+    private final String str;
+
+    PositionMode(String str) {
+      this.str = str;
+    }
+
+    @Override
+    public String toString() {
+      return this.str;
+    }
+  }
+
   public enum Wiring {
     ROWS_L2R_B2T("Rows - Left→Right - Bot→Top"),
     ROWS_L2R_T2B("Rows - Left→Right - Top→Bot"),
@@ -93,6 +109,10 @@ public class GridFixture extends LXProtocolFixture {
     new BoundedParameter("Column Spacing", 10, 0, 1000000)
     .setDescription("Spacing between columns in the grid");
 
+  public final EnumParameter<PositionMode> positionMode =
+    new EnumParameter<PositionMode>("Mode", PositionMode.CORNER)
+    .setDescription("Whether the arc is positioned by its starting point or center");
+
   public final EnumParameter<Wiring> wiring =
     new EnumParameter<Wiring>("Wiring", Wiring.ROWS_L2R_B2T)
     .setDescription("How the strips in the grid are sequentially wired");
@@ -118,6 +138,7 @@ public class GridFixture extends LXProtocolFixture {
     addMetricsParameter("numColumns", this.numColumns);
     addGeometryParameter("rowSpacing", this.rowSpacing);
     addGeometryParameter("columnSpacing", this.columnSpacing);
+    addGeometryParameter("positionMode", this.positionMode);
     addDatagramParameter("wiring", this.wiring);
     addDatagramParameter("splitPacket", this.splitPacket);
     addDatagramParameter("pointsPerPacket", this.pointsPerPacket);
@@ -157,6 +178,14 @@ public class GridFixture extends LXProtocolFixture {
 
   @Override
   protected void computePointGeometry(LXMatrix matrix, List<LXPoint> points) {
+    if (this.positionMode.getEnum() == PositionMode.CENTER) {
+      matrix.translate(
+        -.5f * (this.numColumns.getValuei() - 1) * this.columnSpacing.getValuef(),
+        -.5f * (this.numRows.getValuei() - 1) * this.rowSpacing.getValuef(),
+        0f
+      );
+    }
+
     // We create the points from left-to-right (increasing X), bottom-to-top (increasing Y)
     LXTransform transform = new LXTransform(matrix);
     int numRows = this.numRows.getValuei();

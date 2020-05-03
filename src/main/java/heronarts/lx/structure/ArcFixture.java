@@ -25,10 +25,27 @@ import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 
 public class ArcFixture extends LXBasicFixture {
+
+  public enum PositionMode {
+    ORIGIN("Origin"),
+    CENTER("Center");
+
+    private final String str;
+
+    PositionMode(String str) {
+      this.str = str;
+    }
+
+    @Override
+    public String toString() {
+      return this.str;
+    }
+  }
 
   public final DiscreteParameter numPoints = (DiscreteParameter)
     new DiscreteParameter("Num", 10, 1, 4097)
@@ -44,11 +61,16 @@ public class ArcFixture extends LXBasicFixture {
     .setUnits(LXParameter.Units.DEGREES)
     .setDescription("Number of degrees the arc covers");
 
+  public final EnumParameter<PositionMode> positionMode =
+    new EnumParameter<PositionMode>("Mode", PositionMode.ORIGIN)
+    .setDescription("Whether the arc is positioned by its starting point or center");
+
   public ArcFixture(LX lx) {
     super(lx, "Arc");
     addMetricsParameter("numPoints", this.numPoints);
     addGeometryParameter("radius", this.radius);
     addGeometryParameter("degrees", this.degrees);
+    addGeometryParameter("positionMode", this.positionMode);
   }
 
   @Override
@@ -56,11 +78,23 @@ public class ArcFixture extends LXBasicFixture {
     float radius = this.radius.getValuef();
     float degrees = this.degrees.getValuef();
     float rotation = (float) (degrees / (this.points.size() - 1) * Math.PI / 180);
-    for (LXPoint p : this.points) {
-      p.set(transform);
-      transform.translateY(radius);
-      transform.rotateZ(rotation);
-      transform.translateY(-radius);
+    switch (this.positionMode.getEnum()) {
+    case CENTER:
+      for (LXPoint p : this.points) {
+        transform.translateY(-radius);
+        p.set(transform);
+        transform.translateY(radius);
+        transform.rotateZ(rotation);
+      }
+      break;
+    case ORIGIN:
+      for (LXPoint p : this.points) {
+        p.set(transform);
+        transform.translateY(radius);
+        transform.rotateZ(rotation);
+        transform.translateY(-radius);
+      }
+      break;
     }
   }
 
