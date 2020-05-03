@@ -28,6 +28,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.StringParameter;
 
 /**
  * Interface for any object that may be stored and loaded from a serialized file using
@@ -57,7 +58,7 @@ public interface LXSerializable {
   public static class Utils {
 
     /**
-     * Loads an integer value into a parameter, if it is found. If teh
+     * Loads an integer value into a parameter, if it is found. If the
      * key doesn't exist, this method does nothing.
      *
      * @param parameter Parameter to load
@@ -71,7 +72,7 @@ public interface LXSerializable {
     }
 
     /**
-     * Loads a boolean value into a parameter, if it is found. If teh
+     * Loads a boolean value into a parameter, if it is found. If the
      * key doesn't exist, this method does nothing.
      *
      * @param parameter Parameter to load
@@ -85,7 +86,7 @@ public interface LXSerializable {
     }
 
     /**
-     * Loads an double value into a parameter, if it is found. If teh
+     * Loads an double value into a parameter, if it is found. If the
      * key doesn't exist, this method does nothing.
      *
      * @param parameter Parameter to load
@@ -95,6 +96,20 @@ public interface LXSerializable {
     public static void loadDouble(LXParameter parameter, JsonObject object, String key) {
       if (object.has(key)) {
         parameter.setValue(object.get(key).getAsDouble());
+      }
+    }
+
+    /**
+     * Loads an double value into a parameter, if it is found. If the
+     * key doesn't exist, this method does nothing.
+     *
+     * @param parameter Parameter to load
+     * @param object Json object
+     * @param key Key to check, if exists loaded as string
+     */
+    public static void loadString(StringParameter parameter, JsonObject object, String key) {
+      if (object.has(key)) {
+        parameter.setValue(object.get(key).getAsString());
       }
     }
 
