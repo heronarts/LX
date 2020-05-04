@@ -44,6 +44,12 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   }
 
   @Override
+  public EnumParameter<T> setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
+  @Override
   public EnumParameter<T> addListener(LXParameterListener listener) {
     super.addListener(listener);
     return this;

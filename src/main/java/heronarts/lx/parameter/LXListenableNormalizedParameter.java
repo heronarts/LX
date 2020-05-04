@@ -28,6 +28,7 @@ public abstract class LXListenableNormalizedParameter extends
     LXListenableParameter implements LXNormalizedParameter {
 
   private double exponent = 1;
+  private boolean mappable = true;
 
   protected LXListenableNormalizedParameter(String label, double value) {
     super(label, value);
@@ -43,6 +44,17 @@ public abstract class LXListenableNormalizedParameter extends
 
   public double getExponent() {
     return this.exponent;
+  }
+
+  @Override
+  public LXListenableNormalizedParameter setMappable(boolean mappable) {
+    this.mappable = mappable;
+    return this;
+  }
+
+  @Override
+  public boolean isMappable() {
+    return this.mappable;
   }
 
 }

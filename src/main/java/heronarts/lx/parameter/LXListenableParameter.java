@@ -51,6 +51,8 @@ public abstract class LXListenableParameter implements LXParameter {
 
   protected String description = null;
 
+  private boolean mappable = true;
+
   protected LXListenableParameter() {
     this(null, 0);
   }
@@ -229,6 +231,17 @@ public abstract class LXListenableParameter implements LXParameter {
       l.onParameterChanged(this);
     }
     return this;
+  }
+
+  @Override
+  public LXListenableParameter setMappable(boolean mappable) {
+    this.mappable = mappable;
+    return this;
+  }
+
+  @Override
+  public boolean isMappable() {
+    return this.mappable;
   }
 
   /**

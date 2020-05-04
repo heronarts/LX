@@ -78,8 +78,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final Output output;
 
-  public final BoundedParameter framesPerSecond =
+  public final BoundedParameter framesPerSecond = (BoundedParameter)
     new BoundedParameter("FPS", 60, 0, 300)
+    .setMappable(false)
     .setDescription("Number of frames per second the engine runs at");
 
   public final BoundedParameter speed =
@@ -271,16 +272,19 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private final DoubleBuffer buffer;
 
-  public final BooleanParameter isMultithreaded =
+  public final BooleanParameter isMultithreaded = (BooleanParameter)
     new BooleanParameter("Threaded", false)
+    .setMappable(false)
     .setDescription("Whether the engine and UI are on separate threads");
 
-  public final BooleanParameter isChannelMultithreaded =
+  public final BooleanParameter isChannelMultithreaded = (BooleanParameter)
     new BooleanParameter("Channel Threaded", false)
+    .setMappable(false)
     .setDescription("Whether the engine is multi-threaded per channel");
 
-  public final BooleanParameter isNetworkMultithreaded =
+  public final BooleanParameter isNetworkMultithreaded = (BooleanParameter)
     new BooleanParameter("Network Threaded", false)
+    .setMappable(false)
     .setDescription("Whether the network output is on a separate thread");
 
   private volatile boolean isEngineThreadRunning = false;

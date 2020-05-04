@@ -121,20 +121,6 @@ public interface LXParameter extends LXPath {
   public LXParameter setComponent(LXComponent component, String path);
 
   /**
-   * Gets the component to which this parameter is registered.
-   *
-   * @return Component this parameter belongs to, may be null
-   */
-  public LXComponent getParent();
-
-  /**
-   * Gets the path that this parameter is registered to in the component
-   *
-   * @return Component parameter path
-   */
-  public String getPath();
-
-  /**
    * Returns a contextual help message explaining the purpose of this parameter to the user, or null if
    * none is available.
    *
@@ -185,7 +171,6 @@ public interface LXParameter extends LXPath {
    */
   public LXParameter setValue(double value);
 
-
   /**
    * Retrieves the value of the parameter
    *
@@ -206,5 +191,26 @@ public interface LXParameter extends LXPath {
    * @return Label of parameter
    */
   public String getLabel();
+
+  /**
+   * Sets whether this parameter should be eligible for MIDI/modulation mapping
+   * or not.
+   *
+   * @param mappable Whether parameter should be available for mapping
+   * @return this
+   */
+  public default LXParameter setMappable(boolean mappable) {
+    throw new UnsupportedOperationException(getClass() + " does not support setMappable()");
+  }
+
+  /**
+   * Whether this parameter should be eligible for mapping via MIDI or
+   * modulation control.
+   *
+   * @return <code>true</code> if mappable, false if otherwise
+   */
+  public default boolean isMappable() {
+    return false;
+  }
 
 }

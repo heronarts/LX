@@ -132,5 +132,4 @@ public abstract class FunctionalParameter implements LXParameter {
   public final String getLabel() {
     return this.label;
   }
-
 }

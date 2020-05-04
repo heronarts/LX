@@ -56,8 +56,9 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
    */
   public final LXMidiOutput output;
 
-  public final BooleanParameter enabled =
+  public final BooleanParameter enabled = (BooleanParameter)
     new BooleanParameter("Enabled")
+    .setMappable(false)
     .setDescription("Whether the control surface is enabled");
 
   protected LXMidiSurface(LX lx, final LXMidiInput input, final LXMidiOutput output) {

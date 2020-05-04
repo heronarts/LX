@@ -31,6 +31,7 @@ public class NormalizedParameter implements LXNormalizedParameter {
   private final String label;
   private String description = null;
   private double value = 0;
+  private boolean mappable = true;
 
   public NormalizedParameter(String label) {
     this(label, 0);
@@ -138,6 +139,10 @@ public class NormalizedParameter implements LXNormalizedParameter {
   @Override
   public double getExponent() {
     return 1;
+  }
+
+  public boolean isMappable() {
+    return this.mappable;
   }
 
 }

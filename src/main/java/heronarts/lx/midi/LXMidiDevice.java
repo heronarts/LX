@@ -32,12 +32,12 @@ public abstract class LXMidiDevice {
    * true doesn't guarantee availability, but it indicates that we want availability
    * if at all possible.
    */
-  public final BooleanParameter enabled =
-    new BooleanParameter("Enabled", false);
+  public final BooleanParameter enabled = (BooleanParameter)
+    new BooleanParameter("Enabled", false)
+    .setMappable(false);
 
   // Helper used by LXMidiEngine to check active
   boolean keepAlive = true;
-
 
   /**
    * Whether the MIDI device is connected. It is possible for enabled to be true, but for

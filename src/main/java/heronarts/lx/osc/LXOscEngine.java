@@ -58,23 +58,28 @@ public class LXOscEngine extends LXComponent {
   public final DiscreteParameter receivePort = (DiscreteParameter)
     new DiscreteParameter("RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
     .setDescription("UDP port on which the engine listens for OSC message")
+    .setMappable(false)
     .setUnits(LXParameter.Units.INTEGER);
 
   public final DiscreteParameter transmitPort = (DiscreteParameter)
     new DiscreteParameter("TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
     .setDescription("UDP port on which the engine transmits OSC messages")
+    .setMappable(false)
     .setUnits(LXParameter.Units.INTEGER);
 
-  public final StringParameter transmitHost =
+  public final StringParameter transmitHost = (StringParameter)
     new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST)
+    .setMappable(false)
     .setDescription("Hostname to which OSC messages are sent");
 
-  public final BooleanParameter receiveActive =
+  public final BooleanParameter receiveActive = (BooleanParameter)
     new BooleanParameter("RX Active", false)
+    .setMappable(false)
     .setDescription("Enables or disables OSC engine input");
 
-  public final BooleanParameter transmitActive =
+  public final BooleanParameter transmitActive = (BooleanParameter)
     new BooleanParameter("TX Active", false)
+    .setMappable(false)
     .setDescription("Enables or disables OSC engine output");
 
   private final List<Receiver> receivers = new ArrayList<Receiver>();

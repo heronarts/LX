@@ -94,6 +94,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   public final EnumParameter<ClockSource> clockSource =
     new EnumParameter<ClockSource>("Clock", ClockSource.INTERNAL)
+    .setMappable(false)
     .setDescription("Source of the tempo clock");
 
   public final DiscreteParameter beatsPerMeasure = new DiscreteParameter("Beats", 4, 1, 9)

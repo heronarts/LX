@@ -137,8 +137,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   private final InitializationLock initializationLock = new InitializationLock();
 
-  public final BooleanParameter computerKeyboardEnabled =
+  public final BooleanParameter computerKeyboardEnabled = (BooleanParameter)
     new BooleanParameter("Computer MIDI Keyboard", false)
+    .setMappable(false)
     .setDescription("Whether the computer keyboard plays notes to MIDI tracks");
 
   public LXMidiEngine(LX lx) {
