@@ -412,7 +412,6 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    *
    * @param start Start index relative to this fixture
    * @param num Total number of points
-   * @param stride How many points to stride over for each step
    * @return Index buffer of the points in this fixture
    */
   protected int[] toDynamicIndexBuffer(int start, int num) {
