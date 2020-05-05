@@ -994,7 +994,7 @@ public class LXChannel extends LXAbstractChannel {
     } catch (LX.InstantiationException x) {
       LX.error("Using placeholder class for missing pattern: " + patternClass);
       pattern = new LXPattern.Placeholder(lx);
-      lx.command.pushError("Pattern class " + patternClass + " could not be loaded, check that content files were not removed?", x);
+      lx.pushError(x, "Pattern class " + patternClass + " could not be loaded, check that content files were not removed?");
     }
     pattern.load(lx, patternObj);
     addPattern(pattern, index);

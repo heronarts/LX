@@ -51,46 +51,39 @@ public class LXOscEngine extends LXComponent {
 
   private final static int DEFAULT_MAX_PACKET_SIZE = 8192;
 
-  public final StringParameter receiveHost =
-    new StringParameter("RX Host", DEFAULT_RECEIVE_HOST)
-    .setDescription("Hostname to which OSC input socket is bound");
+  public final StringParameter receiveHost = new StringParameter("RX Host",
+    DEFAULT_RECEIVE_HOST)
+      .setDescription("Hostname to which OSC input socket is bound");
 
-  public final BooleanParameter unknownReceiveHost = (BooleanParameter)
-    new BooleanParameter("Unknown RX Host", false)
-    .setMappable(false)
-    .setDescription("Set to true if the receive host is unknown");
+  public final BooleanParameter unknownReceiveHost = (BooleanParameter) new BooleanParameter(
+    "Unknown RX Host", false).setMappable(false)
+      .setDescription("Set to true if the receive host is unknown");
 
-  public final DiscreteParameter receivePort = (DiscreteParameter)
-    new DiscreteParameter("RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
-    .setDescription("UDP port on which the engine listens for OSC message")
-    .setMappable(false)
-    .setUnits(LXParameter.Units.INTEGER);
+  public final DiscreteParameter receivePort = (DiscreteParameter) new DiscreteParameter(
+    "RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
+      .setDescription("UDP port on which the engine listens for OSC message")
+      .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
-  public final StringParameter transmitHost = (StringParameter)
-    new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST)
-    .setMappable(false)
-    .setDescription("Hostname to which OSC messages are sent");
+  public final StringParameter transmitHost = (StringParameter) new StringParameter(
+    "TX Host", DEFAULT_TRANSMIT_HOST).setMappable(false)
+      .setDescription("Hostname to which OSC messages are sent");
 
-  public final BooleanParameter unknownTransmitHost = (BooleanParameter)
-    new BooleanParameter("Unknown TX Host", false)
-    .setMappable(false)
-    .setDescription("Set to true if the transmit host is unknown");
+  public final BooleanParameter unknownTransmitHost = (BooleanParameter) new BooleanParameter(
+    "Unknown TX Host", false).setMappable(false)
+      .setDescription("Set to true if the transmit host is unknown");
 
-  public final DiscreteParameter transmitPort = (DiscreteParameter)
-    new DiscreteParameter("TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
-    .setDescription("UDP port on which the engine transmits OSC messages")
-    .setMappable(false)
-    .setUnits(LXParameter.Units.INTEGER);
+  public final DiscreteParameter transmitPort = (DiscreteParameter) new DiscreteParameter(
+    "TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
+      .setDescription("UDP port on which the engine transmits OSC messages")
+      .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
-  public final BooleanParameter receiveActive = (BooleanParameter)
-    new BooleanParameter("RX Active", false)
-    .setMappable(false)
-    .setDescription("Enables or disables OSC engine input");
+  public final BooleanParameter receiveActive = (BooleanParameter) new BooleanParameter(
+    "RX Active", false).setMappable(false)
+      .setDescription("Enables or disables OSC engine input");
 
-  public final BooleanParameter transmitActive = (BooleanParameter)
-    new BooleanParameter("TX Active", false)
-    .setMappable(false)
-    .setDescription("Enables or disables OSC engine output");
+  public final BooleanParameter transmitActive = (BooleanParameter) new BooleanParameter(
+    "TX Active", false).setMappable(false)
+      .setDescription("Enables or disables OSC engine output");
 
   private final List<Receiver> receivers = new ArrayList<Receiver>();
 
@@ -152,7 +145,8 @@ public class LXOscEngine extends LXComponent {
           throw new OscException();
         }
       } catch (Exception x) {
-        error("Failed to handle OSC message: " + message.getAddressPattern().getValue());
+        error("Failed to handle OSC message: "
+          + message.getAddressPattern().getValue());
       }
     }
 
@@ -165,10 +159,12 @@ public class LXOscEngine extends LXComponent {
     private final DatagramSocket socket;
     protected final DatagramPacket packet;
 
-    private Transmitter(InetAddress address, int port, int bufferSize) throws SocketException {
+    private Transmitter(InetAddress address, int port, int bufferSize)
+      throws SocketException {
       this.bytes = new byte[bufferSize];
       this.buffer = ByteBuffer.wrap(this.bytes);
-      this.packet = new DatagramPacket(this.bytes, this.bytes.length, address, port);
+      this.packet = new DatagramPacket(this.bytes, this.bytes.length, address,
+        port);
       this.socket = new DatagramSocket();
     }
 
@@ -188,8 +184,10 @@ public class LXOscEngine extends LXComponent {
     }
   }
 
-  private class EngineTransmitter extends Transmitter implements LXParameterListener {
-    private EngineTransmitter(InetAddress address, int port, int bufferSize) throws SocketException {
+  private class EngineTransmitter extends Transmitter
+    implements LXParameterListener {
+    private EngineTransmitter(InetAddress address, int port, int bufferSize)
+      throws SocketException {
       super(address, port, bufferSize);
     }
 
@@ -221,7 +219,8 @@ public class LXOscEngine extends LXComponent {
             oscInt.setValue(((DiscreteParameter) parameter).getValuei());
             oscMessage.add(oscInt);
           } else if (parameter instanceof LXNormalizedParameter) {
-            oscFloat.setValue(((LXNormalizedParameter) parameter).getNormalizedf());
+            oscFloat
+              .setValue(((LXNormalizedParameter) parameter).getNormalizedf());
             oscMessage.add(oscFloat);
           } else {
             oscFloat.setValue(parameter.getValuef());
@@ -244,7 +243,8 @@ public class LXOscEngine extends LXComponent {
       try {
         send(oscMessage);
       } catch (IOException iox) {
-        error(iox, "Failed to transmit message: " + message.getAddressPattern().toString());
+        error(iox, "Failed to transmit message: "
+          + message.getAddressPattern().toString());
       }
     }
   }
@@ -258,16 +258,16 @@ public class LXOscEngine extends LXComponent {
     private final byte[] buffer;
     private final ReceiverThread thread;
 
-    private final List<OscMessage> threadSafeEventQueue =
-      Collections.synchronizedList(new ArrayList<OscMessage>());
+    private final List<OscMessage> threadSafeEventQueue = Collections
+      .synchronizedList(new ArrayList<OscMessage>());
 
-    private final List<OscMessage> engineThreadEventQueue =
-      new ArrayList<OscMessage>();
+    private final List<OscMessage> engineThreadEventQueue = new ArrayList<OscMessage>();
 
     private final List<LXOscListener> listeners = new ArrayList<LXOscListener>();
     private final List<LXOscListener> listenerSnapshot = new ArrayList<LXOscListener>();
 
-    private Receiver(int port, InetAddress address, int bufferSize) throws SocketException {
+    private Receiver(int port, InetAddress address, int bufferSize)
+      throws SocketException {
       this(new DatagramSocket(port, address), port, bufferSize);
     }
 
@@ -275,7 +275,8 @@ public class LXOscEngine extends LXComponent {
       this(new DatagramSocket(port), port, bufferSize);
     }
 
-    private Receiver(DatagramSocket socket, int port, int bufferSize) throws SocketException {
+    private Receiver(DatagramSocket socket, int port, int bufferSize)
+      throws SocketException {
       this.socket = socket;
       this.address = socket.getLocalSocketAddress();
       this.port = port;
@@ -288,7 +289,9 @@ public class LXOscEngine extends LXComponent {
     public Receiver addListener(LXOscListener listener) {
       Objects.requireNonNull("May not add null LXOscListener");
       if (this.listeners.contains(listener)) {
-        throw new IllegalStateException("Cannot add duplicate LXOscEngine.Receiver.LXOscListener: " + listener);
+        throw new IllegalStateException(
+          "Cannot add duplicate LXOscEngine.Receiver.LXOscListener: "
+            + listener);
       }
       this.listeners.add(listener);
       return this;
@@ -296,7 +299,9 @@ public class LXOscEngine extends LXComponent {
 
     public Receiver removeListener(LXOscListener listener) {
       if (!this.listeners.contains(listener)) {
-        throw new IllegalStateException("Cannot remove non-existent LXOscEngine.Receiver.LXOscListener: " + listener);
+        throw new IllegalStateException(
+          "Cannot remove non-existent LXOscEngine.Receiver.LXOscListener: "
+            + listener);
       }
       this.listeners.remove(listener);
       return this;
@@ -325,7 +330,8 @@ public class LXOscEngine extends LXComponent {
             }
           } catch (IOException iox) {
             if (!isInterrupted()) {
-              error(iox, "Exception in OSC listener on port " + port + ":" + iox.getLocalizedMessage());
+              error(iox, "Exception in OSC listener on port " + port + ":"
+                + iox.getLocalizedMessage());
             }
           }
         }
@@ -342,7 +348,8 @@ public class LXOscEngine extends LXComponent {
       }
       // TODO(mcslee): do we want to handle NTP timetags?
 
-      // NOTE(mcslee): we iterate this way so that listeners can modify the listener list
+      // NOTE(mcslee): we iterate this way so that listeners can modify the
+      // listener list
       this.listenerSnapshot.clear();
       this.listenerSnapshot.addAll(this.listeners);
       for (OscMessage message : this.engineThreadEventQueue) {
@@ -389,7 +396,8 @@ public class LXOscEngine extends LXComponent {
       }
     } else if (p == this.transmitHost) {
       try {
-        InetAddress address = InetAddress.getByName(this.transmitHost.getString());
+        InetAddress address = InetAddress
+          .getByName(this.transmitHost.getString());
         this.unknownTransmitHost.setValue(false);
         if (this.engineTransmitter != null) {
           this.engineTransmitter.setAddress(address);
@@ -414,8 +422,10 @@ public class LXOscEngine extends LXComponent {
     if (this.engineReceiver != null) {
       stopReceiver();
     }
+    String host = this.receiveHost.getString();
+    int port = this.receivePort.getValuei();
     try {
-      this.engineReceiver = receiver(this.receivePort.getValuei(), this.receiveHost.getString());
+      this.engineReceiver = receiver(port, host);
       this.engineReceiver.addListener(this.engineListener);
       this.unknownReceiveHost.setValue(false);
       log("Started OSC listener " + this.engineReceiver.address);
@@ -425,7 +435,8 @@ public class LXOscEngine extends LXComponent {
       this.receiveActive.setValue(false);
     } catch (SocketException sx) {
       error("Failed to start OSC receiver: " + sx.getLocalizedMessage());
-      // TODO(mcslee): get a bad error to the UI
+      this.lx.pushError(sx, "Failed to start OSC receiver at " + host + ":"
+        + port + "\n" + sx.getLocalizedMessage());
       this.receiveActive.setValue(false);
     }
   }
@@ -439,35 +450,38 @@ public class LXOscEngine extends LXComponent {
 
   private void startTransmitter() {
     if (this.engineTransmitter == null) {
+      String host = this.transmitHost.getString();
+      int port = this.transmitPort.getValuei();
       try {
-        InetAddress address = InetAddress.getByName(this.transmitHost.getString());
+        InetAddress address = InetAddress.getByName(host);
         this.unknownTransmitHost.setValue(false);
-        this.engineTransmitter = new EngineTransmitter(
-          address,
-          this.transmitPort.getValuei(),
-          DEFAULT_MAX_PACKET_SIZE
-        );
+        this.engineTransmitter = new EngineTransmitter(address, port,
+          DEFAULT_MAX_PACKET_SIZE);
       } catch (UnknownHostException uhx) {
         error("Invalid host: " + uhx.getLocalizedMessage());
         this.unknownTransmitHost.setValue(true);
         this.transmitActive.setValue(false);
       } catch (SocketException sx) {
         error("Could not start transmitter: " + sx.getLocalizedMessage());
-        // TODO(mcslee): get a severe error to the UI
+        this.lx.pushError(sx, "Failed to start OSC transmitter at " + host + ":"
+          + port + "\n" + sx.getLocalizedMessage());
         this.transmitActive.setValue(false);
       }
     }
   }
 
-  public Receiver receiver(int port, String host) throws SocketException, UnknownHostException {
+  public Receiver receiver(int port, String host)
+    throws SocketException, UnknownHostException {
     return receiver(port, InetAddress.getByName(host));
   }
 
-  public Receiver receiver(int port, InetAddress address) throws SocketException {
+  public Receiver receiver(int port, InetAddress address)
+    throws SocketException {
     return receiver(port, address, DEFAULT_MAX_PACKET_SIZE);
   }
 
-  public Receiver receiver(int port, InetAddress address, int bufferSize) throws SocketException {
+  public Receiver receiver(int port, InetAddress address, int bufferSize)
+    throws SocketException {
     Receiver receiver = new Receiver(port, address, bufferSize);
     this.receivers.add(receiver);
     return receiver;
@@ -483,21 +497,23 @@ public class LXOscEngine extends LXComponent {
     return receiver;
   }
 
-  public Transmitter transmitter(String host, int port) throws SocketException, UnknownHostException {
+  public Transmitter transmitter(String host, int port)
+    throws SocketException, UnknownHostException {
     return transmitter(InetAddress.getByName(host), port);
   }
 
-  public Transmitter transmitter(InetAddress address, int port) throws SocketException {
+  public Transmitter transmitter(InetAddress address, int port)
+    throws SocketException {
     return transmitter(address, port, DEFAULT_MAX_PACKET_SIZE);
   }
 
-  public Transmitter transmitter(InetAddress address, int port, int bufferSize) throws SocketException {
+  public Transmitter transmitter(InetAddress address, int port, int bufferSize)
+    throws SocketException {
     return new Transmitter(address, port, bufferSize);
   }
 
   /**
-   * Invoked by the main engine to dispatch all OSC messages on the
-   * input queue.
+   * Invoked by the main engine to dispatch all OSC messages on the input queue.
    */
   public void dispatch() {
     for (Receiver receiver : this.receivers) {
@@ -527,6 +543,5 @@ public class LXOscEngine extends LXComponent {
   public static final void error(Exception x, String message) {
     LX.error(x, OSC_LOG_PREFIX + message);
   }
-
 
 }

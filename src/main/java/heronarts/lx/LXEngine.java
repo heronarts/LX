@@ -162,7 +162,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       try {
         addChild(new ModelOutput(lx));
       } catch (SocketException sx) {
-        // TODO(mcslee): report this to the UI somehow
+        lx.pushError(sx, "Serious network error, could not create output socket. Program will continue with no network output.\n" + sx.getLocalizedMessage());
         LXOutput.error("Could not create output datagram socket, model will not be able to send");
       }
     }

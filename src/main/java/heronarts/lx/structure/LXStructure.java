@@ -179,8 +179,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     try {
       output = new Output(lx);
     } catch (SocketException sx) {
-      // TODO(mcslee): get a severe error up to the UI
-      LX.error(sx, "Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getMessage());
+      lx.pushError(sx, "Serious network error, could not create output socket. Program will continue with no network output.\n" + sx.getLocalizedMessage());
+      LX.error(sx, "Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getLocalizedMessage());
     }
     this.output = output;
   }
@@ -591,7 +591,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         model = lx.instantiateModel(className);
         model.load(lx, modelObj);
       } catch (LX.InstantiationException x) {
-        lx.command.pushError("Could not instantiate model class " + className + ". Check that content files are present?", x);
+        lx.pushError(x, "Could not instantiate model class " + className + ". Check that content files are present?");
       }
       // There was an error... just use an empty static model
       if (model == null) {

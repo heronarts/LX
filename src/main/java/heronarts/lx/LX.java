@@ -28,6 +28,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
+import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
@@ -39,6 +40,8 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Stack;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -102,6 +106,39 @@ public class LX {
 
     public String getDirName() {
       return this.dirName;
+    }
+  }
+
+  public static class Error {
+
+    public final Throwable cause;
+    public final String message;
+
+    private Error(String message) {
+      this(null, message);
+    }
+
+    private Error(Throwable cause) {
+      this(cause, cause.getLocalizedMessage());
+    }
+
+    private Error(Throwable cause, String message) {
+      this.cause = cause;
+      this.message = message;
+    }
+
+    public String getStackTrace() {
+      if (this.cause != null) {
+        try (
+          StringWriter sw = new StringWriter();
+          PrintWriter pw = new PrintWriter(sw)) {
+          this.cause.printStackTrace(pw);
+          return sw.toString();
+        } catch (IOException e) {
+          // Ignored, we really meta-failed hard here.
+        }
+      }
+      return null;
     }
   }
 
@@ -175,6 +212,16 @@ public class LX {
    * Configuration flags
    */
   public final Flags flags;
+
+  /**
+   * Error stack
+   */
+  private final Stack<Error> errorStack = new Stack<Error>();
+
+  /**
+   * Parameter that is bang()-ed every time errors change
+   */
+  public final MutableParameter errorChanged = new MutableParameter("Error");
 
   /**
    * The lighting system structure
@@ -268,6 +315,35 @@ public class LX {
       this.flags.initialize.initialize(this);
     }
     this.registry.initializePlugins();
+  }
+
+  public LX pushError(Exception exception) {
+    return pushError(new Error(exception));
+  }
+
+  public LX pushError(Exception exception, String message) {
+    return pushError(new Error(exception, message));
+  }
+
+  public LX pushError(Error error) {
+    this.errorStack.push(error);
+    this.errorChanged.bang();
+    return this;
+  }
+
+  public LX popError() {
+    if (!this.errorStack.isEmpty()) {
+      this.errorStack.pop();
+      this.errorChanged.bang();
+    }
+    return this;
+  }
+
+  public LX.Error getError() {
+    if (!this.errorStack.isEmpty()) {
+      return this.errorStack.peek();
+    }
+    return null;
   }
 
   /**
@@ -729,10 +805,10 @@ public class LX {
       LX.log("Project loaded successfully from " + file.toString());
     } catch (IOException iox) {
       LX.error("Could not load project file: " + iox.getLocalizedMessage());
-      this.command.pushError("Could not load project file: " + iox.getLocalizedMessage(), iox);
+      pushError(iox, "Could not load project file: " + iox.getLocalizedMessage());
     } catch (Exception x) {
       LX.error(x, "Exception in openProject: " + x.getLocalizedMessage());
-      this.command.pushError("Exception in openProject: " + x.getLocalizedMessage(), x);
+      pushError(x, "Exception in openProject: " + x.getLocalizedMessage());
     }
   }
 

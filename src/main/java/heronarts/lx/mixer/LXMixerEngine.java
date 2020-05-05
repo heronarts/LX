@@ -332,7 +332,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       try {
         blends.add(this.lx.instantiateBlend(blend));
       } catch (LX.InstantiationException x) {
-        this.lx.command.pushError("Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?", x);
+        this.lx.pushError(x, "Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?");
       }
     }
     return blends.toArray(new LXBlend[0]);
