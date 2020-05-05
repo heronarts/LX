@@ -478,10 +478,10 @@ public class JsonFixture extends LXFixture {
       removeJsonParameters();
     }
 
-    this.warning.setValue(false);
     this.warnings.clear();
-    this.error.setValue(false);
+    this.warning.setValue(false);
     this.errorMessage.setValue("");
+    this.error.setValue(false);
 
     this.size = 0;
     this.definedPoints.clear();
