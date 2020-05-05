@@ -29,6 +29,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
@@ -53,9 +54,15 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BooleanParameter("Cue applies to Live Output", false)
     .setDescription("Whether Cue selection applies to live output, not just the preview window");
 
+  public final DiscreteParameter uiZoom = (DiscreteParameter)
+    new DiscreteParameter("UI Scale", 100, 50, 201)
+    .setDescription("Percentage by which the UI should be scaled")
+    .setUnits(LXParameter.Units.PERCENT)
+    .setMappable(false);
+
   private String projectFileName = null;
-  private float uiWidth = -1;
-  private float uiHeight = -1;
+  private int windowWidth = -1;
+  private int windowHeight = -1;
 
   private boolean inLoad = false;
 
@@ -65,6 +72,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.focusChannelOnCue.addListener(this);
     this.focusActivePattern.addListener(this);
     this.sendCueToOutput.addListener(this);
+    this.uiZoom.addListener(this);
 
     lx.registry.addListener(new LXRegistry.Listener() {
       @Override
@@ -83,17 +91,17 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     save();
   }
 
-  public float getUIWidth() {
-    return this.uiWidth;
+  public int getWindowWidth() {
+    return this.windowWidth;
   }
 
-  public float getUIHeight() {
-    return this.uiHeight;
+  public int getWindowHeight() {
+    return this.windowHeight;
   }
 
-  public void setUISize(float uiWidth, float uiHeight) {
-    this.uiWidth = uiWidth;
-    this.uiHeight = uiHeight;
+  public void setWindowSize(int uiWidth, int uiHeight) {
+    this.windowWidth = uiWidth;
+    this.windowHeight = uiHeight;
     save();
   }
 
@@ -106,9 +114,11 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     save();
   }
 
+  private static final String KEY_VERSION = "version";
   private static final String KEY_PROJECT_FILE_NAME = "projectFileName";
-  private static final String KEY_UI_WIDTH = "uiWidth";
-  private static final String KEY_UI_HEIGHT = "uiHeight";
+  private static final String KEY_WINDOW_WIDTH = "windwWidth";
+  private static final String KEY_WINDOW_HEIGHT = "windowHeight";
+  private static final String KEY_UI_ZOOM = "uiZoom";
   private static final String KEY_FOCUS_CHANNEL_ON_CUE = "focusChannelOnCue";
   private static final String KEY_FOCUS_ACTIVE_PATTERN = "focusActivePattern";
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
@@ -116,11 +126,13 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
   @Override
   public void save(LX lx, JsonObject object) {
+    object.addProperty(KEY_VERSION, LX.VERSION);
     if (this.projectFileName != null) {
       object.addProperty(KEY_PROJECT_FILE_NAME, this.projectFileName);
     }
-    object.addProperty(KEY_UI_WIDTH, this.uiWidth);
-    object.addProperty(KEY_UI_HEIGHT, this.uiHeight);
+    object.addProperty(KEY_WINDOW_WIDTH, this.windowWidth);
+    object.addProperty(KEY_WINDOW_HEIGHT, this.windowHeight);
+    object.addProperty(KEY_UI_ZOOM, this.uiZoom.getValuei());
     object.addProperty(KEY_FOCUS_CHANNEL_ON_CUE, this.focusChannelOnCue.isOn());
     object.addProperty(KEY_FOCUS_ACTIVE_PATTERN, this.focusActivePattern.isOn());
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
@@ -133,11 +145,12 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.focusChannelOnCue, object, KEY_FOCUS_CHANNEL_ON_CUE);
     LXSerializable.Utils.loadBoolean(this.focusActivePattern, object, KEY_FOCUS_ACTIVE_PATTERN);
     LXSerializable.Utils.loadBoolean(this.sendCueToOutput, object, KEY_SEND_CUE_TO_OUTPUT);
-    if (object.has(KEY_UI_WIDTH)) {
-      this.uiWidth = object.get(KEY_UI_WIDTH).getAsInt();
+    LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
+    if (object.has(KEY_WINDOW_WIDTH)) {
+      this.windowWidth = object.get(KEY_WINDOW_WIDTH).getAsInt();
     }
-    if (object.has(KEY_UI_HEIGHT)) {
-      this.uiHeight = object.get(KEY_UI_HEIGHT).getAsInt();
+    if (object.has(KEY_WINDOW_HEIGHT)) {
+      this.windowHeight = object.get(KEY_WINDOW_HEIGHT).getAsInt();
     }
     if (object.has(KEY_PROJECT_FILE_NAME)) {
       this.projectFileName = object.get(KEY_PROJECT_FILE_NAME).getAsString();
