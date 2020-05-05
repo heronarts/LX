@@ -56,7 +56,8 @@ public interface LXParameter extends LXPath {
     HERTZ,
     MIDI_NOTE,
     DEGREES,
-    RADIANS;
+    RADIANS,
+    PERCENT;
 
     @Override
     public String format(double value) {
@@ -68,6 +69,8 @@ public interface LXParameter extends LXPath {
       switch (units) {
       case INTEGER:
         return String.format("%d", (int) value);
+      case PERCENT:
+        return String.format("%d%%", (int) value);
       case SECONDS:
         value *= 1000;
         // pass through!
