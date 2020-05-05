@@ -595,7 +595,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
       // There was an error... just use an empty static model
       if (model == null) {
-        // TODO(mcslee): get an error placeholder in here?
         model = new LXModel();
       }
       setStaticModel(model);

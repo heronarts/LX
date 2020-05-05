@@ -705,8 +705,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       throw new IllegalStateException("LXComponent never had lx reference set: " + this);
     }
 
-    // TODO(mcslee): do we dispose of all children here? Or is it better to leave this
-    // to explicit subclass implementations...
+    // NOTE: we do not dispose of all children or child arrays autmatically here. It is better
+    // to leave this to explicit subclass implementations. Ordering can matter.
 
     if (this instanceof LXModulationContainer) {
       ((LXModulationContainer) this).getModulationEngine().dispose();
