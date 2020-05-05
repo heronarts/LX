@@ -1143,8 +1143,12 @@ public class JsonFixture extends LXFixture {
       return;
     }
     if (child.warning.isOn() ) {
-      this.warning.setValue(true);
       this.warnings.addAll(child.warnings);
+      if (this.warning.isOn()) {
+        this.warning.bang();
+      } else {
+        this.warning.setValue(true);
+      }
     }
     loadGeometry(child, childObj);
 
