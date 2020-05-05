@@ -18,6 +18,10 @@
 
 package heronarts.lx;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -30,6 +34,12 @@ import heronarts.lx.parameter.BooleanParameter;
 public abstract class LXDeviceComponent extends LXLayeredComponent implements LXModulationContainer, LXOscComponent {
 
   public final LXModulationEngine modulation;
+
+  private Throwable crash = null;
+
+  public final BooleanParameter crashed =
+    new BooleanParameter("Crashed", false)
+    .setDescription("Set to true by the engine if this component fails in an unexpected way");
 
   public final BooleanParameter controlsExpanded =
     new BooleanParameter("Expanded", true)
@@ -52,8 +62,31 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
   @Override
   public void loop(double deltaMs) {
-    super.loop(deltaMs);
-    this.modulation.loop(deltaMs);
+    if (!this.crashed.isOn()) {
+      try {
+        super.loop(deltaMs);
+        this.modulation.loop(deltaMs);
+      } catch (Exception x) {
+        LX.error(x, "Unexpected exception in device loop " + getClass().getName() + ": " + x.getLocalizedMessage());
+        this.lx.pushError(x, "Device " + LXUtils.getComponentName(getClass()) + " crashed due to an unexpected error.\n" + x.getLocalizedMessage());
+        this.crash = x;
+        this.crashed.setValue(true);
+      }
+    }
+  }
+
+  public Throwable getCrash() {
+    return this.crash;
+  }
+
+  public String getCrashStackTrace() {
+    try (StringWriter sw = new StringWriter()){
+      this.crash.printStackTrace(new PrintWriter(sw));
+      return sw.toString();
+    } catch (IOException iox) {
+      // This is fucked
+      return null;
+    }
   }
 
   public LXModulationEngine getModulationEngine() {

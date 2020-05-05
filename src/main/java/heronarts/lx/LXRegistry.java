@@ -268,6 +268,7 @@ public class LXRegistry implements LXSerializable {
         this.instance.initialize(lx);
       } catch (Exception x) {
         LX.error(x, "Unhandled exception in plugin initialize: " + clazz.getName());
+        lx.pushError(x, "Error on initialization of plugin " + clazz.getSimpleName() + "\n" + x.getLocalizedMessage());
         setException(x);
       }
     }
