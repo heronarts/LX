@@ -55,15 +55,14 @@ public class LXOscEngine extends LXComponent {
     new StringParameter("RX Host", DEFAULT_RECEIVE_HOST)
     .setDescription("Hostname to which OSC input socket is bound");
 
+  public final BooleanParameter unknownReceiveHost = (BooleanParameter)
+    new BooleanParameter("Unknown RX Host", false)
+    .setMappable(false)
+    .setDescription("Set to true if the receive host is unknown");
+
   public final DiscreteParameter receivePort = (DiscreteParameter)
     new DiscreteParameter("RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
     .setDescription("UDP port on which the engine listens for OSC message")
-    .setMappable(false)
-    .setUnits(LXParameter.Units.INTEGER);
-
-  public final DiscreteParameter transmitPort = (DiscreteParameter)
-    new DiscreteParameter("TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
-    .setDescription("UDP port on which the engine transmits OSC messages")
     .setMappable(false)
     .setUnits(LXParameter.Units.INTEGER);
 
@@ -71,6 +70,17 @@ public class LXOscEngine extends LXComponent {
     new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST)
     .setMappable(false)
     .setDescription("Hostname to which OSC messages are sent");
+
+  public final BooleanParameter unknownTransmitHost = (BooleanParameter)
+    new BooleanParameter("Unknown TX Host", false)
+    .setMappable(false)
+    .setDescription("Set to true if the transmit host is unknown");
+
+  public final DiscreteParameter transmitPort = (DiscreteParameter)
+    new DiscreteParameter("TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
+    .setDescription("UDP port on which the engine transmits OSC messages")
+    .setMappable(false)
+    .setUnits(LXParameter.Units.INTEGER);
 
   public final BooleanParameter receiveActive = (BooleanParameter)
     new BooleanParameter("RX Active", false)
@@ -173,18 +183,14 @@ public class LXOscEngine extends LXComponent {
       this.packet.setPort(port);
     }
 
-    public void setHost(String host) throws UnknownHostException {
-      this.packet.setAddress(InetAddress.getByName(host));
-    }
-
-    public void setHost(InetAddress host) {
+    public void setAddress(InetAddress host) {
       this.packet.setAddress(host);
     }
   }
 
   private class EngineTransmitter extends Transmitter implements LXParameterListener {
-    private EngineTransmitter(String host, int port, int bufferSize) throws SocketException, UnknownHostException {
-      super(InetAddress.getByName(host), port, bufferSize);
+    private EngineTransmitter(InetAddress address, int port, int bufferSize) throws SocketException {
+      super(address, port, bufferSize);
     }
 
     private final OscMessage oscMessage = new OscMessage("");
@@ -355,9 +361,21 @@ public class LXOscEngine extends LXComponent {
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (p == this.receivePort || p == this.receiveHost) {
-      if (this.engineReceiver != null) {
+    if (p == this.receivePort) {
+      if (this.receiveActive.isOn()) {
         startReceiver();
+      }
+    } else if (p == this.receiveHost) {
+      try {
+        InetAddress.getByName(this.receiveHost.getString());
+        this.unknownReceiveHost.setValue(false);
+        if (this.receiveActive.isOn()) {
+          startReceiver();
+        }
+      } catch (UnknownHostException uhx) {
+        error("Invalid OSC receive host: " + uhx.getLocalizedMessage());
+        this.unknownReceiveHost.setValue(true);
+        this.receiveActive.setValue(false);
       }
     } else if (p == this.receiveActive) {
       if (this.receiveActive.isOn()) {
@@ -370,16 +388,25 @@ public class LXOscEngine extends LXComponent {
         this.engineTransmitter.setPort(this.transmitPort.getValuei());
       }
     } else if (p == this.transmitHost) {
-      if (this.engineTransmitter != null) {
-        try {
-          this.engineTransmitter.setHost(this.transmitHost.getString());
-        } catch (UnknownHostException uhx) {
-          error("Invalid OSC output host: " + this.transmitHost.getString() + " " + uhx.getLocalizedMessage());
-          this.transmitActive.setValue(false);
+      try {
+        InetAddress address = InetAddress.getByName(this.transmitHost.getString());
+        this.unknownTransmitHost.setValue(false);
+        if (this.engineTransmitter != null) {
+          this.engineTransmitter.setAddress(address);
         }
+      } catch (UnknownHostException uhx) {
+        error("Invalid OSC output host: " + uhx.getLocalizedMessage());
+        this.unknownTransmitHost.setValue(true);
+        this.transmitActive.setValue(false);
       }
     } else if (p == this.transmitActive) {
-      startTransmitter();
+      if (this.transmitActive.isOn()) {
+        if (this.unknownTransmitHost.isOn()) {
+          this.transmitActive.setValue(false);
+        } else {
+          startTransmitter();
+        }
+      }
     }
   }
 
@@ -390,11 +417,16 @@ public class LXOscEngine extends LXComponent {
     try {
       this.engineReceiver = receiver(this.receivePort.getValuei(), this.receiveHost.getString());
       this.engineReceiver.addListener(this.engineListener);
+      this.unknownReceiveHost.setValue(false);
       log("Started OSC listener " + this.engineReceiver.address);
-    } catch (SocketException sx) {
-      error("Failed to start OSC receiver: " + sx.getLocalizedMessage());
     } catch (UnknownHostException uhx) {
       error("Bad OSC receive host: " + uhx.getLocalizedMessage());
+      this.unknownReceiveHost.setValue(true);
+      this.receiveActive.setValue(false);
+    } catch (SocketException sx) {
+      error("Failed to start OSC receiver: " + sx.getLocalizedMessage());
+      // TODO(mcslee): get a bad error to the UI
+      this.receiveActive.setValue(false);
     }
   }
 
@@ -408,15 +440,21 @@ public class LXOscEngine extends LXComponent {
   private void startTransmitter() {
     if (this.engineTransmitter == null) {
       try {
+        InetAddress address = InetAddress.getByName(this.transmitHost.getString());
+        this.unknownTransmitHost.setValue(false);
         this.engineTransmitter = new EngineTransmitter(
-          this.transmitHost.getString(),
+          address,
           this.transmitPort.getValuei(),
           DEFAULT_MAX_PACKET_SIZE
         );
       } catch (UnknownHostException uhx) {
         error("Invalid host: " + uhx.getLocalizedMessage());
+        this.unknownTransmitHost.setValue(true);
+        this.transmitActive.setValue(false);
       } catch (SocketException sx) {
         error("Could not start transmitter: " + sx.getLocalizedMessage());
+        // TODO(mcslee): get a severe error to the UI
+        this.transmitActive.setValue(false);
       }
     }
   }
