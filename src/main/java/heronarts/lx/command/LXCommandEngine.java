@@ -49,7 +49,6 @@ public class LXCommandEngine {
   private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
   private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
 
-
   public final BooleanParameter dirty =
     new BooleanParameter("Dirty", false)
     .setDescription("Whether the project has unsaved changes");
@@ -78,7 +77,9 @@ public class LXCommandEngine {
       this.redoChanged.bang();
 
     } catch (InvalidCommandException icx) {
-      this.lx.pushError(icx);
+      this.lx.pushError(icx, "Unexpected error performing action " + command.getName() + "\n" + icx.getMessage());
+      LX.error(icx, "Unhandled exception on undo " + command + " - bad internal state?");
+      clear();
     } catch (Exception x) {
       this.lx.pushError(x, "Unexpected error performing action " + command.getName() + "\n" + x.getLocalizedMessage());
       LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
@@ -129,7 +130,9 @@ public class LXCommandEngine {
         this.undoChanged.bang();
         this.redoChanged.bang();
       } catch (InvalidCommandException icx) {
-        this.lx.pushError(icx);
+        this.lx.pushError(icx, "Unexpected error on undo of " + command.getName() + "\n" + icx.getMessage());
+        LX.error(icx, "Unhandled exception on undo " + command + " - bad internal state?");
+        clear();
       } catch (Exception x) {
         this.lx.pushError(x, "Unexpected error on undo of " + command.getName() + "\n" + x.getLocalizedMessage());
         LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
@@ -154,7 +157,9 @@ public class LXCommandEngine {
         this.undoChanged.bang();
         this.redoChanged.bang();
       } catch (InvalidCommandException icx) {
-        this.lx.pushError(icx);
+        this.lx.pushError(icx, "Unexpected error on redo of " + command.getName() + "\n" + icx.getMessage());
+        LX.error(icx, "Unhandled exception on redo " + command + " - bad internal state?");
+        clear();
       } catch (Exception x) {
         this.lx.pushError(x, "Unexpected error on redo of " + command.getName() + "\n" + x.getLocalizedMessage());
         LX.error(x, "Unhandled exception on redo " + command + " - bad internal state?");

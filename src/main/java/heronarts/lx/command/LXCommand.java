@@ -71,10 +71,6 @@ public abstract class LXCommand {
 
     private static final long serialVersionUID = 1L;
 
-    protected InvalidCommandException(String message) {
-      super(message);
-    }
-
     protected InvalidCommandException(Exception cause) {
       super(cause.getMessage(), cause);
     }
@@ -1458,7 +1454,7 @@ public abstract class LXCommand {
           fixture = new JsonFixture(lx, this.fixtureType);
           fixture.label.setValue(fixture.label.getString() + " " + (lx.structure.fixtures.size() + 1));
         } else {
-          throw new InvalidCommandException("No fixture type specified for AddFixture");
+          throw new IllegalStateException("AddFixture action has neither fixtureClass nor fixtureType");
         }
         if (this.fixtureObj != null) {
           fixture.load(lx, this.fixtureObj);
