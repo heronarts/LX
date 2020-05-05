@@ -18,14 +18,13 @@
 
 package heronarts.lx.structure;
 
-import java.net.UnknownHostException;
+import java.net.InetAddress;
 import heronarts.lx.LX;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXBufferDatagram;
 import heronarts.lx.output.LXDatagram;
-import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.LXParameter;
@@ -81,6 +80,11 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       return null;
     }
 
+    InetAddress address = resolveHostAddress();
+    if (address == null) {
+      return null;
+    }
+
     LXBufferDatagram datagram;
     switch (protocol) {
     case ARTNET:
@@ -100,16 +104,10 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       break;
     default:
     case NONE:
-      throw new IllegalStateException("Unhandled protocol type: " + protocol);
+      throw new IllegalStateException("Unhandled LXBasicFixture protocol type: " + protocol);
     }
 
-    try {
-      datagram.setAddress(this.host.getString());
-    } catch (UnknownHostException uhx) {
-      // TODO(mcslee): get an error up to the UI here...
-      datagram.enabled.setValue(false);
-      LXOutput.error(uhx, "Unknown host for fixture datagram: " + this.host.getString());
-    }
+    datagram.setAddress(address);
 
     return datagram;
   }
@@ -119,12 +117,10 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
     super.onParameterChanged(p);
     if (this.datagram != null) {
       if (p == this.host) {
-        try {
-          this.datagram.setAddress(this.host.getString());
-        } catch (UnknownHostException uhx) {
-          this.datagram.enabled.setValue(false);
-          // TODO(mcslee): get an error to the UI...
-          LXOutput.error(uhx, "Unkown host for fixture datagram: " + this.host.getString());
+        InetAddress address = resolveHostAddress();
+        this.datagram.enabled.setValue(address != null);
+        if (address != null) {
+          this.datagram.setAddress(address);
         }
       } else if (p == this.artNetUniverse) {
         if (this.datagram instanceof ArtNetDatagram) {

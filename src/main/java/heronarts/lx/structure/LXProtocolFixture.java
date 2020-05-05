@@ -18,7 +18,11 @@
 
 package heronarts.lx.structure;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 import heronarts.lx.LX;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -40,6 +44,9 @@ public abstract class LXProtocolFixture extends LXFixture {
   public final StringParameter host =
     new StringParameter("Host", "127.0.0.1")
     .setDescription("Host/IP this fixture transmits to");
+
+  public final BooleanParameter unknownHost =
+    new BooleanParameter("Unknown Host", false);
 
   public final DiscreteParameter artNetUniverse = (DiscreteParameter)
     new DiscreteParameter("ArtNet Universe", 0, 0, 32768)
@@ -67,6 +74,18 @@ public abstract class LXProtocolFixture extends LXFixture {
 
   protected LXProtocolFixture(LX lx, String label) {
     super(lx, label);
+  }
+
+  protected InetAddress resolveHostAddress() {
+    try {
+      InetAddress address = InetAddress.getByName(this.host.getString());
+      this.unknownHost.setValue(false);
+      return address;
+    } catch (UnknownHostException uhx) {
+      LXOutput.error("Unknown host for fixture datagram: " + uhx.getLocalizedMessage());
+      this.unknownHost.setValue(true);
+    }
+    return null;
   }
 
   protected int getProtocolChannel() {

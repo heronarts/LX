@@ -23,7 +23,6 @@ import heronarts.lx.parameter.BoundedParameter;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -96,20 +95,6 @@ public abstract class LXDatagram {
       return this.errorState;
     }
     return this.errorState = getDatagramErrorState(this);
-  }
-
-
-  /**
-   * Sets the destination address of this datagram
-   *
-   * @param ipAddress IP address or hostname as string
-   * @return this
-   * @throws UnknownHostException Bad address
-   */
-  public LXDatagram setAddress(String ipAddress) throws UnknownHostException {
-    this.errorState = null;
-    this.packet.setAddress(InetAddress.getByName(ipAddress));
-    return this;
   }
 
   /**

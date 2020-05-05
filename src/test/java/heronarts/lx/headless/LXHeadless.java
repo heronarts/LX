@@ -18,6 +18,8 @@
 package heronarts.lx.headless;
 
 import java.io.File;
+import java.net.InetAddress;
+
 import heronarts.lx.LX;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
@@ -42,7 +44,7 @@ public class LXHeadless {
     lx.engine.addOutput(
       new LXDatagramOutput(lx).addDatagram(
         new ArtNetDatagram(lx.getModel(), 512, 0)
-        .setAddress("localhost")
+        .setAddress(InetAddress.getByName("localhost"))
       )
     );
   }

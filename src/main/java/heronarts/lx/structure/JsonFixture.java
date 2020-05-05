@@ -20,6 +20,7 @@ package heronarts.lx.structure;
 
 import java.io.File;
 import java.io.FileReader;
+import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -297,7 +298,7 @@ public class JsonFixture extends LXFixture {
 
     private final ProtocolDefinition protocol;
     private final ByteOrderDefinition byteOrder;
-    private final String host;
+    private final InetAddress address;
     private final int port;
     private final int universe;
     private final int start;
@@ -305,10 +306,10 @@ public class JsonFixture extends LXFixture {
     private final int stride;
     private final boolean reverse;
 
-    private OutputDefinition(ProtocolDefinition protocol, ByteOrderDefinition byteOrder, String host, int port, int universe, int start, int num, int stride, boolean reverse) {
+    private OutputDefinition(ProtocolDefinition protocol, ByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int start, int num, int stride, boolean reverse) {
       this.protocol = protocol;
       this.byteOrder = byteOrder;
-      this.host = host;
+      this.address = address;
       this.port = port;
       this.universe = universe;
       this.start = start;
@@ -1199,6 +1200,14 @@ public class JsonFixture extends LXFixture {
       addWarning("Output must define a valid, non-empty host");
       return;
     }
+    InetAddress address;
+    try {
+      address = InetAddress.getByName(host);
+    } catch (UnknownHostException uhx) {
+      addWarning("Cannot send output to invalid host: " + host);
+      return;
+    }
+
     int port = OutputDefinition.DEFAULT_PORT;
     if (outputObj.has(KEY_PORT)) {
       port = loadInt(outputObj, KEY_PORT, true, "Output must specify a valid host");
@@ -1236,7 +1245,7 @@ public class JsonFixture extends LXFixture {
       }
     }
     boolean reverse = loadBoolean(outputObj, KEY_REVERSE, "Output " + KEY_REVERSE + " must be a valid boolean");
-    outputs.add(new OutputDefinition(protocol, byteOrder, host, port, universe, start, num, stride, reverse));
+    outputs.add(new OutputDefinition(protocol, byteOrder, address, port, universe, start, num, stride, reverse));
   }
 
   @Override
@@ -1385,12 +1394,8 @@ public class JsonFixture extends LXFixture {
       if (output.port != OutputDefinition.DEFAULT_PORT) {
         bufferDatagram.setPort(output.port);
       }
-      try {
-        bufferDatagram.setAddress(output.host);
-        addDatagram(bufferDatagram);
-      } catch (UnknownHostException uhx) {
-        addWarning("Uknown host specified for output: " + uhx.getLocalizedMessage());
-      }
+      bufferDatagram.setAddress(output.address);
+      addDatagram(bufferDatagram);
     }
   }
 
@@ -1399,12 +1404,8 @@ public class JsonFixture extends LXFixture {
     if (output.port != OutputDefinition.DEFAULT_PORT) {
       artSync.setPort(output.port);
     }
-    try {
-      artSync.setAddress(output.host);
-      addDatagram(artSync);
-    } catch (UnknownHostException uhx) {
-      addWarning("Uknown host specified for ArtSync packet: " + uhx.getLocalizedMessage());
-    }
+    artSync.setAddress(output.address);
+    addDatagram(artSync);
   }
 
   @Override

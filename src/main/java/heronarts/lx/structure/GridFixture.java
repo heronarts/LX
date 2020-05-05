@@ -18,7 +18,7 @@
 
 package heronarts.lx.structure;
 
-import java.net.UnknownHostException;
+import java.net.InetAddress;
 import java.util.List;
 
 import heronarts.lx.LX;
@@ -29,7 +29,6 @@ import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXBufferDatagram;
 import heronarts.lx.output.LXDatagram;
-import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
@@ -148,13 +147,11 @@ public class GridFixture extends LXProtocolFixture {
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.host) {
+      InetAddress address = resolveHostAddress();
       for (LXDatagram datagram : this.datagrams) {
-        try {
-          datagram.setAddress(this.host.getString());
-        } catch (UnknownHostException uhx) {
-          datagram.enabled.setValue(false);
-          // TODO(mcslee): get an error to the UI...
-          LXOutput.error(uhx, "Unkown host for fixture datagram: " + this.host.getString());
+        datagram.enabled.setValue(address != null);
+        if (address != null) {
+          datagram.setAddress(address);
         }
       }
     }
@@ -397,7 +394,7 @@ public class GridFixture extends LXProtocolFixture {
     if (protocol == Protocol.NONE) {
       return;
     }
-
+    InetAddress address = resolveHostAddress();
     int[] wiringIndexBuffer = getWiringIndexBuffer();
     int pointsPerPacket = this.pointsPerPacket.getValuei();
     if (this.splitPacket.isOn() && (wiringIndexBuffer.length > pointsPerPacket)) {
@@ -407,15 +404,15 @@ public class GridFixture extends LXProtocolFixture {
         int chunkSize = Math.min(pointsPerPacket, wiringIndexBuffer.length - i);
         int chunkIndexBuffer[] = new int[chunkSize];
         System.arraycopy(wiringIndexBuffer, i, chunkIndexBuffer, 0, chunkSize);
-        addDatagram(chunkIndexBuffer, channel++);
+        addDatagram(address, chunkIndexBuffer, channel++);
         i += chunkSize;
       }
     } else {
-      addDatagram(wiringIndexBuffer, getProtocolChannel());
+      addDatagram(address, wiringIndexBuffer, getProtocolChannel());
     }
   }
 
-  private void addDatagram(int[] indexBuffer, int channel) {
+  private void addDatagram(InetAddress address, int[] indexBuffer, int channel) {
     LXBufferDatagram datagram = null;
     switch (this.protocol.getEnum()) {
     case ARTNET:
@@ -434,18 +431,16 @@ public class GridFixture extends LXProtocolFixture {
       datagram = new OPCDatagram(indexBuffer, (byte) channel);
       break;
     default:
+      LX.error("Undefined datagram protocol in GridFixture: " + this.protocol.getEnum());
       break;
     }
     if (datagram != null) {
-      try {
-        datagram.setAddress(this.host.getString());
-      } catch (UnknownHostException uhx) {
-        LX.error(uhx, "Invalid host on datagram: "+ uhx.getLocalizedMessage());
+      datagram.enabled.setValue(address != null);
+      if (address != null) {
+        datagram.setAddress(address);
       }
       addDatagram(datagram);
-
     }
-
   }
 
   @Override

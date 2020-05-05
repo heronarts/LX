@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,18 +78,6 @@ public class LXDatagramOutput extends LXOutput {
     for (LXDatagram datagram : datagrams) {
       addDatagram(datagram);
     }
-    return this;
-  }
-
-  /**
-   * Sets the destination address of all datagrams on this output
-   *
-   * @param ipAddress IP address or hostname as string
-   * @return this
-   * @throws UnknownHostException Bad address
-   */
-  public LXDatagramOutput setAddress(String ipAddress) throws UnknownHostException {
-    setAddress(InetAddress.getByName(ipAddress));
     return this;
   }
 
