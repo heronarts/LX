@@ -144,6 +144,10 @@ public class LXCommandEngine {
 
     } catch (InvalidCommandException icx) {
       pushError(icx);
+    } catch (Exception x) {
+      pushError("Unexpected error performing action " + command.getName() + "\n" + x.getLocalizedMessage(), x);
+      LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
+      clear();
     }
 
     this.dirty.setValue(true);
@@ -192,7 +196,7 @@ public class LXCommandEngine {
       } catch (InvalidCommandException icx) {
         pushError(icx);
       } catch (Exception x) {
-        pushError("Unexpected error on undo: " + x.getLocalizedMessage(), x);
+        pushError("Unexpected error on undo of " + command.getName() + "\n" + x.getLocalizedMessage(), x);
         LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
         clear();
       }
@@ -217,7 +221,7 @@ public class LXCommandEngine {
       } catch (InvalidCommandException icx) {
         pushError(icx);
       } catch (Exception x) {
-        pushError("Unexpected error on redo: " + x.getLocalizedMessage(), x);
+        pushError("Unexpected error on redo of " + command.getName() + "\n" + x.getLocalizedMessage(), x);
         LX.error(x, "Unhandled exception on redo " + command + " - bad internal state?");
         clear();
       }

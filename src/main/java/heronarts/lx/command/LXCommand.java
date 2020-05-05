@@ -155,6 +155,16 @@ public abstract class LXCommand {
    */
   public abstract String getDescription();
 
+  final String getName() {
+    try {
+      return getDescription();
+    } catch (Exception x) {
+      String className = getClass().getName();
+      int subIndex = className.indexOf(".LXCommand.");
+      return className.substring(subIndex + ".LXCommand.".length());
+    }
+  }
+
   /**
    * Perform the given command
    *
@@ -1128,7 +1138,6 @@ public abstract class LXCommand {
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
         }
-
       }
 
       @Override
@@ -1313,8 +1322,7 @@ public abstract class LXCommand {
           LXCompoundModulation modulation = new LXCompoundModulation(lx, this.engine.get(), this.modulationObj);
           this.engine.get().addModulation(modulation);
           modulation.load(lx, this.modulationObj);
-          this.modulation = new ComponentReference<LXCompoundModulation>(
-            modulation);
+          this.modulation = new ComponentReference<LXCompoundModulation>(modulation);
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
