@@ -29,6 +29,7 @@ import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
@@ -224,6 +225,14 @@ public class LX {
   public final MutableParameter errorChanged = new MutableParameter("Error");
 
   /**
+   * This parameter will be set if a critical, unrecoverable error occurs. It will
+   * only be set one time, and it should be assumed that the engine is no longer
+   * running if this is the case.
+   */
+  public StringParameter failure =
+    new StringParameter("Failure", null);
+
+  /**
    * The lighting system structure
    */
   public final LXStructure structure;
@@ -315,6 +324,30 @@ public class LX {
       this.flags.initialize.initialize(this);
     }
     this.registry.initializePlugins();
+  }
+
+  protected void fail(Exception x) {
+    String logLocation = "the console output.";
+    if (LX.EXPLICIT_LOG_FILE != null) {
+      logLocation = LX.EXPLICIT_LOG_FILE.getAbsolutePath();
+    }
+
+    String message =
+      "A serious and unexpected fatal error has occured. The program cannot continue and the UI may no longer be responsive. Please report this issue." +
+      "\n\n" +
+      "Details of the error have been logged to " + logLocation +
+      "\n\n";
+
+    try (StringWriter sw = new StringWriter()) {
+      x.printStackTrace(new PrintWriter(sw));
+      String stackTrace = sw.toString();
+      message += stackTrace;
+      setSystemClipboardString(stackTrace);
+    } catch (IOException iox) {
+      // Ooh, royally fucked and weird if this happens
+    }
+
+    this.failure.setValue(message);
   }
 
   public LX pushError(Exception exception) {
@@ -1009,7 +1042,11 @@ public class LX {
   }
 
   protected static void bootstrapMediaPath(Flags flags) {
-    File studioDir = new File(System.getProperty("user.home"), "LXStudio");
+    bootstrapMediaPath(flags, "LXStudio");
+  }
+
+  protected static void bootstrapMediaPath(Flags flags, String dirName) {
+    File studioDir = new File(System.getProperty("user.home"), dirName);
     if (!studioDir.exists()) {
       LX.log("Creating directory: " + studioDir);
       studioDir.mkdir();
@@ -1024,7 +1061,7 @@ public class LX {
         }
       }
     } else {
-      LX.error("~/LXStudio already exists but is not a directory, this will not go well.");
+      LX.error("~/" + dirName + " already exists but is not a directory, this will not go well.");
     }
   }
 
@@ -1056,9 +1093,7 @@ public class LX {
     _log(System.err, x, LOG_PREFIX, message);
   }
 
-  private static final DateFormat logDateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-
-  protected static final DateFormat logFilenameFormat = new SimpleDateFormat("'LX-'yyyy.MM.dd-HH.mm.ss'.log'");
+  private static final DateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
   private static final String LOG_PREFIX = "LX";
 
@@ -1079,30 +1114,34 @@ public class LX {
   }
 
   protected static void _log(PrintStream stream, Throwable throwable, String prefix, String message) {
-    String logMsg = "[" + prefix + " " + logDateFormat.format(Calendar.getInstance().getTime()) + "] " + message;
+    String logMsg = "[" + prefix + " " + LOG_DATE_FORMAT.format(Calendar.getInstance().getTime()) + "] " + message;
     stream.println(logMsg);
     if (throwable != null) {
       throwable.printStackTrace(stream);
     }
-    if (logFile != null) {
+    if (EXPLICIT_LOG_STREAM != null) {
       try {
-        logFile.println(logMsg);
+        EXPLICIT_LOG_STREAM.println(logMsg);
         if (throwable != null) {
-          throwable.printStackTrace(logFile);
+          throwable.printStackTrace(EXPLICIT_LOG_STREAM);
         }
       } catch (Exception x) {
-        logFile = null;
+        EXPLICIT_LOG_STREAM = null;
         error(x, "Exception writing log file to disk: " + x.getLocalizedMessage());
       }
     }
   }
 
-  private static PrintStream logFile = null;
+  static File EXPLICIT_LOG_FILE = null;
+  private static PrintStream EXPLICIT_LOG_STREAM = null;
 
   protected static void setLogFile(File file) {
     try {
-      logFile = new PrintStream(new FileOutputStream(file, true));
+      EXPLICIT_LOG_FILE = file;
+      EXPLICIT_LOG_STREAM = new PrintStream(new FileOutputStream(file, true));
     } catch (Exception x) {
+      EXPLICIT_LOG_FILE = null;
+      EXPLICIT_LOG_STREAM = null;
       error(x, "Log file cannot be used: " + file.toURI() + " - " + x.getLocalizedMessage());
     }
   }

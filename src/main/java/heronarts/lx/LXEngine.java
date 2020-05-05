@@ -91,6 +91,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private boolean logTimers = false;
 
+  private boolean hasFailed = false;
+
   public class FocusedClipParameter extends MutableParameter {
 
     private LXClip clip = null;
@@ -115,7 +117,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
-  private float frameRate = 0;
+  private float actualFrameRate = 0;
 
   public class Output extends LXOutputGroup implements LXOscComponent {
 
@@ -394,8 +396,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    *
    * @return How many FPS the engine is running
    */
-  public float frameRate() {
-    return this.frameRate;
+  public float getActualFrameRate() {
+    return this.actualFrameRate;
   }
 
   /**
@@ -454,7 +456,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this;
   }
 
-  public void onDraw() {
+  public void beforeP3LXDraw() {
     if (this.isMultithreaded.isOn() != this.isEngineThreadRunning) {
       _setThreaded(this.isMultithreaded.isOn());
     }
@@ -500,18 +502,23 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       while (!isInterrupted()) {
         long frameStart = System.currentTimeMillis();
         LXEngine.this.run();
+
+        // NOTE: we check this right away because something in the run()
+        // method, happening on this thread (the engine thread) could be deciding
+        // that the engine thread should stop, and setting the interrupt flag.
+        // In this case we bail out here before the sleep() call
         if (isInterrupted()) {
           break;
         };
 
         // Sleep until next frame
         long frameMillis = System.currentTimeMillis() - frameStart;
-        frameRate = 1000.f / frameMillis;
+        actualFrameRate = 1000.f / frameMillis;
         float targetFPS = framesPerSecond.getValuef();
         if (targetFPS > 0) {
           long minMillisPerFrame = (long) (1000. / targetFPS);
           if (frameMillis < minMillisPerFrame) {
-            frameRate = targetFPS;
+            actualFrameRate = targetFPS;
             try {
               sleep(minMillisPerFrame - frameMillis);
             } catch (InterruptedException ix) {
@@ -523,7 +530,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
 
       // We are done threading
-      frameRate = 0;
+      actualFrameRate = 0;
       engineThread = null;
       isEngineThreadRunning = false;
 
@@ -625,7 +632,28 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this.modulation;
   }
 
+  /**
+   * This is the core run loop of the LXEngine. It can be invoked from various places, such
+   * as the EngineThread when running in multi-threaded mode, or from a Processing sketch
+   * when in P3LX, or from another application framework. Unless you are writing your own
+   * new application framework using LX (this is not recommended), you should never call
+   * this method directly. It is only public to make it accessible to these other frameworks.
+   */
   public void run() {
+    if (this.hasFailed) {
+      return;
+    }
+    try {
+      _run();
+    } catch (Exception x) {
+      this.hasFailed = true;
+      LX.error(x, "FATAL TOP-LEVEL EXCEPTION IN ENGINE: " + x.getLocalizedMessage());
+      setThreaded(false);
+      lx.fail(x);
+    }
+  }
+
+  private void _run() {
 
     this.hasStarted = true;
 
@@ -801,7 +829,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     private long lastFrame = System.currentTimeMillis();
 
-    private float frameRate = 0;
+    private float actualFrameRate = 0;
 
     public final Timer timer = new Timer();
 
@@ -839,7 +867,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
         // Compute network framerate
         long now = System.currentTimeMillis();
-        this.frameRate = 1000.f / (now - this.lastFrame);
+        this.actualFrameRate = 1000.f / (now - this.lastFrame);
         this.lastFrame = now;
       }
 
@@ -847,7 +875,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
 
     public float frameRate() {
-      return this.frameRate;
+      return this.actualFrameRate;
     }
   }
 
