@@ -192,6 +192,7 @@ public class LXCommandEngine {
       } catch (InvalidCommandException icx) {
         pushError(icx);
       } catch (Exception x) {
+        pushError("Unexpected error on undo: " + x.getLocalizedMessage(), x);
         LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
         clear();
       }
@@ -216,6 +217,7 @@ public class LXCommandEngine {
       } catch (InvalidCommandException icx) {
         pushError(icx);
       } catch (Exception x) {
+        pushError("Unexpected error on redo: " + x.getLocalizedMessage(), x);
         LX.error(x, "Unhandled exception on redo " + command + " - bad internal state?");
         clear();
       }
