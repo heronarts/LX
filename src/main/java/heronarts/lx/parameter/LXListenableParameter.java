@@ -19,11 +19,10 @@
 package heronarts.lx.parameter;
 
 import java.util.ArrayDeque;
-import java.util.HashSet;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Queue;
-import java.util.Set;
-
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 
@@ -38,7 +37,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   private double defaultValue, value;
 
-  private final Set<LXParameterListener> listeners = new HashSet<LXParameterListener>();
+  private final List<LXParameterListener> listeners = new ArrayList<LXParameterListener>();
 
   private LXComponent parent;
   private String path;
