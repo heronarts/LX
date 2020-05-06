@@ -137,11 +137,6 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       new ObjectParameter<LXBlend>("Crossfader Blend", new LXBlend[1])
       .setDescription("Sets the blend mode used for the master crossfader");
     updateCrossfaderBlendOptions();
-    this.crossfaderBlendMode.addListener((p) -> {
-      this.activeCrossfaderBlend.onInactive();
-      this.activeCrossfaderBlend = this.crossfaderBlendMode.getObject();
-      this.activeCrossfaderBlend.onActive();
-    });
     LX.initTimer.log("Engine: Mixer: Blends");
 
     // Master channel
@@ -150,45 +145,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
     // Scenes
     for (int i = 0; i < this.scenes.length; ++i) {
-      final int sceneIndex = i;
       this.scenes[i] = new BooleanParameter("Scene-" + (i+1)).setMode(BooleanParameter.Mode.MOMENTARY);
       addParameter("scene-" + (i+1), this.scenes[i]);
-      this.scenes[i].addListener((p) -> {
-        BooleanParameter scene = (BooleanParameter) p;
-        if (scene.isOn()) {
-          launchScene(sceneIndex);
-          scene.setValue(false);
-        }
-      });
     }
-
-    // Cue setup
-    this.cueA.addListener((p) -> {
-      if (this.cueA.isOn()) {
-        this.cueB.setValue(false);
-        for (LXAbstractChannel channel : this.channels) {
-          channel.cueActive.setValue(false);
-        }
-      }
-    });
-    this.cueB.addListener((p) -> {
-      if (this.cueB.isOn()) {
-        this.cueA.setValue(false);
-        for (LXAbstractChannel channel : this.channels) {
-          channel.cueActive.setValue(false);
-        }
-      }
-    });
-    LX.initTimer.log("Engine: Mixer: Cue");
-
-    // Listener
-    this.focusedChannel.addListener((p) -> {
-      LXClip clip = this.lx.engine.focusedClip.getClip();
-      if (clip != null && clip.bus != getFocusedChannel()) {
-        this.lx.engine.focusedClip.setClip(null);
-      }
-    });
-    LX.initTimer.log("Engine: Focus Listener");
 
     // LX top level model listener
     lx.addListener(new LX.Listener() {
@@ -235,9 +194,45 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("viewCondensed", this.viewCondensed);
 
   }
-  public static final String PATH_CHANNEL = "channel";
-  public static final String PATH_FOCUSED = "focused";
-  public static final String PATH_MASTER = "master";
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (this.crossfaderBlendMode == p) {
+      this.activeCrossfaderBlend.onInactive();
+      this.activeCrossfaderBlend = this.crossfaderBlendMode.getObject();
+      this.activeCrossfaderBlend.onActive();
+    } else if (this.cueA == p) {
+      if (this.cueA.isOn()) {
+        this.cueB.setValue(false);
+        for (LXAbstractChannel channel : this.channels) {
+          channel.cueActive.setValue(false);
+        }
+      }
+    } else if (this.cueB == p) {
+      if (this.cueB.isOn()) {
+        this.cueA.setValue(false);
+        for (LXAbstractChannel channel : this.channels) {
+          channel.cueActive.setValue(false);
+        }
+      }
+    } else if (this.focusedChannel == p) {
+      LXClip clip = this.lx.engine.focusedClip.getClip();
+      if (clip != null && clip.bus != getFocusedChannel()) {
+        this.lx.engine.focusedClip.setClip(null);
+      }
+    } else {
+      for (int i = 0; i < this.scenes.length; ++i) {
+        if (this.scenes[i] == p) {
+          if (this.scenes[i].isOn()) {
+            launchScene(i);
+            this.scenes[i].setValue(false);
+          }
+        }
+      }
+    }
+
+  }
 
 
   /**
@@ -291,6 +286,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
     return this;
   }
+
+  public static final String PATH_CHANNEL = "channel";
+  public static final String PATH_FOCUSED = "focused";
+  public static final String PATH_MASTER = "master";
 
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
@@ -1025,6 +1024,16 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         }
       }
     }
+  }
+
+  @Override
+  public void dispose() {
+    List<LXAbstractChannel> toRemove = new ArrayList<LXAbstractChannel>(this.channels);
+    Collections.reverse(toRemove);
+    for (LXAbstractChannel channel : toRemove) {
+      removeChannel(channel);
+    }
+    super.dispose();
   }
 
   public void clear() {

@@ -99,7 +99,7 @@ public abstract class LXListenableParameter implements LXParameter {
   public LXListenableParameter addListener(LXParameterListener listener) {
     Objects.requireNonNull(listener, "May add null LXParameterListener: " + this);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add duplicate LXParameterListener " + this.getCanonicalPath() + " " + listener.getClass().getName());
+      throw new IllegalStateException("Cannot add duplicate LXParameterListener " + getCanonicalPath() + " " + listener.getClass().getName());
     }
     this.listeners.add(listener);
     return this;
@@ -107,7 +107,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   public final LXListenableParameter removeListener(LXParameterListener listener) {
     if (!this.listeners.contains(listener)) {
-      LX.error("Trying to remove unregistered LXParameterListener " + this.getCanonicalPath() + " " + listener.getClass().getName());
+      LX.error(new Exception(), "Trying to remove unregistered LXParameterListener " + getCanonicalPath() + " " + listener.getClass().getName());
     }
     this.listeners.remove(listener);
     return this;
@@ -153,7 +153,7 @@ public abstract class LXListenableParameter implements LXParameter {
       if (className.contains(".ui.")) {
         LX.warning("Stranded UI listener on parameter: " + getCanonicalPath() + " - " + className);
       } else {
-        LX.error("Stranded listener on parameter: " + getCanonicalPath() + " - " + className);
+        LX.error(new Exception(), "Stranded listener on parameter: " + getCanonicalPath() + " - " + className);
       }
     }
     this.listeners.clear();

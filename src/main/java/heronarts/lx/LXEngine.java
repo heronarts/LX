@@ -292,7 +292,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private volatile boolean isEngineThreadRunning = false;
 
   private boolean isNetworkThreadStarted = false;
-  public final NetworkThread network;
+  public final NetworkThread networkThread;
 
   private EngineThread engineThread = null;
 
@@ -318,7 +318,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.buffer = new DoubleBuffer(lx);
 
     // Initialize network thread (don't start it yet)
-    this.network = new NetworkThread(lx);
+    this.networkThread = new NetworkThread(lx);
 
     // Color palette
     addChild("palette", this.palette = new LXPalette(lx));
@@ -385,7 +385,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         this.buffer.sync();
         if (!this.isNetworkThreadStarted) {
           this.isNetworkThreadStarted = true;
-          this.network.start();
+          this.networkThread.start();
         }
       }
     }
@@ -783,8 +783,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
     if (isNetworkMultithreaded) {
       // Notify the network thread of new work to do!
-      synchronized (this.network) {
-        this.network.notify();
+      synchronized (this.networkThread) {
+        this.networkThread.notify();
       }
     } else {
       // Or do it ourself here on the engine thread
@@ -849,7 +849,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
             wait();
           }
         } catch (InterruptedException ix) {
-          LXOutput.log("LXEngine Network Thread interrupted");
           break;
         }
 
@@ -861,7 +860,14 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           }
           long copyEnd = System.nanoTime();
           this.timer.copyNanos = copyEnd - copyStart;
-          output.send(this.networkFrame.main);
+          try {
+            output.send(this.networkFrame.main);
+          } catch (Exception x) {
+            // TODO(mcslee): For now we don't flag these, there could be ConcurrentModificationException
+            // or ArrayIndexBounds exceptions if the model/fixtures are being changed in real-time.
+            // This is rare and would only occur at a VERY high framerate.
+            LX.error("Exception in network thread: " + x.getLocalizedMessage());
+          }
           this.timer.sendNanos = System.nanoTime() - copyEnd;
         }
 
@@ -901,7 +907,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     frame.copyFrom(this.buffer.render);
   }
 
-
   @Override
   public void load(LX lx, JsonObject obj) {
     // TODO(mcslee): remove loop tasks that other things might have added? maybe
@@ -913,6 +918,18 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Invoke super-loader
     super.load(lx, obj);
+  }
+
+  @Override
+  public void dispose() {
+    this.mixer.dispose();
+    this.audio.dispose();
+    this.midi.dispose();
+    this.osc.dispose();
+    synchronized (this.networkThread) {
+      this.networkThread.interrupt();
+    }
+    super.dispose();
   }
 
 

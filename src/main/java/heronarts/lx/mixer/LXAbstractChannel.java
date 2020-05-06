@@ -126,7 +126,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   private static int channelThreadCount = 1;
 
-  class ChannelThread extends java.lang.Thread {
+  class ChannelThread extends Thread {
 
     ChannelThread() {
       super("LXChannel thread #" + channelThreadCount++);
@@ -286,6 +286,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   public void dispose() {
     this.blendBuffer.dispose();
     this.listeners.clear();
+    synchronized (this.thread) {
+      this.thread.interrupt();
+    }
     super.dispose();
   }
 

@@ -477,9 +477,7 @@ public class LX {
    * Shut down resources of the LX instance.
    */
   public void dispose() {
-    this.engine.audio.dispose();
-    this.engine.midi.dispose();
-    this.engine.osc.dispose();
+    this.engine.dispose();
   }
 
   /**
