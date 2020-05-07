@@ -152,6 +152,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private final List<LXPoint> mutablePoints = new ArrayList<LXPoint>();
 
+  private LXModel model = null;
+
   private LXFixtureContainer container = null;
 
   /**
@@ -521,6 +523,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     // A new model will have to be created, forget these points
+    this.model = null;
     this.modelPoints.clear();
 
     // Regenerate our geometry, note that we bypass regenerateGeometry()
@@ -565,13 +568,16 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     this.geometryMatrix.set(this.parentTransformMatrix);
     computeGeometryMatrix(this.geometryMatrix);
 
-    // Regenerate the
+    // Regenerate the point geometry
     regeneratePointGeometry();
 
     // No indices have changed but points may have moved, we are not going
     // to rebuilt the entire model, but we do need to update the locations
     // of these points in their reflected deep copies, if those have already
     // been made
+    if (this.model != null) {
+      this.model.transform.set(this.geometryMatrix);
+    }
     if (!this.modelPoints.isEmpty()) {
       int i = 0;
       for (LXPoint p : this.points) {
@@ -680,7 +686,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Okay, good to go, construct the model
     LXModel model = new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKeys());
     model.transform.set(this.geometryMatrix);
-    return model;
+    return this.model = model;
   }
 
   private List<LXPoint> subpoints(int start, int n, int stride) {

@@ -551,7 +551,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   public void fixtureGeometryChanged(LXFixture fixture) {
     // We need to re-normalize our model, things have changed
-    this.model.update();
+    this.model.update(true, true);
 
     // Denote that file is modified
     if (this.modelFile != null) {
