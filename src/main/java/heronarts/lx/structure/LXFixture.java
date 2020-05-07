@@ -257,6 +257,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     this.mutableChildren.add(child);
     _reindexChildren();
 
+    child.parentTransformMatrix.set(this.geometryMatrix);
+
     if (generateFirst) {
       child.regenerate();
     }
