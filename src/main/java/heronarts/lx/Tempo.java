@@ -23,12 +23,14 @@ import java.util.List;
 import java.util.Objects;
 
 import heronarts.lx.modulator.Click;
+import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 
@@ -126,12 +128,19 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     new BooleanParameter("Nudge-")
     .setDescription("Temporarily decreases tempo while engaged");
 
+  private final LinearEnvelope nudge = new LinearEnvelope(1, 1, 5000);
+
   public final MutableParameter period = (MutableParameter) new MutableParameter(MS_PER_MINUTE / DEFAULT_BPM)
     .setDescription("Reports the duration between beats (ms)");
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
-  private final Click click = new Click(this.period);
+  private final Click click = new Click("Beat", new FunctionalParameter() {
+    @Override
+    public double getValue() {
+      return period.getValue() * nudge.getValue();
+    }
+  });
 
   private long firstTap = 0;
   private long lastTap = 0;
@@ -153,6 +162,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     addParameter("beatsPerMeasure", this.beatsPerMeasure);
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
+    addModulator("nudge", this.nudge);
     startModulator(this.click);
   }
 
@@ -206,9 +216,9 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
         tap();
       }
     } else if (p == this.nudgeUp) {
-      adjustBpm(this.nudgeUp.isOn() ? .1 : -.1);
+      updateNudge(this.nudgeUp, this.nudgeDown, .90);
     } else if (p == this.nudgeDown) {
-      adjustBpm(this.nudgeDown.isOn() ? -.1 : .1);
+      updateNudge(this.nudgeDown, this.nudgeUp, 1.1);
     } else if (p == this.trigger) {
       if (this.trigger.isOn()) {
         this.trigger.setValue(false);
@@ -218,6 +228,27 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
         this.click.setLooping(true).trigger();
       } else {
         this.click.setLooping(false);
+      }
+    }
+  }
+
+  private void updateNudge(BooleanParameter changed, BooleanParameter other, double target) {
+    if (changed.isOn()) {
+      if (other.isOn()) {
+        // If the other nudge button was already down, do nothing, first one to be
+        // pressed has the priority as long as it is held. See below for what happens
+        // upon the release.
+      } else {
+        this.nudge.setRange(1, target).reset().start();
+      }
+    } else {
+      // We released this button, if the other one was being held, it takes over now
+      if (other.isOn()) {
+        this.nudge.setRange(1, target).reset().start();
+      } else {
+        // Both buttons released, nudge goes back to 1
+        this.nudge.stop();
+        this.nudge.setValue(1);
       }
     }
   }
