@@ -13,13 +13,7 @@
  * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
  * PURPOSE, WITH RESPECT TO THE SOFTWARE.
  *
- * ##library.name##
- * ##library.sentence##
- * ##library.url##
- *
- * @author      ##author##
- * @modified    ##date##
- * @version     ##library.prettyVersion## (##library.version##)
+ * @author Mark C. Slee <mark@heronarts.com>
  */
 
 package heronarts.lx.clip;
