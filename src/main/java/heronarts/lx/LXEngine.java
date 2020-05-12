@@ -732,8 +732,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Mutate by master speed for everything else
     deltaMs *= this.speed.getValue();
 
-    // Run the modulation engine
+    // Run the modulation and snapshot engines
     this.modulation.loop(deltaMs);
+    this.snapshots.loop(deltaMs);
 
     // Run the color control
     this.lx.engine.palette.loop(deltaMs);

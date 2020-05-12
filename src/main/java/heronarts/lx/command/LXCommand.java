@@ -599,7 +599,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Pattern";
+        return "Delete Pattern";
       }
 
       @Override
@@ -748,7 +748,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Effect";
+        return "Delete Effect";
       }
 
       @Override
@@ -1207,7 +1207,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Modulator";
+        return "Delete Modulator";
       }
 
       @Override
@@ -1314,7 +1314,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Modulation";
+        return "Delete Modulation";
       }
 
       @Override
@@ -1388,7 +1388,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Trigger";
+        return "Delete Trigger";
       }
 
       @Override
@@ -1504,6 +1504,37 @@ public abstract class LXCommand {
       }
     }
 
+    public static class Recall extends LXCommand {
+
+      private ComponentReference<LXSnapshot> snapshot;
+      private final List<LXCommand> commands = new ArrayList<LXCommand>();
+
+      public Recall(LXSnapshot snapshot) {
+        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.commands.clear();
+        for (LXSnapshot.View view : this.snapshot.get().views) {
+          this.commands.add(view.getCommand());
+        }
+        lx.engine.snapshots.recall(this.snapshot.get());
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (LXCommand command : this.commands) {
+          command.undo(lx);
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "Recall Snapshot";
+      }
+    }
+
     public static class RemoveView extends LXCommand {
 
       private ComponentReference<LXSnapshot> snapshot;
@@ -1518,7 +1549,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Snapshot View";
+        return "Delete Snapshot View";
       }
 
       @Override
@@ -1619,7 +1650,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Fixture";
+        return "Delete Fixture";
       }
 
       @Override
@@ -1652,7 +1683,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove Fixtures";
+        return "Delete Fixtures";
       }
 
       @Override
@@ -1775,7 +1806,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Remove MIDI Mapping";
+        return "Delete MIDI Mapping";
       }
 
       @Override

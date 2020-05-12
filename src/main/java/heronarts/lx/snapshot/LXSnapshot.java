@@ -32,16 +32,18 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.LXUtils;
 import heronarts.lx.color.ColorParameter;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
@@ -113,6 +115,14 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     }
 
     /**
+     * Gets a command version of this view's operation, needed to make
+     * this action undoable.
+     *
+     * @return Command implementation of this view
+     */
+    public abstract LXCommand getCommand();
+
+    /**
      * Subclasses must implement, determines whether the given view is dependent upon
      * the specified component, and whether this view should be removed if the
      * component is disposed
@@ -126,6 +136,25 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
      * Subclasses must implement, should reapply the state of the view immediately
      */
     protected abstract void recall();
+
+    /**
+     * Subclasses may override, indicates the beginning of a transition
+     */
+    protected void startTransition() {
+      recall();
+    }
+
+    /**
+     * Subclasses may override, indicates the progress of a transition
+     *
+     * @param amount Amount of interpolation to apply
+     */
+    protected void interpolate(double amount) {}
+
+    /**
+     * Subclasses may override, indicates the completion of a transition
+     */
+    protected void finishTransition() {}
 
     private static final String KEY_TYPE = "type";
     private static final String KEY_ENABLED = "enabled";
@@ -156,6 +185,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     private final double value;
     private final int intValue;
     private final String stringValue;
+    private final double normalizedValue;
 
     private ParameterView(LXParameter parameter) {
       super(ViewType.PARAMETER);
@@ -177,6 +207,11 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       } else {
         this.intValue = 0;
         this.stringValue = null;
+      }
+      if (parameter instanceof LXNormalizedParameter) {
+        this.normalizedValue = getBaseNormalized();
+      } else {
+        this.normalizedValue = 0;
       }
     }
 
@@ -204,6 +239,18 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
         this.intValue = 0;
         this.stringValue = null;
       }
+      this.normalizedValue = obj.get(KEY_NORMALIZED_VALUE).getAsDouble();
+    }
+
+    @Override
+    public LXCommand getCommand() {
+      if (this.parameter instanceof DiscreteParameter) {
+        return new LXCommand.Parameter.SetValue((DiscreteParameter) this.parameter, this.intValue);
+      } else if (this.parameter instanceof StringParameter) {
+        return new LXCommand.Parameter.SetString((StringParameter) this.parameter, this.stringValue);
+      } else {
+        return new LXCommand.Parameter.SetValue(this.parameter, this.value);
+      }
     }
 
     @Override
@@ -224,6 +271,48 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       }
     }
 
+    private double fromNormalized;
+    private double fromValue;
+    private int fromInt;
+
+    @Override
+    protected void startTransition() {
+      if (this.parameter instanceof StringParameter) {
+        recall();
+      } else if (this.parameter instanceof LXNormalizedParameter) {
+        this.fromNormalized = getBaseNormalized();
+      } else if (this.parameter instanceof DiscreteParameter) {
+        this.fromInt = ((DiscreteParameter) this.parameter).getValuei();
+      } else {
+        this.fromValue = this.parameter.getValue();
+      }
+    }
+
+    @Override
+    protected void interpolate(double amount) {
+      if (this.parameter instanceof StringParameter) {
+        // No interpolating strings
+      } else if (this.parameter instanceof LXNormalizedParameter) {
+        ((LXNormalizedParameter) this.parameter).setNormalized(LXUtils.lerp(this.fromNormalized, this.normalizedValue, amount));
+      } else if (this.parameter instanceof DiscreteParameter) {
+        ((DiscreteParameter) this.parameter).setValue((int) LXUtils.lerp(this.fromInt, this.intValue, amount));
+      } else {
+        this.parameter.setValue(LXUtils.lerp(this.fromValue, this.value, amount));
+      }
+    }
+
+    @Override
+    protected void finishTransition() {
+      recall();
+    }
+
+    private double getBaseNormalized() {
+      if (this.parameter instanceof CompoundParameter) {
+        return ((CompoundParameter) this.parameter).getBaseNormalized();
+      }
+      return ((LXNormalizedParameter) this.parameter).getNormalized();
+    }
+
     private double getBaseValue() {
       if (this.parameter instanceof CompoundParameter) {
         return ((CompoundParameter) this.parameter).getBaseValue();
@@ -233,6 +322,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
     private static final String KEY_PARAMETER_PATH = "parameterPath";
     private static final String KEY_VALUE = "value";
+    private static final String KEY_NORMALIZED_VALUE = "normalizedValue";
 
     @Override
     public void save(LX lx, JsonObject obj) {
@@ -247,6 +337,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       } else {
         obj.addProperty(KEY_VALUE, this.value);
       }
+      obj.addProperty(KEY_NORMALIZED_VALUE, this.normalizedValue);
     }
 
   }
@@ -272,6 +363,11 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     }
 
     @Override
+    public LXCommand getCommand() {
+      return new LXCommand.Channel.GoPattern(this.channel, channel.getPattern(this.activePatternIndex));
+    }
+
+    @Override
     protected boolean isDependentOf(LXComponent component) {
       return component.contains(this.channel);
     }
@@ -293,9 +389,25 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
   }
 
+  public final BooleanParameter trigger =
+    new BooleanParameter("Trigger", false)
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Triggers recall of the snapshot");
+
   public LXSnapshot(LX lx) {
     super(lx, "Snapshot");
     setParent(lx.engine.snapshots);
+    addParameter("trigger", this.trigger);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    if (this.trigger == p) {
+      if (this.trigger.isOn()) {
+        this.lx.engine.snapshots.recall(this);
+        this.trigger.setValue(false);
+      }
+    }
   }
 
   // Package-only method for LXSnapshotEngine to update indices
@@ -368,6 +480,10 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
   }
 
   private void addParameterView(LXParameter p) {
+    if (p instanceof ColorParameter) {
+      // Don't add ColorParameter directly, let the sub-hue/sat/bright values do it
+      return;
+    }
     addView(new ParameterView(p));
   }
 
@@ -422,17 +538,6 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     view.dispose();
   }
 
-  /**
-   * Recall this snapshot, apply all of its values
-   */
-  public void recall() {
-    for (View view : this.views) {
-      if (view.enabled.isOn()) {
-        view.recall();
-      }
-    }
-  }
-
   @Override
   public String getOscPath() {
     String path = super.getOscPath();
@@ -449,17 +554,6 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       return parent.getOscAddress() + "/" + getOscPath();
     }
     return null;
-  }
-
-  @Override
-  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
-    if (index >= parts.length) {
-      if (message.size() > 0) {
-        // Any argument at all is fine for now
-        recall();
-      }
-    }
-    return super.handleOscMessage(message, parts, index);
   }
 
   @Override

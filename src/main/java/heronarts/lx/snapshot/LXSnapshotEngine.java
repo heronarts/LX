@@ -30,23 +30,23 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.FunctionalParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.snapshot.LXSnapshot.View;
 
 /**
  * The snapshot engine stores snapshots in time of the state of project settings. This includes
  * mixer settings, the parameter values of the active patterns and effects that are running at
  * the given time.
  */
-public class LXSnapshotEngine extends LXComponent implements LXOscComponent {
-
-  private final List<LXSnapshot> mutableSnapshots = new ArrayList<LXSnapshot>();
-
-  /**
-   * Public read-only view of all the snapshots.
-   */
-  public final List<LXSnapshot> snapshots = Collections.unmodifiableList(this.mutableSnapshots);
+public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXLoopTask {
 
   public interface Listener {
     /**
@@ -75,9 +75,39 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent {
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
+  private final List<LXSnapshot> mutableSnapshots = new ArrayList<LXSnapshot>();
+
+  /**
+   * Public read-only view of all the snapshots.
+   */
+  public final List<LXSnapshot> snapshots = Collections.unmodifiableList(this.mutableSnapshots);
+
+  /**
+   * Amount of time taken in seconds to transition into a new snapshot view
+   */
+  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
+    new BoundedParameter("Transition Time", 5, .1, 180)
+    .setDescription("Sets the duration of interpolated transitions between snapshots")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter transitionEnabled =
+    new BooleanParameter("Transitions", false)
+    .setDescription("When enabled, transitions between snapshots use interpolation");
+
+  private LXSnapshot inTransition = null;
+
+  private LinearEnvelope transition = new LinearEnvelope(0, 1, new FunctionalParameter() {
+    @Override
+    public double getValue() {
+      return 1000 * transitionTimeSecs.getValue();
+    }
+  });
+
   public LXSnapshotEngine(LX lx) {
     super(lx, "Snapshots");
     addArray("snapshot", this.snapshots);
+    addParameter("transitionEnabled", this.transitionEnabled);
+    addParameter("transitionTimeSecs", this.transitionTimeSecs);
   }
 
   public LXSnapshotEngine addListener(Listener listener) {
@@ -191,6 +221,52 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent {
       listener.snapshotMoved(this, snapshot);
     }
     return this;
+  }
+
+  /**
+   * Recall this snapshot, apply all of its values
+   */
+  public void recall(LXSnapshot snapshot) {
+    if (this.transitionEnabled.isOn()) {
+      this.inTransition = snapshot;
+      for (View view : this.inTransition.views) {
+        if (view.enabled.isOn()) {
+          view.startTransition();
+        }
+      }
+      this.transition.trigger();
+    } else {
+      for (View view : snapshot.views) {
+        if (view.enabled.isOn()) {
+          view.recall();
+        }
+      }
+    }
+  }
+
+  public double getTransitionProgress() {
+    return (this.inTransition != null) ? this.transition.getValue() : 0;
+  }
+
+  @Override
+  public void loop(double deltaMs) {
+    if (this.inTransition != null) {
+      this.transition.loop(deltaMs);
+      if (this.transition.finished()) {
+        for (View view : this.inTransition.views) {
+          if (view.enabled.isOn()) {
+            view.finishTransition();
+          }
+        }
+        this.inTransition = null;
+      } else {
+        for (View view : this.inTransition.views) {
+          if (view.enabled.isOn()) {
+            view.interpolate(this.transition.getValue());
+          }
+        }
+      }
+    }
   }
 
   /**
