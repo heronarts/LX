@@ -163,7 +163,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
           return effect.handleOscMessage(message, parts, index+2);
         }
       }
-      LXOscEngine.error("Channel " + getLabel() + " does not have effect at path: " + effectId);
+      LXOscEngine.error("Channel " + getLabel() + " does not have effect at path: " + effectId + " (" + message + ")");
       return false;
     }
     return super.handleOscMessage(message, parts, index);
