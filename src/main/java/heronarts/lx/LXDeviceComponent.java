@@ -21,6 +21,7 @@ package heronarts.lx;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Comparator;
 
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
@@ -32,6 +33,22 @@ import heronarts.lx.parameter.BooleanParameter;
  * of this are Patterns and Effects.
  */
 public abstract class LXDeviceComponent extends LXLayeredComponent implements LXModulationContainer, LXOscComponent {
+
+  public static final Comparator<Class<? extends LXDeviceComponent>> DEVICE_CATEGORY_NAME_SORT =
+    new Comparator<Class<? extends LXDeviceComponent>>() {
+      public int compare(Class<? extends LXDeviceComponent> cls1, Class<? extends LXDeviceComponent> cls2) {
+        String category1 = getCategory(cls1);
+        String category2 = getCategory(cls2);
+        if (category1.equals(category2)) {
+          return LXUtils.getComponentName(cls1).compareToIgnoreCase(LXUtils.getComponentName(cls2));
+        } else if (category1.equals(LXCategory.TEST)) {
+          return 1;
+        } else if (category2.equals(LXCategory.TEST)) {
+          return -1;
+        }
+        return category1.compareToIgnoreCase(category2);
+      }
+  };
 
   public final LXModulationEngine modulation;
 
@@ -58,6 +75,11 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     addChild("modulation", this.modulation = new LXModulationEngine(lx));
     addInternalParameter("expanded", this.controlsExpanded);
     addInternalParameter("modulationExpanded", this.modulationExpanded);
+  }
+
+  public static String getCategory(Class<? extends LXDeviceComponent> clazz) {
+    LXCategory annotation = clazz.getAnnotation(LXCategory.class);
+    return (annotation != null) ? annotation.value() : LXCategory.OTHER;
   }
 
   @Override
