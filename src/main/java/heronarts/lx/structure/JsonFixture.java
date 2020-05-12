@@ -522,7 +522,7 @@ public class JsonFixture extends LXFixture {
 
       if (loadParameters) {
         loadLabel(obj);
-        this.modelKeys = loadModelKeys(obj, true, LXModel.Key.MODEL);
+        this.modelKeys = loadModelKeys(obj, true, true, LXModel.Key.MODEL);
         loadParameters(obj);
         this.parametersReloaded.bang();
       }
@@ -796,11 +796,12 @@ public class JsonFixture extends LXFixture {
     this.label.setValue(validLabel);
   }
 
-  private String[] loadModelKeys(JsonObject obj, boolean required, String ... defaultKeys) {
+  private String[] loadModelKeys(JsonObject obj, boolean required, boolean includeParent, String ... defaultKeys) {
     warnDuplicateKeys(obj, KEY_MODEL_KEY, KEY_MODEL_KEYS);
+    List<String> validModelKeys = new ArrayList<String>();
+
     if (obj.has(KEY_MODEL_KEYS)) {
       JsonArray modelKeyArr = loadArray(obj, KEY_MODEL_KEYS);
-      List<String> validModelKeys = new ArrayList<String>();
       for (JsonElement modelKeyElem : modelKeyArr) {
         if (!modelKeyElem.isJsonPrimitive() || !modelKeyElem.getAsJsonPrimitive().isString()) {
           addWarning(KEY_MODEL_KEYS + " may only contain strings");
@@ -813,11 +814,6 @@ public class JsonFixture extends LXFixture {
           }
         }
       }
-      if (validModelKeys.isEmpty()) {
-        addWarning(KEY_MODEL_KEYS + " must contain at least one non-empty string value");
-      } else {
-        return validModelKeys.toArray(new String[0]);
-      }
     } else if (obj.has(KEY_MODEL_KEY)) {
       String key = loadString(obj, KEY_MODEL_KEY, false, KEY_MODEL_KEY + " should contain a single string value");
       if (key != null) {
@@ -825,13 +821,27 @@ public class JsonFixture extends LXFixture {
         if (key.isEmpty()) {
           addWarning(KEY_MODEL_KEY + " must contain a non-empty string value");
         } else {
-          return new String[] { key };
+          validModelKeys.add(key);
         }
       }
     } else if (required) {
       LX.warning("Fixture definition should specify one of " + KEY_MODEL_KEY + " or " + KEY_MODEL_KEYS);
     }
-    return defaultKeys;
+
+    if (includeParent) {
+      for (String key : loadModelKeys(this.jsonParameterValues, false, false)) {
+        if (validModelKeys.contains(key)) {
+          LX.warning("Parent JSON fixture redundantly specifies model key: " + key);
+        } else {
+          validModelKeys.add(key);
+        }
+      }
+    }
+
+    if (validModelKeys.isEmpty()) {
+      return defaultKeys;
+    }
+    return validModelKeys.toArray(new String[0]);
   }
 
   private void loadParameters(JsonObject obj) {
@@ -967,7 +977,7 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
-    String[] modelKeys = loadModelKeys(stripObj, false, LXModel.Key.STRIP);
+    String[] modelKeys = loadModelKeys(stripObj, false, false, LXModel.Key.STRIP);
 
     float spacing = 1f;
     LXMatrix transform = new LXMatrix();
@@ -1042,7 +1052,7 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
-    String[] modelKeys = loadModelKeys(arcObj, false, LXModel.Key.STRIP, LXModel.Key.ARC);
+    String[] modelKeys = loadModelKeys(arcObj, false, false, LXModel.Key.STRIP, LXModel.Key.ARC);
 
     LXMatrix transform = new LXMatrix();
 
@@ -1152,7 +1162,7 @@ public class JsonFixture extends LXFixture {
     }
     loadGeometry(child, childObj);
 
-    // TODO(mcslee): should we allow adding model keys and/or datagrams here? if so do they supercede
+    // TODO(mcslee): should we allow adding datagrams here? if so do they supercede
     // those in the child?
 
     addChild(child, true);
