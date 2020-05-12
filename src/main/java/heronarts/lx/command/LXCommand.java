@@ -54,6 +54,8 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.snapshot.LXSnapshot;
+import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.JsonFixture;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
@@ -183,6 +185,7 @@ public abstract class LXCommand {
     private final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
     private final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
     private final List<Midi.RemoveMapping> removeMidiMappings = new ArrayList<Midi.RemoveMapping>();
+    private final List<Snapshots.RemoveView> removeSnapshotViews = new ArrayList<Snapshots.RemoveView>();
 
     private void _removeModulations(LXModulationEngine modulation, LXComponent component) {
       List<LXCompoundModulation> compounds = modulation.findModulations(component, modulation.modulations);
@@ -211,15 +214,25 @@ public abstract class LXCommand {
       }
     }
 
-    protected void removeMappings(LXModulationEngine modulation, LXComponent component) {
+    protected void removeModulationMappings(LXModulationEngine modulation, LXComponent component) {
       _removeModulations(modulation, component);
       _removeTriggers(modulation, component);
     }
 
+    protected void removeSnapshotViews(LXSnapshotEngine snapshots, LXComponent component) {
+      List<LXSnapshot.View> views = snapshots.findSnapshotViews(component);
+      if (views  != null) {
+        for (LXSnapshot.View view : views) {
+          this.removeSnapshotViews.add(new Snapshots.RemoveView(view));
+        }
+      }
+    }
+
     protected RemoveComponent(LXComponent component) {
       // Tally up all the modulations and triggers that relate to this component and must be restored!
-      removeMappings(component.getLX().engine.modulation, component);
+      removeModulationMappings(component.getLX().engine.modulation, component);
       removeMidiMappings(component.getLX().engine.midi, component);
+      removeSnapshotViews(component.getLX().engine.snapshots, component);
     }
 
     @Override
@@ -232,6 +245,9 @@ public abstract class LXCommand {
       }
       for (Midi.RemoveMapping mapping : this.removeMidiMappings) {
         mapping.undo(lx);
+      }
+      for (Snapshots.RemoveView view : this.removeSnapshotViews) {
+        view.undo(lx);
       }
     }
   }
@@ -1191,7 +1207,7 @@ public abstract class LXCommand {
 
         // Not the global modulation engine? Remove from ours as well!
         if (modulation != modulator.getLX().engine.modulation) {
-          removeMappings(modulation, modulator);
+          removeModulationMappings(modulation, modulator);
         }
       }
 
@@ -1396,6 +1412,129 @@ public abstract class LXCommand {
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
+      }
+    }
+  }
+
+  public static class Snapshots {
+
+    public static class AddSnapshot extends LXCommand {
+
+      private ComponentReference<LXSnapshot> snapshot;
+      private JsonObject snapshotObj = null;
+
+      public AddSnapshot() {}
+
+      @Override
+      public String getDescription() {
+        return "Add Snapshot";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        if (this.snapshotObj == null) {
+          LXSnapshot instance = lx.engine.snapshots.addSnapshot();
+          this.snapshot = new ComponentReference<LXSnapshot>(instance);
+          this.snapshotObj = LXSerializable.Utils.toObject(lx, instance);
+        } else {
+          LXSnapshot instance = new LXSnapshot(lx);
+          this.snapshot = new ComponentReference<LXSnapshot>(instance);
+          instance.load(lx, this.snapshotObj);
+          lx.engine.snapshots.addSnapshot(instance);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) {
+        lx.engine.snapshots.removeSnapshot(this.snapshot.get());
+      }
+    }
+
+    public static class MoveSnapshot extends LXCommand {
+
+      private final ComponentReference<LXSnapshot> snapshot;
+      private final int fromIndex;
+      private final int toIndex;
+
+      public MoveSnapshot(LXSnapshot snapshot, int toIndex) {
+        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+        this.fromIndex = snapshot.getIndex();
+        this.toIndex = toIndex;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Snapshot";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        lx.engine.snapshots.moveSnapshot(this.snapshot.get(), this.toIndex);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        lx.engine.snapshots.moveSnapshot(this.snapshot.get(), this.fromIndex);
+      }
+    }
+
+    public static class RemoveSnapshot extends RemoveComponent {
+
+      private final ComponentReference<LXSnapshot> snapshot;
+      private final JsonObject snapshotObj;
+      private final int index;
+
+      public RemoveSnapshot(LXSnapshot snapshot) {
+        super(snapshot);
+        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+        this.snapshotObj = LXSerializable.Utils.toObject(this.snapshot.get());
+        this.index = snapshot.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Delete Snapshot";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        lx.engine.snapshots.removeSnapshot(this.snapshot.get());
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        LXSnapshot snapshot = new LXSnapshot(lx);
+        snapshot.load(lx, this.snapshotObj);
+        lx.engine.snapshots.addSnapshot(snapshot, this.index);
+        super.undo(lx);
+      }
+    }
+
+    public static class RemoveView extends LXCommand {
+
+      private ComponentReference<LXSnapshot> snapshot;
+      private LXSnapshot.View view;
+      private final JsonObject viewObj;
+
+      public RemoveView(LXSnapshot.View view) {
+        this.snapshot = new ComponentReference<LXSnapshot>(view.getSnapshot());
+        this.view = view;
+        this.viewObj = LXSerializable.Utils.toObject(view.getSnapshot().getLX(), view);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Snapshot View";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.snapshot.get().removeView(this.view);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.view = this.snapshot.get().addView(this.viewObj);
       }
     }
   }

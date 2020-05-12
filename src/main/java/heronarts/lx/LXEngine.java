@@ -40,6 +40,7 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
 
 import java.net.SocketException;
@@ -66,7 +67,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final LXAudioEngine audio;
 
-  public final LXMappingEngine mapping = new LXMappingEngine();
+  public final LXMappingEngine mapping;
 
   public final LXOscEngine osc;
 
@@ -88,6 +89,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     .setDescription("Overall speed adjustement to the entire engine (does not apply to master tempo and audio)");
 
   public final LXModulationEngine modulation;
+
+  public final LXSnapshotEngine snapshots;
 
   private boolean logTimers = false;
 
@@ -320,6 +323,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Initialize network thread (don't start it yet)
     this.networkThread = new NetworkThread(lx);
 
+    // Mapping engine
+    this.mapping = new LXMappingEngine();
+
     // Color palette
     addChild("palette", this.palette = new LXPalette(lx));
     LX.initTimer.log("Engine: Palette");
@@ -354,6 +360,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // OSC engine
     addChild("osc", this.osc = new LXOscEngine(lx));
     LX.initTimer.log("Engine: Osc");
+
+    // Snapshot engine
+    addChild("snapshots", this.snapshots = new LXSnapshotEngine(lx));
+    LX.initTimer.log("Engine: Snapshots");
 
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
@@ -913,6 +923,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // need to separate application-owned loop tasks from project-specific ones...
 
     // Clear all the modulation and mixer content
+    this.snapshots.clear();
     this.modulation.clear();
     this.mixer.clear();
 

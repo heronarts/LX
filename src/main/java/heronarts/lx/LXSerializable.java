@@ -23,10 +23,14 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import heronarts.lx.color.ColorParameter;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 
@@ -56,6 +60,49 @@ public interface LXSerializable {
    * Static container for utility methods
    */
   public static class Utils {
+
+    public static void saveParameter(LXParameter parameter, JsonObject obj) {
+      saveParameter(parameter, obj, parameter.getPath());
+    }
+
+    public static void saveParameter(LXParameter parameter, JsonObject obj, String path) {
+      if (parameter instanceof StringParameter) {
+        obj.addProperty(path, ((StringParameter) parameter).getString());
+      } else if (parameter instanceof BooleanParameter) {
+        obj.addProperty(path, ((BooleanParameter) parameter).isOn());
+      } else if (parameter instanceof DiscreteParameter) {
+        obj.addProperty(path, ((DiscreteParameter) parameter).getValuei());
+      } else if (parameter instanceof ColorParameter) {
+        obj.addProperty(path, ((ColorParameter) parameter).getColor());
+      } else if (parameter instanceof CompoundParameter) {
+        obj.addProperty(path, ((CompoundParameter) parameter).getBaseValue());
+      } else if (parameter instanceof FunctionalParameter) {
+        // Do not write FunctionalParamters into saved files
+      } else {
+        obj.addProperty(path, parameter.getValue());
+      }
+    }
+
+    public static void loadParameter(LXParameter parameter, JsonObject obj, String path) {
+      if (obj.has(path)) {
+        JsonElement value = obj.get(path);
+        if (parameter instanceof StringParameter) {
+          ((StringParameter) parameter).setValue(value.getAsString());
+        } else if (parameter instanceof BooleanParameter) {
+          ((BooleanParameter) parameter).setValue(value.getAsBoolean());
+        } else if (parameter instanceof DiscreteParameter) {
+          parameter.setValue(value.getAsInt());
+        } else if (parameter instanceof ColorParameter) {
+          ((ColorParameter) parameter).setColor(value.getAsInt());
+        } else if (parameter instanceof CompoundParameter) {
+          parameter.setValue(value.getAsDouble());
+        } else if (parameter instanceof FunctionalParameter) {
+          // Do nothing
+        } else {
+          parameter.setValue(value.getAsDouble());
+        }
+      }
+    }
 
     /**
      * Loads an integer value into a parameter, if it is found. If the

@@ -26,7 +26,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
@@ -39,7 +38,6 @@ import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -537,10 +535,24 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       return child.handleOscMessage(message, parts, index + 1);
     }
 
+    // Then check for a child array
+    List<? extends LXComponent> array = this.childArrays.get(path);
+    if (array != null) {
+      String arrayId = parts[index+1];
+      if (arrayId.matches("\\d+")) {
+        int arrayIndex = Integer.parseInt(arrayId) - 1;
+        if (arrayIndex >= 0 && arrayIndex < array.size()) {
+          return array.get(arrayIndex).handleOscMessage(message, parts, index + 2);
+        }
+      }
+      LXOscEngine.error("Invalid array index in OSC message: " + parts[index+1] + " (" + message + ")");
+      return false;
+    }
+
     // Next check for a parameter at the given path
     LXParameter parameter = getParameter(path);
     if (parameter == null) {
-      LXOscEngine.error("Component " + this + " does not have parameter: " + path);
+      LXOscEngine.error("Component " + this + " did not find anything at OSC path: " + path + " (" + message + ")");
       return false;
     }
 
@@ -705,16 +717,19 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       throw new IllegalStateException("LXComponent never had lx reference set: " + this);
     }
 
-    // NOTE: we do not dispose of all children or child arrays autmatically here. It is better
-    // to leave this to explicit subclass implementations. Ordering can matter.
+    // NOTE: we do not dispose of all children or child arrays automatically here. It is better
+    // to leave this to explicit subclass implementations. Ordering can matter and child
+    // arrays are typically dynamic, not fixed
 
+    // Remove the modulation engine for any component that has one
     if (this instanceof LXModulationContainer) {
       ((LXModulationContainer) this).getModulationEngine().dispose();
     }
 
-    // The global midi and modulation engines need to know we're gone
+    // The global midi, modulation, and snapshot engines need to know we're gone
     this.lx.engine.midi.removeMappings(this);
     this.lx.engine.modulation.removeModulations(this);
+    this.lx.engine.snapshots.removeSnapshotViews(this);
 
     // Remove all of the parameters
     for (LXParameter parameter : new ArrayList<LXParameter>(this.parameters.values())) {
@@ -932,23 +947,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   protected static void saveParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
     for (String path : parameters.keySet()) {
       LXParameter parameter = parameters.get(path);
-      if (parameter instanceof StringParameter) {
-        obj.addProperty(path, ((StringParameter) parameter).getString());
-      } else if (parameter instanceof BooleanParameter) {
-        obj.addProperty(path, ((BooleanParameter) parameter).isOn());
-      } else if (parameter instanceof DiscreteParameter) {
-        obj.addProperty(path,
-          ((DiscreteParameter) parameter).getValuei());
-      } else if (parameter instanceof ColorParameter) {
-        // Do nothing, see ColorParameter.setComponent which adds its
-        // sub-parameters
-      } else if (parameter instanceof CompoundParameter) {
-        obj.addProperty(path, ((CompoundParameter) parameter).getBaseValue());
-      } else if (parameter instanceof FunctionalParameter) {
-        // Do not write FunctionalParamters into saved files
-      } else {
-        obj.addProperty(path, parameter.getValue());
+      if (parameter instanceof ColorParameter) {
+        // Let this store/restore from hue/sat/brightness instead
+        continue;
       }
+      LXSerializable.Utils.saveParameter(parameter, obj, path);
     }
   }
 
@@ -962,27 +965,14 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   protected static void loadParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
     for (String path : parameters.keySet()) {
       LXParameter parameter = parameters.get(path);
-      if (parameter == component.label && !(component instanceof LXComponent.Renamable)) {
+      if ((parameter == component.label) && !(component instanceof LXComponent.Renamable)) {
         continue;
       }
-      if (obj.has(path)) {
-        JsonElement value = obj.get(path);
-        if (parameter instanceof StringParameter) {
-          ((StringParameter) parameter).setValue(value.getAsString());
-        } else if (parameter instanceof BooleanParameter) {
-          ((BooleanParameter) parameter).setValue(value.getAsBoolean());
-        } else if (parameter instanceof DiscreteParameter) {
-          parameter.setValue(value.getAsInt());
-        } else if (parameter instanceof ColorParameter) {
-          // Do nothing, it's stored in hue/sat/bright
-        } else if (parameter instanceof CompoundParameter) {
-          parameter.setValue(value.getAsDouble());
-        } else if (parameter instanceof FunctionalParameter) {
-          // Do nothing
-        } else {
-          parameter.setValue(value.getAsDouble());
-        }
+      if (parameter instanceof ColorParameter) {
+        // Let this be loaded by the sub-added hue/sat/color
+        continue;
       }
+      LXSerializable.Utils.loadParameter(parameters.get(path), obj, path);
     }
   }
 
