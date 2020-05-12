@@ -108,9 +108,9 @@ public class LXModel implements LXSerializable {
   public final List<LXDatagram> datagrams;
 
   /**
-   * A list of String keys by which this model type can be identified. Keys must be lowercase strings.
+   * A list of String keys by which this model type can be identified. Keys are non-empty strings.
    * These keys can be used with the {@link LXModel#children(String)} and {@link LXModel#sub(String)}
-   * methods to dynamically naviate this model's hierarchy.
+   * methods to dynamically navigate this model's hierarchy.
    */
   public final List<String> keys;
 
@@ -356,7 +356,14 @@ public class LXModel implements LXSerializable {
       if (key == null) {
         throw new IllegalArgumentException("May not pass null key to LXModel");
       }
-      _keys.add(key.toLowerCase());
+      key = key.trim();
+      if (key.isEmpty()) {
+        throw new IllegalArgumentException("May not pass empty string key to LXModel");
+      }
+      // Filter out any duplicates that got in somehow
+      if (!_keys.contains(key)) {
+        _keys.add(key);
+      }
     }
     return Collections.unmodifiableList(_keys);
   }
@@ -422,7 +429,7 @@ public class LXModel implements LXSerializable {
    * Returns a list of all the direct child components by particular key. Children are only one-level
    * deep.
    *
-   * @param key Child key type, must be lowercase
+   * @param key Child key type
    * @return List of direct children by type
    */
   public List<LXModel> children(String key) {
@@ -434,7 +441,7 @@ public class LXModel implements LXSerializable {
    * Returns a list of all the submodel components by particular key, at any level of depth, may be
    * many levels of descendants contained here
    *
-   * @param key Submodel key, must be all lowercase
+   * @param key Submodel key
    * @return List of all descendant submodels
    */
   public List<LXModel> sub(String key) {

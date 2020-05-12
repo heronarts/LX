@@ -30,8 +30,8 @@ import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
-import heronarts.lx.pattern.IteratorPattern;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.test.TestPattern;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
 
@@ -312,7 +312,7 @@ public class LX {
     this.engine.midi.initialize();
 
     // Add a default channel
-    this.engine.mixer.addChannel(new LXPattern[] { new IteratorPattern(this) }).fader.setValue(1);
+    this.engine.mixer.addChannel(new LXPattern[] { new TestPattern(this) }).fader.setValue(1);
     LX.initTimer.log("Default Channel");
 
     // Load the global preferences before plugin initialization

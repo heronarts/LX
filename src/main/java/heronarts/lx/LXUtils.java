@@ -30,6 +30,30 @@ public class LXUtils {
   private LXUtils() {
   }
 
+  public static int min(int a, int b) {
+    return a < b ? a : b;
+  }
+
+  public static int max(int a, int b) {
+    return a < b ? b : a;
+  }
+
+  public static float minf(float a, float b) {
+    return a < b ? a : b;
+  }
+
+  public static float maxf(float a, float b) {
+    return a < b ? b : a;
+  }
+
+  public static double min(double a, double b) {
+    return a < b ? a : b;
+  }
+
+  public static double max(double a, double b) {
+    return a < b ? b : a;
+  }
+
   public static double clamp(double value, double min, double max) {
     return value < min ? min : (value > max ? max : value);
   }

@@ -16,7 +16,7 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx.pattern;
+package heronarts.lx.pattern.color;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
@@ -25,6 +25,7 @@ import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.pattern.LXPattern;
 
 @LXCategory(LXCategory.COLOR)
 public class GradientPattern extends LXPattern {
