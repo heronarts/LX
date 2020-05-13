@@ -91,12 +91,12 @@ public class GridFixture extends LXProtocolFixture {
   }
 
   public final DiscreteParameter numRows = (DiscreteParameter)
-    new DiscreteParameter("Rows", 10, 1, 1025)
+    new DiscreteParameter("Rows", 10, 1, 257)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of rows in the grid");
 
   public final DiscreteParameter numColumns = (DiscreteParameter)
-    new DiscreteParameter("Columns", 10, 1, 1025)
+    new DiscreteParameter("Columns", 10, 1, 257)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of columns in the grid");
 
