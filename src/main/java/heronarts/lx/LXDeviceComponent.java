@@ -40,7 +40,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
         String category1 = getCategory(cls1);
         String category2 = getCategory(cls2);
         if (category1.equals(category2)) {
-          return LXUtils.getComponentName(cls1).compareToIgnoreCase(LXUtils.getComponentName(cls2));
+          return LXComponent.getComponentName(cls1).compareToIgnoreCase(LXComponent.getComponentName(cls2));
         } else if (category1.equals(LXCategory.TEST)) {
           return 1;
         } else if (category2.equals(LXCategory.TEST)) {
@@ -90,7 +90,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
         this.modulation.loop(deltaMs);
       } catch (Exception x) {
         LX.error(x, "Unexpected exception in device loop " + getClass().getName() + ": " + x.getLocalizedMessage());
-        this.lx.pushError(x, "Device " + LXUtils.getComponentName(getClass()) + " crashed due to an unexpected error.\n" + x.getLocalizedMessage());
+        this.lx.pushError(x, "Device " + LXComponent.getComponentName(getClass()) + " crashed due to an unexpected error.\n" + x.getLocalizedMessage());
         this.crash = x;
         this.crashed.setValue(true);
       }

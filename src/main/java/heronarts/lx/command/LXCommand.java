@@ -26,7 +26,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.LXUtils;
 import heronarts.lx.clipboard.LXNormalizedValue;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
@@ -1120,7 +1119,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Add " + LXUtils.getComponentName(this.modulatorClass);
+        return "Add " + LXComponent.getComponentName(this.modulatorClass);
       }
 
       @Override

@@ -143,31 +143,6 @@ public class LXUtils {
     }
   }
 
-  public static String getComponentName(Class<? extends LXComponent> component, String suffix) {
-    String simple = component.getSimpleName();
-    if (simple.endsWith(suffix)) {
-      simple = simple.substring(0, simple.length() - suffix.length());
-    }
-    return simple;
-  }
-
-  public static String getComponentName(Class<? extends LXComponent> cls) {
-    String suffix = "";
-    Class<? extends LXComponent> generic = cls;
-    while (generic != null) {
-      if (generic.getSimpleName().startsWith("LX")) {
-        suffix = generic.getSimpleName().substring(2);
-        break;
-      }
-      generic = generic.getSuperclass().asSubclass(LXComponent.class);
-    }
-    return getComponentName(cls, suffix);
-  }
-
-  public static String getComponentName(LXComponent component, String suffix) {
-    return getComponentName(component.getClass(), suffix);
-  }
-
   public static class LookupTable {
 
     public interface Function {

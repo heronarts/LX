@@ -270,6 +270,52 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   /**
+   * Gets the name of a component class, with a suffix removed
+   *
+   * @param component Component class
+   * @param suffix Suffix to remove
+   * @return Name of component type
+   */
+  public static String getComponentName(Class<? extends LXComponent> component, String suffix) {
+    String simple = component.getSimpleName();
+    if (simple.endsWith(suffix)) {
+      simple = simple.substring(0, simple.length() - suffix.length());
+    }
+    return simple;
+  }
+
+  /**
+   * Gets the name of a component class, automatically removing the suffix of
+   * a generic LX superclass, if one is found
+   *
+   * @param cls Component class
+   * @return Name of component class
+   */
+  public static String getComponentName(Class<? extends LXComponent> cls) {
+    String suffix = "";
+    Class<? extends LXComponent> generic = cls;
+    while (generic != null) {
+      if (generic.getSimpleName().startsWith("LX")) {
+        suffix = generic.getSimpleName().substring(2);
+        break;
+      }
+      generic = generic.getSuperclass().asSubclass(LXComponent.class);
+    }
+    return getComponentName(cls, suffix);
+  }
+
+  /**
+   * Gets the name of an LXComponent object with suffix removed
+   *
+   * @param component Component instance
+   * @param suffix Suffix to remove
+   * @return Name of component type
+   */
+  public static String getComponentName(LXComponent component, String suffix) {
+    return getComponentName(component.getClass(), suffix);
+  }
+
+  /**
    * Creates a new component with no ID and not part of the LX hierarchy. This
    * should very rarely be used, except when creating components that will have to
    * be dynamically loaded later, or may never be part of the hierarchy.
@@ -327,7 +373,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     if (lx != null) {
       lx.componentRegistry.register(this);
     }
-    this.label.setValue((label != null) ? label : LXUtils.getComponentName(getClass()));
+    this.label.setValue((label != null) ? label : LXComponent.getComponentName(getClass()));
     addParameter("label", this.label);
   }
 

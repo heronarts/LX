@@ -20,8 +20,8 @@ package heronarts.lx.blend;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXBuffer;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXModulatorComponent;
-import heronarts.lx.LXUtils;
 
 /**
  * An LXBlend is a loop-based implementation of a compositing algorithm.
@@ -68,7 +68,7 @@ public abstract class LXBlend extends LXModulatorComponent {
 
   protected LXBlend(LX lx) {
     super(lx);
-    this.name = LXUtils.getComponentName(this, "Blend");
+    this.name = LXComponent.getComponentName(this, "Blend");
   }
 
   /**
