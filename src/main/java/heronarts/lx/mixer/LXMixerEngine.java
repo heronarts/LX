@@ -231,7 +231,6 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         }
       }
     }
-
   }
 
 
@@ -1002,9 +1001,6 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    // Load all components
-    super.load(lx, obj);
-
     // Add the new channels
     if (obj.has(KEY_CHANNELS)) {
       JsonArray channelsArray = obj.getAsJsonArray(KEY_CHANNELS);
@@ -1014,6 +1010,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     } else {
       addChannel().fader.setValue(1);
     }
+
+    // Load the parameters after restoring the channels!
+    super.load(lx, obj);
 
     // Notify all the active patterns
     for (LXAbstractChannel channel : this.channels) {

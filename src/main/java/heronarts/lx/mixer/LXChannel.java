@@ -257,6 +257,7 @@ public class LXChannel extends LXAbstractChannel {
     addParameter("transitionEnabled", this.transitionEnabled);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
     addParameter("transitionBlendMode", this.transitionBlendMode);
+    addParameter("focusedPattern", this.focusedPattern);
   }
 
   void updateTransitionBlendOptions() {
@@ -1020,11 +1021,7 @@ public class LXChannel extends LXAbstractChannel {
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
     }
 
-    // Set the focused pattern to the active one, if it exists
-    if (this.activePatternIndex >= 0) {
-      this.focusedPattern.setValue(this.activePatternIndex);
-    }
-
+    // Restore parameter values
     super.load(lx, obj);
   }
 
