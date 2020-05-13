@@ -386,26 +386,25 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath());
       obj.addProperty(KEY_ACTIVE_PATTERN_INDEX, this.activePatternIndex);
     }
-
   }
 
-  public final BooleanParameter trigger =
-    new BooleanParameter("Trigger", false)
+  public final BooleanParameter recall =
+    new BooleanParameter("Recall", false)
     .setMode(BooleanParameter.Mode.MOMENTARY)
-    .setDescription("Triggers recall of the snapshot");
+    .setDescription("Restores the values of this snapshot");
 
   public LXSnapshot(LX lx) {
     super(lx, "Snapshot");
     setParent(lx.engine.snapshots);
-    addParameter("trigger", this.trigger);
+    addParameter("recall", this.recall);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (this.trigger == p) {
-      if (this.trigger.isOn()) {
+    if (this.recall == p) {
+      if (this.recall.isOn()) {
+        this.recall.setValue(false);
         this.lx.engine.snapshots.recall(this);
-        this.trigger.setValue(false);
       }
     }
   }
