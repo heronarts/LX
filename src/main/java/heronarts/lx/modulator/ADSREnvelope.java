@@ -18,11 +18,11 @@
 
 package heronarts.lx.modulator;
 
-import heronarts.lx.LXUtils;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 public class ADSREnvelope extends LXModulator implements LXNormalizedParameter {
 

@@ -19,7 +19,6 @@
 package heronarts.lx.pattern.test;
 
 import heronarts.lx.LXCategory;
-import heronarts.lx.LXUtils;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.LX;
@@ -30,6 +29,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * Braindead simple test pattern that iterates through all the nodes turning

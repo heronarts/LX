@@ -20,9 +20,9 @@ package heronarts.lx.pattern;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
-import heronarts.lx.LXUtils;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.GridModel;
+import heronarts.lx.utils.LXUtils;
 
 import java.util.HashMap;
 

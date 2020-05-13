@@ -19,7 +19,6 @@
 package heronarts.lx.effect;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXUtils;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.modulator.LXWaveshape;
 import heronarts.lx.modulator.SawLFO;
@@ -27,6 +26,7 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 public class StrobeEffect extends LXEffect {
 

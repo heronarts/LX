@@ -18,7 +18,7 @@
 
 package heronarts.lx.parameter;
 
-import heronarts.lx.LXUtils;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * Simple parameter class with a double value.

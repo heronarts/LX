@@ -18,12 +18,12 @@
 
 package heronarts.lx.audio;
 
-import heronarts.lx.LXUtils;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * A DecibelMeter is a modulator that returns the level of an audio signal. Gain

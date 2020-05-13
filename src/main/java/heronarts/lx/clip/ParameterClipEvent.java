@@ -3,8 +3,8 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXUtils;
 import heronarts.lx.parameter.LXNormalizedParameter;
+import heronarts.lx.utils.LXUtils;
 
 public class ParameterClipEvent extends LXClipEvent {
 

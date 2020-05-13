@@ -18,8 +18,8 @@
 
 package heronarts.lx.transform;
 
-import heronarts.lx.LXUtils;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.utils.LXUtils;
 
 import java.lang.Math;
 

@@ -19,7 +19,7 @@
 package heronarts.lx.parameter;
 
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXUtils;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * Simple normalized parameter which is not listenable.

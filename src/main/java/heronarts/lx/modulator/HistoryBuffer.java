@@ -18,7 +18,7 @@
 
 package heronarts.lx.modulator;
 
-import heronarts.lx.LXUtils;
+import heronarts.lx.utils.LXUtils;
 
 public abstract class HistoryBuffer extends LXModulator {
 

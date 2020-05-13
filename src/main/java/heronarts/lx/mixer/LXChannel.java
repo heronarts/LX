@@ -20,7 +20,6 @@ package heronarts.lx.mixer;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.LXUtils;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
@@ -37,6 +36,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.utils.LXUtils;
 import heronarts.lx.parameter.BooleanParameter;
 import java.util.ArrayList;
 import java.util.Collections;

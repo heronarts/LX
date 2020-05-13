@@ -16,7 +16,9 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx;
+package heronarts.lx.utils;
+
+import heronarts.lx.LX;
 
 /**
  * Helper class of useful utilities, many just mirror Processing built-ins but
@@ -143,6 +145,95 @@ public class LXUtils {
     }
   }
 
+  /**
+   * This function computes a random value at the coordinate (x,y,z).
+   * Adjacent random values are continuous but the noise fluctuates
+   * its randomness with period 1, i.e. takes on wholly unrelated values
+   * at integer points. Specifically, this implements Ken Perlin's
+   * revised noise function from 2002.
+   *
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @return
+   */
+  public static float noise(float x, float y, float z) {
+    return Noise.stb_perlin_noise3(x, y, z, 0, 0, 0);
+  }
+
+  /**
+   * This function computes a random value at the coordinate (x,y,z).
+   * Adjacent random values are continuous but the noise fluctuates
+   * its randomness with period 1, i.e. takes on wholly unrelated values
+   * at integer points. Specifically, this implements Ken Perlin's
+   * revised noise function from 2002.
+   *
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @param seed Seed
+   * @return
+   */
+  public static float noise(float x, float y, float z, int seed) {
+    return Noise.stb_perlin_noise3_seed(x, y, z, 0, 0, 0, seed);
+  }
+
+
+  /**
+   * Common fractal noise functions are included, which produce
+   * a wide variety of nice effects depending on the parameters
+   * provided. Note that each function will call stb_perlin_noise3
+   * 'octaves' times, so this parameter will affect runtime.
+   *
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @param lacunarity spacing between successive octaves (use exactly 2.0 for wrapping output)
+   * @param gain relative weighting applied to each successive octave
+   * @param offset used to invert the ridges, may need to be larger, not sure
+   * @param octaves number of "octaves" of noise3() to sum
+   * @return
+   */
+  public static float noiseRidge(float x, float y, float z, float lacunarity, float gain, float offset, int octaves) {
+    return Noise.stb_perlin_ridge_noise3(x, y, z, lacunarity, gain, offset, octaves);
+  }
+
+  /**
+   * Common fractal noise functions are included, which produce
+   * a wide variety of nice effects depending on the parameters
+   * provided. Note that each function will call stb_perlin_noise3
+   * 'octaves' times, so this parameter will affect runtime.
+   *
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @param lacunarity spacing between successive octaves (use exactly 2.0 for wrapping output)
+   * @param gain relative weighting applied to each successive octave
+   * @param octaves number of "octaves" of noise3() to sum
+   * @return
+   */
+  public static float noiseFBM(float x, float y, float z, float lacunarity, float gain, int octaves) {
+    return Noise.stb_perlin_fbm_noise3(x, y, z, lacunarity, gain, octaves);
+  }
+
+  /**
+   * Common fractal noise functions are included, which produce
+   * a wide variety of nice effects depending on the parameters
+   * provided. Note that each function will call stb_perlin_noise3
+   * 'octaves' times, so this parameter will affect runtime.
+   *
+   * @param x X coordinate
+   * @param y Y coordinate
+   * @param z Z coordinate
+   * @param lacunarity spacing between successive octaves (use exactly 2.0 for wrapping output)
+   * @param gain relative weighting applied to each successive octave
+   * @param octaves number of "octaves" of noise3() to sum
+   * @return
+   */
+  public static float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves) {
+    return Noise.stb_perlin_turbulence_noise3(x, y, z, lacunarity, gain, octaves);
+  }
+
   public static class LookupTable {
 
     public interface Function {
@@ -227,4 +318,5 @@ public class LXUtils {
       return this.values[(int) Math.round(basis * this.tableSize)];
     }
   }
+
 }

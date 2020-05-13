@@ -28,8 +28,8 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.LXUtils;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.utils.LXUtils;
 
 public abstract class LXClipLane implements LXSerializable {
 

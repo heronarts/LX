@@ -19,7 +19,6 @@
 package heronarts.lx.audio;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXUtils;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.osc.LXOscComponent;
@@ -28,6 +27,7 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.NormalizedParameter;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * A frequency gate monitors a Graphic Meter for a particular frequency range and

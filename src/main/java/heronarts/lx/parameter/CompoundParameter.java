@@ -21,8 +21,9 @@ package heronarts.lx.parameter;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.Collections;
 import java.util.List;
-import heronarts.lx.LXUtils;
+
 import heronarts.lx.modulation.LXCompoundModulation;
+import heronarts.lx.utils.LXUtils;
 
 public class CompoundParameter extends BoundedParameter {
 

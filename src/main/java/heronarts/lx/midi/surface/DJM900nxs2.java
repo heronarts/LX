@@ -19,7 +19,6 @@
 package heronarts.lx.midi.surface;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXUtils;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
 import heronarts.lx.midi.MidiAftertouch;
@@ -31,6 +30,7 @@ import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter.Polarity;
+import heronarts.lx.utils.LXUtils;
 
 public class DJM900nxs2 extends LXMidiSurface {
 
