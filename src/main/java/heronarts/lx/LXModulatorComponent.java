@@ -74,23 +74,24 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     }
   }
 
-  public LXModulator addModulator(String path, LXModulator modulator) {
+  public <T extends LXModulator> T addModulator(String path, T modulator) {
     _addModulator(modulator, -1);
     addChild(path, modulator);
     return modulator;
   }
 
-  public final LXModulator addModulator(LXModulator modulator) {
-    return addModulator(modulator, -1);
+  public final <T extends LXModulator> T addModulator(T modulator) {
+    addModulator(modulator, -1);
+    return modulator;
   }
 
-  public LXModulator addModulator(LXModulator modulator, int index) {
+  public <T extends LXModulator> T addModulator(T modulator, int index) {
     _addModulator(modulator, index);
     modulator.setParent(this);
     return modulator;
   }
 
-  public LXModulator moveModulator(LXModulator modulator, int index) {
+  public <T extends LXModulator> T moveModulator(T modulator, int index) {
     if (!this.modulators.contains(modulator)) {
       throw new IllegalArgumentException("Cannot move modulator not in component: " + modulator);
     }
@@ -100,12 +101,12 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
     return modulator;
   }
 
-  public final LXModulator startModulator(LXModulator modulator) {
+  public final <T extends LXModulator> T startModulator(T modulator) {
     addModulator(modulator).start();
     return modulator;
   }
 
-  public LXModulator removeModulator(LXModulator modulator) {
+  public <T extends LXModulator> T removeModulator(T modulator) {
     checkForReentrancy(modulator, "remove");
     this.mutableModulators.remove(modulator);
     modulator.dispose();

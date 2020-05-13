@@ -204,7 +204,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   @Override
-  public LXModulator addModulator(LXModulator modulator, int index) {
+  public <T extends LXModulator> T addModulator(T modulator, int index) {
     super.addModulator(modulator, index);
     for (Listener listener : this.listeners) {
       listener.modulatorAdded(this, modulator);
@@ -213,7 +213,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   @Override
-  public LXModulator removeModulator(LXModulator modulator) {
+  public <T extends LXModulator> T removeModulator(T modulator) {
     removeModulations(modulator);
     super.removeModulator(modulator);
     for (Listener listener : this.listeners) {
@@ -223,7 +223,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   @Override
-  public LXModulator moveModulator(LXModulator modulator, int index) {
+  public <T extends LXModulator> T moveModulator(T modulator, int index) {
     super.moveModulator(modulator, index);
     for (Listener listener : this.listeners) {
       listener.modulatorMoved(this, modulator);
