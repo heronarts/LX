@@ -132,8 +132,8 @@ public class LXCommandEngine {
         LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
         clear();
       }
+      this.dirty.setValue(true);
     }
-    this.dirty.setValue(true);
     return this;
   }
 
@@ -159,8 +159,8 @@ public class LXCommandEngine {
         LX.error(x, "Unhandled exception on redo " + command + " - bad internal state?");
         clear();
       }
+      this.dirty.setValue(true);
     }
-    this.dirty.setValue(true);
     return this;
   }
 
