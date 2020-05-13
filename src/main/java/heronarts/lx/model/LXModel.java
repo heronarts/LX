@@ -209,19 +209,37 @@ public class LXModel implements LXSerializable {
   public float zRange;
 
   /**
-   * Smallest radius from origin
+   * Smallest radius from origin (0, 0)
    */
   public float rMin;
 
   /**
-   * Greatest radius from origin
+   * Greatest radius from origin (0, 0)
    */
   public float rMax;
 
   /**
-   * Range of radial values
+   * Range of radial values from origin (0, 0)
    */
   public float rRange;
+
+  /**
+   * Smallest radius from center of model, this is only
+   * valid on the top-level LXModel
+   */
+  public float rcMin;
+
+  /**
+   * Greatest radius from center of model, this is only valid
+   * on the top-level LXModel
+   */
+  public float rcMax;
+
+  /**
+   * Range of radial values from center of model, only validd
+   * on the top-level LXModel
+   */
+  public float rcRange;
 
   /**
    * Constructs a null model with no points
@@ -585,6 +603,7 @@ public class LXModel implements LXSerializable {
         yMin = yMax = p.y;
         zMin = zMax = p.z;
         rMin = rMax = p.r;
+        firstPoint = false;
       } else {
         if (p.x < xMin) {
           xMin = p.x;
@@ -611,7 +630,6 @@ public class LXModel implements LXSerializable {
           rMax = p.r;
         }
       }
-      firstPoint = false;
     }
     this.ax = ax / Math.max(1, this.points.length);
     this.ay = ay / Math.max(1, this.points.length);
@@ -628,9 +646,9 @@ public class LXModel implements LXSerializable {
     this.rMin = rMin;
     this.rMax = rMax;
     this.rRange = rMax - rMin;
-    this.cx = xMin + xRange / 2.f;
-    this.cy = yMin + yRange / 2.f;
-    this.cz = zMin + zRange / 2.f;
+    this.cx = xMin + xRange / 2f;
+    this.cy = yMin + yRange / 2f;
+    this.cz = zMin + zRange / 2f;
     this.center.set(this.cx, this.cy, this.cz);
     this.average.set(this.ax, this.ay, this.az);
   }
@@ -645,6 +663,35 @@ public class LXModel implements LXSerializable {
     for (LXPoint p : this.points) {
       p.normalize(this);
     }
+    float rcMin = 0, rcMax = 0;
+    boolean firstPoint = true;
+    for (LXPoint p : this.points) {
+      if (firstPoint) {
+        rcMin = p.rc;
+        rcMax = p.rc;
+        firstPoint = false;
+      } else {
+        if (p.rc < rcMin) {
+          rcMin = p.rc;
+        }
+        if (p.rc > rcMax) {
+          rcMax = p.rc;
+        }
+      }
+    }
+    this.rcMin = rcMin;
+    this.rcMax = rcMax;
+    this.rcRange = rcMax - rcMin;
+    if (rcMax == 0) {
+      for (LXPoint p : this.points) {
+        p.rcn = 0.5f;
+      }
+    } else {
+      for (LXPoint p : this.points) {
+        p.rcn = p.rc / rcMax;
+      }
+    }
+
     return this;
   }
 

@@ -63,6 +63,11 @@ public class LXPoint {
   public float r;
 
   /**
+   * Radius of this point from the center of the global model
+   */
+  public float rc;
+
+  /**
    * Radius of this point from origin (0, 0) in the x-y plane
    */
   public float rxy;
@@ -73,7 +78,7 @@ public class LXPoint {
   public float rxz;
 
   /**
-   * Angle of this point about the origin in the x-y plane
+   * Angle of this point about the origin (0, 0) in the x-y plane
    */
   public float theta;
 
@@ -107,6 +112,12 @@ public class LXPoint {
    * Normalized position of point in radial space (0-1), 0 is origin, 1 is max radius
    */
   public float rn = 0;
+
+  /**
+   * Normalized position of point in radial space from center of model,
+   * 0 is center, 1 is max radius from center
+   */
+  public float rcn = 0;
 
   /**
    * Index of this point into color buffer
@@ -343,6 +354,11 @@ public class LXPoint {
     this.xn = (model.xRange == 0) ? .5f : (this.x - model.xMin) / model.xRange;
     this.yn = (model.yRange == 0) ? .5f : (this.y - model.yMin) / model.yRange;
     this.zn = (model.zRange == 0) ? .5f : (this.z - model.zMin) / model.zRange;
-    this.rn = (model.rRange == 0) ? 0f : this.r / model.rRange;
+    this.rn = (model.rMax == 0) ? .5f : this.r / model.rMax;
+
+    float rx = this.x - model.cx;
+    float ry = this.y - model.cy;
+    float rz = this.z - model.cz;
+    this.rc = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
   }
 }
