@@ -173,7 +173,20 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
 
   @Override
   public BoundedParameter setDescription(String description) {
-    return (BoundedParameter) super.setDescription(description);
+    super.setDescription(description);
+    return this;
+  }
+
+  @Override
+  public BoundedParameter setPolarity(LXParameter.Polarity polarity) {
+    super.setPolarity(polarity);
+    return this;
+  }
+
+  @Override
+  public BoundedParameter setExponent(double exponent) {
+    super.setExponent(exponent);
+    return this;
   }
 
   public BoundedParameter incrementValue(double amount, boolean wrap) {

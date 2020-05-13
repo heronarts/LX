@@ -96,8 +96,21 @@ public class CompoundParameter extends BoundedParameter {
   }
 
   @Override
+  public CompoundParameter setPolarity(LXParameter.Polarity polarity) {
+    super.setPolarity(polarity);
+    return this;
+  }
+
+  @Override
+  public CompoundParameter setExponent(double exponent) {
+    super.setExponent(exponent);
+    return this;
+  }
+
+  @Override
   public CompoundParameter setDescription(String description) {
-    return (CompoundParameter) super.setDescription(description);
+    super.setDescription(description);
+    return this;
   }
 
   /**
