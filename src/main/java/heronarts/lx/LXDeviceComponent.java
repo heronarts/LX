@@ -23,6 +23,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Comparator;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -49,6 +51,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
         return category1.compareToIgnoreCase(category2);
       }
   };
+
+  protected static final int DEVICE_VERSION_UNSPECIFIED = -1;
 
   public final LXModulationEngine modulation;
 
@@ -82,6 +86,18 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     return (annotation != null) ? annotation.value() : LXCategory.OTHER;
   }
 
+  /**
+   * Subclasses may override this and provide a version identifier. This will be written
+   * to project files when this device is saved. The version should be incremented when
+   * change to the code makes old parameter values incompatible, and the implementation
+   * should handle loading old values if possible.
+   *
+   * @return Version number of this device
+   */
+  public int getDeviceVersion() {
+    return DEVICE_VERSION_UNSPECIFIED;
+  }
+
   @Override
   public void loop(double deltaMs) {
     if (!this.crashed.isOn()) {
@@ -113,6 +129,14 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
   public LXModulationEngine getModulationEngine() {
     return this.modulation;
+  }
+
+  protected static final String KEY_DEVICE_VERSION = "deviceVersion";
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
+    obj.addProperty(KEY_DEVICE_VERSION, getDeviceVersion());
   }
 
 }
