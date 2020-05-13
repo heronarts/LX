@@ -374,7 +374,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
     @Override
     protected void recall() {
-      this.channel.goIndex(this.activePatternIndex);
+      this.channel.goPatternIndex(this.activePatternIndex);
     }
 
     private static final String KEY_CHANNEL_PATH = "channelPath";

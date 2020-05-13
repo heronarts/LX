@@ -54,6 +54,8 @@ import com.google.gson.JsonObject;
  */
 public class LXChannel extends LXAbstractChannel {
 
+  public static final int NO_PATTERN_INDEX = -1;
+
   /**
    * Listener interface for objects which want to be notified when the internal
    * channel state is modified.
@@ -210,8 +212,8 @@ public class LXChannel extends LXAbstractChannel {
 
   private double autoCycleProgress = 0;
   private double transitionProgress = 0;
-  private int activePatternIndex = -1;
-  private int nextPatternIndex = -1;
+  private int activePatternIndex = NO_PATTERN_INDEX;
+  private int nextPatternIndex = NO_PATTERN_INDEX;
 
   /**
    * Group that this channel belongs to
@@ -348,7 +350,7 @@ public class LXChannel extends LXAbstractChannel {
         return pattern.handleOscMessage(message, parts, index + 2);
       }
     } else if (path.equals(PATH_ACTIVE_PATTERN) || path.equals(PATH_NEXT_PATTERN)) {
-      goIndex(message.getInt());
+      goPatternIndex(message.getInt());
       return true;
     }
     return super.handleOscMessage(message, parts, index);
@@ -429,7 +431,7 @@ public class LXChannel extends LXAbstractChannel {
       }
     }
     _updatePatterns(patterns);
-    this.activePatternIndex = this.nextPatternIndex = (this.patterns.isEmpty()) ? -1 : 0;
+    this.activePatternIndex = this.nextPatternIndex = (this.patterns.isEmpty()) ? NO_PATTERN_INDEX : 0;
     this.transition = null;
 
     // Is there an active pattern? Notify it
@@ -630,6 +632,12 @@ public class LXChannel extends LXAbstractChannel {
     return this.focusedPattern.getValuei();
   }
 
+  /**
+   * Returns the pattern that currently has focus in this channel's
+   * pattern list.
+   *
+   * @return Pattern focused in the list
+   */
   public final LXPattern getFocusedPattern() {
     if (this.patterns.isEmpty()) {
       return null;
@@ -637,6 +645,11 @@ public class LXChannel extends LXAbstractChannel {
     return this.patterns.get(this.focusedPattern.getValuei());
   }
 
+  /**
+   * Returns the index of the currently active pattern, if any
+   *
+   * @return Index of the currently active pattern
+   */
   public final int getActivePatternIndex() {
     return this.activePatternIndex;
   }
@@ -657,7 +670,12 @@ public class LXChannel extends LXAbstractChannel {
     return (this.nextPatternIndex >= 0) ? this.mutablePatterns.get(this.nextPatternIndex) : null;
   }
 
-  public final LXChannel goPrev() {
+  /**
+   * Activates the previous pattern in this channel's pattern list
+   *
+   * @return this
+   */
+  public final LXChannel goPreviousPattern() {
     if (this.transition != null) {
       return this;
     }
@@ -673,7 +691,12 @@ public class LXChannel extends LXAbstractChannel {
     return this;
   }
 
-  public final LXChannel goNext() {
+  /**
+   * Activates the next pattern in this channel's pattern list
+   *
+   * @return this
+   */
+  public final LXChannel goNextPattern() {
     if (this.transition != null) {
       return this;
     }
@@ -691,17 +714,29 @@ public class LXChannel extends LXAbstractChannel {
     return this;
   }
 
+  /**
+   * Activates the given pattern, which must belong to this channel.
+   *
+   * @param pattern Pattern to acivate
+   * @return this
+   */
   public final LXChannel goPattern(LXPattern pattern) {
     int index = this.patterns.indexOf(pattern);
     if (index >= 0) {
-      goIndex(index);
+      goPatternIndex(index);
     }
     return this;
   }
 
   private final List<LXPattern> randomEligible = new ArrayList<LXPattern>();
 
-  public final LXChannel goRandom() {
+  /**
+   * Activates a randomly seleted pattern on the channel, from the set of
+   * patterns that have auto cycle enabled.
+   *
+   * @return this
+   */
+  public final LXChannel goRandomPattern() {
     if (this.transition != null) {
       return this;
     }
@@ -722,7 +757,14 @@ public class LXChannel extends LXAbstractChannel {
     return this;
   }
 
-  public final LXChannel goIndex(int i) {
+  /**
+   * Activates the pattern at the given index, if it is within the
+   * bounds of this channel's pattern list.
+   *
+   * @param i Pattern index
+   * @return this
+   */
+  public final LXChannel goPatternIndex(int i) {
     if (i < 0 || i >= this.patterns.size()) {
       return this;
     }
@@ -803,7 +845,7 @@ public class LXChannel extends LXAbstractChannel {
         listener.patternDidChange(this, activePattern);
       }
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
-      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, -1);
+      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, NO_PATTERN_INDEX);
     }
   }
 
@@ -821,7 +863,7 @@ public class LXChannel extends LXAbstractChannel {
       listener.patternDidChange(this, activePattern);
     }
     this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
-    this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, -1);
+    this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, NO_PATTERN_INDEX);
     if (this.lx.flags.focusActivePattern) {
       this.focusedPattern.setValue(this.activePatternIndex);
     }
@@ -858,10 +900,10 @@ public class LXChannel extends LXAbstractChannel {
         if (this.autoCycleEnabled.isOn()) {
           switch (this.autoCycleMode.getEnum()) {
           case NEXT:
-            goNext();
+            goNextPattern();
             break;
           case RANDOM:
-            goRandom();
+            goRandomPattern();
             break;
           }
         }
@@ -963,7 +1005,7 @@ public class LXChannel extends LXAbstractChannel {
     }
 
     // Set the active index instantly, do not transition!
-    this.activePatternIndex = this.nextPatternIndex = -1;
+    this.activePatternIndex = this.nextPatternIndex = NO_PATTERN_INDEX;
     if (obj.has(KEY_PATTERN_INDEX)) {
       int patternIndex = obj.get(KEY_PATTERN_INDEX).getAsInt();
       if (patternIndex < this.patterns.size()) {

@@ -319,7 +319,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     void onDeviceOnOff() {
       if (this.pattern != null) {
-        this.pattern.getChannel().goIndex(this.pattern.getIndex());
+        this.pattern.getChannel().goPatternIndex(this.pattern.getIndex());
         sendNoteOn(0, DEVICE_ON_OFF, 1);
       } else if (this.effect != null) {
         this.effect.enabled.toggle();
@@ -826,7 +826,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               if (index < c.getPatterns().size()) {
                 c.focusedPattern.setValue(index);
                 if (!this.shiftOn) {
-                  c.goIndex(index);
+                  c.goPatternIndex(index);
                 }
               }
             }

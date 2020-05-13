@@ -609,7 +609,7 @@ public class LX {
   public LX goPrev() {
     LXChannel channel = getChannel();
     if (channel != null) {
-      channel.goPrev();
+      channel.goPreviousPattern();
     }
     return this;
   }
@@ -622,7 +622,7 @@ public class LX {
   public LX goNext() {
     LXChannel channel = getChannel();
     if (channel != null) {
-      channel.goNext();
+      channel.goNextPattern();
     }
     return this;
   }
@@ -650,7 +650,7 @@ public class LX {
   public LX goIndex(int i) {
     LXChannel channel = getChannel();
     if (channel != null) {
-      channel.goIndex(i);
+      channel.goPatternIndex(i);
     }
     return this;
   }
