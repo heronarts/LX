@@ -230,7 +230,7 @@ public class LXUtils {
    * @param octaves number of "octaves" of noise3() to sum
    * @return
    */
-  public static float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves) {
+  public static float noiseTurbulence(float x, float y, float z, float lacunarity, float gain, int octaves) {
     return Noise.stb_perlin_turbulence_noise3(x, y, z, lacunarity, gain, octaves);
   }
 

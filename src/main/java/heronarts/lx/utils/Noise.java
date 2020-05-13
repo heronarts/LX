@@ -1,6 +1,9 @@
 /**
  * Java port of https://github.com/nothings/stb/blob/master/stb_perlin.h
- * Thanks to Sean Barrett, Jack Mott, and Jordan Peck
+ * Thanks to Sean Barrett, Jack Mott, and Jordan Peck.
+ *
+ * Code formatting has been minimally modified, intentionally left as-is.
+ * The wrappers in LXUtils may be used for more "Java-esque".
  *
  * stb_perlin.h - v0.5 - perlin noise
  * public domain single-file C implementation by Sean Barrett
@@ -26,7 +29,7 @@
 
 package heronarts.lx.utils;
 
-class Noise {
+public class Noise {
   // not same permutation table as Perlin's reference to avoid copyright issues;
   // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
   private static final int[] stb__perlin_randtab =
@@ -202,17 +205,17 @@ class Noise {
     return stb__perlin_lerp(n0,n1,u);
   }
 
-  static float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)
+  public static float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap)
   {
     return stb_perlin_noise3_internal(x,y,z,x_wrap,y_wrap,z_wrap,0);
   }
 
-  static float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)
+  public static float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)
   {
     return stb_perlin_noise3_internal(x,y,z,x_wrap,y_wrap,z_wrap, seed);
   }
 
-  static float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves)
+  public static float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves)
   {
     int i;
     float frequency = 1.0f;
@@ -232,7 +235,7 @@ class Noise {
     return sum;
   }
 
-  static float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)
+  public static float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)
   {
     int i;
     float frequency = 1.0f;
@@ -247,7 +250,7 @@ class Noise {
     return sum;
   }
 
-  static float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)
+  public static float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)
   {
     int i;
     float frequency = 1.0f;
@@ -263,7 +266,7 @@ class Noise {
     return sum;
   }
 
-  static float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)
+  public static float stb_perlin_noise3_wrap_nonpow2(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)
   {
     float u,v,w;
     float n000,n001,n010,n011,n100,n101,n110,n111;
