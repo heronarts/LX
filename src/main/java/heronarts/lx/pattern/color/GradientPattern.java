@@ -30,42 +30,42 @@ import heronarts.lx.pattern.LXPattern;
 @LXCategory(LXCategory.COLOR)
 public class GradientPattern extends LXPattern {
 
-  public final CompoundParameter gradient = (CompoundParameter)
+  public final CompoundParameter gradient =
     new CompoundParameter("Gradient", 0, -360, 360)
     .setDescription("Amount of total color gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter spreadX = (CompoundParameter)
+  public final CompoundParameter spreadX =
     new CompoundParameter("XSprd", 0, -1, 1)
     .setDescription("Sets the amount of hue spread on the X axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter spreadY = (CompoundParameter)
+  public final CompoundParameter spreadY =
     new CompoundParameter("YSprd", 0, -1, 1)
     .setDescription("Sets the amount of hue spread on the Y axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter spreadZ = (CompoundParameter)
+  public final CompoundParameter spreadZ =
     new CompoundParameter("ZSprd", 0, -1, 1)
     .setDescription("Sets the amount of hue spread on the Z axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter offsetX = (CompoundParameter)
+  public final CompoundParameter offsetX =
     new CompoundParameter("XOffs", 0, -1, 1)
     .setDescription("Sets the offset of the hue spread point on the X axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter offsetY = (CompoundParameter)
+  public final CompoundParameter offsetY =
     new CompoundParameter("YOffs", 0, -1, 1)
     .setDescription("Sets the offset of the hue spread point on the Y axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter offsetZ = (CompoundParameter)
+  public final CompoundParameter offsetZ =
     new CompoundParameter("ZOffs", 0, -1, 1)
     .setDescription("Sets the offset of the hue spread point on the Z axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter spreadR = (CompoundParameter)
+  public final CompoundParameter spreadR =
     new CompoundParameter("RSprd", 0, -1, 1)
     .setDescription("Sets the amount of hue spread in the radius from center")
     .setPolarity(LXParameter.Polarity.BIPOLAR);

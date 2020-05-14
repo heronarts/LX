@@ -21,7 +21,9 @@ package heronarts.lx;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 
 import com.google.gson.JsonObject;
 
@@ -29,6 +31,8 @@ import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
+import heronarts.lx.parameter.LXParameter;
 
 /**
  * A component which may have its own scoped user-level modulators. The concrete subclasses
@@ -55,6 +59,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   protected static final int DEVICE_VERSION_UNSPECIFIED = -1;
 
   public final LXModulationEngine modulation;
+
+  private LXListenableNormalizedParameter[] remoteControls = null;
 
   private Throwable crash = null;
 
@@ -84,6 +90,40 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   public static String getCategory(Class<? extends LXDeviceComponent> clazz) {
     LXCategory annotation = clazz.getAnnotation(LXCategory.class);
     return (annotation != null) ? annotation.value() : LXCategory.OTHER;
+  }
+
+  /**
+   * Subclasses may override this to filter out parameters that should not
+   * be controlled by a remote surface
+   *
+   * @param parameter Parameter to check
+   * @return Whether parameter is eligible for remote control
+   */
+  protected boolean isRemoteControl(LXListenableNormalizedParameter parameter) {
+    return true;
+  }
+
+  protected void setRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
+    this.remoteControls = remoteControls;
+  }
+
+  /**
+   * Subclasses may override this. The method returns an array of parameters in order
+   * that can be addressed by a remote control surface
+   *
+   * @return Array of parameters for a remote control surface to address
+   */
+  public LXListenableNormalizedParameter[] getRemoteControls() {
+    if (this.remoteControls == null) {
+      List<LXListenableNormalizedParameter> remoteControls = new ArrayList<LXListenableNormalizedParameter>();
+      for (LXParameter parameter : getParameters()) {
+        if (parameter instanceof LXListenableNormalizedParameter) {
+          remoteControls.add((LXListenableNormalizedParameter) parameter);
+        }
+      }
+      this.remoteControls = remoteControls.toArray(new LXListenableNormalizedParameter[0]);
+    }
+    return this.remoteControls;
   }
 
   /**

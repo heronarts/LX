@@ -38,6 +38,7 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 
@@ -127,6 +128,11 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     this.enabled.addListener(this.enabledListener);
     addParameter("enabled", this.enabled);
     addModulator(this.enabledDamped);
+  }
+
+  @Override
+  protected boolean isRemoteControl(LXListenableNormalizedParameter parameter) {
+    return (parameter != this.enabled);
   }
 
   @Override

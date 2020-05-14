@@ -214,6 +214,17 @@ public class NoisePattern extends LXPattern {
     addParameter("gain", this.gain);
     addParameter("ridgeOffset", this.ridgeOffset);
 
+    // Set the order of most useful control parameters
+    setRemoteControls(
+      this.scale,
+      this.level,
+      this.contrast,
+      this.motionSpeed,
+      this.xMotion,
+      this.yMotion,
+      this.zMotion,
+      this.motionSpeedRange
+    );
   }
 
   @Override

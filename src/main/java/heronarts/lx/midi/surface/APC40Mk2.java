@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.effect.LXEffect;
@@ -38,9 +37,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.mixer.LXMixerEngine;
-import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
@@ -159,7 +156,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private class DeviceListener implements LXParameterListener {
 
-    private LXComponent device = null;
+    private LXDeviceComponent device = null;
     private LXEffect effect = null;
     private LXPattern pattern = null;
     private LXBus channel = null;
@@ -268,21 +265,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           } else if (this.pattern != null) {
             isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
           }
-          for (LXParameter p : this.device.getParameters()) {
+          for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
             if (i >= this.knobs.length) {
               break;
             }
-            if (p instanceof BoundedParameter || p instanceof DiscreteParameter) {
-              LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
-              this.knobs[i] = parameter;
-              parameter.addListener(this);
-              sendControlChange(0, DEVICE_KNOB_STYLE + i, p.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
-              double normalized = (parameter instanceof CompoundParameter) ?
-                ((CompoundParameter) parameter).getBaseNormalized() :
-                parameter.getNormalized();
-              sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
-              ++i;
-            }
+            this.knobs[i] = parameter;
+            parameter.addListener(this);
+            sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
+            double normalized = (parameter instanceof CompoundParameter) ?
+              ((CompoundParameter) parameter).getBaseNormalized() :
+              parameter.getNormalized();
+            sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+            ++i;
           }
           this.device.controlSurfaceSemaphore.increment();
         }
