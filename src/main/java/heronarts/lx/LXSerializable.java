@@ -86,20 +86,24 @@ public interface LXSerializable {
     public static void loadParameter(LXParameter parameter, JsonObject obj, String path) {
       if (obj.has(path)) {
         JsonElement value = obj.get(path);
-        if (parameter instanceof StringParameter) {
-          ((StringParameter) parameter).setValue(value.getAsString());
-        } else if (parameter instanceof BooleanParameter) {
-          ((BooleanParameter) parameter).setValue(value.getAsBoolean());
-        } else if (parameter instanceof DiscreteParameter) {
-          parameter.setValue(value.getAsInt());
-        } else if (parameter instanceof ColorParameter) {
-          ((ColorParameter) parameter).setColor(value.getAsInt());
-        } else if (parameter instanceof CompoundParameter) {
-          parameter.setValue(value.getAsDouble());
-        } else if (parameter instanceof FunctionalParameter) {
-          // Do nothing
-        } else {
-          parameter.setValue(value.getAsDouble());
+        try {
+          if (parameter instanceof StringParameter) {
+            ((StringParameter) parameter).setValue(value.getAsString());
+          } else if (parameter instanceof BooleanParameter) {
+            ((BooleanParameter) parameter).setValue(value.getAsBoolean());
+          } else if (parameter instanceof DiscreteParameter) {
+            parameter.setValue(value.getAsInt());
+          } else if (parameter instanceof ColorParameter) {
+            ((ColorParameter) parameter).setColor(value.getAsInt());
+          } else if (parameter instanceof CompoundParameter) {
+            parameter.setValue(value.getAsDouble());
+          } else if (parameter instanceof FunctionalParameter) {
+            // Do nothing
+          } else {
+            parameter.setValue(value.getAsDouble());
+          }
+        } catch (Exception x) {
+          LX.error(x, "Invalid format loading parameter " + parameter + " from JSON value: " + value);
         }
       }
     }
