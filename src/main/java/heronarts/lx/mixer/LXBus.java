@@ -60,13 +60,13 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     public void clipRemoved(LXBus bus, LXClip clip);
   }
 
-  public class Timer extends LXModulatorComponent.Timer {
+  public class Profiler extends LXModulatorComponent.Profiler {
     public long effectNanos;
   }
 
   @Override
-  protected LXModulatorComponent.Timer constructTimer() {
-    return new Timer();
+  protected LXModulatorComponent.Profiler constructProfiler() {
+    return new Profiler();
   }
 
   /**
@@ -381,7 +381,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
       super.loop(deltaMs);
     }
 
-    this.timer.loopNanos = System.nanoTime() - loopStart;
+    this.profiler.loopNanos = System.nanoTime() - loopStart;
   }
 
   @Override

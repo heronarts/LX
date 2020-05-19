@@ -104,11 +104,11 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   protected final MutableParameter enabledDampingRelease = new MutableParameter(100);
   protected final LinearEnvelope enabledDamped = new LinearEnvelope(0, 0, 0);
 
-  public class Timer {
+  public class Profiler {
     public long runNanos = 0;
   }
 
-  public final Timer timer = new Timer();
+  public final Profiler profiler = new Profiler();
 
   private int index = -1;
 
@@ -225,7 +225,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     if (enabledDamped > 0) {
       run(deltaMs, enabledDamped);
     }
-    this.timer.runNanos = System.nanoTime() - runStart;
+    this.profiler.runNanos = System.nanoTime() - runStart;
   }
 
   /**

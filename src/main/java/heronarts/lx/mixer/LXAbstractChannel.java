@@ -62,13 +62,13 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
-  public class Timer extends LXBus.Timer {
+  public class Profiler extends LXBus.Profiler {
     public long blendNanos;
   }
 
   @Override
-  protected LXModulatorComponent.Timer constructTimer() {
-    return new Timer();
+  protected LXModulatorComponent.Profiler constructProfiler() {
+    return new Profiler();
   }
 
   public enum CrossfadeGroup {

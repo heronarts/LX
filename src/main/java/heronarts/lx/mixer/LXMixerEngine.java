@@ -126,7 +126,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     this.backgroundTransparent = new ModelBuffer(lx, 0);
     this.blendBufferLeft = new ModelBuffer(lx);
     this.blendBufferRight = new ModelBuffer(lx);
-    LX.initTimer.log("Engine: Mixer: Buffers");
+    LX.initProfiler.log("Engine: Mixer: Buffers");
 
     // Set up global add blend
     this.addBlend = new AddBlend(lx);
@@ -137,11 +137,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       new ObjectParameter<LXBlend>("Crossfader Blend", new LXBlend[1])
       .setDescription("Sets the blend mode used for the master crossfader");
     updateCrossfaderBlendOptions();
-    LX.initTimer.log("Engine: Mixer: Blends");
+    LX.initProfiler.log("Engine: Mixer: Blends");
 
     // Master channel
     addChild("master", this.masterBus = new LXMasterBus(lx));
-    LX.initTimer.log("Engine: Mixer: Master Channel");
+    LX.initProfiler.log("Engine: Mixer: Master Channel");
 
     // Scenes
     for (int i = 0; i < this.scenes.length; ++i) {
@@ -890,7 +890,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
     // Step 1b: Run the master channel (it may have clips on it)
     this.masterBus.loop(deltaMs);
-    this.lx.engine.timer.channelNanos = System.nanoTime() - channelStart;
+    this.lx.engine.profiler.channelNanos = System.nanoTime() - channelStart;
 
     // Step 2: composite any group channels
     for (LXAbstractChannel channel : this.channels) {
@@ -944,7 +944,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         this.blendStackCue.blend(this.addBlend, channel.getColors(), 1);
       }
 
-      ((LXAbstractChannel.Timer) channel.timer).blendNanos = System.nanoTime() - blendStart;
+      ((LXAbstractChannel.Profiler) channel.profiler).blendNanos = System.nanoTime() - blendStart;
     }
 
     // Check if the crossfade group buses are cued
@@ -985,7 +985,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       effect.setBuffer(render);
       effect.loop(deltaMs);
     }
-    ((LXBus.Timer) this.masterBus.timer).effectNanos = System.nanoTime() - effectStart;
+    ((LXBus.Profiler) this.masterBus.profiler).effectNanos = System.nanoTime() - effectStart;
 
     // Mark the cue active state of the buffer
     render.setCueOn(cueBusActive);

@@ -155,7 +155,7 @@ public class LX {
   public static final double HALF_PI = Math.PI / 2.;
   public static final double TWO_PI = Math.PI * 2.;
 
-  public static class InitTimer {
+  public static class InitProfiler {
     private long lastTime;
 
     protected void init() {
@@ -164,19 +164,19 @@ public class LX {
 
     public void log(String label) {
       long thisTime = System.nanoTime();
-      if (LX.LOG_INIT_TIMING) {
+      if (LX.LOG_INIT_PROFILER) {
         LX.log(String.format("init: %s: %.2fms", label, (thisTime - lastTime) / 1000000.));
       }
       this.lastTime = thisTime;
     }
   }
 
-  public static final InitTimer initTimer = new InitTimer();
+  public static final InitProfiler initProfiler = new InitProfiler();
 
-  private static boolean LOG_INIT_TIMING = false;
+  private static boolean LOG_INIT_PROFILER = false;
 
-  public static void logInitTiming() {
-    LX.LOG_INIT_TIMING = true;
+  public static void logInitProfiler() {
+    LX.LOG_INIT_PROFILER = true;
   }
 
   /**
@@ -284,7 +284,7 @@ public class LX {
   }
 
   protected LX(Flags flags, LXModel model) {
-    LX.initTimer.init();
+    LX.initProfiler.init();
     this.flags = flags;
     this.flags.immutableModel = (model != null);
 
@@ -296,24 +296,24 @@ public class LX {
       this.model = model;
     }
     this.structure.setModelListener((newModel) -> { setModel(newModel); });
-    LX.initTimer.log("Model");
+    LX.initProfiler.log("Model");
 
     // Custom content loader
     this.registry = instantiateRegistry(this);
     this.registry.initialize();
-    LX.initTimer.log("Registry");
+    LX.initProfiler.log("Registry");
 
     // Construct the engine
     this.engine = new LXEngine(this);
     this.command = new LXCommandEngine(this);
-    LX.initTimer.log("Engine");
+    LX.initProfiler.log("Engine");
 
     // Midi
     this.engine.midi.initialize();
 
     // Add a default channel
     this.engine.mixer.addChannel(new LXPattern[] { new TestPattern(this) }).fader.setValue(1);
-    LX.initTimer.log("Default Channel");
+    LX.initProfiler.log("Default Channel");
 
     // Load the global preferences before plugin initialization
     this.preferences = new LXPreferences(this);

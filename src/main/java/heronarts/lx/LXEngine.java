@@ -92,7 +92,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final LXSnapshotEngine snapshots;
 
-  private boolean logTimers = false;
+  private boolean logProfiler = false;
 
   private boolean hasFailed = false;
 
@@ -177,7 +177,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     public void dispatch();
   }
 
-  public class Timer {
+  public class Profiler {
     public long runNanos = 0;
     public long channelNanos = 0;
     public long inputNanos = 0;
@@ -186,7 +186,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     public long outputNanos = 0;
   }
 
-  public final Timer timer = new Timer();
+  public final Profiler profiler = new Profiler();
 
   // Buffer for a single frame, which was rendered with
   // a particular model state, has a main and a cue view,
@@ -315,7 +315,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   LXEngine(final LX lx) {
     super(lx, LXComponent.ID_ENGINE, "Engine");
-    LX.initTimer.log("Engine: Init");
+    LX.initProfiler.log("Engine: Init");
 
     // Initialize double-buffer of frame contents
     this.buffer = new DoubleBuffer(lx);
@@ -328,42 +328,42 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Color palette
     addChild("palette", this.palette = new LXPalette(lx));
-    LX.initTimer.log("Engine: Palette");
+    LX.initProfiler.log("Engine: Palette");
 
     // Tempo engine
     addChild("tempo", this.tempo = new Tempo(lx));
-    LX.initTimer.log("Engine: Tempo");
+    LX.initProfiler.log("Engine: Tempo");
 
     // Mixer engine
     addChild("mixer", this.mixer = new LXMixerEngine(lx));
-    LX.initTimer.log("Engine: Mixer");
+    LX.initProfiler.log("Engine: Mixer");
 
     // Modulation matrix
     addChild("modulation", this.modulation = new LXModulationEngine(lx));
-    LX.initTimer.log("Engine: Modulation");
+    LX.initProfiler.log("Engine: Modulation");
 
     // Master output
     addChild("output", this.output = new Output(lx));
     if (lx.structure.output != null) {
       this.output.addChild(lx.structure.output);
     }
-    LX.initTimer.log("Engine: Output");
+    LX.initProfiler.log("Engine: Output");
 
     // Midi engine
     addChild("midi", this.midi = new LXMidiEngine(lx));
-    LX.initTimer.log("Engine: Midi");
+    LX.initProfiler.log("Engine: Midi");
 
     // Audio engine
     addChild("audio", this.audio = new LXAudioEngine(lx));
-    LX.initTimer.log("Engine: Audio");
+    LX.initProfiler.log("Engine: Audio");
 
     // OSC engine
     addChild("osc", this.osc = new LXOscEngine(lx));
-    LX.initTimer.log("Engine: Osc");
+    LX.initProfiler.log("Engine: Osc");
 
     // Snapshot engine
     addChild("snapshots", this.snapshots = new LXSnapshotEngine(lx));
-    LX.initTimer.log("Engine: Snapshots");
+    LX.initProfiler.log("Engine: Snapshots");
 
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
@@ -373,8 +373,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addParameter("speed", this.speed);
   }
 
-  public void logTimers() {
-    this.logTimers = true;
+  public void logProfiler() {
+    this.logProfiler = true;
   }
 
   @Override
@@ -685,29 +685,29 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Paused? Reset timers and kill the loop...
     if (this.paused) {
-      this.timer.channelNanos = 0;
-      ((LXBus.Timer) this.mixer.masterBus.timer).effectNanos = 0;
-      this.timer.runNanos = System.nanoTime() - runStart;
+      this.profiler.channelNanos = 0;
+      ((LXBus.Profiler) this.mixer.masterBus.profiler).effectNanos = 0;
+      this.profiler.runNanos = System.nanoTime() - runStart;
       return;
     }
 
     // Process MIDI events
     long midiStart = System.nanoTime();
     this.midi.dispatch();
-    this.timer.midiNanos = System.nanoTime() - midiStart;
+    this.profiler.midiNanos = System.nanoTime() - midiStart;
 
     // Process OSC events
     long oscStart = System.nanoTime();
     this.osc.dispatch();
-    this.timer.oscNanos = System.nanoTime() - oscStart;
+    this.profiler.oscNanos = System.nanoTime() - oscStart;
 
     // Process UI input events
     if (this.inputDispatch == null) {
-      this.timer.inputNanos = 0;
+      this.profiler.inputNanos = 0;
     } else {
       long inputStart = System.nanoTime();
       this.inputDispatch.dispatch();
-      this.timer.inputNanos = System.nanoTime() - inputStart;
+      this.profiler.inputNanos = System.nanoTime() - inputStart;
     }
 
     // Run-once scheduled tasks
@@ -804,28 +804,28 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       int[] sendColors = (this.lx.flags.sendCueToOutput && sendFrame.cueOn) ? sendFrame.cue : sendFrame.main;
       this.output.send(sendColors);
 
-      this.timer.outputNanos = System.nanoTime() - outputStart;
+      this.profiler.outputNanos = System.nanoTime() - outputStart;
     }
 
     // All done running this pass of the engine!
-    this.timer.runNanos = System.nanoTime() - runStart;
+    this.profiler.runNanos = System.nanoTime() - runStart;
 
     // Debug trace logging
-    if (this.logTimers) {
-      _logTimers();
-      this.logTimers = false;
+    if (this.logProfiler) {
+      _logProfiler();
+      this.logProfiler = false;
     }
   }
 
-  private void _logTimers() {
+  private void _logProfiler() {
     StringBuilder sb = new StringBuilder();
-    sb.append("LXEngine::run() " + ((int) (this.timer.runNanos / 1000000)) + "ms\n");
-    sb.append("LXEngine::run()::channels " + ((int) (this.timer.channelNanos / 1000000)) + "ms\n");
+    sb.append("LXEngine::run() " + ((int) (this.profiler.runNanos / 1000000)) + "ms\n");
+    sb.append("LXEngine::run()::channels " + ((int) (this.profiler.channelNanos / 1000000)) + "ms\n");
     for (LXAbstractChannel channel : this.mixer.channels) {
-      sb.append("LXEngine::" + channel.getLabel() + "::loop() " + ((int) (channel.timer.loopNanos / 1000000)) + "ms\n");
+      sb.append("LXEngine::" + channel.getLabel() + "::loop() " + ((int) (channel.profiler.loopNanos / 1000000)) + "ms\n");
       if (channel instanceof LXChannel) {
         LXPattern pattern = ((LXChannel) channel).getActivePattern();
-        sb.append("LXEngine::" + channel.getLabel() + "::" + pattern.getLabel() + "::run() " + ((int) (pattern.timer.runNanos / 1000000)) + "ms\n");
+        sb.append("LXEngine::" + channel.getLabel() + "::" + pattern.getLabel() + "::run() " + ((int) (pattern.profiler.runNanos / 1000000)) + "ms\n");
       }
     }
     LX.log(sb.toString());
@@ -833,7 +833,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public class NetworkThread extends Thread {
 
-    public class Timer {
+    public class Profiler {
       public long copyNanos = 0;
       public long sendNanos = 0;
     }
@@ -842,7 +842,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     private float actualFrameRate = 0;
 
-    public final Timer timer = new Timer();
+    public final Profiler timer = new Profiler();
 
     private final Frame networkFrame;
 

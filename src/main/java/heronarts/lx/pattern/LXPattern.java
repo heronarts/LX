@@ -105,9 +105,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   protected double runMs = 0;
 
-  public final Timer timer = new Timer();
+  public final Profiler profiler = new Profiler();
 
-  public class Timer {
+  public class Profiler {
     public long runNanos = 0;
   }
 
@@ -242,7 +242,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     long runStart = System.nanoTime();
     this.runMs += deltaMs;
     this.run(deltaMs);
-    this.timer.runNanos = System.nanoTime() - runStart;
+    this.profiler.runNanos = System.nanoTime() - runStart;
   }
 
   /**

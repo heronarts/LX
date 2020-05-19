@@ -32,13 +32,13 @@ import heronarts.lx.parameter.LXParameter;
 
 public class LXGroup extends LXAbstractChannel {
 
-  public class Timer extends LXAbstractChannel.Timer {
+  public class Profiler extends LXAbstractChannel.Profiler {
     public long compositeNanos;
   }
 
   @Override
-  protected LXModulatorComponent.Timer constructTimer() {
-    return new Timer();
+  protected LXModulatorComponent.Profiler constructProfiler() {
+    return new Profiler();
   }
 
   private final List<LXChannel> mutableChannels = new ArrayList<LXChannel>();
@@ -114,7 +114,7 @@ public class LXGroup extends LXAbstractChannel {
       }
     }
     this.colors = blendDestination;
-    ((LXGroup.Timer) this.timer).compositeNanos = System.nanoTime() - compositeStart;
+    ((LXGroup.Profiler) this.profiler).compositeNanos = System.nanoTime() - compositeStart;
 
     // Run group effects
     long effectStart = System.nanoTime();
@@ -128,7 +128,7 @@ public class LXGroup extends LXAbstractChannel {
       }
       this.colors = blendOutput;
     }
-    ((LXBus.Timer) this.timer).effectNanos = System.nanoTime() - effectStart;
+    ((LXBus.Profiler) this.profiler).effectNanos = System.nanoTime() - effectStart;
 
   }
 

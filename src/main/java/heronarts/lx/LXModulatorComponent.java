@@ -31,15 +31,15 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
 
   public final List<LXModulator> modulators = Collections.unmodifiableList(this.mutableModulators);
 
-  public class Timer {
+  public class Profiler {
     public long loopNanos;
   }
 
-  protected Timer constructTimer() {
-    return new Timer();
+  protected Profiler constructProfiler() {
+    return new Profiler();
   }
 
-  public final Timer timer = constructTimer();
+  public final Profiler profiler = constructProfiler();
 
   protected LXModulatorComponent(LX lx) {
     this(lx, null);

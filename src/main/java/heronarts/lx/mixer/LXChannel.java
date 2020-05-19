@@ -880,7 +880,7 @@ public class LXChannel extends LXAbstractChannel {
     // LXChannelBus will have figured out if we need to run everything.
     // If not, then we're done here and skip the rest.
     if (!this.isAnimating) {
-      this.timer.loopNanos = System.nanoTime() - loopStart;
+      this.profiler.loopNanos = System.nanoTime() - loopStart;
       return;
     }
 
@@ -951,10 +951,10 @@ public class LXChannel extends LXAbstractChannel {
         effect.loop(deltaMs);
       }
     }
-    ((LXBus.Timer) this.timer).effectNanos = System.nanoTime() - effectStart;
+    ((LXBus.Profiler) this.profiler).effectNanos = System.nanoTime() - effectStart;
 
     this.colors = colors;
-    this.timer.loopNanos = System.nanoTime() - loopStart;
+    this.profiler.loopNanos = System.nanoTime() - loopStart;
   }
 
   @Override
