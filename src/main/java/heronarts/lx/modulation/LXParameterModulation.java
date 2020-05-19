@@ -28,7 +28,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
-import heronarts.lx.color.ColorParameter;
+import heronarts.lx.color.DiscreteColorParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 
@@ -67,10 +67,10 @@ public abstract class LXParameterModulation extends LXComponent {
   public final LXParameter source;
   public final LXParameter target;
 
-  public final ColorParameter color;
+  public final DiscreteColorParameter color;
 
   // Hack so that Processing IDE can access it...
-  public final ColorParameter clr;
+  public final DiscreteColorParameter clr;
 
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled", true)

@@ -28,7 +28,7 @@ import java.util.Map;
 
 import com.google.gson.JsonObject;
 import heronarts.lx.color.ColorParameter;
-import heronarts.lx.color.LXColor;
+import heronarts.lx.color.DiscreteColorParameter;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
@@ -118,8 +118,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * A color used to identify this component when it or one of its parameters
    * is used as a modulation source.
    */
-  public final ColorParameter modulationColor =
-    new ColorParameter("Modulation Color", LXColor.hsb(Math.random() * 360, 100, 100))
+  public final DiscreteColorParameter modulationColor = (DiscreteColorParameter)
+    new DiscreteColorParameter("Modulation Color")
     .setDescription("The color used to indicate this modulation source");
 
   /**
@@ -375,6 +375,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
     this.label.setValue((label != null) ? label : LXComponent.getComponentName(getClass()));
     addParameter("label", this.label);
+    addInternalParameter("modulationColor", this.modulationColor);
   }
 
   /**
@@ -975,7 +976,6 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final static String KEY_ID = "id";
   public final static String KEY_CLASS = "class";
 
-  protected final static String KEY_MODULATION_COLOR = "modulationColor";
   private final static String KEY_PARAMETERS = "parameters";
   private final static String KEY_INTERNAL = "internal";
   private final static String KEY_CHILDREN = "children";
@@ -1041,7 +1041,6 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     JsonObject children = LXSerializable.Utils.toObject(lx, this.children);
     obj.addProperty(KEY_ID, this.id);
     obj.addProperty(KEY_CLASS, getClass().getName());
-    obj.addProperty(KEY_MODULATION_COLOR, this.modulationColor.getColor());
     obj.add(KEY_INTERNAL, internal);
     obj.add(KEY_PARAMETERS, parameters);
     obj.add(KEY_CHILDREN, children);
@@ -1059,9 +1058,6 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     if (obj.has(KEY_ID)) {
       lx.componentRegistry.registerId(this, obj.get(KEY_ID).getAsInt());
       this.lx = lx;
-    }
-    if (obj.has(KEY_MODULATION_COLOR)) {
-      this.modulationColor.setColor(obj.get(KEY_MODULATION_COLOR).getAsInt());
     }
 
     // Load parameters
