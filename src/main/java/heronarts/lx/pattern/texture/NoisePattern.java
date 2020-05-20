@@ -66,6 +66,35 @@ public class NoisePattern extends LXPattern {
     }
   }
 
+  public enum CoordinateMode {
+    NORMAL("Normal"),
+    CENTER("Center"),
+    RADIAL("Radial");
+
+    private final String name;
+
+    private CoordinateMode(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public String toString() {
+      return this.name;
+    }
+
+    private float getCoordinate(LXPoint p, float normalized, float offset) {
+      switch (this) {
+      case NORMAL:
+        return normalized + offset;
+      case CENTER:
+        return Math.abs(normalized - .5f * (1 + offset));
+      case RADIAL:
+        return p.rcn + offset * normalized;
+      }
+      return 0f;
+    }
+  }
+
   public final EnumParameter<Algorithm> algorithm =
     new EnumParameter<Algorithm>("Algorithm", Algorithm.PERLIN);
 
@@ -82,17 +111,32 @@ public class NoisePattern extends LXPattern {
     .setExponent(2)
     .setDescription("Dynamic contrast of noise generation");
 
+  public final EnumParameter<CoordinateMode> xMode =
+    new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
+    .setDescription("Which coorindate mode the X-dimension uses");
+
+  public final EnumParameter<CoordinateMode> yMode =
+    new EnumParameter<CoordinateMode>("Y Mode", CoordinateMode.NORMAL)
+    .setDescription("Which coorindate mode the Y-dimension uses");
+
+  public final EnumParameter<CoordinateMode> zMode =
+    new EnumParameter<CoordinateMode>("Z Mode", CoordinateMode.NORMAL)
+    .setDescription("Which coorindate mode the Z-dimension uses");
+
   public final CompoundParameter xOffset =
-    new CompoundParameter("X-Off", 0, -1, 1)
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+    new CompoundParameter("X-Pos", 0, -1, 1)
+    .setPolarity(LXParameter.Polarity.BIPOLAR)
+    .setDescription("The coordinate offset on the X-axis");
 
   public final CompoundParameter yOffset =
-    new CompoundParameter("Y-Off", 0, -1, 1)
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+    new CompoundParameter("Y-Pos", 0, -1, 1)
+    .setPolarity(LXParameter.Polarity.BIPOLAR)
+    .setDescription("The coordinate offset on the Y-axis");
 
   public final CompoundParameter zOffset =
-    new CompoundParameter("Z-Off", 0, -1, 1)
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+    new CompoundParameter("Z-Pos", 0, -1, 1)
+    .setPolarity(LXParameter.Polarity.BIPOLAR)
+    .setDescription("The coordinate offset on the Z-axis");
 
   public final CompoundParameter scale =
     new CompoundParameter("Scale", .5f)
@@ -214,6 +258,10 @@ public class NoisePattern extends LXPattern {
     addParameter("gain", this.gain);
     addParameter("ridgeOffset", this.ridgeOffset);
 
+    addParameter("xMode", this.xMode);
+    addParameter("yMode", this.yMode);
+    addParameter("zMode", this.zMode);
+
     // Set the order of most useful control parameters
     setRemoteControls(
       this.scale,
@@ -274,10 +322,17 @@ public class NoisePattern extends LXPattern {
     float contrast = this.contrast.getValuef();
     float level = this.level.getValuef() - contrast / 4;;
 
+    CoordinateMode xMode = this.xMode.getEnum();
+    CoordinateMode yMode = this.yMode.getEnum();
+    CoordinateMode zMode = this.zMode.getEnum();
 
     if (algorithm.equals(Algorithm.PERLIN)) {
       for (LXPoint p : model.points) {
-        float b = level + contrast * stb_perlin_noise3_seed(xa + xs * (p.xn + xo), ya + ys * (p.yn + yo), za + zs * (p.zn + zo), 0, 0, 0, seed);
+        float xd = xMode.getCoordinate(p, p.xn, xo);
+        float yd = yMode.getCoordinate(p, p.yn, yo);
+        float zd = zMode.getCoordinate(p, p.zn, zo);
+
+        float b = level + contrast * stb_perlin_noise3_seed(xa + xs * xd, ya + ys * yd, za + zs * zd, 0, 0, 0, seed);
         this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
       }
     } else {
@@ -288,17 +343,26 @@ public class NoisePattern extends LXPattern {
       if (algorithm.equals(Algorithm.RIDGE)) {
         float ridgeOffset = this.ridgeOffset.getValuef();
         for (LXPoint p : model.points) {
-          float b = level + contrast * stb_perlin_ridge_noise3(xa + xs * (p.xn + xo), ya + ys * (p.yn + yo), za + zs * (p.zn + zo), lacunarity, gain, ridgeOffset, octaves);
+          float xd = xMode.getCoordinate(p, p.xn, xo);
+          float yd = yMode.getCoordinate(p, p.yn, yo);
+          float zd = zMode.getCoordinate(p, p.zn, zo);
+          float b = level + contrast * stb_perlin_ridge_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, ridgeOffset, octaves);
           this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
         }
       } else if (algorithm.equals(Algorithm.FBM)) {
         for (LXPoint p : model.points) {
-          float b = level + contrast * stb_perlin_fbm_noise3(xa + xs * (p.xn + xo), ya + ys * (p.yn + yo), za + zs * (p.zn + zo), lacunarity, gain, octaves);
+          float xd = xMode.getCoordinate(p, p.xn, xo);
+          float yd = yMode.getCoordinate(p, p.yn, yo);
+          float zd = zMode.getCoordinate(p, p.zn, zo);
+          float b = level + contrast * stb_perlin_fbm_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
           this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
         }
       } else if (algorithm.equals(Algorithm.TURBULENCE)) {
         for (LXPoint p : model.points) {
-          float b = level + contrast * stb_perlin_turbulence_noise3(xa + xs * (p.xn + xo), ya + ys * (p.yn + yo), za + zs * (p.zn + zo), lacunarity, gain, octaves);
+          float xd = xMode.getCoordinate(p, p.xn, xo);
+          float yd = yMode.getCoordinate(p, p.yn, yo);
+          float zd = zMode.getCoordinate(p, p.zn, zo);
+          float b = level + contrast * stb_perlin_turbulence_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
           this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
         }
       }
