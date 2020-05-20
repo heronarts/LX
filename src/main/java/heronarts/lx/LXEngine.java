@@ -124,7 +124,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
   private float actualFrameRate = 0;
-  private float cpuUsage = 0;
+  private float cpuLoad = 0;
 
   public class Output extends LXOutputGroup implements LXOscComponent {
 
@@ -418,13 +418,13 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   /**
-   * Gets a very rough estimate of the CPU usage the engine is using
+   * Gets a very rough estimate of the CPU load the engine is using
    * before maxing out.
    *
-   * @return Estimated CPU usage
+   * @return Estimated CPU load
    */
-  public float getCpuUsage() {
-    return this.cpuUsage;
+  public float getCpuLoad() {
+    return this.cpuLoad;
   }
 
   /**
@@ -623,7 +623,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
         // Sample the real performance of the engine every 500ms
         if (frameEnd - this.lastSampleTime > 500) {
-          cpuUsage = this.cpuTime * framesPerSecond.getValuef() / 1000f / this.sampleCount;
+          cpuLoad = this.cpuTime * framesPerSecond.getValuef() / 1000f / this.sampleCount;
           actualFrameRate = 1000f * this.sampleCount / (frameEnd - this.lastSampleTime);
           this.sampleCount = 0;
           this.cpuTime = 0;
