@@ -72,11 +72,11 @@ public class LXCommandEngine {
 
     } catch (InvalidCommandException icx) {
       this.lx.pushError(icx, "Unexpected error performing action " + command.getName() + "\n" + icx.getMessage());
-      LX.error(icx, "Unhandled exception on undo " + command + " - bad internal state?");
+      LX.error(icx, "Unexpected error performing action " + command + " - bad internal state?");
       clear();
     } catch (Exception x) {
       this.lx.pushError(x, "Unexpected error performing action " + command.getName() + "\n" + x.getLocalizedMessage());
-      LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
+      LX.error(x, "Unexpected error performing action " + command + " - bad internal state?");
       clear();
     }
 
