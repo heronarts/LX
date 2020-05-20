@@ -47,6 +47,9 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import com.google.gson.JsonObject;
 
 /**
@@ -121,6 +124,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
   private float actualFrameRate = 0;
+  private float cpuUsage = 0;
 
   public class Output extends LXOutputGroup implements LXOscComponent {
 
@@ -292,12 +296,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     .setMappable(false)
     .setDescription("Whether the network output is on a separate thread");
 
-  private volatile boolean isEngineThreadRunning = false;
+  private EngineThread engineThread = null;
 
   private boolean isNetworkThreadStarted = false;
   public final NetworkThread networkThread;
-
-  private EngineThread engineThread = null;
 
   boolean hasStarted = false;
 
@@ -398,6 +400,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           this.networkThread.start();
         }
       }
+    } else if (p == this.framesPerSecond) {
+      EngineThread engineThread = this.engineThread;
+      if (engineThread != null) {
+        engineThread.updateFramerate();
+      }
     }
   }
 
@@ -408,6 +415,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    */
   public float getActualFrameRate() {
     return this.actualFrameRate;
+  }
+
+  /**
+   * Gets a very rough estimate of the CPU usage the engine is using
+   * before maxing out.
+   *
+   * @return Estimated CPU usage
+   */
+  public float getCpuUsage() {
+    return this.cpuUsage;
   }
 
   /**
@@ -423,23 +440,13 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   /**
-   * Whether the engine is threaded. Generally, this should only be called
-   * from the Processing animation thread.
-   *
-   * @return Whether the engine is threaded
-   */
-  public boolean isThreaded() {
-    return this.isEngineThreadRunning;
-  }
-
-  /**
    * Starts the engine thread.
    */
   public void start() {
     if (this.lx.flags.isP3LX) {
       throw new IllegalStateException("LXEngine start() may not be used from P3LX, call setThreaded() instead");
     }
-    setThreaded(true);
+    this.isMultithreaded.setValue(true);
     _setThreaded(true);
   }
 
@@ -450,8 +457,17 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     if (this.lx.flags.isP3LX) {
       throw new IllegalStateException("LXEngine stop() may not be used from P3LX, call setThreaded() instead");
     }
-    setThreaded(false);
+    this.isMultithreaded.setValue(false);
     _setThreaded(false);
+  }
+
+  /**
+   * Returns whether the engine is actively threaded
+   *
+   * @return Whether engine is threaded
+   */
+  public boolean isThreaded() {
+    return (this.engineThread != null);
   }
 
   /**
@@ -462,90 +478,161 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * @return this
    */
   public LXEngine setThreaded(boolean threaded) {
+    if (!this.lx.flags.isP3LX) {
+      throw new IllegalStateException("LXEngine.setThreaded() should not be used outside P3LX, call start() / stop() instead");
+    }
     this.isMultithreaded.setValue(threaded);
     return this;
   }
 
+  /**
+   * Utility method for P3LX mode, invoked from the Processing draw thread to give
+   * a chance to change the threading state before the draw loop.
+   */
   public void beforeP3LXDraw() {
-    if (this.isMultithreaded.isOn() != this.isEngineThreadRunning) {
+    if (isThreaded() != this.isMultithreaded.isOn()) {
       _setThreaded(this.isMultithreaded.isOn());
+
+      // Clear out any lingering key/mouse events on the queue
+      if (!this.isMultithreaded.isOn()) {
+        processInputEvents();
+      }
     }
   }
 
   private synchronized void _setThreaded(boolean threaded) {
-    if (threaded == this.isEngineThreadRunning) {
-      return;
+    if (threaded == isThreaded()) {
+      throw new IllegalStateException("Cannot set thread state to current state: " + threaded);
     }
     if (!threaded) {
-      // Set interrupt flag on the engine thread
-      EngineThread engineThread = this.engineThread;
-      engineThread.interrupt();
-      // Called from another thread? If so, wait for engine thread to finish
-      if (Thread.currentThread() != engineThread) {
-        try {
-          engineThread.join();
-        } catch (InterruptedException ix) {
-          throw new IllegalThreadStateException("Interrupted waiting to join LXEngine thread");
-        }
+      if (Thread.currentThread() == this.engineThread.thread) {
+        throw new IllegalStateException("Cannot call to stop engine thread from itself");
       }
+
+      // Tell the engine thread to stop
+      this.engineThread.stop();
+      try {
+        // Wait for it to finish
+        this.engineThread.thread.join();
+      } catch (InterruptedException ix) {
+        throw new IllegalThreadStateException("Interrupted waiting to join LXEngine thread");
+      }
+      this.engineThread = null;
+
     } else {
       // Synchronize the two buffers, flip so that the engine thread doesn't start
       // rendering over the top of the buffer that the UI thread might be currently
       // working on drawing.
       this.buffer.sync();
       this.buffer.flip();
-      this.isEngineThreadRunning = true;
       this.engineThread = new EngineThread();
       this.engineThread.start();
     }
   }
 
-  private class EngineThread extends Thread {
+  private class EngineThread extends Timer {
 
-    private EngineThread() {
-      super("LXEngine Core Thread");
+    public static final String THREAD_NAME = "LXEngine Core Thread";
+
+    private class InitSemaphore {
+      boolean hasThread = false;
     }
 
-    @Override
-    public void run() {
-      LX.log("LXEngine Core Thread started.");
-      while (!isInterrupted()) {
-        long frameStart = System.currentTimeMillis();
-        LXEngine.this.run();
+    private final InitSemaphore initSemaphore = new InitSemaphore();
 
-        // NOTE: we check this right away because something in the run()
-        // method, happening on this thread (the engine thread) could be deciding
-        // that the engine thread should stop, and setting the interrupt flag.
-        // In this case we bail out here before the sleep() call
-        if (isInterrupted()) {
-          break;
-        };
+    private Thread thread;
+    private RenderTask renderTask;
 
-        // Sleep until next frame
-        long frameMillis = System.currentTimeMillis() - frameStart;
-        actualFrameRate = 1000.f / frameMillis;
-        float targetFPS = framesPerSecond.getValuef();
-        if (targetFPS > 0) {
-          long minMillisPerFrame = (long) (1000. / targetFPS);
-          if (frameMillis < minMillisPerFrame) {
-            actualFrameRate = targetFPS;
-            try {
-              sleep(minMillisPerFrame - frameMillis);
-            } catch (InterruptedException ix) {
-              // We're done!
-              break;
-            }
+    private EngineThread() {
+      super(THREAD_NAME);
+      schedule(new TimerTask() {
+        @Override
+        public void run() {
+          thread = Thread.currentThread();
+          thread.setPriority(Thread.MAX_PRIORITY);
+          synchronized (initSemaphore) {
+            initSemaphore.hasThread = true;
+            initSemaphore.notify();
+          }
+        }
+      }, 0);
+      waitForThreadStart();
+    }
+
+    private void waitForThreadStart() {
+      synchronized (this.initSemaphore) {
+        if (!this.initSemaphore.hasThread) {
+          try {
+            this.initSemaphore.wait();
+          } catch (InterruptedException ix) {
+            // Why the fuck? Can't happen...
+            throw new RuntimeException(ix);
           }
         }
       }
-
-      // We are done threading
-      actualFrameRate = 0;
-      engineThread = null;
-      isEngineThreadRunning = false;
-
-      LX.log("LXEngine Core Thread finished.");
     }
+
+    private boolean isRunning = false;
+
+    private void updateFramerate() {
+      if (this.isRunning) {
+        LX.log("Updating engine framerate: " + framesPerSecond.getValuef());
+        this.renderTask.cancel();
+        long period = (long) (1000.f / framesPerSecond.getValuef());
+        scheduleAtFixedRate(this.renderTask = new RenderTask(), period, period);
+      }
+    }
+
+    private void start() {
+      if (this.isRunning) {
+        throw new IllegalStateException("May not start already running EngineThread");
+      }
+      this.isRunning = true;
+      LX.log(this.thread.getName() + " starting.");
+      scheduleAtFixedRate(this.renderTask = new RenderTask(), 0, (long) (1000.f / framesPerSecond.getValuef()));
+      scheduleAtFixedRate(new TimerTask() {
+        @Override
+        public void run() {
+          processInputEvents();
+        }
+      }, 0, 16);
+    }
+
+    private void stop() {
+      if (!this.isRunning) {
+        throw new IllegalStateException("Can not stop a non-running EngineThread");
+      }
+      cancel();
+      this.isRunning = false;
+      LX.log(this.thread.getName() + " stopped.");
+    }
+
+    private class RenderTask extends TimerTask {
+
+      private static final int SAMPLE_FRAMERATE = 30;
+
+      private int sampleCount = 0;
+
+      private long lastSampleTime = System.currentTimeMillis();
+      private long cpuTime = 0;
+
+      @Override
+      public void run() {
+        long frameStart = System.currentTimeMillis();
+        LXEngine.this.run(true);
+        long frameEnd = System.currentTimeMillis();
+        this.cpuTime += (frameEnd - frameStart);
+
+        // Sample the real performance of the engine
+        if (++this.sampleCount == SAMPLE_FRAMERATE) {
+          cpuUsage = this.cpuTime * framesPerSecond.getValuef() / 1000f / SAMPLE_FRAMERATE;
+          actualFrameRate = 1000f * SAMPLE_FRAMERATE / (frameEnd - this.lastSampleTime);
+          this.sampleCount = 0;
+          this.cpuTime = 0;
+          this.lastSampleTime = frameEnd;
+        }
+      }
+    };
   }
 
   /**
@@ -650,11 +737,15 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * this method directly. It is only public to make it accessible to these other frameworks.
    */
   public void run() {
+    run(false);
+  }
+
+  private void run(boolean fromEngineThread) {
     if (this.hasFailed) {
       return;
     }
     try {
-      _run();
+      _run(fromEngineThread);
     } catch (Exception x) {
       this.hasFailed = true;
       LX.error(x, "FATAL TOP-LEVEL EXCEPTION IN ENGINE: " + x.getLocalizedMessage());
@@ -663,7 +754,28 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
   }
 
-  private void _run() {
+  private void processInputEvents() {
+    // Process MIDI events
+    long midiStart = System.nanoTime();
+    this.midi.dispatch();
+    this.profiler.midiNanos = System.nanoTime() - midiStart;
+
+    // Process OSC events
+    long oscStart = System.nanoTime();
+    this.osc.dispatch();
+    this.profiler.oscNanos = System.nanoTime() - oscStart;
+
+    // Process UI input events
+    if (this.inputDispatch == null) {
+      this.profiler.inputNanos = 0;
+    } else {
+      long inputStart = System.nanoTime();
+      this.inputDispatch.dispatch();
+      this.profiler.inputNanos = System.nanoTime() - inputStart;
+    }
+  }
+
+  private void _run(boolean fromEngineThread) {
 
     this.hasStarted = true;
 
@@ -691,23 +803,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       return;
     }
 
-    // Process MIDI events
-    long midiStart = System.nanoTime();
-    this.midi.dispatch();
-    this.profiler.midiNanos = System.nanoTime() - midiStart;
-
-    // Process OSC events
-    long oscStart = System.nanoTime();
-    this.osc.dispatch();
-    this.profiler.oscNanos = System.nanoTime() - oscStart;
-
-    // Process UI input events
-    if (this.inputDispatch == null) {
-      this.profiler.inputNanos = 0;
-    } else {
-      long inputStart = System.nanoTime();
-      this.inputDispatch.dispatch();
-      this.profiler.inputNanos = System.nanoTime() - inputStart;
+    // Process input events, unless we're running on the engine thread
+    // which uses a separate timer task to do this
+    if (!fromEngineThread) {
+      processInputEvents();
     }
 
     // Run-once scheduled tasks
@@ -787,7 +886,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Step 5: our cue and render frames are ready! Let's get them output
     boolean isNetworkMultithreaded = this.isNetworkMultithreaded.isOn();
-    boolean isDoubleBuffering = this.isEngineThreadRunning || isNetworkMultithreaded;
+    boolean isDoubleBuffering = isThreaded()|| isNetworkMultithreaded;
     if (isDoubleBuffering) {
       // We are multi-threading, lock the double buffer and flip it
       this.buffer.flip();
