@@ -576,7 +576,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     private void updateFramerate() {
       if (this.isRunning) {
-        LX.log("Updating engine framerate: " + framesPerSecond.getValuef());
         this.renderTask.cancel();
         long period = (long) (1000.f / framesPerSecond.getValuef());
         scheduleAtFixedRate(this.renderTask = new RenderTask(), period, period);
@@ -609,10 +608,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     private class RenderTask extends TimerTask {
 
-      private static final int SAMPLE_FRAMERATE = 30;
-
       private int sampleCount = 0;
-
       private long lastSampleTime = System.currentTimeMillis();
       private long cpuTime = 0;
 
@@ -622,11 +618,13 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         LXEngine.this.run(true);
         long frameEnd = System.currentTimeMillis();
         this.cpuTime += (frameEnd - frameStart);
+        ++this.sampleCount;
 
-        // Sample the real performance of the engine
-        if (++this.sampleCount == SAMPLE_FRAMERATE) {
-          cpuUsage = this.cpuTime * framesPerSecond.getValuef() / 1000f / SAMPLE_FRAMERATE;
-          actualFrameRate = 1000f * SAMPLE_FRAMERATE / (frameEnd - this.lastSampleTime);
+
+        // Sample the real performance of the engine every 500ms
+        if (frameEnd - this.lastSampleTime > 500) {
+          cpuUsage = this.cpuTime * framesPerSecond.getValuef() / 1000f / this.sampleCount;
+          actualFrameRate = 1000f * this.sampleCount / (frameEnd - this.lastSampleTime);
           this.sampleCount = 0;
           this.cpuTime = 0;
           this.lastSampleTime = frameEnd;
