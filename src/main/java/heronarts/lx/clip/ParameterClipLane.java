@@ -66,15 +66,20 @@ public class ParameterClipLane extends LXClipLane {
     for (LXClipEvent event : this.events) {
       prior = next;
       next = event;
-      if (next.cursor > to) {
+      if (to < next.cursor) {
         break;
       }
     }
-    if (prior == null) {
+    if (from > next.cursor) {
+      // Do nothing, we've already passed it all
+    } else if (prior == null) {
+      // Nothing before us, set the first value
       this.parameter.setNormalized(((ParameterClipEvent) next).getNormalized());
     } else if (to > next.cursor) {
+      // We're past the last event, just set its value
       this.parameter.setNormalized(((ParameterClipEvent) next).getNormalized());
     } else {
+      // Interpolate value between the two events surrounding usgs
       this.parameter.setNormalized(LXUtils.lerp(
         ((ParameterClipEvent) prior).getNormalized(),
         ((ParameterClipEvent) next).getNormalized(),
