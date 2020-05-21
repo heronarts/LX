@@ -66,32 +66,35 @@ public class NoisePattern extends LXPattern {
     }
   }
 
-  public enum CoordinateMode {
-    NORMAL("Normal"),
-    CENTER("Center"),
-    RADIAL("Radial");
+  private interface CoordinateFunction {
+    float getCoordinate(LXPoint p, float normalized, float offset);
+  }
 
-    private final String name;
+  public static enum CoordinateMode {
 
-    private CoordinateMode(String name) {
+    NORMAL("Normal", (p, normalized, offset) ->  {
+      return normalized + offset;
+    }),
+
+    CENTER("Center", (p, normalized, offset) -> {
+      return Math.abs(normalized - .5f * (1 + offset));
+    }),
+
+    RADIAL("Radial", (p, normalized, offset) -> {
+      return p.rcn + offset * normalized;
+    });
+
+    public final String name;
+    public final CoordinateFunction function;
+
+    private CoordinateMode(String name, CoordinateFunction function) {
       this.name = name;
+      this.function = function;
     }
 
     @Override
     public String toString() {
       return this.name;
-    }
-
-    private float getCoordinate(LXPoint p, float normalized, float offset) {
-      switch (this) {
-      case NORMAL:
-        return normalized + offset;
-      case CENTER:
-        return Math.abs(normalized - .5f * (1 + offset));
-      case RADIAL:
-        return p.rcn + offset * normalized;
-      }
-      return 0f;
     }
   }
 
@@ -322,9 +325,9 @@ public class NoisePattern extends LXPattern {
     float contrast = this.contrast.getValuef();
     float level = this.level.getValuef() - contrast / 4;;
 
-    CoordinateMode xMode = this.xMode.getEnum();
-    CoordinateMode yMode = this.yMode.getEnum();
-    CoordinateMode zMode = this.zMode.getEnum();
+    CoordinateFunction xMode = this.xMode.getEnum().function;
+    CoordinateFunction yMode = this.yMode.getEnum().function;
+    CoordinateFunction zMode = this.zMode.getEnum().function;
 
     if (algorithm.equals(Algorithm.PERLIN)) {
       for (LXPoint p : model.points) {
