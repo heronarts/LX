@@ -132,6 +132,8 @@ public class LXColor {
     return (max == 0) ? 0 : (max - min) * 100.f / max;
   }
 
+  private static final float BRIGHTNESS_SCALE = 100f / 255f;
+
   /**
    * Brightness from 0-100
    *
@@ -146,11 +148,28 @@ public class LXColor {
     if (b > max) {
       max = b;
     }
-    return 100.f * max / 255.f;
+    return max * BRIGHTNESS_SCALE;
   }
 
+  /**
+   * Luminosity from 0-100, using the quick approximated function:
+   * Y = 0.375 R + 0.5 G + 0.125 B
+   *
+   * @param rgb Color value
+   * @return Luminosity from 0-100
+   */
+  public static float luminosity(int rgb) {
+    int r = (rgb & R_MASK) >> R_SHIFT;
+    int g = (rgb & G_MASK) >> G_SHIFT;
+    int b = rgb & B_MASK;
+    return (r+r+r+b+g+g+g+g+g >> 3) * BRIGHTNESS_SCALE;
+  }
+
+  private static final double GRAY_SCALE = 255. / 100.;
+  private static final double GRAY_SCALE_FLOAT = 255f / 100f;
+
   public static int gray(double brightness) {
-    int b = 0xff & (int) (255 * (brightness / 100.));
+    int b = 0xff & (int) (brightness * GRAY_SCALE);
     return
       0xff000000 |
       ((b & 0xff) << R_SHIFT) |
@@ -159,7 +178,7 @@ public class LXColor {
   }
 
   public static int gray(float brightness) {
-    int b = 0xff & (int) (255 * (brightness / 100.f));
+    int b = 0xff & (int) (brightness * GRAY_SCALE_FLOAT);
     return
       0xff000000 |
       ((b & 0xff) << R_SHIFT) |
@@ -223,7 +242,7 @@ public class LXColor {
 
   private static final float H_COEFF = 1 / 360.f;
   private static final float S_COEFF = 1 / 100.f;
-  private static final float B_COEFF = 1 / 100.f;
+  private static final float B_COEFF = 255f / 100f;
 
   /**
    * Create a color from HSB
@@ -233,50 +252,49 @@ public class LXColor {
    * @param b Brightness from 0-100
    * @return rgb color value
    */
-  public static int hsb(float h, float s, float b) {
-    return _hsbImpl(h * H_COEFF, s * S_COEFF, b * B_COEFF);
-  }
-
-  public static int _hsbImpl(float hue, float saturation, float brightness) {
+  public static int hsb(float hue, float saturation, float brightness) {
     int r = 0, g = 0, b = 0;
+    float brightness255 = brightness * B_COEFF;
     if (saturation == 0) {
-      r = g = b = (int) (brightness * 255.f + 0.5f);
+      r = g = b = (int) (brightness255 + 0.5f);
     } else {
-      float h = (hue - (float) Math.floor(hue)) * 6.0f;
+      float h1 = hue * H_COEFF;
+      float h = (h1 - (float) Math.floor(h1)) * 6.0f;
       float f = h - (float) java.lang.Math.floor(h);
-      float p = brightness * (1.0f - saturation);
-      float q = brightness * (1.0f - saturation * f);
-      float t = brightness * (1.0f - (saturation * (1.0f - f)));
+      float s1 = saturation * S_COEFF;
+      float p255 = brightness255 * (1.0f - s1);
+      float q255 = brightness255 * (1.0f - s1 * f);
+      float t255 = brightness255 * (1.0f - (s1 * (1.0f - f)));
       switch ((int) h) {
       case 0:
-        r = (int) (brightness * 255.0f + 0.5f);
-        g = (int) (t * 255.0f + 0.5f);
-        b = (int) (p * 255.0f + 0.5f);
+        r = (int) (brightness255 + 0.5f);
+        g = (int) (t255 + 0.5f);
+        b = (int) (p255 + 0.5f);
         break;
       case 1:
-        r = (int) (q * 255.0f + 0.5f);
-        g = (int) (brightness * 255.0f + 0.5f);
-        b = (int) (p * 255.0f + 0.5f);
+        r = (int) (q255 + 0.5f);
+        g = (int) (brightness255 + 0.5f);
+        b = (int) (p255 + 0.5f);
         break;
       case 2:
-        r = (int) (p * 255.0f + 0.5f);
-        g = (int) (brightness * 255.0f + 0.5f);
-        b = (int) (t * 255.0f + 0.5f);
+        r = (int) (p255 + 0.5f);
+        g = (int) (brightness255 + 0.5f);
+        b = (int) (t255 + 0.5f);
         break;
       case 3:
-        r = (int) (p * 255.0f + 0.5f);
-        g = (int) (q * 255.0f + 0.5f);
-        b = (int) (brightness * 255.0f + 0.5f);
+        r = (int) (p255 + 0.5f);
+        g = (int) (q255 + 0.5f);
+        b = (int) (brightness255 + 0.5f);
         break;
       case 4:
-        r = (int) (t * 255.0f + 0.5f);
-        g = (int) (p * 255.0f + 0.5f);
-        b = (int) (brightness * 255.0f + 0.5f);
+        r = (int) (t255 + 0.5f);
+        g = (int) (p255 + 0.5f);
+        b = (int) (brightness255 + 0.5f);
         break;
       case 5:
-        r = (int) (brightness * 255.0f + 0.5f);
-        g = (int) (p * 255.0f + 0.5f);
-        b = (int) (q * 255.0f + 0.5f);
+        r = (int) (brightness255 + 0.5f);
+        g = (int) (p255 + 0.5f);
+        b = (int) (q255 + 0.5f);
         break;
       }
     }

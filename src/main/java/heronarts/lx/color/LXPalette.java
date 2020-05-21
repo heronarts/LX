@@ -132,7 +132,7 @@ public class LXPalette extends LXModulatorComponent implements LXOscComponent {
   }
 
   public final float getHuef() {
-    return (float) getHue();
+    return this.hue.getValuef();
   }
 
   public double getSaturation() {
@@ -140,7 +140,7 @@ public class LXPalette extends LXModulatorComponent implements LXOscComponent {
   }
 
   public final float getSaturationf() {
-    return (float) getSaturation();
+    return this.color.saturation.getValuef();
   }
 
   public int getColor() {
@@ -154,9 +154,23 @@ public class LXPalette extends LXModulatorComponent implements LXOscComponent {
     return LXColor.BLACK;
   }
 
+  public int getColor(float brightness) {
+    if (brightness > 0) {
+      return LXColor.hsb(getHuef(), getSaturationf(), brightness);
+    }
+    return LXColor.BLACK;
+  }
+
   public int getColor(double saturation, double brightness) {
     if (brightness > 0) {
       return LXColor.hsb(getHue(), saturation, brightness);
+    }
+    return LXColor.BLACK;
+  }
+
+  public int getColor(float saturation, float brightness) {
+    if (brightness > 0) {
+      return LXColor.hsb(getHuef(), saturation, brightness);
     }
     return LXColor.BLACK;
   }
