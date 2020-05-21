@@ -959,6 +959,7 @@ public class LXChannel extends LXAbstractChannel {
 
   @Override
   public void dispose() {
+    disposeClips();
     for (LXPattern pattern : this.mutablePatterns) {
       pattern.dispose();
     }

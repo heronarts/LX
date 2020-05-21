@@ -387,8 +387,18 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     this.profiler.loopNanos = System.nanoTime() - loopStart;
   }
 
+  protected void disposeClips() {
+    for (LXClip clip : this.mutableClips) {
+      if (clip != null) {
+        clip.dispose();
+      }
+    }
+    this.mutableClips.clear();
+  }
+
   @Override
   public void dispose() {
+    disposeClips();
     for (LXEffect effect : this.mutableEffects) {
       effect.dispose();
     }
