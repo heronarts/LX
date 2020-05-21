@@ -162,7 +162,7 @@ public class LXColor {
     int r = (rgb & R_MASK) >> R_SHIFT;
     int g = (rgb & G_MASK) >> G_SHIFT;
     int b = rgb & B_MASK;
-    return (r+r+r+b+g+g+g+g+g >> 3) * BRIGHTNESS_SCALE;
+    return (r+r+r+b+g+g+g+g >> 3) * BRIGHTNESS_SCALE;
   }
 
   private static final double GRAY_SCALE = 255. / 100.;
