@@ -34,6 +34,7 @@ import heronarts.lx.LXRunnableComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -41,7 +42,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 
-public abstract class LXClip extends LXRunnableComponent implements LXComponent.Renamable, LXBus.Listener {
+public abstract class LXClip extends LXRunnableComponent implements LXOscComponent, LXComponent.Renamable, LXBus.Listener {
 
   public interface Listener {
     public void parameterLaneAdded(LXClip clip, ParameterClipLane lane);

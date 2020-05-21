@@ -19,7 +19,7 @@
 package heronarts.lx;
 
 import heronarts.lx.audio.LXAudioEngine;
-import heronarts.lx.clip.LXClip;
+import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXPalette;
 import heronarts.lx.midi.LXMidiEngine;
@@ -38,7 +38,6 @@ import heronarts.lx.output.LXOutputGroup;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
@@ -63,6 +62,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final LXPalette palette;
 
   public final Tempo tempo;
+
+  public final LXClipEngine clips;
 
   public final LXMixerEngine mixer;
 
@@ -98,30 +99,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private boolean logProfiler = false;
 
   private boolean hasFailed = false;
-
-  public class FocusedClipParameter extends MutableParameter {
-
-    private LXClip clip = null;
-
-    private FocusedClipParameter() {
-      super("Focused Clip");
-      setDescription("Parameter which indicate the globally focused clip");
-    }
-
-    public FocusedClipParameter setClip(LXClip clip) {
-      if (this.clip != clip) {
-        this.clip = clip;
-        bang();
-      }
-      return this;
-    }
-
-    public LXClip getClip() {
-      return this.clip;
-    }
-  };
-
-  public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
   private float actualFrameRate = 0;
   private float cpuLoad = 0;
@@ -335,6 +312,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Tempo engine
     addChild("tempo", this.tempo = new Tempo(lx));
     LX.initProfiler.log("Engine: Tempo");
+
+    // Clip engine
+    addChild("clips", this.clips = new LXClipEngine(lx));
+    LX.initProfiler.log("Engine: Clips");
 
     // Mixer engine
     addChild("mixer", this.mixer = new LXMixerEngine(lx));

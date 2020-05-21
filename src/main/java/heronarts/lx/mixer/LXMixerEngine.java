@@ -87,10 +87,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new DiscreteParameter("Channel", 1)
     .setDescription("Which channel is currently focused in the UI");
 
-  public final CompoundParameter crossfader = (CompoundParameter)
-    new CompoundParameter("Crossfader", 0.5)
-    .setDescription("Applies blending between output groups A and B")
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter crossfader = new CompoundParameter("Crossfader", 0.5)
+  .setDescription("Applies blending between output groups A and B")
+  .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final ObjectParameter<LXBlend> crossfaderBlendMode;
   private LXBlend activeCrossfaderBlend;
@@ -217,9 +216,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         }
       }
     } else if (this.focusedChannel == p) {
-      LXClip clip = this.lx.engine.focusedClip.getClip();
+      LXClip clip = this.lx.engine.clips.getFocusedClip();
       if (clip != null && clip.bus != getFocusedChannel()) {
-        this.lx.engine.focusedClip.setClip(null);
+        this.lx.engine.clips.setFocusedClip(null);
       }
     } else {
       for (int i = 0; i < this.scenes.length; ++i) {

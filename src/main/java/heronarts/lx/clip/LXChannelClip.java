@@ -28,7 +28,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.pattern.LXPattern;
 
-public class LXChannelClip extends LXChannelBusClip implements LXChannel.Listener, LXChannel.MidiListener {
+public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Listener, LXChannel.MidiListener {
 
   public final PatternClipLane patternLane = new PatternClipLane(this);
   public final MidiNoteClipLane midiNoteLane = new MidiNoteClipLane(this);

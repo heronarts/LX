@@ -354,8 +354,8 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   public void removeClip(int index) {
     LXClip clip = this.mutableClips.get(index);
     this.mutableClips.set(index, null);
-    if (this.lx.engine.focusedClip.getClip() == clip) {
-      this.lx.engine.focusedClip.setClip(null);
+    if (this.lx.engine.clips.getFocusedClip() == clip) {
+      this.lx.engine.clips.setFocusedClip(null);
     }
     for (ClipListener listener : this.clipListeners) {
       listener.clipRemoved(this, clip);

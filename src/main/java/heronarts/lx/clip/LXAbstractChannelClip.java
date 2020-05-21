@@ -21,11 +21,11 @@ package heronarts.lx.clip;
 import heronarts.lx.LX;
 import heronarts.lx.mixer.LXAbstractChannel;
 
-public class LXChannelBusClip extends LXClip {
+public abstract class LXAbstractChannelClip extends LXClip {
 
   public final LXAbstractChannel channel;
 
-  public LXChannelBusClip(LX lx, LXAbstractChannel channel, int index, boolean registerListener) {
+  protected LXAbstractChannelClip(LX lx, LXAbstractChannel channel, int index, boolean registerListener) {
     super(lx, channel, index, registerListener);
 
     this.channel = channel;
