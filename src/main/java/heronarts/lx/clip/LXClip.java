@@ -66,6 +66,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXComponent.
   public final LXBus bus;
 
   private int index;
+  private final boolean busListener;
 
   protected final LXParameterListener parameterRecorder = new LXParameterListener() {
     public void onParameterChanged(LXParameter p) {
@@ -86,6 +87,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXComponent.
     this.label.setDescription("The name of this clip");
     this.bus = bus;
     this.index = index;
+    this.busListener = registerListener;
     setParent(this.bus);
     addParameter("length", this.length);
     addParameter("loop", this.loop);
@@ -108,7 +110,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXComponent.
     for (LXEffect effect : bus.effects) {
       unregisterComponent(effect);
     }
-    this.bus.removeListener(this);
+    if (this.busListener) {
+      this.bus.removeListener(this);
+    }
     this.mutableLanes.clear();
     this.listeners.clear();
     super.dispose();

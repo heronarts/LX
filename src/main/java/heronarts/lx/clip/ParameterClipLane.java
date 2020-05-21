@@ -72,6 +72,8 @@ public class ParameterClipLane extends LXClipLane {
     }
     if (prior == null) {
       this.parameter.setNormalized(((ParameterClipEvent) next).getNormalized());
+    } else if (to > next.cursor) {
+      this.parameter.setNormalized(((ParameterClipEvent) next).getNormalized());
     } else {
       this.parameter.setNormalized(LXUtils.lerp(
         ((ParameterClipEvent) prior).getNormalized(),
