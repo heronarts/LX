@@ -97,12 +97,16 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   }
 
   public final BooleanParameter enabled =
-    new BooleanParameter("Enabled", false)
+    new BooleanParameter("Enabled", true)
     .setDescription("Whether the effect is enabled");
 
   protected final MutableParameter enabledDampingAttack = new MutableParameter(100);
-  protected final MutableParameter enabledDampingRelease = new MutableParameter(100);
-  protected final LinearEnvelope enabledDamped = new LinearEnvelope(0, 0, 0);
+  protected final MutableParameter enabledDampingRelease =  new MutableParameter(100);
+  protected final LinearEnvelope enabledDamped = new LinearEnvelope(1, 1, 0);
+
+  private boolean initialize = true;
+  private boolean onEnable = false;
+  private boolean onDisable = false;
 
   public class Profiler {
     public long runNanos = 0;
@@ -115,10 +119,10 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   private final LXParameterListener enabledListener = (p) -> {
     if (this.enabled.isOn()) {
       this.enabledDamped.setRangeFromHereTo(1, this.enabledDampingAttack.getValue()).start();
-      onEnable();
+      this.onEnable = true;
     } else {
       this.enabledDamped.setRangeFromHereTo(0, this.enabledDampingRelease.getValue()).start();
-      onDisable();
+      this.onDisable = true;
     }
   };
 
@@ -208,9 +212,11 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   }
 
   protected/* abstract */void onEnable() {
+
   }
 
   protected/* abstract */void onDisable() {
+
   }
 
   /**
@@ -220,6 +226,22 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
    */
   @Override
   public final void onLoop(double deltaMs) {
+    if (this.initialize) {
+      if (this.enabled.isOn()) {
+        onEnable();
+      }
+      this.initialize = false;
+    }
+
+    // Fire onEnable/onDisable event
+    if (this.onEnable) {
+      onEnable();
+      this.onEnable = false;
+    } else if (this.onDisable && this.enabledDamped.finished()) {
+      onDisable();
+      this.onDisable = false;
+    }
+
     long runStart = System.nanoTime();
     double enabledDamped = this.enabledDamped.getValue();
     if (enabledDamped > 0) {
