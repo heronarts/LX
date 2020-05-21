@@ -364,6 +364,10 @@ public class LXColor {
     return lerp(dst, src, (int) (alpha * 0x100));
   }
 
+  public static int lerp(int dst, int src, float alpha) {
+    return lerp(dst, src, (int) (alpha * 0x100));
+  }
+
   public static int lerp(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
