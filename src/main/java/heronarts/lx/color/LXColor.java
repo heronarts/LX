@@ -199,6 +199,18 @@ public class LXColor {
   }
 
   /**
+   * Computes an RGB color value from normalized floating point values
+   *
+   * @param r Red 0-1
+   * @param g Green 0-1
+   * @param b Blue 0-1
+   * @return Color
+   */
+  public static final int rgbf(float r, float g, float b) {
+    return rgba((int) (255 * r), (int) (255 * g), (int) (255 * b), 255);
+  }
+
+  /**
    * Computes an RGB color value
    *
    * @param r Red 0-255
