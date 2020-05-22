@@ -19,6 +19,7 @@
 package heronarts.lx.effect;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.Tempo;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.modulator.LXWaveshape;
@@ -32,6 +33,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.utils.LXUtils;
 
+@LXCategory(LXCategory.CORE)
 public class StrobeEffect extends LXEffect {
 
   public final ObjectParameter<LXWaveshape> waveshape =

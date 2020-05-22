@@ -16,19 +16,20 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx.effect.color;
+package heronarts.lx.effect;
 
 import java.util.HashSet;
 import java.util.Set;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
-import heronarts.lx.effect.LXEffect;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
+@LXCategory(LXCategory.CORE)
 public class DynamicsEffect extends LXEffect {
 
   // These could be bytes but it's a small table and simpler

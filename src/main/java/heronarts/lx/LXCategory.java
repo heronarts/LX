@@ -33,6 +33,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface LXCategory {
 
+  public static final String CORE = "Core";
   public static final String FORM = "Form";
   public static final String COLOR = "Color";
   public static final String TEXTURE = "Texture";
