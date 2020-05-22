@@ -155,7 +155,7 @@ public class LXUtils {
    * @param x X coordinate
    * @param y Y coordinate
    * @param z Z coordinate
-   * @return
+   * @return Noise value
    */
   public static float noise(float x, float y, float z) {
     return Noise.stb_perlin_noise3(x, y, z, 0, 0, 0);
@@ -172,7 +172,7 @@ public class LXUtils {
    * @param y Y coordinate
    * @param z Z coordinate
    * @param seed Seed
-   * @return
+   * @return Noise value
    */
   public static float noise(float x, float y, float z, int seed) {
     return Noise.stb_perlin_noise3_seed(x, y, z, 0, 0, 0, seed);
@@ -192,7 +192,7 @@ public class LXUtils {
    * @param gain relative weighting applied to each successive octave
    * @param offset used to invert the ridges, may need to be larger, not sure
    * @param octaves number of "octaves" of noise3() to sum
-   * @return
+   * @return Noise value
    */
   public static float noiseRidge(float x, float y, float z, float lacunarity, float gain, float offset, int octaves) {
     return Noise.stb_perlin_ridge_noise3(x, y, z, lacunarity, gain, offset, octaves);
@@ -210,7 +210,7 @@ public class LXUtils {
    * @param lacunarity spacing between successive octaves (use exactly 2.0 for wrapping output)
    * @param gain relative weighting applied to each successive octave
    * @param octaves number of "octaves" of noise3() to sum
-   * @return
+   * @return Noise value
    */
   public static float noiseFBM(float x, float y, float z, float lacunarity, float gain, int octaves) {
     return Noise.stb_perlin_fbm_noise3(x, y, z, lacunarity, gain, octaves);
@@ -228,7 +228,7 @@ public class LXUtils {
    * @param lacunarity spacing between successive octaves (use exactly 2.0 for wrapping output)
    * @param gain relative weighting applied to each successive octave
    * @param octaves number of "octaves" of noise3() to sum
-   * @return
+   * @return Noise value
    */
   public static float noiseTurbulence(float x, float y, float z, float lacunarity, float gain, int octaves) {
     return Noise.stb_perlin_turbulence_noise3(x, y, z, lacunarity, gain, octaves);

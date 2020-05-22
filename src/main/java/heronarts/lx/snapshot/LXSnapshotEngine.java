@@ -164,7 +164,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
 
    * @param snapshot Snapshot to add
    * @param index Index to add at
-   * @return
+   * @return this
    */
   public LXSnapshotEngine addSnapshot(LXSnapshot snapshot, int index) {
     Objects.requireNonNull(snapshot, "May not LXSnapshotEngine.addSnapshot(null)");
@@ -225,6 +225,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
 
   /**
    * Recall this snapshot, apply all of its values
+   *
+   * @param snapshot The snapshot to recall
    */
   public void recall(LXSnapshot snapshot) {
     if (this.transitionEnabled.isOn()) {

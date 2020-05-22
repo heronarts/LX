@@ -259,9 +259,9 @@ public class LXColor {
   /**
    * Create a color from HSB
    *
-   * @param h Hue from 0-360
-   * @param s Saturation from 0-100
-   * @param b Brightness from 0-100
+   * @param hue Hue from 0-360
+   * @param saturation Saturation from 0-100
+   * @param brightness Brightness from 0-100
    * @return rgb color value
    */
   public static int hsb(float hue, float saturation, float brightness) {
