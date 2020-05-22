@@ -103,14 +103,14 @@ public class StrobeEffect extends LXEffect {
     this.basis.setBasis(0).start();
   }
 
-  public float compute(double basis) {
+  public float compute(double basis, boolean useBaseValue) {
     double strobe = this.waveshape.getObject().compute(basis);
-    double bias = this.bias.getValue();
+    double bias = useBaseValue ? this.bias.getBaseValue() : this.bias.getValue();
     double expPower = (bias >= 0) ? (1 + 3*bias) : (1 / (1 - 3*bias));
     if (expPower != 1) {
       strobe = Math.pow(strobe, expPower);
     }
-    return LXUtils.lerpf(1, (float) strobe, this.depth.getValuef());
+    return LXUtils.lerpf(1, (float) strobe, useBaseValue ? this.depth.getBaseValuef() : this.depth.getValuef());
   }
 
   private double getTempoBasis() {
@@ -123,7 +123,7 @@ public class StrobeEffect extends LXEffect {
     float amt = (float) enabledAmount * this.depth.getValuef();
     if (amt > 0) {
       double strobeBasis = this.tempoSync.isOn() ? getTempoBasis() : this.basis.getValue();
-      float strobe = LXUtils.lerpf(1, compute(strobeBasis), (float) enabledAmount);
+      float strobe = LXUtils.lerpf(1, compute(strobeBasis, false), (float) enabledAmount);
 
       if (strobe < 1) {
         if (strobe == 0) {
