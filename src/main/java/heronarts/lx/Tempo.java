@@ -54,7 +54,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   public final static double MIN_BPM = 20;
   public final static double MAX_BPM = 240;
 
-  public static enum Multiplier {
+  public static enum Division {
 
     SIXTEENTH(4, "1/16"),
     EIGHTH_TRIPLET(3, "1/8T"),
@@ -76,7 +76,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     public final double multiplier;
     public final String label;
 
-    Multiplier(double multiplier, String label) {
+    Division(double multiplier, String label) {
       this.multiplier = multiplier;
       this.label = label;
     }
@@ -328,8 +328,19 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
    *
    * @return Number of full beats completed since beginning of tempo
    */
-  public double compositeBasis() {
+  public double getCompositeBasis() {
     return this.beatCount + this.click.getBasis();
+  }
+
+  /**
+   * Gets the basis of the tempo, relative to a tempo division. The result is between
+   * 0 and 1.
+   *
+   * @param multiplier Tempo division
+   * @return Relative tempo basis from 0-1
+   */
+  public double getBasis(Division division) {
+    return (getCompositeBasis() * division.multiplier) % 1.;
   }
 
   /**

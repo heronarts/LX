@@ -19,50 +19,83 @@
 package heronarts.lx.effect;
 
 import heronarts.lx.LX;
+import heronarts.lx.Tempo;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.modulator.LXWaveshape;
 import heronarts.lx.modulator.SawLFO;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.utils.LXUtils;
 
 public class StrobeEffect extends LXEffect {
 
-  public enum Waveshape {
-    SIN,
-    TRI,
-    UP,
-    DOWN,
-    SQUARE
-  };
+  public final ObjectParameter<LXWaveshape> waveshape =
+    new ObjectParameter<LXWaveshape>("Waveshape", new LXWaveshape[] {
+      LXWaveshape.SIN,
+      LXWaveshape.TRI,
+      LXWaveshape.SQUARE,
+      LXWaveshape.UP,
+      LXWaveshape.DOWN
+    });
 
-  public final EnumParameter<Waveshape> shape =
-    new EnumParameter<Waveshape>("Shape", Waveshape.SIN)
-    .setDescription("Wave shape of strobing");
+  public final BoundedParameter maxFrequency = (BoundedParameter)
+    new BoundedParameter("Max Freq", 5, 1, 30)
+    .setDescription("Maximum strobing frequency")
+    .setUnits(LXParameter.Units.HERTZ);
 
-  public final CompoundParameter frequency = (CompoundParameter)
-    new CompoundParameter("Freq", 1, .05, 10)
+  public final BoundedParameter minFrequency = (BoundedParameter)
+    new BoundedParameter("Min Freq", .5, .1, 1)
+    .setDescription("Minimium strobing frequency")
+    .setUnits(LXParameter.Units.HERTZ);
+
+  public final CompoundParameter speed =
+    new CompoundParameter("Speed", .5)
     .setExponent(2)
-    .setUnits(LXParameter.Units.HERTZ)
-    .setDescription("Frequency of strobing");
+    .setDescription("Speed of the strobe effect");
 
   public final CompoundParameter depth =
     new CompoundParameter("Depth", 0.5)
     .setDescription("Depth of the strobe effect");
 
-  private final SawLFO basis = (SawLFO) startModulator(new SawLFO(1, 0, new FunctionalParameter() {
+  public final CompoundParameter bias =
+    new CompoundParameter("Bias", 0, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
+    .setDescription("Bias of the strobe effect");
+
+  public final BooleanParameter tempoSync =
+    new BooleanParameter("Sync", false)
+    .setDescription("Whether to sync the tempo to a clock division");
+
+  public final EnumParameter<Tempo.Division> tempoDivision =
+    new EnumParameter<Tempo.Division>("Division", Tempo.Division.QUARTER)
+    .setDescription("Which tempo division to use when in sync mode");
+
+  public final BoundedParameter tempoPhaseOffset =
+    new BoundedParameter("Phase Offset", 0)
+    .setDescription("Shifts the phase of the strobe LFO relative to tempo");
+
+  private final SawLFO basis = startModulator(new SawLFO(0, 1, new FunctionalParameter() {
     @Override
     public double getValue() {
-      return 1000 / frequency.getValue();
+      return 1000 / LXUtils.lerp(minFrequency.getValue(), maxFrequency.getValue(), speed.getValue());
   }}));
 
   public StrobeEffect(LX lx) {
     super(lx);
-    addParameter("frequency", this.frequency);
-    addParameter("shape", this.shape);
+    addParameter("speed", this.speed);
     addParameter("depth", this.depth);
+    addParameter("bias", this.bias);
+    addParameter("waveshape", this.waveshape);
+    addParameter("tempoSync", this.tempoSync);
+    addParameter("tempoDivision", this.tempoDivision);
+    addParameter("tempoPhaseOffset", this.tempoPhaseOffset);
+    addParameter("minFrequency", this.minFrequency);
+    addParameter("maxFrequency", this.maxFrequency);
   }
 
   @Override
@@ -70,29 +103,33 @@ public class StrobeEffect extends LXEffect {
     this.basis.setBasis(0).start();
   }
 
-  private LXWaveshape getWaveshape() {
-    switch (this.shape.getEnum()) {
-    case SIN: return LXWaveshape.SIN;
-    case TRI: return LXWaveshape.TRI;
-    case UP: return LXWaveshape.UP;
-    case DOWN: return LXWaveshape.DOWN;
-    case SQUARE: return LXWaveshape.SQUARE;
+  public float compute(double basis) {
+    double strobe = this.waveshape.getObject().compute(basis);
+    double bias = this.bias.getValue();
+    double expPower = (bias >= 0) ? (1 + 3*bias) : (1 / (1 - 3*bias));
+    if (expPower != 1) {
+      strobe = Math.pow(strobe, expPower);
     }
-    return LXWaveshape.SIN;
+    return LXUtils.lerpf(1, (float) strobe, this.depth.getValuef());
+  }
+
+  private double getTempoBasis() {
+    double basis = this.lx.engine.tempo.getBasis(this.tempoDivision.getEnum());
+    return (basis + this.tempoPhaseOffset.getValue()) % 1.;
   }
 
   @Override
-  public void run(double deltaMs, double amount) {
-    float amt = this.enabledDamped.getValuef() * this.depth.getValuef();
+  public void run(double deltaMs, double enabledAmount) {
+    float amt = (float) enabledAmount * this.depth.getValuef();
     if (amt > 0) {
-      float strobef = this.basis.getValuef();
-      strobef = (float) getWaveshape().compute(strobef);
-      strobef = LXUtils.lerpf(1, strobef, amt);
-      if (strobef < 1) {
-        if (strobef == 0) {
+      double strobeBasis = this.tempoSync.isOn() ? getTempoBasis() : this.basis.getValue();
+      float strobe = LXUtils.lerpf(1, compute(strobeBasis), (float) enabledAmount);
+
+      if (strobe < 1) {
+        if (strobe == 0) {
           setColors(LXColor.BLACK);
         } else {
-          int src = LXColor.gray(100 * strobef);
+          int src = LXColor.gray(100 * strobe);
           for (int i = 0; i < this.colors.length; ++i) {
             this.colors[i] = LXColor.multiply(this.colors[i], src, 0x100);
           }

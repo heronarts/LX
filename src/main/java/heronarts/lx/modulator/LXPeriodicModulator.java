@@ -48,9 +48,9 @@ public abstract class LXPeriodicModulator extends LXModulator {
     new BooleanParameter("Sync", false)
     .setDescription("Whether this modulator syncs to a tempo");
 
-  public final EnumParameter<Tempo.Multiplier> tempoMultiplier =
-    new EnumParameter<Tempo.Multiplier>("Multiplier", Tempo.Multiplier.QUARTER)
-    .setDescription("Tempo multiplier when in sync mode");
+  public final EnumParameter<Tempo.Division> tempoDivision =
+    new EnumParameter<Tempo.Division>("Division", Tempo.Division.QUARTER)
+    .setDescription("Tempo division when in sync mode");
 
   public final BooleanParameter tempoLock =
     new BooleanParameter("Lock", true)
@@ -94,7 +94,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     super(label);
     addParameter("loop", this.looping);
     addParameter("tempoSync", this.tempoSync);
-    addParameter("tempoMultiplier", this.tempoMultiplier);
+    addParameter("tempoMultiplier", this.tempoDivision);
     addParameter("tempoLock", this.tempoLock);
     this.period = period;
   }
@@ -252,8 +252,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     double periodv = this.period.getValue();
     if (this.tempoSync.isOn()) {
       if (this.tempoLock.isOn()) {
-        double basis = this.lx.engine.tempo.compositeBasis() * this.tempoMultiplier.getEnum().multiplier;
-        this.basis = basis % 1.;
+        this.basis = this.lx.engine.tempo.getBasis(this.tempoDivision.getEnum());
         int measure = (int) basis;
         if (this.restarted) {
           this.restarted = false;
@@ -263,7 +262,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
         }
         this.startMeasure = measure;
       } else {
-        this.basis += deltaMs / this.lx.engine.tempo.period.getValue() * this.tempoMultiplier.getEnum().multiplier;
+        this.basis += deltaMs / this.lx.engine.tempo.period.getValue() * this.tempoDivision.getEnum().multiplier;
       }
     } else if (periodv == 0) {
       this.basis = 1;
