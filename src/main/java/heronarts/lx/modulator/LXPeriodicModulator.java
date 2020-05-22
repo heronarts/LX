@@ -21,6 +21,7 @@ package heronarts.lx.modulator;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.Tempo;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FixedParameter;
@@ -36,40 +37,6 @@ import heronarts.lx.parameter.LXParameter;
  */
 public abstract class LXPeriodicModulator extends LXModulator {
 
-  public enum TempoMultiplier {
-
-    SIXTEENTH(4, "1/16"),
-    EIGHTH_TRIPLET(3, "1/8T"),
-    EIGHTH(2, "1/8"),
-    EIGHTH_DOT(1.5, "3/16"),
-    QUARTER_TRIPLET(4/3., "1/4T"),
-    QUARTER(1, "1/4"),
-    HALF_TRIPLET(.75, "1/2T"),
-    QUARTER_DOT(2/3., "3/8"),
-    HALF(.5, "1/2"),
-    HALF_DOT(1/3., "3/4"),
-    WHOLE(.25, "1"),
-    WHOLE_DOT(1/6., "3/2"),
-    DOUBLE(1/8., "2"),
-    FOUR(1/16., "4"),
-    EIGHT(1/32., "8"),
-    SIXTEEN(1/64., "16");
-
-    public final double multiplier;
-    public final String label;
-
-    TempoMultiplier(double multiplier, String label) {
-      this.multiplier = multiplier;
-      this.label = label;
-    }
-
-    @Override
-    public String toString() {
-      return this.label;
-    }
-  }
-
-
   /**
    * Whether this modulator runs continuously looping.
    */
@@ -81,8 +48,8 @@ public abstract class LXPeriodicModulator extends LXModulator {
     new BooleanParameter("Sync", false)
     .setDescription("Whether this modulator syncs to a tempo");
 
-  public final EnumParameter<TempoMultiplier> tempoMultiplier =
-    new EnumParameter<TempoMultiplier>("Multiplier", TempoMultiplier.QUARTER)
+  public final EnumParameter<Tempo.Multiplier> tempoMultiplier =
+    new EnumParameter<Tempo.Multiplier>("Multiplier", Tempo.Multiplier.QUARTER)
     .setDescription("Tempo multiplier when in sync mode");
 
   public final BooleanParameter tempoLock =
