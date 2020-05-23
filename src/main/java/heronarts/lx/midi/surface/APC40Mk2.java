@@ -922,9 +922,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return;
     case CUE_LEVEL:
       if (this.shiftOn) {
-        this.lx.engine.palette.color.saturation.incrementValue(cc.getRelative());
+        this.lx.engine.palette.color.primary.saturation.incrementValue(cc.getRelative());
       } else {
-        this.lx.engine.palette.color.hue.incrementValue(cc.getRelative(), true);
+        this.lx.engine.palette.color.primary.hue.incrementValue(cc.getRelative(), true);
       }
       return;
     case CHANNEL_FADER:

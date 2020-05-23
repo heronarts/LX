@@ -18,167 +18,171 @@
 
 package heronarts.lx.color;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXModulatorComponent;
-import heronarts.lx.modulator.DampedParameter;
-import heronarts.lx.modulator.LXModulator;
-import heronarts.lx.modulator.SawLFO;
-import heronarts.lx.modulator.SinLFO;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXLoopTask;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.EnumParameter;
-import heronarts.lx.parameter.FunctionalParameter;
-import heronarts.lx.parameter.LXParameter;
 
 /**
  * A palette is an object that is used to keep track of top-level color values and
  * set modes of color computation. Though its use is not required, it is very useful for
  * creating coherent color schemes across patterns.
  */
-public class LXPalette extends LXModulatorComponent implements LXOscComponent {
+public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent {
 
-  public enum Mode {
-    FIXED,
-    OSCILLATE,
-    CYCLE
-  };
+  public interface Listener {
+    public void swatchAdded(LXPalette palette, LXSwatch swatch);
+    public void swatchRemoved(LXPalette palette, LXSwatch swatch);
+    public void swatchMoved(LXPalette palette, LXSwatch swatch);
+  }
 
-  public final EnumParameter<Mode> hueMode =
-    new EnumParameter<Mode>("Mode", Mode.FIXED)
-    .setDescription("Sets the operation mode of the palette");
+  private final List<Listener> listeners = new ArrayList<Listener>();
 
-  public final ColorParameter color =
-    new ColorParameter("Color", 0xffff0000)
-    .setDescription("The base color selection for the palette");
+  private final List<LXSwatch> mutableSwatches = new ArrayList<LXSwatch>();
 
   /**
-   * Hack... the Processing IDE doesn't let you address object.color, duplicate it to clr
+   * A read-only list of all the saved color swatches
    */
-  public final ColorParameter clr = color;
+  public final List<LXSwatch> swatches = Collections.unmodifiableList(this.mutableSwatches);
 
-  public final CompoundParameter range = new CompoundParameter("Range", 10, 360)
-    .setDescription("Sets range in degrees (0-360) of how much the palette oscillates");
+  /**
+   * The active color swatch
+   */
+  public final LXSwatch swatch;
 
-  public final CompoundParameter period = (CompoundParameter)
-    new CompoundParameter("Period", 120000, 1000, 3600000)
-    .setDescription("Sets how long the palette takes to complete one full oscillation")
-    .setUnits(LXParameter.Units.MILLISECONDS);
-
-  private final DampedParameter hueFixed = new DampedParameter(this.color.hue, 1800).setModulus(360.);
-
-  private final SawLFO hueCycle = new SawLFO(0, 360, period);
-
-  private final FunctionalParameter hue2 = new FunctionalParameter() {
-    @Override
-    public double getValue() {
-      return color.hue.getValue() + range.getValue();
-    }
-  };
-
-  private final SinLFO hueOscillate = new SinLFO(color.hue, hue2, period);
-
-  private LXModulator hue = hueFixed;
+  public final LXDynamicColor color;
 
   public LXPalette(LX lx) {
-    super(lx);
-
-    this.hueMode.setOptions(new String[] { "Fixed", "Oscillate", "Cycle" });
-    addParameter("hueMode", this.hueMode);
-    addParameter("color", this.color);
-    addParameter("period", this.period);
-    addParameter("range", this.range);
-    addModulator(this.hueFixed).start();
-    addModulator(this.hueCycle);
-    addModulator(this.hueOscillate);
+    super(lx, "Color Palette");
+    addChild("swatch", this.swatch = new LXSwatch(this, false));
+    addArray("swatches", this.swatches);
+    this.color = swatch.colors.get(0);
   }
 
-  @Override
-  public String getLabel() {
-    return "Color Palette";
-  }
-
-  @Override
-  public void onParameterChanged(LXParameter parameter) {
-    if (parameter == this.hueMode) {
-      double hueValue = this.hue.getValue();
-      this.color.hue.setValue(hueValue);
-      switch (this.hueMode.getEnum()) {
-        case FIXED:
-          this.hue = this.hueFixed;
-          this.hueFixed.setValue(hueValue).start();
-          this.hueCycle.stop();
-          this.hueOscillate.stop();
-          break;
-        case CYCLE:
-          this.hue = this.hueCycle;
-          this.hueFixed.stop();
-          this.hueOscillate.stop();
-          this.hueCycle.setValue(hueValue).start();
-          break;
-        case OSCILLATE:
-          this.hue = this.hueOscillate;
-          this.hueFixed.stop();
-          this.hueCycle.stop();
-          this.hueOscillate.setValue(hueValue).start();
-          break;
-      }
-    }
-  }
-
-  public double getHue() {
-    return this.hue.getValue();
-  }
-
-  public final float getHuef() {
-    return this.hue.getValuef();
-  }
-
-  public double getSaturation() {
-    return this.color.saturation.getValue();
-  }
-
-  public final float getSaturationf() {
-    return this.color.saturation.getValuef();
-  }
-
+  /**
+   * Gets the primary color of the currently active swatch
+   *
+   * @return Primary color of active swatch
+   */
   public int getColor() {
     return this.color.getColor();
   }
 
-  public int getColor(double brightness) {
-    if (brightness > 0) {
-      return LXColor.hsb(getHue(), getSaturation(), brightness);
+
+  private void _reindexSwatches() {
+    int i = 0;
+    for (LXSwatch swatch: this.swatches) {
+      swatch.setIndex(i++);
     }
-    return LXColor.BLACK;
   }
 
-  public int getColor(float brightness) {
-    if (brightness > 0) {
-      return LXColor.hsb(getHuef(), getSaturationf(), brightness);
+  /**
+   * Saves the current swatch to the list of saved swatches
+   *
+   * @return Saved swatch, added to swatch list
+   */
+  public LXSwatch saveSwatch() {
+    LXSwatch saved = new LXSwatch(this, true);
+    JsonObject savedObj = LXSerializable.Utils.toObject(this.lx, this);
+    saved.load(this.lx, LXSerializable.Utils.stripIds(savedObj));
+    this.mutableSwatches.add(saved);
+    _reindexSwatches();
+    for (Listener listener : this.listeners) {
+      listener.swatchAdded(this, saved);
     }
-    return LXColor.BLACK;
+    return saved;
   }
 
-  public int getColor(double saturation, double brightness) {
-    if (brightness > 0) {
-      return LXColor.hsb(getHue(), saturation, brightness);
+  /**
+   * Removes a swatch from the color palette's saved swatch list
+   *
+   * @param swatch Swatch to remove
+   * @return this
+   */
+  public LXPalette removeSwatch(LXSwatch swatch) {
+    if (!this.swatches.contains(swatch)) {
+      throw new IllegalStateException("Cannot remove swatch not in palette: " + swatch);
     }
-    return LXColor.BLACK;
+    this.mutableSwatches.remove(swatch);
+    _reindexSwatches();
+    for (Listener listener : this.listeners) {
+      listener.swatchRemoved(this, swatch);
+    }
+    swatch.dispose();
+    return this;
   }
 
-  public int getColor(float saturation, float brightness) {
-    if (brightness > 0) {
-      return LXColor.hsb(getHuef(), saturation, brightness);
+  public void loop(double deltaMs) {
+    this.swatch.loop(deltaMs);
+    // NOTE(mcslee): do we want to run the saved swatches here? maybe if
+    // one is selected/focused and being worked on?
+  }
+
+  /**
+   * Moves a saved swatch to a different position in the list
+   *
+   * @param swatch Saved swatch
+   * @param index New index for that swatch
+   * @return this
+   */
+  public LXPalette moveSwatch(LXSwatch swatch, int index) {
+    if (index < 0 || index >= this.mutableSwatches.size()) {
+      throw new IllegalArgumentException("Cannot move swatch to invalid index: " + index);
     }
-    return LXColor.BLACK;
+    this.mutableSwatches.remove(swatch);
+    this.mutableSwatches.add(index, swatch);
+    _reindexSwatches();
+    for (Listener listener : this.listeners) {
+      listener.swatchMoved(this, swatch);
+    }
+    return this;
+  }
+
+  /**
+   * Registers a listener to the palette
+   *
+   * @param listener Palette listener
+   * @return this
+   */
+  public LXPalette addListener(Listener listener) {
+    Objects.requireNonNull(listener);
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate LXPalette.Listener: " + listener);
+    }
+    this.listeners.add(listener);
+    return this;
+  }
+
+  /**
+   * Unregisters a listener to the palette
+   *
+   * @param listener Palette listener
+   * @return this
+   */
+  public LXPalette removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXPalette.Listener: " + listener);
+    }
+    this.listeners.add(listener);
+    return this;
   }
 
   @Override
-  public void load(LX lx, JsonObject object) {
-    super.load(lx, object);
-    this.hueCycle.setValue(this.color.hue.getValue());
+  public void dispose() {
+    for (LXSwatch swatch : this.swatches) {
+      swatch.dispose();
+    }
+    this.mutableSwatches.clear();
+    this.swatch.dispose();
+    super.dispose();
   }
 
 }

@@ -275,6 +275,9 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     if (index < 0 || index >= this.mutableEffects.size()) {
       throw new IllegalArgumentException("Cannot move effect to invalid index: " + index);
     }
+    if (!this.mutableEffects.contains(effect)) {
+      throw new IllegalStateException("Cannot move effect that is not on channel: " + this + " " + effect);
+    }
     this.mutableEffects.remove(effect);
     this.mutableEffects.add(index, effect);
     _reindexEffects();

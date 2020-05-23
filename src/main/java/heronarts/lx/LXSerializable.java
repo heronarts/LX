@@ -298,6 +298,30 @@ public interface LXSerializable {
       }
       return arr;
     }
+
+    /**
+     * Strips all ID values out of a JsonObject. This is often helpful when copy/pasting
+     * or loading objects in a context where global IDs should not be overwritten.
+     *
+     * @param object Object to strip all nested ID keys from
+     * @return The same object, with no ID keys
+     */
+    public static JsonObject stripIds(JsonObject object) {
+      object.remove(LXComponent.KEY_ID);
+      for (Map.Entry<java.lang.String, JsonElement> entry : object.entrySet()) {
+        JsonElement value = entry.getValue();
+        if (value.isJsonObject()) {
+          stripIds(value.getAsJsonObject());
+        } else if (value.isJsonArray()) {
+          for (JsonElement elem : value.getAsJsonArray()) {
+            if (elem.isJsonObject()) {
+              stripIds(elem.getAsJsonObject());
+            }
+          }
+        }
+      }
+      return object;
+    }
   }
 
 }

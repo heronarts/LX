@@ -89,8 +89,9 @@ public class GradientPattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    float paletteHue = palette.getHuef();
-    float paletteSaturation = palette.getSaturationf();
+    int paletteColor = palette.getColor();
+    float paletteHue = LXColor.h(paletteColor);
+    float paletteSaturation = LXColor.s(paletteColor);
     float gradient = this.gradient.getValuef();
     float spreadX = this.spreadX.getValuef();
     float spreadY = this.spreadY.getValuef();

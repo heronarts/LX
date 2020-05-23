@@ -19,10 +19,7 @@
 package heronarts.lx.clipboard;
 
 import java.io.StringWriter;
-import java.util.Map;
-
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
@@ -81,23 +78,7 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
     // TODO(mcslee): is this the best way to handle this? alternate solution would be
     // having flags or state for the load() methods to know about restoring from a
     // file vs duplicating things...
-    stripIds(this.componentObj);
-  }
-
-  private void stripIds(JsonObject object) {
-    object.remove(LXComponent.KEY_ID);
-    for (Map.Entry<java.lang.String, JsonElement> entry : object.entrySet()) {
-      JsonElement value = entry.getValue();
-      if (value.isJsonObject()) {
-        stripIds(value.getAsJsonObject());
-      } else if (value.isJsonArray()) {
-        for (JsonElement elem : value.getAsJsonArray()) {
-          if (elem.isJsonObject()) {
-            stripIds(elem.getAsJsonObject());
-          }
-        }
-      }
-    }
+    LXSerializable.Utils.stripIds(this.componentObj);
   }
 
   @Override
