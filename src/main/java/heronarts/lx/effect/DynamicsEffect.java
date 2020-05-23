@@ -18,13 +18,12 @@
 
 package heronarts.lx.effect;
 
-import java.util.HashSet;
-import java.util.Set;
-
+import java.util.ArrayList;
+import java.util.List;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
-import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
@@ -40,38 +39,67 @@ public class DynamicsEffect extends LXEffect {
   private final int[] gTable = new int[256];
   private final int[] bTable = new int[256];
 
-  private final Set<LXParameter> lookupParameters = new HashSet<LXParameter>();
+  private class ParameterMonitor {
+    private final CompoundParameter parameter;
+    private double lastValue;
 
-  private final Set<LXParameter> channelParameters = new HashSet<LXParameter>();
+    private ParameterMonitor(CompoundParameter parameter) {
+      this.parameter = parameter;
+      this.lastValue = parameter.getValue();
+    }
 
-  public final BoundedParameter floor =
-    new BoundedParameter("Floor", 0)
+    public boolean checkForChange() {
+      double value = this.parameter.getValue();
+      boolean dirty = (value != this.lastValue);
+      this.lastValue = value;
+      return dirty;
+    }
+
+    public void clean() {
+      this.lastValue = this.parameter.getValue();
+    }
+  }
+
+  private final List<ParameterMonitor> lookupParameters = new ArrayList<ParameterMonitor>();
+  private final List<ParameterMonitor> channelParameters = new ArrayList<ParameterMonitor>();
+
+  public final CompoundParameter floor =
+    new CompoundParameter("Floor", 0)
     .setDescription("Minimum possible value");
 
-  public final BoundedParameter ceiling =
-    new BoundedParameter("Ceiling", 1)
+  public final CompoundParameter ceiling =
+    new CompoundParameter("Ceiling", 1)
     .setDescription("Maximum possible value");
 
-  public final BoundedParameter shape =
-    new BoundedParameter("Shape", 0, -1, 1)
-    .setPolarity(BoundedParameter.Polarity.BIPOLAR)
+  public final CompoundParameter shape =
+    new CompoundParameter("Shape", 0, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Shaping factor");
 
-  public final BoundedParameter contrast =
-    new BoundedParameter("Contrast", 0, -1, 1)
-    .setPolarity(BoundedParameter.Polarity.BIPOLAR)
+  public final CompoundParameter contrast =
+    new CompoundParameter("Contrast", 0, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Contrast factor");
 
-  public final BoundedParameter redAmount =
-    new BoundedParameter("Red", 1)
+  public final CompoundParameter drive =
+    new CompoundParameter("Drive", 0)
+    .setDescription("Drive factor");
+
+  public final CompoundParameter skew =
+    new CompoundParameter("Skew", 0, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
+    .setDescription("Skew factor");
+
+  public final CompoundParameter redAmount =
+    new CompoundParameter("Red", 1)
     .setDescription("Amount of effect to apply to red channel");
 
-  public final BoundedParameter greenAmount =
-    new BoundedParameter("Green", 1)
+  public final CompoundParameter greenAmount =
+    new CompoundParameter("Green", 1)
     .setDescription("Amount of effect to apply to green channel");
 
-  public final BoundedParameter blueAmount =
-    new BoundedParameter("Blue", 1)
+  public final CompoundParameter blueAmount =
+    new CompoundParameter("Blue", 1)
     .setDescription("Amount of effect to apply to blue channel");
 
   public final MutableParameter waveChanged =
@@ -79,10 +107,13 @@ public class DynamicsEffect extends LXEffect {
 
   public DynamicsEffect(LX lx) {
     super(lx);
-    addLookupParameter("floor", this.floor);
     addLookupParameter("ceiling", this.ceiling);
-    addLookupParameter("shape", this.shape);
     addLookupParameter("contrast", this.contrast);
+    addLookupParameter("drive", this.drive);
+
+    addLookupParameter("floor", this.floor);
+    addLookupParameter("skew", this.skew);
+    addLookupParameter("shape", this.shape);
 
     addChannelParameter("red", this.redAmount);
     addChannelParameter("green", this.greenAmount);
@@ -91,24 +122,25 @@ public class DynamicsEffect extends LXEffect {
     buildLookupTable();
   }
 
-  private void addLookupParameter(String path, LXParameter parameter) {
+  private void addLookupParameter(String path, CompoundParameter parameter) {
     super.addParameter(path, parameter);
-    this.lookupParameters.add(parameter);
+    this.lookupParameters.add(new ParameterMonitor(parameter));
   }
 
-  private void addChannelParameter(String path, LXParameter parameter) {
+  private void addChannelParameter(String path, CompoundParameter parameter) {
     super.addParameter(path, parameter);
-    this.channelParameters.add(parameter);
+    this.channelParameters.add(new ParameterMonitor(parameter));
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
-    if (this.lookupParameters.contains(p)) {
-      buildLookupTable();
-      this.waveChanged.bang();
-    } else if (this.channelParameters.contains(p)) {
-      buildRGBTables();
+    for (ParameterMonitor monitor : this.lookupParameters) {
+      if (monitor.parameter == p) {
+        monitor.clean();
+        buildLookupTable();
+        this.waveChanged.bang();
+      }
     }
   }
 
@@ -120,6 +152,10 @@ public class DynamicsEffect extends LXEffect {
     float floor = 255 * this.floor.getValuef();
     float ceiling = 255 * this.ceiling.getValuef();
     float shape = this.shape.getValuef();
+    float drive = this.drive.getValuef();
+    float skew = this.skew.getValuef();
+
+    float skewPower = (skew >= 0) ? (1 + 3*skew) : (1 / (1-3*skew));
 
     float shapePow = 1;
     if (shape >= 0) {
@@ -140,9 +176,14 @@ public class DynamicsEffect extends LXEffect {
 
     for (int i = 0; i < this.lookupTable.length; ++i) {
       float lerp = i / (float) (this.lookupTable.length - 1);
+      lerp = (float) Math.pow(lerp, skewPower);
+
       lerp = 0.5f + (float) Math.pow(2 * Math.abs(lerp - .5f), contrastPow) * ((lerp > .5f) ? 0.5f : -0.5f);
+
       lerp = (float) Math.pow(lerp, shapePow);
-      this.lookupTable[i] = (int) LXUtils.lerpf(floor, ceiling, lerp);
+      this.lookupTable[i] = (int) LXUtils.lerpf(floor, ceiling,
+        LXUtils.clampf(.5f + (lerp - .5f) * ((drive + 1) * (drive + 1)), 0, 1)
+      );
     }
 
     buildRGBTables();
@@ -159,8 +200,38 @@ public class DynamicsEffect extends LXEffect {
     }
   }
 
+  private void rebuildTablesIfNecessary() {
+    boolean rebuild = false;
+    for (ParameterMonitor monitor : this.lookupParameters) {
+      if (monitor.checkForChange()) {
+        rebuild = true;
+      }
+    }
+    if (rebuild) {
+      buildLookupTable();
+      this.waveChanged.bang();
+      for (ParameterMonitor monitor : this.channelParameters) {
+        monitor.clean();
+      }
+    } else {
+      boolean rebuildRGB = false;
+      for (ParameterMonitor monitor : this.channelParameters) {
+        if (monitor.checkForChange()) {
+          rebuildRGB = true;
+        }
+      }
+      if (rebuildRGB) {
+        buildRGBTables();
+      }
+    }
+
+  }
+
   @Override
   protected void run(double deltaMs, double enabledAmount) {
+    // Check if any changes occurred
+    rebuildTablesIfNecessary();
+
     if (enabledAmount < 1) {
       // Extra lerping required here, keep this out of the code
       // path when fully enabled...
