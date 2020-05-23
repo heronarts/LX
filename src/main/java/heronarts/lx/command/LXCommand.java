@@ -28,6 +28,8 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clipboard.LXNormalizedValue;
 import heronarts.lx.color.ColorParameter;
+import heronarts.lx.color.LXDynamicColor;
+import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiMapping;
@@ -1452,6 +1454,69 @@ public abstract class LXCommand {
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
+      }
+    }
+  }
+
+  public static class Palette {
+    public static class AddColor extends LXCommand {
+
+      private final ComponentReference<LXSwatch> swatch;
+      private ComponentReference<LXDynamicColor> color;
+      private JsonObject colorObj;
+
+      public AddColor(LXSwatch swatch) {
+        this.swatch = new ComponentReference<LXSwatch>(swatch);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Color";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.colorObj == null) {
+          this.color = new ComponentReference<LXDynamicColor>(this.swatch.get().addColor());
+          this.colorObj = LXSerializable.Utils.toObject(lx, this.color.get());
+        } else {
+          this.swatch.get().addColor(-1, this.colorObj);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.swatch.get().removeColor(this.color.get());
+      }
+    }
+
+    public static class RemoveColor extends LXCommand {
+      private final ComponentReference<LXSwatch> swatch;
+      private final ComponentReference<LXDynamicColor> color;
+      private final int index;
+      private final JsonObject colorObj;
+
+      public RemoveColor(LXDynamicColor color) {
+        this.swatch = new ComponentReference<LXSwatch>(color.getSwatch());
+        this.color = new ComponentReference<LXDynamicColor>(color);
+        this.colorObj = LXSerializable.Utils.toObject(this.color.get());
+        this.index = color.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Delete Color";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.swatch.get().removeColor(this.color.get());
+
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.swatch.get().addColor(this.index, this.colorObj);
       }
     }
   }

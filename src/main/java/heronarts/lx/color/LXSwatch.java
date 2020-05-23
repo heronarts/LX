@@ -105,16 +105,28 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
    */
   public LXDynamicColor addColor() {
     LXDynamicColor newColor = new LXDynamicColor(this);
-    JsonObject copy = LXSerializable.Utils.toObject(this.lx, this.colors.get(this.colors.size() - 1));
-    newColor.load(this.lx, LXSerializable.Utils.stripIds(copy));
-    return addColor(newColor);
+    newColor.primary.setColor(this.colors.get(this.colors.size() - 1).getColor());
+    return addColor(newColor, -1);
   }
 
-  private LXDynamicColor addColor(LXDynamicColor color) {
+  public LXDynamicColor addColor(int index, JsonObject colorObj) {
+    LXDynamicColor newColor = new LXDynamicColor(this);
+    newColor.load(this.lx, colorObj);
+    return addColor(newColor, index);
+  }
+
+  private LXDynamicColor addColor(LXDynamicColor color, int index) {
+    if (index == 0 || index >= MAX_COLORS) {
+      throw new IllegalArgumentException("Cannot add color at invalid index: " + index);
+    }
     if (this.mutableColors.size() >= MAX_COLORS) {
       throw new IllegalStateException("Cannot add more than " + MAX_COLORS + " to a swatch.");
     }
-    this.mutableColors.add(color);
+    if (index < 0) {
+      this.mutableColors.add(color);
+    } else {
+      this.mutableColors.add(index, color);
+    }
     _reindexColors();
     for (Listener listener : this.listeners) {
       listener.colorAdded(this, color);
@@ -141,6 +153,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
    * @return The removed color
    */
   public LXDynamicColor removeColor(LXDynamicColor color) {
+    Objects.requireNonNull(color, "Cannot LXSwatch.removeColor(null)");
     int index = this.colors.indexOf(color);
     if (index < 0) {
       throw new IllegalStateException("Cannot remove color that does not exist in swatch");
@@ -218,7 +231,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
         if (ci >= this.colors.size()) {
           LXDynamicColor color = new LXDynamicColor(this);
           color.load(lx, colorObj);
-          addColor(color);
+          addColor(color, -1);
         } else {
           // Just load into existing color object
           this.colors.get(ci).load(lx, colorObj);
