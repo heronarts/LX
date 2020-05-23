@@ -65,6 +65,14 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
    */
   public final List<View> views = Collections.unmodifiableList(this.mutableViews);
 
+  public static enum ViewScope {
+    MIXER,
+    PATTERNS,
+    EFFECTS,
+    OUTPUT,
+    MODULATION;
+  }
+
   /**
    * Type of snapshot view
    */
@@ -86,6 +94,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
    */
   public abstract class View implements LXSerializable {
 
+    public final ViewScope scope;
     private final ViewType type;
 
     /**
@@ -96,12 +105,14 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       .setMappable(false)
       .setDescription("Whether this view is enabled in the snapshot");
 
-    private View(ViewType type) {
+    private View(ViewScope scope, ViewType type) {
+      this.scope = scope;
       this.type = type;
     }
 
     private View(LX lx, JsonObject obj) {
       LXSerializable.Utils.loadBoolean(this.enabled, obj, KEY_ENABLED);
+      this.scope = ViewScope.valueOf(obj.get(KEY_SCOPE).getAsString());
       this.type = ViewType.valueOf(obj.get(KEY_TYPE).getAsString());
     }
 
@@ -156,11 +167,13 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
      */
     protected void finishTransition() {}
 
+    private static final String KEY_SCOPE = "scope";
     private static final String KEY_TYPE = "type";
     private static final String KEY_ENABLED = "enabled";
 
     @Override
     public void save(LX lx, JsonObject obj) {
+      obj.addProperty(KEY_SCOPE, this.type.name());
       obj.addProperty(KEY_TYPE, this.type.name());
       obj.addProperty(KEY_ENABLED, this.enabled.isOn());
     }
@@ -187,8 +200,8 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     private final String stringValue;
     private final double normalizedValue;
 
-    private ParameterView(LXParameter parameter) {
-      super(ViewType.PARAMETER);
+    private ParameterView(ViewScope scope, LXParameter parameter) {
+      super(scope, ViewType.PARAMETER);
       this.component = parameter.getParent();
       if (this.component == null) {
         throw new IllegalStateException("Cannot store a snapshot view of a parameter with no parent");
@@ -351,7 +364,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     private final int activePatternIndex;
 
     private ActivePatternView(LXChannel channel) {
-      super(ViewType.ACTIVE_PATTERN);
+      super(ViewScope.PATTERNS, ViewType.ACTIVE_PATTERN);
       this.channel = channel;
       this.activePatternIndex = channel.getActivePatternIndex();
     }
@@ -432,13 +445,13 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
   // relevant in the project scope. It's a bit of an arbitrary selection at the moment
   void initialize() {
     LX lx = getLX();
-    addParameterView(lx.engine.output.brightness);
-    addParameterView(lx.engine.mixer.crossfader);
+    addParameterView(ViewScope.OUTPUT, lx.engine.output.brightness);
+    addParameterView(ViewScope.MIXER, lx.engine.mixer.crossfader);
     for (LXAbstractChannel bus : lx.engine.mixer.channels) {
       // Top-level bus settings
-      addParameterView(bus.enabled);
-      addParameterView(bus.fader);
-      addParameterView(bus.crossfadeGroup);
+      addParameterView(ViewScope.MIXER, bus.enabled);
+      addParameterView(ViewScope.MIXER, bus.fader);
+      addParameterView(ViewScope.MIXER, bus.crossfadeGroup);
 
       // Active pattern settings
       if (bus instanceof LXChannel) {
@@ -448,7 +461,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
           addView(new ActivePatternView(channel));
           for (LXParameter p : pattern.getParameters()) {
             if (p != pattern.label) {
-              addParameterView(p);
+              addParameterView(ViewScope.PATTERNS, p);
             }
           }
         }
@@ -460,12 +473,12 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
           // If the effect is on, store all its parameters (including that it's enabled)
           for (LXParameter p : effect.getParameters()) {
             if (p != effect.label) {
-              addParameterView(p);
+              addParameterView(ViewScope.EFFECTS, p);
             }
           }
         } else {
           // If the effect is off, then we only recall that it is off
-          addParameterView(effect.enabled);
+          addParameterView(ViewScope.EFFECTS, effect.enabled);
         }
       }
     }
@@ -473,17 +486,17 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     // Modulator settings
     for (LXModulator modulator : lx.engine.modulation.getModulators()) {
       for (LXParameter p : modulator.getParameters()) {
-        addParameterView(p);
+        addParameterView(ViewScope.MODULATION, p);
       }
     }
   }
 
-  private void addParameterView(LXParameter p) {
+  private void addParameterView(ViewScope scope, LXParameter p) {
     if (p instanceof ColorParameter) {
       // Don't add ColorParameter directly, let the sub-hue/sat/bright values do it
       return;
     }
-    addView(new ParameterView(p));
+    addView(new ParameterView(scope, p));
   }
 
   /**

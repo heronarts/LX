@@ -1515,10 +1515,7 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         this.commands.clear();
-        for (LXSnapshot.View view : this.snapshot.get().views) {
-          this.commands.add(view.getCommand());
-        }
-        lx.engine.snapshots.recall(this.snapshot.get());
+        lx.engine.snapshots.recall(this.snapshot.get(), this.commands);
       }
 
       @Override

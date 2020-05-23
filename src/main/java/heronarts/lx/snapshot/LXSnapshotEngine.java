@@ -32,6 +32,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -82,6 +83,14 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    */
   public final List<LXSnapshot> snapshots = Collections.unmodifiableList(this.mutableSnapshots);
 
+  public final BooleanParameter recallMixer =
+    new BooleanParameter("Mixer", true)
+    .setDescription("Whether mixer settings are recalled");
+
+  public final BooleanParameter recallModulation =
+    new BooleanParameter("Modulation", true)
+    .setDescription("Whether global modulation settings are recalled");
+
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
    */
@@ -106,6 +115,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   public LXSnapshotEngine(LX lx) {
     super(lx, "Snapshots");
     addArray("snapshot", this.snapshots);
+    addParameter("recallMixer", this.recallMixer);
+    addParameter("recallModulation", this.recallModulation);
     addParameter("transitionEnabled", this.transitionEnabled);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
   }
@@ -229,21 +240,55 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    * @param snapshot The snapshot to recall
    */
   public void recall(LXSnapshot snapshot) {
+    recall(snapshot, null);
+  }
+
+  /**
+   * Recall this snapshot, and populate an array of commands which
+   * would need to be undone by this operation.
+   *
+   * @param snapshot Snapshot to recall
+   * @param commands Array to populate with all the commands processed
+   */
+  public void recall(LXSnapshot snapshot, List<LXCommand> commands) {
+    boolean mixer = this.recallMixer.isOn();
+    System.out.println("Mixer: " + mixer);
+    boolean modulation = this.recallModulation.isOn();
+    boolean transition = false;
     if (this.transitionEnabled.isOn()) {
+      transition = true;
       this.inTransition = snapshot;
-      for (View view : this.inTransition.views) {
-        if (view.enabled.isOn()) {
+    }
+    for (View view : snapshot.views) {
+      view.enabled.setValue(isValidView(view, mixer, modulation));
+      if (view.enabled.isOn()) {
+        if (transition) {
           view.startTransition();
-        }
-      }
-      this.transition.trigger();
-    } else {
-      for (View view : snapshot.views) {
-        if (view.enabled.isOn()) {
+        } else {
           view.recall();
+        }
+        if (commands != null) {
+          commands.add(view.getCommand());
         }
       }
     }
+    if (transition) {
+      this.transition.trigger();
+    }
+  }
+
+  private boolean isValidView(View view, boolean mixer, boolean modulation) {
+    if (view.scope == LXSnapshot.ViewScope.MODULATION) {
+      if (!modulation) {
+        return false;
+      }
+    } else {
+      // Everything else is treated as "mixer" for now
+      if (!mixer) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public double getTransitionProgress() {
