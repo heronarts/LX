@@ -97,6 +97,9 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     public final ViewScope scope;
     private final ViewType type;
 
+    // Whether this view is active in a transition
+    boolean activeFlag = false;
+
     /**
      * Whether this view is enabled for recall or not.
      */

@@ -260,8 +260,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       this.inTransition = snapshot;
     }
     for (View view : snapshot.views) {
-      view.enabled.setValue(isValidView(view, mixer, modulation));
-      if (view.enabled.isOn()) {
+      if (view.activeFlag = isValidView(view, mixer, modulation)) {
         if (transition) {
           view.startTransition();
         } else {
@@ -288,7 +287,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
         return false;
       }
     }
-    return true;
+    return view.enabled.isOn();
   }
 
   public double getTransitionProgress() {
@@ -301,14 +300,14 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       this.transition.loop(deltaMs);
       if (this.transition.finished()) {
         for (View view : this.inTransition.views) {
-          if (view.enabled.isOn()) {
+          if (view.activeFlag) {
             view.finishTransition();
           }
         }
         this.inTransition = null;
       } else {
         for (View view : this.inTransition.views) {
-          if (view.enabled.isOn()) {
+          if (view.activeFlag) {
             view.interpolate(this.transition.getValue());
           }
         }
