@@ -27,6 +27,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clipboard.LXNormalizedValue;
+import heronarts.lx.color.ColorParameter;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiMapping;
@@ -361,6 +362,52 @@ public abstract class LXCommand {
         } else {
           this.genericParameter.get().setValue(this.originalGenericValue);
         }
+      }
+
+    }
+
+    public static class SetColor extends LXCommand {
+
+      private final ParameterReference<ColorParameter> colorParameter;
+      private final double originalHue;
+      private final double originalSaturation;
+
+      private double updateHue;
+      private double updateSaturation;
+
+      public SetColor(ColorParameter colorParameter) {
+        this(colorParameter, colorParameter.hue.getBaseValue(), colorParameter.saturation.getBaseValue());
+      }
+
+      public SetColor(ColorParameter colorParameter, double hue, double saturation) {
+        this.colorParameter = new ParameterReference<ColorParameter>(colorParameter);
+        this.originalHue = colorParameter.hue.getBaseValue();
+        this.originalSaturation = colorParameter.saturation.getBaseValue();
+        this.updateHue = hue;
+        this.updateSaturation = saturation;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Update Color";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.colorParameter.get().hue.setValue(this.updateHue);
+        this.colorParameter.get().saturation.setValue(this.updateSaturation);
+      }
+
+      public SetColor update(double hue, double saturation) {
+        this.updateHue = hue;
+        this.updateSaturation = saturation;
+        return this;
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.colorParameter.get().hue.setValue(this.originalHue);
+        this.colorParameter.get().saturation.setValue(this.originalSaturation);
       }
 
     }
