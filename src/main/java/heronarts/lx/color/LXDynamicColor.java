@@ -134,8 +134,13 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
       double lerp = getBasis();
       switch (this.blendMode.getEnum()) {
       case HSV:
+        double hue1 = this.primary.hue.getValue();
+        double hue2 = this.secondary.hue.getValue();
+        if (hue2 < hue1) {
+          hue2 += 360.;
+        }
         return LXColor.hsb(
-          LXUtils.lerp(this.primary.hue.getValue(), this.secondary.hue.getValue(), lerp),
+          LXUtils.lerp(hue1, hue2, lerp),
           LXUtils.lerp(this.primary.saturation.getValue(), this.secondary.saturation.getValue(), lerp),
           LXUtils.lerp(this.primary.brightness.getValue(), this.secondary.brightness.getValue(), lerp)
         );
