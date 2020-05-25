@@ -76,6 +76,22 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     return this.color.getColor();
   }
 
+  public float getHuef() {
+    return (float) getHue();
+  }
+
+  public double  getHue() {
+    return LXColor.h(getColor());
+  }
+
+  public float getSaturationf() {
+    return (float) getSaturation();
+  }
+
+  public double getSaturation() {
+    return LXColor.s(getColor());
+  }
+
 
   private void _reindexSwatches() {
     int i = 0;
