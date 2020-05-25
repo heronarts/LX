@@ -28,7 +28,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
-@LXCategory(LXCategory.CORE)
+@LXCategory(LXCategory.COLOR)
 public class DynamicsEffect extends LXEffect {
 
   // These could be bytes but it's a small table and simpler
@@ -81,14 +81,14 @@ public class DynamicsEffect extends LXEffect {
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Contrast factor");
 
-  public final CompoundParameter drive =
-    new CompoundParameter("Drive", 0)
-    .setDescription("Drive factor");
+  public final CompoundParameter gain =
+    new CompoundParameter("Gain", 1, 1, 10)
+    .setExponent(2)
+    .setDescription("Gain factor");
 
-  public final CompoundParameter skew =
-    new CompoundParameter("Skew", 0, -1, 1)
-    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
-    .setDescription("Skew factor");
+  public final CompoundParameter gate =
+    new CompoundParameter("Gate", 0)
+    .setDescription("Minimum incoming level to generate output");
 
   public final CompoundParameter redAmount =
     new CompoundParameter("Red", 1)
@@ -109,10 +109,10 @@ public class DynamicsEffect extends LXEffect {
     super(lx);
     addLookupParameter("ceiling", this.ceiling);
     addLookupParameter("contrast", this.contrast);
-    addLookupParameter("drive", this.drive);
+    addLookupParameter("gain", this.gain);
 
     addLookupParameter("floor", this.floor);
-    addLookupParameter("skew", this.skew);
+    addLookupParameter("gate", this.gate);
     addLookupParameter("shape", this.shape);
 
     addChannelParameter("red", this.redAmount);
@@ -152,10 +152,10 @@ public class DynamicsEffect extends LXEffect {
     float floor = 255 * this.floor.getValuef();
     float ceiling = 255 * this.ceiling.getValuef();
     float shape = this.shape.getValuef();
-    float drive = this.drive.getValuef();
-    float skew = this.skew.getValuef();
+    float gain = this.gain.getValuef();
 
-    float skewPower = (skew >= 0) ? (1 + 3*skew) : (1 / (1-3*skew));
+    float gate = this.gate.getValuef();
+    float gateFactor = (gate < 1) ? (1 / (1 - gate)) : 0;
 
     float shapePow = 1;
     if (shape >= 0) {
@@ -176,14 +176,12 @@ public class DynamicsEffect extends LXEffect {
 
     for (int i = 0; i < this.lookupTable.length; ++i) {
       float lerp = i / (float) (this.lookupTable.length - 1);
-      lerp = (float) Math.pow(lerp, skewPower);
+      lerp = LXUtils.maxf(0, (lerp - gate)) * gateFactor;
 
       lerp = 0.5f + (float) Math.pow(2 * Math.abs(lerp - .5f), contrastPow) * ((lerp > .5f) ? 0.5f : -0.5f);
 
       lerp = (float) Math.pow(lerp, shapePow);
-      this.lookupTable[i] = (int) LXUtils.lerpf(floor, ceiling,
-        LXUtils.clampf(.5f + (lerp - .5f) * ((drive + 1) * (drive + 1)), 0, 1)
-      );
+      this.lookupTable[i] = (int) LXUtils.lerpf(floor, ceiling, LXUtils.clampf(lerp * gain, 0, 1));
     }
 
     buildRGBTables();
