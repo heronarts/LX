@@ -185,6 +185,31 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   }
 
   /**
+   * Retrieves the color at index i. This is provided mainly as documentation,
+   * but you should not generally use this method. You're better of just indexing directly
+   * to this.colors[i] and saving function call overhead.
+   *
+   * @param i Color index
+   * @return Color at that buffer index
+   */
+  protected int getColor(int i) {
+    return this.colors[i];
+  }
+
+  /**
+   * Retrieves the color at a given point. This is provided mainly as documentation,
+   * you should not generally use this method. You're better off just indexing
+   * directly by calling this.colors[p.index] and saving the function call overhead
+   * for a single point.
+   *
+   * @param p Point
+   * @return Color at that point
+   */
+  protected int getColor(LXPoint p) {
+    return this.colors[p.index];
+  }
+
+  /**
    * Sets the color of point i
    *
    * @param i Point index
@@ -193,6 +218,20 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
    */
   protected final LXLayeredComponent setColor(int i, int c) {
     this.colors[i] = c;
+    return this;
+  }
+
+  /**
+   * Sets the color of a point. This is provided for clarity, but if you're working
+   * with large pixel counts you may just skip calling this method and set
+   * colors[p.index] to avoid per-pixel function call overhead.
+   *
+   * @param p Point
+   * @param c color
+   * @return this
+   */
+  protected final LXLayeredComponent setColor(LXPoint p, int c) {
+    this.colors[p.index] = c;
     return this;
   }
 
