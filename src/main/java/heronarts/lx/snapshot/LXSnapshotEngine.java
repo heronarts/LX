@@ -252,7 +252,6 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    */
   public void recall(LXSnapshot snapshot, List<LXCommand> commands) {
     boolean mixer = this.recallMixer.isOn();
-    System.out.println("Mixer: " + mixer);
     boolean modulation = this.recallModulation.isOn();
     boolean transition = false;
     if (this.transitionEnabled.isOn()) {
