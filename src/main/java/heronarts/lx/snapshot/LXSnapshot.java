@@ -176,7 +176,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
     @Override
     public void save(LX lx, JsonObject obj) {
-      obj.addProperty(KEY_SCOPE, this.type.name());
+      obj.addProperty(KEY_SCOPE, this.scope.name());
       obj.addProperty(KEY_TYPE, this.type.name());
       obj.addProperty(KEY_ENABLED, this.enabled.isOn());
     }
@@ -577,8 +577,8 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       view.dispose();
     }
     this.mutableViews.clear();
+    super.dispose();
   }
-
 
   private static final String KEY_VIEWS = "views";
 
