@@ -1490,13 +1490,14 @@ public abstract class LXCommand {
       }
     }
 
-    public static class RemoveColor extends LXCommand {
+    public static class RemoveColor extends RemoveComponent {
       private final ComponentReference<LXSwatch> swatch;
       private final ComponentReference<LXDynamicColor> color;
       private final int index;
       private final JsonObject colorObj;
 
       public RemoveColor(LXDynamicColor color) {
+        super(color);
         this.swatch = new ComponentReference<LXSwatch>(color.getSwatch());
         this.color = new ComponentReference<LXDynamicColor>(color);
         this.colorObj = LXSerializable.Utils.toObject(this.color.get());
@@ -1511,13 +1512,135 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         this.swatch.get().removeColor(this.color.get());
-
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         this.swatch.get().addColor(this.index, this.colorObj);
+        super.undo(lx);
       }
+    }
+
+    public static class SaveSwatch extends LXCommand {
+
+      private ComponentReference<LXSwatch> swatch;
+      private JsonObject swatchObj;
+      private int index = -1;
+
+      @Override
+      public String getDescription() {
+        return "Save Color Swatch";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.swatch != null) {
+          lx.engine.palette.addSwatch(this.swatchObj, this.index);
+        } else {
+          LXSwatch swatch = lx.engine.palette.saveSwatch();
+          this.index = swatch.getIndex();
+          this.swatchObj = LXSerializable.Utils.toObject(swatch);
+          this.swatch = new ComponentReference<LXSwatch>(swatch);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.palette.removeSwatch(this.swatch.get());
+      }
+
+    }
+
+    public static class RemoveSwatch extends RemoveComponent {
+
+      private final ComponentReference<LXSwatch> swatch;
+      private final JsonObject swatchObj;
+      private final int swatchIndex;
+
+      public RemoveSwatch(LXSwatch swatch) {
+        super(swatch);
+        this.swatch = new ComponentReference<LXSwatch>(swatch);
+        this.swatchObj = LXSerializable.Utils.toObject(swatch);
+        this.swatchIndex = swatch.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Delete Swatch";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.engine.palette.removeSwatch(this.swatch.get());
+
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.palette.addSwatch(this.swatchObj, this.swatchIndex);
+        super.undo(lx);
+      }
+
+    }
+
+    public static class MoveSwatch extends LXCommand {
+
+      private final ComponentReference<LXSwatch> swatch;
+      private final int fromIndex;
+      private final int toIndex;;
+
+      public MoveSwatch(LXSwatch swatch, int toIndex) {
+        this.swatch = new ComponentReference<LXSwatch>(swatch);
+        this.fromIndex = swatch.getIndex();
+        this.toIndex = toIndex;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Swatch";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.engine.palette.moveSwatch(this.swatch.get(), this.toIndex);
+
+      }
+
+      @Override
+      public void undo(LX lx) {
+        lx.engine.palette.moveSwatch(this.swatch.get(), this.fromIndex);
+      }
+
+    }
+
+
+    public static class SetSwatch extends LXCommand {
+
+      private final ComponentReference<LXSwatch> swatch;
+      private JsonObject originalSwatch;
+
+      public SetSwatch(LXSwatch swatch) {
+        this.swatch = new ComponentReference<LXSwatch>(swatch);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Set Swatch Colors";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.originalSwatch =
+          LXSerializable.Utils.stripIds(
+            LXSerializable.Utils.toObject(lx.engine.palette.swatch));
+        lx.engine.palette.setSwatch(this.swatch.get());
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.palette.swatch.load(lx, this.originalSwatch);
+      }
+
     }
   }
 
@@ -1587,13 +1710,13 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXSnapshot> snapshot;
       private final JsonObject snapshotObj;
-      private final int index;
+      private final int snapshotIndex;
 
       public RemoveSnapshot(LXSnapshot snapshot) {
         super(snapshot);
         this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
-        this.snapshotObj = LXSerializable.Utils.toObject(this.snapshot.get());
-        this.index = snapshot.getIndex();
+        this.snapshotObj = LXSerializable.Utils.toObject(snapshot);
+        this.snapshotIndex = snapshot.getIndex();
       }
 
       @Override
@@ -1610,7 +1733,7 @@ public abstract class LXCommand {
       public void undo(LX lx) throws InvalidCommandException {
         LXSnapshot snapshot = new LXSnapshot(lx);
         snapshot.load(lx, this.snapshotObj);
-        lx.engine.snapshots.addSnapshot(snapshot, this.index);
+        lx.engine.snapshots.addSnapshot(snapshot, this.snapshotIndex);
         super.undo(lx);
       }
     }

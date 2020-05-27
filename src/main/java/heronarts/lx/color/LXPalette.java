@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -145,14 +147,36 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
    */
   public LXSwatch saveSwatch() {
     LXSwatch saved = new LXSwatch(this, true);
-    JsonObject savedObj = LXSerializable.Utils.toObject(this.lx, this);
+    JsonObject savedObj = LXSerializable.Utils.toObject(this.lx, this.swatch);
     saved.load(this.lx, LXSerializable.Utils.stripIds(savedObj));
-    this.mutableSwatches.add(saved);
+    saved.label.setValue("Swatch-" + (this.swatches.size() + 1));
+    return addSwatch(saved, -1);
+  }
+
+  /**
+   * Adds a swatch at the given index
+   *
+   * @param swatchObj Saved swatch object
+   * @param index Index to save at
+   * @return Swatch object
+   */
+  public LXSwatch addSwatch(JsonObject swatchObj, int index) {
+    LXSwatch saved = new LXSwatch(this, true);
+    saved.load(getLX(), swatchObj);
+    return addSwatch(saved, index);
+  }
+
+  private LXSwatch addSwatch(LXSwatch swatch, int index) {
+    if (index < 0) {
+      this.mutableSwatches.add(swatch);
+    } else {
+      this.mutableSwatches.add(index, swatch);
+    }
     _reindexSwatches();
     for (Listener listener : this.listeners) {
-      listener.swatchAdded(this, saved);
+      listener.swatchAdded(this, swatch);
     }
-    return saved;
+    return swatch;
   }
 
   /**
@@ -171,6 +195,11 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       listener.swatchRemoved(this, swatch);
     }
     swatch.dispose();
+    return this;
+  }
+
+  public LXPalette setSwatch(LXSwatch swatch) {
+    this.swatch.load(this.lx, LXSerializable.Utils.stripIds(LXSerializable.Utils.toObject(swatch)));
     return this;
   }
 
@@ -237,6 +266,28 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     this.mutableSwatches.clear();
     this.swatch.dispose();
     super.dispose();
+  }
+
+  private static final String KEY_SWATCHES = "swatches";
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
+    obj.add(KEY_SWATCHES, LXSerializable.Utils.toArray(lx, this.swatches));
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    while (!this.swatches.isEmpty()) {
+      removeSwatch(this.swatches.get(this.swatches.size() - 1));
+    }
+    if (obj.has(KEY_SWATCHES)) {
+      JsonArray swatchArr = obj.get(KEY_SWATCHES).getAsJsonArray();
+      for (JsonElement swatchElem : swatchArr) {
+        addSwatch(swatchElem.getAsJsonObject(), -1);
+      }
+    }
+    super.load(lx, obj);
   }
 
 }

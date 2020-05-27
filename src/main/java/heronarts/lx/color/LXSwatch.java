@@ -31,7 +31,9 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXParameter;
 
 /**
  * A swatch is a set of up to 5 dynamic colors that can be referenced by patterns and effects.
@@ -53,18 +55,34 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
 
   public final DiscreteParameter numColors = new DiscreteParameter("Num", 1, 1, MAX_COLORS + 1);
 
+  public final BooleanParameter recall =
+    new BooleanParameter("Recall", false)
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Restores the values of this swatch");
+
   private int index = 0;
 
   public LXSwatch(LX lx) {
     super(lx, "Swatch");
     this.mutableColors.add(new LXDynamicColor(this));
     addArray("colors", this.colors);
+    addParameter("recall", this.recall);
   }
 
   LXSwatch(LXPalette palette, boolean setParent) {
     this(palette.getLX());
     if (setParent) {
       setParent(palette);
+    }
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    if (this.recall == p) {
+      if (this.recall.isOn()) {
+        this.recall.setValue(false);
+        this.lx.engine.palette.setSwatch(this);
+      }
     }
   }
 
