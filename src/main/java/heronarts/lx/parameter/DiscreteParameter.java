@@ -58,7 +58,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @param label Label
    * @param value Default value
    * @param min Minimum value (inclusive)
-   * @param max Maximum value (exclusive
+   * @param max Maximum value (exclusive)
    */
   public DiscreteParameter(String label, int value, int min, int max) {
     super(label, value);
