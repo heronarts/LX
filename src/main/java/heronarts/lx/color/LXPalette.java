@@ -76,22 +76,60 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     return this.color.getColor();
   }
 
+  /**
+   * Gets the hue of the primary color in active swatch
+   *
+   * @return Hue of primary color
+   */
   public float getHuef() {
     return (float) getHue();
   }
 
-  public double  getHue() {
+  /**
+   * Gets the hue of the primary color in active swatch
+   *
+   * @return Hue of primary color
+   */
+  public double getHue() {
     return LXColor.h(getColor());
   }
 
+  /**
+   * Gets the saturation of the primary color in active swatch
+   *
+   * @return Saturation of primary color
+   */
   public float getSaturationf() {
     return (float) getSaturation();
   }
 
+  /**
+   * Gets the saturation of the primary color in active swatch
+   *
+   * @return Saturation of primary color
+   */
   public double getSaturation() {
     return LXColor.s(getColor());
   }
 
+
+  /**
+   * Gets the brightness of the primary color in active swatch
+   *
+   * @return Brightness of primary color
+   */
+  public float getBrightnessf() {
+    return (float) getBrightness();
+  }
+
+  /**
+   * Gets the brightness of the primary color in active swatch
+   *
+   * @return Brightness of primary color
+   */
+  public double getBrightness() {
+    return LXColor.b(getColor());
+  }
 
   private void _reindexSwatches() {
     int i = 0;
