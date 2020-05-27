@@ -30,6 +30,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXPath;
 import heronarts.lx.LXRunnableComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.effect.LXEffect;
@@ -323,9 +324,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   protected void loadLane(LX lx, String laneType, JsonObject laneObj) {
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
-      LXComponent component = lx.getProjectComponent(laneObj.get(KEY_COMPONENT_ID).getAsInt());
-      String path = laneObj.get(KEY_PARAMETER_PATH).getAsString();
-      LXParameter parameter = component.getParameter(path);
+      LXParameter parameter;
+      if (laneObj.has(LXComponent.KEY_PATH)) {
+        parameter = LXPath.getParameter(this.bus, laneObj.get(KEY_PATH).getAsString());
+      } else {
+        LXComponent component = lx.getProjectComponent(laneObj.get(KEY_COMPONENT_ID).getAsInt());
+        String path = laneObj.get(KEY_PARAMETER_PATH).getAsString();
+        parameter = component.getParameter(path);
+      }
       LXClipLane lane = getParameterLane((LXNormalizedParameter) parameter, true);
       lane.load(lx, laneObj);
     }

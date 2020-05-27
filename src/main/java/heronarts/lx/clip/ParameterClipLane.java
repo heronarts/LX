@@ -91,6 +91,7 @@ public class ParameterClipLane extends LXClipLane {
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
+    obj.addProperty(LXComponent.KEY_PATH, this.parameter.getCanonicalPath(this.clip.bus));
     obj.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getParent().getId());
     obj.addProperty(LXComponent.KEY_PARAMETER_PATH, this.parameter.getPath());
   }
