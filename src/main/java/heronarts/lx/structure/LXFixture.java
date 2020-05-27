@@ -276,7 +276,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   protected void removeChild(LXFixture child) {
     if (!this.children.contains(child)) {
-      throw new IllegalStateException("Cannot remove non-existend child from LXFixture: " + this + " " + child);
+      throw new IllegalStateException("Cannot remove non-existent child from LXFixture: " + this + " " + child);
     }
     this.mutableChildren.remove(child);
     _reindexChildren();
