@@ -277,6 +277,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @return Name of component type
    */
   public static String getComponentName(Class<? extends LXComponent> component, String suffix) {
+    LXComponentName annotation = component.getAnnotation(LXComponentName.class);
+    if (annotation != null) {
+      return annotation.value();
+    }
     String simple = component.getSimpleName();
     if (simple.endsWith(suffix)) {
       simple = simple.substring(0, simple.length() - suffix.length());
@@ -292,6 +296,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @return Name of component class
    */
   public static String getComponentName(Class<? extends LXComponent> cls) {
+    LXComponentName annotation = cls.getAnnotation(LXComponentName.class);
+    if (annotation != null) {
+      return annotation.value();
+    }
     String suffix = "";
     Class<? extends LXComponent> generic = cls;
     while (generic != null) {

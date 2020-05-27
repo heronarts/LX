@@ -25,21 +25,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * An annotation to be applied to LXPattern or LXEffect classes describing what category
- * the component belongs to.
+ * An annotation to be applied to LXPattern or LXEffect classes giving them
+ * a name in the UI different from their classname
  */
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface LXCategory {
-
-  public static final String CORE = "Core";
-  public static final String FORM = "Form";
-  public static final String COLOR = "Color";
-  public static final String TEXTURE = "Texture";
-  public static final String TEST = "Test";
-  public static final String OTHER = "Other";
-
+public @interface LXComponentName {
   String value();
-
 }
