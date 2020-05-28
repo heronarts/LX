@@ -83,9 +83,9 @@ Document title and Copyright styles
 .aboutLanguage {
     float:right;
     padding:0px 21px;
-    font-size:11px;
+    font-size:13px;
     z-index:200;
-    margin-top:-9px;
+    margin-top:8px;
 }
 .legalCopy {
 	font-size: 13px;
