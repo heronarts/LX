@@ -86,6 +86,17 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     }
   }
 
+  static LXSwatch staticCopy(LXSwatch that) {
+    LXSwatch swatch = new LXSwatch(that.lx);
+    swatch.mutableColors.clear();
+    for (LXDynamicColor color : that.colors) {
+      LXDynamicColor c2 = new LXDynamicColor(swatch);
+      c2.primary.setColor(color.getColor());
+      swatch.mutableColors.add(c2);
+    }
+    return swatch;
+  }
+
   void setIndex(int index) {
     this.index = index;
   }

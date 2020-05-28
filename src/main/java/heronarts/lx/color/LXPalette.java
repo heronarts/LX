@@ -31,7 +31,14 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.FunctionalParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * A palette is an object that is used to keep track of top-level color values and
@@ -45,6 +52,11 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     public void swatchRemoved(LXPalette palette, LXSwatch swatch);
     public void swatchMoved(LXPalette palette, LXSwatch swatch);
   }
+
+  public enum TransitionMode {
+    HSV,
+    RGB
+  };
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
@@ -65,10 +77,40 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
    */
   public final LXDynamicColor color;
 
+  /**
+   * Amount of time taken in seconds to transition into a new snapshot view
+   */
+  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
+    new BoundedParameter("Transition Time", 5, .1, 180)
+    .setDescription("Sets the duration of interpolated transitions between color palettes")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter transitionEnabled =
+    new BooleanParameter("Transitions", false)
+    .setDescription("When enabled, transitions between color palettes use interpolation");
+
+  public final EnumParameter<TransitionMode> transitionMode =
+    new EnumParameter<TransitionMode>("Transition Mode", TransitionMode.RGB)
+    .setDescription("Which color blending mode transitions should use.");
+
+  private LXSwatch transitionFrom = null;
+  private LXSwatch transitionTo = null;
+  private JsonObject transitionTarget = null;
+
+  private LinearEnvelope transition = new LinearEnvelope(0, 1, new FunctionalParameter() {
+    @Override
+    public double getValue() {
+      return 1000 * transitionTimeSecs.getValue();
+    }
+  });
+
   public LXPalette(LX lx) {
     super(lx, "Color Palette");
     addChild("swatch", this.swatch = new LXSwatch(this, false));
     addArray("swatches", this.swatches);
+    addParameter("transitionEnabled", this.transitionEnabled);
+    addParameter("transitionTimeSecs", this.transitionTimeSecs);
+    addParameter("transitionMode", this.transitionMode);
     this.color = swatch.colors.get(0);
   }
 
@@ -214,14 +256,74 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   }
 
   public LXPalette setSwatch(LXSwatch swatch) {
-    this.swatch.load(this.lx, LXSerializable.Utils.stripIds(LXSerializable.Utils.toObject(swatch)));
+    JsonObject swatchObj = LXSerializable.Utils.stripIds(LXSerializable.Utils.toObject(swatch));
+    if (this.transitionEnabled.isOn()) {
+      this.transitionFrom = LXSwatch.staticCopy(this.swatch);
+      this.transitionTo = LXSwatch.staticCopy(swatch);
+      this.transitionTarget = swatchObj;
+      this.transition.trigger();
+
+      // Make sure we have same number of colors as the max of from/to during transition
+      int nColors = Math.max(this.transitionFrom.colors.size(), this.transitionTo.colors.size());
+      while (this.swatch.colors.size() < nColors) {
+        this.swatch.addColor();
+      }
+      while (this.swatch.colors.size() > nColors) {
+        this.swatch.removeColor();
+      }
+
+    } else {
+      this.swatch.load(this.lx, swatchObj);
+    }
     return this;
   }
 
+  public double getTransitionProgress() {
+    return (this.transitionTarget != null) ? this.transition.getValue() : 0;
+  }
+
   public void loop(double deltaMs) {
-    this.swatch.loop(deltaMs);
-    // NOTE(mcslee): do we want to run the saved swatches here? maybe if
-    // one is selected/focused and being worked on?
+    if (this.transitionTarget != null) {
+      this.transition.loop(deltaMs);
+      if (this.transition.finished()) {
+        this.swatch.load(this.lx, this.transitionTarget);
+        this.transitionFrom = null;
+        this.transitionTo = null;
+        this.transitionTarget = null;
+      } else {
+        float lerp = this.transition.getBasisf();
+        int i = 0;
+        for (LXDynamicColor color : this.swatch.colors) {
+          _transitionColor(color, i++, lerp);
+        }
+      }
+    } else {
+      this.swatch.loop(deltaMs);
+    }
+  }
+
+  private void _transitionColor(LXDynamicColor color, int i, float lerp) {
+    ColorParameter fromColor = this.transitionFrom.getColor(i).primary;
+    ColorParameter toColor = this.transitionTo.getColor(i).primary;
+
+    switch (this.transitionMode.getEnum()) {
+    case HSV:
+      color.primary.setColor(LXColor.hsb(
+        LXUtils.lerpf(fromColor.hue.getValuef(), toColor.hue.getValuef(), lerp),
+        LXUtils.lerpf(fromColor.saturation.getValuef(), toColor.saturation.getValuef(), lerp),
+        LXUtils.lerpf(fromColor.brightness.getValuef(), toColor.brightness.getValuef(), lerp)
+      ));
+      break;
+
+    default:
+    case RGB:
+      color.primary.setColor(LXColor.lerp(
+        fromColor.getColor(),
+        toColor.getColor(),
+        lerp
+      ));
+      break;
+    }
   }
 
   /**
