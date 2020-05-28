@@ -329,6 +329,13 @@ public class GradientPattern extends LXPattern {
     }
   }
 
+  public int getGradientColor(float lerp) {
+    final BlendMode blend = this.blendMode.getEnum();
+    lerp *= (this.numStops - 1);
+    int stop = (int) Math.floor(lerp);
+    return blend.function.blend(this.stops[stop], this.stops[stop+1], lerp - stop);
+  }
+
   @Override
   public void run(double deltaMs) {
     setColorStops();
