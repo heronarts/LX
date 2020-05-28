@@ -336,7 +336,7 @@ public class NoisePattern extends LXPattern {
         float zd = zMode.getCoordinate(p, p.zn, zo);
 
         float b = level + contrast * stb_perlin_noise3_seed(xa + xs * xd, ya + ys * yd, za + zs * zd, 0, 0, 0, seed);
-        this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
+        this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
       }
     } else {
       int octaves = this.octaves.getValuei();
@@ -350,7 +350,7 @@ public class NoisePattern extends LXPattern {
           float yd = yMode.getCoordinate(p, p.yn, yo);
           float zd = zMode.getCoordinate(p, p.zn, zo);
           float b = level + contrast * stb_perlin_ridge_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, ridgeOffset, octaves);
-          this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
+          this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
         }
       } else if (algorithm.equals(Algorithm.FBM)) {
         for (LXPoint p : model.points) {
@@ -358,7 +358,7 @@ public class NoisePattern extends LXPattern {
           float yd = yMode.getCoordinate(p, p.yn, yo);
           float zd = zMode.getCoordinate(p, p.zn, zo);
           float b = level + contrast * stb_perlin_fbm_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
-          this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
+          this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
         }
       } else if (algorithm.equals(Algorithm.TURBULENCE)) {
         for (LXPoint p : model.points) {
@@ -366,7 +366,7 @@ public class NoisePattern extends LXPattern {
           float yd = yMode.getCoordinate(p, p.yn, yo);
           float zd = zMode.getCoordinate(p, p.zn, zo);
           float b = level + contrast * stb_perlin_turbulence_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
-          this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
+          this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
         }
       }
     }
@@ -377,7 +377,7 @@ public class NoisePattern extends LXPattern {
     float contrast = this.contrast.getValuef();
     for (LXPoint p : model.points) {
       float b = level + contrast * (-1 + 2 * (float) Math.random());
-      this.colors[p.index] = LXColor.hsb(0, 0, clamp(b, 0, 100));
+      this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
     }
   }
 
