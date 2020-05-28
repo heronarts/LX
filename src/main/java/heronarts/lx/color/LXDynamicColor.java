@@ -124,6 +124,67 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
   }
 
   /**
+   * Gets the hue of the current dynamic color. This will return a valid
+   * value even if brightness is all the way down and the color is black.
+   *
+   * @return Hue
+   */
+  public double getHue() {
+    switch (this.mode.getEnum()) {
+    case OSCILLATE:
+      switch (this.blendMode.getEnum()) {
+      case HSV:
+        double hue1 = this.primary.hue.getValue();
+        double hue2 = this.secondary.hue.getValue();
+        if (hue2 < hue1) {
+          hue2 += 360.;
+        }
+        return LXUtils.lerp(hue1, hue2, getBasis());
+
+      default:
+      case RGB:
+        int c = getColor();
+        float b = LXColor.b(c);
+        if (b > 0) {
+          return LXColor.h(c);
+        } else {
+          // 0 brightness! This means one of primary or secondary is black...
+          if (getBasis() > 0.5) {
+            return this.secondary.hue.getValue();
+          } else {
+            return this.primary.hue.getValue();
+          }
+        }
+      }
+
+    case CYCLE:
+      return this.color.hue.getValue() + this.basis.getValue() * 360;
+
+    default:
+    case FIXED:
+      return this.color.hue.getValue();
+    }
+  }
+
+  /**
+   * Gets the hue of the current dynamic color. This will return a valid
+   * value even if brightness is all the way down and the color is black.
+   *
+   * @return Hue
+   */
+  public float getHuef() {
+    return (float) getHue();
+  }
+
+  public float getSaturation() {
+    return LXColor.s(getColor());
+  }
+
+  public float getBrightness() {
+    return LXColor.b(getColor());
+  }
+
+  /**
    * Gets the current value of this dynamic color
    *
    * @return Color, which may be blending or oscillating different options
