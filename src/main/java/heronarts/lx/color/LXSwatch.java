@@ -117,6 +117,21 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
   }
 
   /**
+   * Retrieves the color at a given index in the swatch.
+   * If this swatch does not specify a color at that index,
+   * then the last valid color is returned instead.
+   *
+   * @param index Index
+   * @return Dynamic color at that index
+   */
+  public LXDynamicColor getColor(int index) {
+    if (index >= this.colors.size()) {
+      return this.colors.get(this.colors.size() - 1);
+    }
+    return this.colors.get(index);
+  }
+
+  /**
    * Adds a new dynamic color to the swatch
    *
    * @return The newly added color

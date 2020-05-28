@@ -60,6 +60,9 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
    */
   public final LXSwatch swatch;
 
+  /**
+   * The primary active color value
+   */
   public final LXDynamicColor color;
 
   public LXPalette(LX lx) {
@@ -79,12 +82,24 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   }
 
   /**
+   * Gets the color in the active swatch at the given index.
+   * If the swatch doesn't have that many colors, the last
+   * available color is returned.
+   *
+   * @param index Index in swatch
+   * @return Color
+   */
+  public LXDynamicColor getSwatchColor(int index) {
+    return this.swatch.getColor(index);
+  }
+
+  /**
    * Gets the hue of the primary color in active swatch
    *
    * @return Hue of primary color
    */
   public float getHuef() {
-    return (float) getHue();
+    return this.color.getHuef();
   }
 
   /**
@@ -93,7 +108,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
    * @return Hue of primary color
    */
   public double getHue() {
-    return LXColor.h(getColor());
+    return this.color.getHue();
   }
 
   /**
