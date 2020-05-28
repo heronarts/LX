@@ -530,7 +530,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         @Override
         public void run() {
           thread = Thread.currentThread();
-          thread.setPriority(Thread.MAX_PRIORITY);
+          thread.setPriority(lx.flags.engineThreadPriority);
           synchronized (initSemaphore) {
             initSemaphore.hasThread = true;
             initSemaphore.notify();

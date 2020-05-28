@@ -88,6 +88,7 @@ public class LX {
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
+    public int engineThreadPriority = Thread.MAX_PRIORITY;
     public String mediaPath = ".";
     public LXPlugin initialize = null;
   }
