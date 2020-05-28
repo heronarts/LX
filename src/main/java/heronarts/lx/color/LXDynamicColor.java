@@ -123,6 +123,10 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
     }
   }
 
+  void trigger() {
+    this.basis.trigger();
+  }
+
   /**
    * Gets the hue of the current dynamic color. This will return a valid
    * value even if brightness is all the way down and the color is black.

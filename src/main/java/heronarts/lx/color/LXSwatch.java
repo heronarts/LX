@@ -288,6 +288,9 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     while (this.colors.size() > ci) {
       removeColor();
     }
+    for (LXDynamicColor color : this.colors) {
+      color.trigger();
+    }
   }
 
   @Override

@@ -263,6 +263,13 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       this.transitionTarget = swatchObj;
       this.transition.trigger();
 
+      // Set everything to fixed color mode while mid-transition
+      for (LXDynamicColor color : this.swatch.colors) {
+        int colorNow = color.getColor();
+        color.mode.setValue(LXDynamicColor.Mode.FIXED);
+        color.primary.setColor(colorNow);
+      }
+
       // Make sure we have same number of colors as the max of from/to during transition
       int nColors = Math.max(this.transitionFrom.colors.size(), this.transitionTo.colors.size());
       while (this.swatch.colors.size() < nColors) {
