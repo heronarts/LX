@@ -1,11 +1,17 @@
+0.2.0
+May 28, 2020
+- Lots of API cleanups
+- New LXFixture and LXPalette systems
+- Better software process, Maven builds
+
 0.1.2
 August 20, 2018
-Fix bug with onActive/onInactive messages when pattern is deleted.
+-Fix bug with onActive/onInactive messages when pattern is deleted.
 
 0.1.1
 August 15, 2018
-Dropping alpha tag, updating release packaging with VERSION and LICENSE files.
+-Dropping alpha tag, updating release packaging with VERSION and LICENSE files.
 
 0.1.0-alpha
 August 13, 2018
-Initial release cut for tracking versioned changes across the LX repositories.
+-Initial release cut for tracking versioned changes across the LX repositories.
