@@ -171,19 +171,19 @@ public class LXColor {
   public static int gray(double brightness) {
     int b = 0xff & (int) (brightness * GRAY_SCALE);
     return
-      0xff000000 |
-      ((b & 0xff) << R_SHIFT) |
-      ((b & 0xff) << G_SHIFT) |
-      (b & 0xff);
+      LXColor.ALPHA_MASK |
+      (b << R_SHIFT) |
+      (b << G_SHIFT) |
+      b;
   }
 
   public static int gray(float brightness) {
     int b = 0xff & (int) (brightness * GRAY_SCALE_FLOAT);
     return
-      0xff000000 |
-      ((b & 0xff) << R_SHIFT) |
-      ((b & 0xff) << G_SHIFT) |
-      (b & 0xff);
+      LXColor.ALPHA_MASK |
+      (b  << R_SHIFT) |
+      (b  << G_SHIFT) |
+      b;
   }
 
   /**
