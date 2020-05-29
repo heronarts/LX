@@ -31,6 +31,7 @@ import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.color.SolidPattern;
 import heronarts.lx.pattern.test.TestPattern;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
@@ -807,6 +808,10 @@ public class LX {
         this.structure.load(this, new JsonObject());
       }
       this.engine.load(this, new JsonObject());
+
+      LXChannel channel = this.engine.mixer.addChannel(new LXPattern[] { new SolidPattern(this, 0xffff0000) });
+      channel.fader.setValue(1);
+
       setProject(null, ProjectListener.Change.NEW);
     });
   }
