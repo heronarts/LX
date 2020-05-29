@@ -99,7 +99,8 @@ public class LX {
     FIXTURES("Fixtures"),
     PROJECTS("Projects"),
     MODELS("Models"),
-    LOGS("Logs");
+    LOGS("Logs"),
+    DELETED("Deleted");
 
     private final String dirName;
 
@@ -109,6 +110,10 @@ public class LX {
 
     public String getDirName() {
       return this.dirName;
+    }
+
+    private boolean isBootstrap() {
+      return (this != DELETED);
     }
   }
 
@@ -305,6 +310,10 @@ public class LX {
     this.registry.initialize();
     LX.initProfiler.log("Registry");
 
+    // Load the global preferences before plugin initialization
+    this.preferences = new LXPreferences(this);
+    this.preferences.load();
+
     // Construct the engine
     this.engine = new LXEngine(this);
     this.command = new LXCommandEngine(this);
@@ -316,10 +325,6 @@ public class LX {
     // Add a default channel
     this.engine.mixer.addChannel(new LXPattern[] { new TestPattern(this) }).fader.setValue(1);
     LX.initProfiler.log("Default Channel");
-
-    // Load the global preferences before plugin initialization
-    this.preferences = new LXPreferences(this);
-    this.preferences.load();
 
     // Initialize plugins!
     if (this.flags.initialize != null) {
@@ -1058,10 +1063,12 @@ public class LX {
     if (studioDir.isDirectory()) {
       flags.mediaPath = studioDir.getPath();
       for (LX.Media type : LX.Media.values()) {
-        File contentDir = new File(studioDir, type.getDirName());
-        if (!contentDir.exists()) {
-          LX.log("Creating directory: " + contentDir);
-          contentDir.mkdir();
+        if (type.isBootstrap()) {
+          File contentDir = new File(studioDir, type.getDirName());
+          if (!contentDir.exists()) {
+            LX.log("Creating directory: " + contentDir);
+            contentDir.mkdir();
+          }
         }
       }
     } else {
