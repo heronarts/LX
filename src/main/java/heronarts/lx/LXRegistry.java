@@ -19,6 +19,8 @@
 package heronarts.lx;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -224,6 +226,14 @@ public class LXRegistry implements LXSerializable {
   public final List<String> jsonFixtures =
    Collections.unmodifiableList(this.mutableJsonFixtures);
 
+  private final List<LXClassLoader.Package> mutablePackages = new ArrayList<LXClassLoader.Package>();
+
+  /**
+   * Registered packages
+   */
+  public final List<LXClassLoader.Package> packages = Collections.unmodifiableList(this.mutablePackages);
+
+
   private final List<Plugin> mutablePlugins = new ArrayList<Plugin>();
 
   /**
@@ -236,7 +246,7 @@ public class LXRegistry implements LXSerializable {
     public final Class<? extends LXPlugin> clazz;
     public LXPlugin instance;
     private boolean hasError = false;
-    private boolean isEnabled = true;
+    private boolean isEnabled = false;
     private Exception exception = null;
 
     private Plugin(Class<? extends LXPlugin> clazz) {
@@ -341,6 +351,7 @@ public class LXRegistry implements LXSerializable {
   public void reloadContent() {
     LX.log("Reloading custom content folders");
     this.classLoader.dispose();
+    this.mutablePackages.clear();
     this.contentReloading = true;
 
     // The previous classLoader is now disposed. Note that the classes it defined
@@ -357,6 +368,41 @@ public class LXRegistry implements LXSerializable {
     // Notify listeners of change
     for (Listener listener : this.listeners) {
       listener.contentChanged(this.lx);
+    }
+  }
+
+  void addPackage(LXClassLoader.Package pack) {
+    this.mutablePackages.add(pack);
+  }
+
+  public void installPackage(File file) {
+    if (!file.exists() || file.isDirectory()) {
+      this.lx.pushError(null, "Package file does not exist or is a directory: " + file);
+      return;
+    }
+    File destinationFile = lx.getMediaFile(LX.Media.CONTENT, file.getName(), false);
+    if (destinationFile.exists()) {
+      this.lx.pushError(null, "Package file already exists: " + destinationFile.getName());
+      return;
+    }
+    try {
+      Files.copy(file.toPath(), destinationFile.toPath());
+      reloadContent();
+    } catch (IOException iox) {
+      this.lx.pushError(iox, "Could not copy package file " + file.getName() + " to the content folder: " + iox.getLocalizedMessage());
+    }
+  }
+
+  public void uninstallPackage(LXClassLoader.Package pack) {
+    File destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName(), true);
+    try {
+      if (destinationFile.exists()) {
+        destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName() + "-" + System.currentTimeMillis(), true);
+      }
+      Files.move(pack.jarFile.toPath(), destinationFile.toPath());
+      reloadContent();
+    } catch (IOException iox) {
+      this.lx.pushError(iox, "Could not remove package file " + pack.jarFile.getName());
     }
   }
 

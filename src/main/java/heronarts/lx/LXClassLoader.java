@@ -44,6 +44,42 @@ import java.util.jar.JarFile;
  */
 public class LXClassLoader extends URLClassLoader {
 
+  public static class Package {
+
+    final File jarFile;
+
+    public final String name;
+
+    private Throwable error = null;
+    private int numClasses = 0;
+
+    private Package(File jarFile) {
+      this.jarFile = jarFile;
+      String name = jarFile.getName();
+      if (name.endsWith(".jar")) {
+        name = name.substring(0, name.length() - ".jar".length());
+      }
+      this.name = name;
+    }
+
+    private void setError(Throwable error) {
+      this.error = error;
+    }
+
+    public int getNumClasses() {
+      return this.numClasses;
+    }
+
+    public boolean hasError() {
+      return this.error != null;
+    }
+
+    public Throwable getError() {
+      return this.error;
+    }
+
+  }
+
   private final LX lx;
 
   private final List<Class<?>> classes = new ArrayList<Class<?>>();
@@ -113,28 +149,39 @@ public class LXClassLoader extends URLClassLoader {
   }
 
   private void loadJarFile(File file) {
-    LX.log("Loading custom content from: " + file);
+    LX.log("Loading package content from: " + file);
+    Package pack = new Package(file);
     try (JarFile jarFile = new JarFile(file)) {
       Enumeration<JarEntry> entries = jarFile.entries();
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         String fileName = entry.getName();
-        if (fileName.endsWith(".class")) {
-          loadClassEntry(jarFile, className(fileName).replaceAll("/", "\\."));
+        if (fileName.endsWith(".lxf")) {
+          // TODO(mcslee): load fixtures from a JAR!
+        } else if (fileName.endsWith(".lxm")) {
+          // TODO(mcslee): load models from a JAR!
+        } else if (fileName.endsWith(".lxp")) {
+          // TODO(mcslee): load projects from a JAR!
+        } if (fileName.endsWith(".class")) {
+          loadClassEntry(pack, jarFile, className(fileName).replaceAll("/", "\\."));
         }
       }
     } catch (IOException iox) {
       LX.error(iox, "IOException unpacking JAR file " + file + " - " + iox.getLocalizedMessage());
+      pack.setError(iox);
     } catch (Exception | Error e) {
       LX.error(e, "Unhandled exception loading JAR file " + file + " - " + e.getLocalizedMessage());
+      pack.setError(e);
     }
+
+    this.lx.registry.addPackage(pack);
   }
 
   private static String className(String fileName) {
     return fileName.substring(0, fileName.length() - ".class".length());
   }
 
-  private void loadClassEntry(JarFile jarFile, String className) {
+  private void loadClassEntry(Package pack, JarFile jarFile, String className) {
     try {
       // This might be slightly slower, but just let URL loader find it...
       // Let's not re-invent the wheel on parsing JAR files and all that
@@ -143,6 +190,7 @@ public class LXClassLoader extends URLClassLoader {
       // Register all public, non-abstract components that we discover
       int modifiers = clz.getModifiers();
       if (Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers)) {
+        ++pack.numClasses;
         this.classes.add(clz);
         this.lx.registry.addClass(clz);
       }
