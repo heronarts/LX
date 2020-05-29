@@ -21,13 +21,20 @@ package heronarts.lx.effect.color;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.ColorParameter;
+import heronarts.lx.color.GradientUtils.BlendFunction;
+import heronarts.lx.color.GradientUtils.BlendMode;
+import heronarts.lx.color.GradientUtils.ColorStops;
+import heronarts.lx.color.GradientUtils.GradientFunction;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
-import heronarts.lx.utils.LXUtils;
+import heronarts.lx.parameter.LXParameter;
 
 @LXCategory(LXCategory.COLOR)
-public class ColorizeEffect extends LXEffect {
+public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   private static final float AVG_FACTOR = 1 / (3 * 255f);
   private static final float INV_255 = 1 / 255f;
@@ -36,7 +43,7 @@ public class ColorizeEffect extends LXEffect {
     public float getLerpFactor(int argb);
   }
 
-  public enum Source {
+  public enum SourceMode {
 
     BRIGHTNESS("Brightness", (argb) -> {
       return LXColor.b(argb) * .01f; }),
@@ -67,7 +74,7 @@ public class ColorizeEffect extends LXEffect {
     private final String name;
     public final SourceFunction lerp;
 
-    private Source(String name, SourceFunction function) {
+    private SourceMode(String name, SourceFunction function) {
       this.name = name;
       this.lerp = function;
     }
@@ -78,18 +85,34 @@ public class ColorizeEffect extends LXEffect {
     }
   }
 
-  public enum BlendMode {
-    RGB,
-    HSV;
-  }
+  public enum ColorMode {
+    FIXED("Fixed"),
+    GRADIENT("Gradient"),
+    PALETTE("Palette");
 
-  public final EnumParameter<Source> source =
-    new EnumParameter<Source>("Source", Source.BRIGHTNESS)
+    public final String label;
+
+    private ColorMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  };
+
+  public final EnumParameter<SourceMode> source =
+    new EnumParameter<SourceMode>("Source", SourceMode.BRIGHTNESS)
     .setDescription("Determines the source of the color mapping");
 
   public final EnumParameter<BlendMode> blendMode =
     new EnumParameter<BlendMode>("Blend Mode", BlendMode.RGB)
     .setDescription("Determines the mode of color blending");
+
+  public final EnumParameter<ColorMode> colorMode =
+    new EnumParameter<ColorMode>("Color Mode", ColorMode.FIXED)
+    .setDescription("Which source the colors come from");
 
   public final ColorParameter color1 =
     new ColorParameter("Color 1", 0xff000000)
@@ -99,83 +122,114 @@ public class ColorizeEffect extends LXEffect {
     new ColorParameter("Color 2", 0xffffffff)
     .setDescription("The second color that is mapped to");
 
+  public final CompoundParameter gradientHue =
+    new CompoundParameter("Hue", 0, -360, 360)
+    .setDescription("Amount of hue gradient")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter gradientSaturation =
+    new CompoundParameter("Saturation", 0, -100, 100)
+    .setDescription("Amount of saturation gradient")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter gradientBrightness =
+    new CompoundParameter("Brightness", 0, -100, 100)
+    .setDescription("Amount of brightness gradient")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final DiscreteParameter paletteIndex =
+    new DiscreteParameter("Index", 1, LXSwatch.MAX_COLORS + 1)
+    .setDescription("Which index at the palette to start from");
+
+  public final DiscreteParameter paletteStops =
+    new DiscreteParameter("Stops", LXSwatch.MAX_COLORS, 2, LXSwatch.MAX_COLORS + 1)
+    .setDescription("How many color stops to use in the palette");
+
   public ColorizeEffect(LX lx) {
     super(lx);
     addParameter("source", this.source);
+    addParameter("gradientHue", this.gradientHue);
+    addParameter("gradientSaturation", this.gradientSaturation);
+    addParameter("gradientBrightness", this.gradientBrightness);
+    addParameter("colorMode", this.colorMode);
     addParameter("blendMode", this.blendMode);
     addParameter("color1", this.color1);
     addParameter("color2", this.color2);
+    addParameter("paletteIndex", this.paletteIndex);
+    addParameter("paletteStops", this.paletteStops);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    if (p == this.colorMode ||
+        p == this.color1 ||
+        p == this.gradientHue ||
+        p == this.gradientSaturation ||
+        p == this.gradientBrightness) {
+      setGradientColor();
+    }
+  }
+
+  private final ColorStops colorStops = new ColorStops();
+
+  private void setGradientColor() {
+    if (this.colorMode.getEnum() == ColorMode.GRADIENT) {
+      this.color2.brightness.setValue(this.color1.brightness.getValue() + this.gradientBrightness.getValue());
+      this.color2.saturation.setValue(this.color1.saturation.getValue() + this.gradientSaturation.getValue());
+      this.color2.hue.setValue((360 + this.color1.hue.getValue() + this.gradientHue.getValue()) % 360);
+    }
+  }
+
+  private void setColorStops() {
+    switch (this.colorMode.getEnum()) {
+    default:
+    case FIXED:
+      this.colorStops.stops[0].set(this.color1);
+      this.colorStops.stops[1].set(this.color2);
+      this.colorStops.setNumStops(2);
+      break;
+    case GRADIENT:
+      this.colorStops.stops[0].set(this.color1);
+      this.colorStops.stops[1].set(this.color1,
+        this.gradientHue.getValuef(),
+        this.gradientSaturation.getValuef(),
+        this.gradientBrightness.getValuef()
+      );
+      this.colorStops.setNumStops(2);
+      break;
+    case PALETTE:
+      this.colorStops.setPaletteGradient(this.lx.engine.palette, this.paletteIndex.getValuei() - 1, this.paletteStops.getValuei());
+      break;
+    }
+  }
+
+  @Override
+  public int getGradientColor(float lerp) {
+    return this.colorStops.getColor(lerp, this.blendMode.getEnum().function);
   }
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
-    switch (this.blendMode.getEnum()) {
-    case RGB:
-      runRGB(deltaMs, enabledAmount);
-      break;
-    case HSV:
-      runHSV(deltaMs, enabledAmount);
-      break;
-    }
-  }
+    setColorStops();
+    setGradientColor();
 
-  private void runRGB(double deltaMs, double enabledAmount) {
-    int c1 = LXColor.hsb(
-      this.color1.hue.getValuef(),
-      this.color1.saturation.getValuef(),
-      this.color1.brightness.getValuef()
-    );
-    int c2 = LXColor.hsb(
-      this.color2.hue.getValuef(),
-      this.color2.saturation.getValuef(),
-      this.color2.brightness.getValuef()
-    );
-    SourceFunction sf = this.source.getEnum().lerp;
+    final SourceFunction sourceFunction = this.source.getEnum().lerp;
+    final BlendFunction blendFunction = this.blendMode.getEnum().function;
 
     if (enabledAmount < 1) {
       for (int i = 0; i < colors.length; ++i) {
-        float lerp = sf.getLerpFactor(colors[i]);
-        colors[i] = LXColor.lerp(colors[i], LXColor.lerp(c1, c2, lerp), enabledAmount);
-      }
-    } else {
-      for (int i = 0; i < colors.length; ++i) {
-        float lerp = sf.getLerpFactor(colors[i]);
-        colors[i] = LXColor.lerp(c1, c2, lerp);
-      }
-    }
-  }
-
-  private void runHSV(double deltaMs, double enabledAmount) {
-    float h1 = this.color1.hue.getValuef();
-    float h2 = this.color2.hue.getValuef();
-    float s1 = this.color1.saturation.getValuef();
-    float s2 = this.color2.saturation.getValuef();
-    float b1 = this.color1.brightness.getValuef();
-    float b2 = this.color2.brightness.getValuef();
-
-    SourceFunction sf = this.source.getEnum().lerp;
-    if (enabledAmount < 1) {
-      for (int i = 0; i < colors.length; ++i) {
-        float lerp = sf.getLerpFactor(colors[i]);
-        colors[i] = LXColor.lerp(colors[i],
-          LXColor.hsb(
-            LXUtils.lerpf(h1, h2, lerp),
-            LXUtils.lerpf(s1, s2, lerp),
-            LXUtils.lerpf(b1, b2, lerp)
-          ),
-          enabledAmount);
-      }
-    } else {
-      for (int i = 0; i < colors.length; ++i) {
-        float lerp = sf.getLerpFactor(colors[i]);
-        colors[i] = LXColor.hsb(
-          LXUtils.lerpf(h1, h2, lerp),
-          LXUtils.lerpf(s1, s2, lerp),
-          LXUtils.lerpf(b1, b2, lerp)
+        colors[i] = LXColor.lerp(
+          colors[i],
+          this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction),
+          enabledAmount
         );
       }
+    } else {
+      for (int i = 0; i < colors.length; ++i) {
+        colors[i] = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
+      }
     }
-
   }
+
 
 }
