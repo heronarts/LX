@@ -380,7 +380,7 @@ public class LXRegistry implements LXSerializable {
       this.lx.pushError(null, "Package file does not exist or is a directory: " + file);
       return;
     }
-    File destinationFile = lx.getMediaFile(LX.Media.CONTENT, file.getName(), false);
+    File destinationFile = lx.getMediaFile(LX.Media.CONTENT, file.getName(), true);
     if (destinationFile.exists()) {
       this.lx.pushError(null, "Package file already exists: " + destinationFile.getName());
       return;

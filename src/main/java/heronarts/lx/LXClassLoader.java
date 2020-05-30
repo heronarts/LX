@@ -184,8 +184,16 @@ public class LXClassLoader extends URLClassLoader {
   private void loadClassEntry(Package pack, JarFile jarFile, String className) {
     try {
       // This might be slightly slower, but just let URL loader find it...
-      // Let's not re-invent the wheel on parsing JAR files and all that
+      // Let's not re-invent the wheel on parsing JAR files and all that.
       Class<?> clz = loadClass(className, false);
+
+      // TODO(mcslee): there must be some better way of checking this explicitly,
+      // without instantiating the class, but more clear than getSimpleName()
+
+      // Okay, we loaded the class. But can we actually operate on it? Let's try
+      // to get the name of this class to ensure it's not going to bork things
+      // later due to unresolved dependencies that will throw NoClassDefFoundError
+      clz.getSimpleName();
 
       // Register all public, non-abstract components that we discover
       int modifiers = clz.getModifiers();
@@ -194,6 +202,7 @@ public class LXClassLoader extends URLClassLoader {
         this.classes.add(clz);
         this.lx.registry.addClass(clz);
       }
+
     } catch (ClassNotFoundException cnfx) {
       LX.error(cnfx, "Class not actually found, expected in JAR file: " + className + " " + jarFile.getName());
     } catch (Exception x) {
