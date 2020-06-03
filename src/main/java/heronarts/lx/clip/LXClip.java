@@ -326,11 +326,25 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
       LXParameter parameter;
       if (laneObj.has(LXComponent.KEY_PATH)) {
-        parameter = LXPath.getParameter(this.bus, laneObj.get(KEY_PATH).getAsString());
+        String parameterPath = laneObj.get(KEY_PATH).getAsString();
+        parameter = LXPath.getParameter(this.bus, parameterPath);
+        if (parameter == null) {
+          LX.error("No parameter found for saved parameter clip lane on bus " + this.bus + " at path: " + parameterPath);
+          return;
+        }
       } else {
-        LXComponent component = lx.getProjectComponent(laneObj.get(KEY_COMPONENT_ID).getAsInt());
-        String path = laneObj.get(KEY_PARAMETER_PATH).getAsString();
-        parameter = component.getParameter(path);
+        int componentId = laneObj.get(KEY_COMPONENT_ID).getAsInt();
+        LXComponent component = lx.getProjectComponent(componentId);
+        if (component == null) {
+          LX.error("No component found for saved parameter clip lane on bus " + this.bus + " with id: " + componentId);
+          return;
+        }
+        String parameterPath = laneObj.get(KEY_PARAMETER_PATH).getAsString();
+        parameter = component.getParameter(parameterPath);
+        if (parameter == null) {
+          LX.error("No parameter found for saved parameter clip lane on component " + component + " at path: " + parameterPath);
+          return;
+        }
       }
       LXClipLane lane = getParameterLane((LXNormalizedParameter) parameter, true);
       lane.load(lx, laneObj);
