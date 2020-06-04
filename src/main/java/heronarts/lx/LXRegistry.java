@@ -397,7 +397,7 @@ public class LXRegistry implements LXSerializable {
     File destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName(), true);
     try {
       if (destinationFile.exists()) {
-        destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName() + "-" + System.currentTimeMillis(), true);
+        destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName() + "-" + java.time.Instant.now().getEpochSecond(), true);
       }
       Files.move(pack.jarFile.toPath(), destinationFile.toPath());
       reloadContent();
