@@ -49,6 +49,12 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   private static final String PROJECT_MODEL = "<Embedded in Project>";
 
   public class Output extends LXDatagramOutput {
+
+    private int datagramCount = 0;
+    private int maxDatagrams = 0;
+    private boolean didWarn = false;
+
+
     public Output(LX lx) throws SocketException {
       super(lx);
     }
@@ -65,6 +71,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
     @Override
     protected void onSend(int[] colors, double brightness) {
+      this.maxDatagrams = lx.getPermissions().getMaxDatagrams();
+      this.datagramCount = 0;
+
       long now = System.currentTimeMillis();
       beforeSend(colors);
       for (LXFixture fixture : fixtures) {
@@ -86,7 +95,14 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
         // Then send the fixture's own direct packets
         for (LXDatagram datagram : fixture.datagrams) {
-          onSendDatagram(datagram, now, colors, brightness);
+          if (this.datagramCount++ < this.maxDatagrams) {
+            onSendDatagram(datagram, now, colors, brightness);
+          } else {
+            if (!this.didWarn) {
+              this.didWarn = true;
+              this.lx.pushError(null, "NOTE: Your license is limited to a maximum of " + this.maxDatagrams + " output packets. Your project exceeds this limit. Only the first " + this.maxDatagrams + " active packets will be sent. This warning will not be shown again.");
+            }
+          }
         }
       }
     }

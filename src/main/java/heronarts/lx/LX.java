@@ -78,6 +78,16 @@ public class LX {
 
   }
 
+  public interface Permissions {
+    public default boolean canSave() {
+      return true;
+    }
+
+    public default int getMaxDatagrams() {
+      return -1;
+    }
+  }
+
   public static class Flags {
     /**
      * Sometimes we need to know if we are P3LX, but we don't want LX library to have
@@ -221,6 +231,11 @@ public class LX {
   public final Flags flags;
 
   /**
+   * Permissions
+   */
+  protected Permissions permissions = new Permissions() {};
+
+  /**
    * Error stack
    */
   private final Stack<Error> errorStack = new Stack<Error>();
@@ -350,6 +365,10 @@ public class LX {
     }
 
     this.failure.setValue(message);
+  }
+
+  public Permissions getPermissions() {
+    return this.permissions;
   }
 
   public LX pushError(Exception exception) {
@@ -751,6 +770,10 @@ public class LX {
   }
 
   public void saveProject(File file) {
+    if (!this.permissions.canSave()) {
+      return;
+    }
+
     JsonObject obj = new JsonObject();
     obj.addProperty(KEY_VERSION, LX.VERSION);
     obj.addProperty(KEY_TIMESTAMP, System.currentTimeMillis());
