@@ -919,6 +919,11 @@ public class LXChannel extends LXAbstractChannel {
     if (activePattern != null) {
       activePattern.loop(deltaMs);
       colors = activePattern.getColors();
+    } else {
+      // No patterns here, blank the channel.
+      for (int i = 0; i < colors.length; ++i) {
+        colors[i] = 0xff000000;
+      }
     }
 
     // Run transition!
