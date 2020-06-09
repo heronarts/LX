@@ -165,11 +165,10 @@ public class LXColor {
     return (r+r+r+b+g+g+g+g >> 3) * BRIGHTNESS_SCALE;
   }
 
-  private static final double GRAY_SCALE = 255. / 100.;
-  private static final double GRAY_SCALE_FLOAT = 255f / 100f;
+  private static final double GRAY_SCALE = 2.55;
 
   public static int gray(double brightness) {
-    int b = 0xff & (int) (brightness * GRAY_SCALE);
+    int b = 0xff & (int) Math.round(.4 + brightness * GRAY_SCALE);
     return
       LXColor.ALPHA_MASK |
       (b << R_SHIFT) |
@@ -177,8 +176,10 @@ public class LXColor {
       b;
   }
 
+  private static final double GRAY_SCALE_FLOAT = 2.55f;
+
   public static int gray(float brightness) {
-    int b = 0xff & (int) (brightness * GRAY_SCALE_FLOAT);
+    int b = 0xff & (int) (.4 + brightness * GRAY_SCALE_FLOAT);
     return
       LXColor.ALPHA_MASK |
       (b  << R_SHIFT) |
