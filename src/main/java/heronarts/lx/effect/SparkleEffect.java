@@ -24,6 +24,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.pattern.texture.SparklePattern;
+import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.TEXTURE)
 public class SparkleEffect extends LXEffect {
@@ -61,7 +62,7 @@ public class SparkleEffect extends LXEffect {
     this.engine.run(deltaMs, model);
 
     for (int i = 0; i < colors.length; ++i) {
-      colors[i] = LXColor.multiply(colors[i], LXColor.gray(engine.sparkleLevels[i]), 0x100);
+      colors[i] = LXColor.multiply(colors[i], LXColor.gray(LXUtils.clamp(engine.sparkleLevels[i], 0, 100)), 0x100);
     }
   }
 

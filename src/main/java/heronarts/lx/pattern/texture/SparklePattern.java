@@ -160,8 +160,11 @@ public class SparklePattern extends LXPattern {
 
       LXWaveshape waveshape = this.waveshape.getObject();
 
-      double maxLevel = LXUtils.lerp(100, this.maxLevel.getValue(), this.amount);
-      double minLevel = LXUtils.lerp(100, maxLevel * .01 * this.minLevel.getValue(), this.amount);
+      double maxLevel = this.maxLevel.getValue();
+      double minLevel = maxLevel * .01 * this.minLevel.getValue();
+
+      maxLevel = LXUtils.lerp(100, maxLevel, this.amount);
+      minLevel = LXUtils.lerp(100, minLevel, this.amount);
 
       double maxDelta = maxLevel - baseLevel;
       double minDelta = minLevel - baseLevel;
@@ -178,11 +181,6 @@ public class SparklePattern extends LXPattern {
         this.sparkleLevels[i] = baseLevel;
       }
 
-      // We're good, save the CPU
-      if (this.amount == 0) {
-        return;
-      }
-
       // Run all the sparkles
       for (int i = 0; i < this.numSparkles; ++i) {
         Sparkle sparkle = this.sparkles[i];
@@ -195,7 +193,7 @@ public class SparklePattern extends LXPattern {
             sparkle.randomLevel = Math.random();
             sparkle.reindex(model);
           }
-        } else if (sparkle.isOn) {
+        } else if (sparkle.isOn && (this.amount > 0)) {
           double sBasis = sparkle.basis * durationInv;
           if (sBasis < 1) {
             double g = waveshape.compute(sBasis);
