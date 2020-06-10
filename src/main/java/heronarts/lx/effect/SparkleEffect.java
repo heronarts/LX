@@ -57,7 +57,7 @@ public class SparkleEffect extends LXEffect {
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
-    this.engine.baseLevel.setValue(100 * (1 - enabledAmount * this.amount.getValue()));
+    this.engine.amount = enabledAmount * this.amount.getValue();
     this.engine.run(deltaMs, model);
 
     for (int i = 0; i < colors.length; ++i) {

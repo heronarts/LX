@@ -77,6 +77,8 @@ public class SparklePattern extends LXPattern {
     private int numSparkles;
     private int pixelsPerSparkle;
 
+    public double amount = 1;
+
     public final CompoundParameter minInterval = (CompoundParameter)
       new CompoundParameter("Fast", 1, .1, 60)
       .setUnits(CompoundParameter.Units.SECONDS)
@@ -154,12 +156,12 @@ public class SparklePattern extends LXPattern {
       double variation = .01 * this.variation.getValue();
       double durationInv = 100 / this.duration.getValue();
       double density = .01 * this.density.getValue();
-      double baseLevel = this.baseLevel.getValue();
+      double baseLevel = LXUtils.lerp(100, this.baseLevel.getValue(), this.amount);
 
       LXWaveshape waveshape = this.waveshape.getObject();
 
-      double maxLevel = this.maxLevel.getValue();
-      double minLevel = maxLevel * .01 * this.minLevel.getValue();
+      double maxLevel = LXUtils.lerp(100, this.maxLevel.getValue(), this.amount);
+      double minLevel = LXUtils.lerp(100, maxLevel * .01 * this.minLevel.getValue(), this.amount);
 
       double maxDelta = maxLevel - baseLevel;
       double minDelta = minLevel - baseLevel;
