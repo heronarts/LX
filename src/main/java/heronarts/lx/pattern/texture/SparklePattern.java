@@ -178,6 +178,11 @@ public class SparklePattern extends LXPattern {
         this.sparkleLevels[i] = baseLevel;
       }
 
+      // We're good, save the CPU
+      if (this.amount == 0) {
+        return;
+      }
+
       // Run all the sparkles
       for (int i = 0; i < this.numSparkles; ++i) {
         Sparkle sparkle = this.sparkles[i];
