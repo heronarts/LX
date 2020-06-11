@@ -93,11 +93,11 @@ public class PlanesPattern extends LXPattern {
     }),
 
     RC("R-center", (p, a) -> {
-      return p.rcn - a.ap;
+      return p.rcn - a.d;
     }),
 
     RO("R-origin", (p, a) -> {
-      return p.rn - a.ap;
+      return p.rn - a.d;
     });
 
     public final String label;
@@ -269,7 +269,7 @@ public class PlanesPattern extends LXPattern {
 
       case RC:
       case RO:
-        args.ap = position;
+        args.d = position;
         break;
 
       default:
