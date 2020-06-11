@@ -1153,6 +1153,7 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXModulationEngine> modulation;
       private final Class<? extends LXModulator> modulatorClass;
+      private final int modulationColor;
       private JsonObject modulatorObj;
       private ComponentReference<LXModulator> modulator;
 
@@ -1160,10 +1161,19 @@ public abstract class LXCommand {
         this(modulation, modulatorClass, null);
       }
 
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, int modulationColor) {
+        this(modulation, modulatorClass, null, modulationColor);
+      }
+
       public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, JsonObject modulatorObj) {
+        this(modulation, modulatorClass, modulatorObj, -1);
+      }
+
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, JsonObject modulatorObj, int modulationColor) {
         this.modulation = new ComponentReference<LXModulationEngine>(modulation);
         this.modulatorClass = modulatorClass;
         this.modulatorObj = modulatorObj;
+        this.modulationColor = modulationColor;
       }
 
       @Override
@@ -1175,6 +1185,9 @@ public abstract class LXCommand {
       public void perform(LX lx) throws InvalidCommandException {
         try {
           LXModulator instance = lx.instantiateModulator(this.modulatorClass);
+          if (this.modulationColor >= 0) {
+            instance.modulationColor.setValue(this.modulationColor);
+          }
           if (this.modulatorObj != null) {
             instance.load(lx, this.modulatorObj);
           } else {
