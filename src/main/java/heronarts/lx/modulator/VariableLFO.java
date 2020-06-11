@@ -72,20 +72,21 @@ public class VariableLFO extends LXRangeModulator implements LXWaveshape, LXOscC
     .setExponent(4)
     .setUnits(LXParameter.Units.MILLISECONDS);
 
-  public final CompoundParameter skew = (CompoundParameter)
-    new CompoundParameter("Skew", 0, -1, 1)
-    .setDescription("Sets a skew coefficient for the waveshape")
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter skew = new CompoundParameter("Skew", 0, -1, 1)
+  .setDescription("Sets a skew coefficient for the waveshape")
+  .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter shape = (CompoundParameter)
-    new CompoundParameter("Shape", 0, -1, 1)
-    .setDescription("Applies shaping to the waveshape")
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter shape = new CompoundParameter("Shape", 0, -1, 1)
+  .setDescription("Applies shaping to the waveshape")
+  .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter exp = (CompoundParameter)
-    new CompoundParameter("Exp", 0, -1, 1)
-    .setDescription("Applies exponential scaling to the waveshape")
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter exp = new CompoundParameter("Exp", 0, -1, 1)
+  .setDescription("Applies exponential scaling to the waveshape")
+  .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter bias = new CompoundParameter("Bias", 0, -1, 1)
+  .setDescription("Bias towards or away from the center of the waveform")
+  .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter phase =
     new CompoundParameter("Phase", 0)
@@ -141,6 +142,7 @@ public class VariableLFO extends LXRangeModulator implements LXWaveshape, LXOscC
     addParameter("wave", this.waveshape);
     addParameter("skew", this.skew);
     addParameter("shape", this.shape);
+    addParameter("bias", this.bias);
     addParameter("phase", this.phase);
     addParameter("exp", this.exp);
   }
@@ -183,17 +185,36 @@ public class VariableLFO extends LXRangeModulator implements LXWaveshape, LXOscC
 
   @Override
   public double compute(double basis) {
-    return compute(basis, this.phase.getValue(), this.skew.getValue(), this.shape.getValue(), this.exp.getValue());
+    return compute(basis, this.phase.getValue(), this.bias.getValue(), this.skew.getValue(), this.shape.getValue(), this.exp.getValue());
   }
 
   public double computeBase(double basis) {
-    return compute(basis, this.phase.getBaseValue(), this.skew.getBaseValue(), this.shape.getBaseValue(), this.exp.getBaseValue());
+    return compute(basis, this.phase.getBaseValue(), this.bias.getBaseValue(), this.skew.getBaseValue(), this.shape.getBaseValue(), this.exp.getBaseValue());
   }
 
-  private double compute(double basis, double phase, double skew, double shape, double exp) {
+  private double compute(double basis, double phase, double bias, double skew, double shape, double exp) {
     basis = basis + phase;
     if (basis > 1.) {
       basis = basis % 1.;
+    }
+
+    if (bias != 0) {
+      double biasPower = 1 + 3 * Math.abs(bias);
+      double midp = .25 - .15 * bias;
+      double midInv = 1 / midp;
+
+      double midAlt = .5 - midp;
+      double midAltInv = 1 / midAlt;
+
+      if (basis < midp) {
+        basis = midp * Math.pow(midInv * basis, biasPower);
+      } else if (basis < .5) {
+        basis = .5f - midAlt * Math.pow(midAltInv * (.5f - basis), biasPower);
+      } else if (basis < .5 + midAlt) {
+        basis = .5f + midAlt * Math.pow(midAltInv * (basis - .5f), biasPower);
+      } else {
+        basis = 1 - midp * Math.pow(midInv * (1 - basis), biasPower);
+      }
     }
 
     double skewPower = (skew >= 0) ? (1 + 3*skew) : (1 / (1-3*skew));
@@ -218,7 +239,7 @@ public class VariableLFO extends LXRangeModulator implements LXWaveshape, LXOscC
 
   @Override
   public double invert(double value, double basisHint) {
-    // TODO(mcslee): implement shape anad bias inversion properly
+    // TODO(mcslee): implement shape and bias inversion properly??
     return getWaveshape().invert(value, basisHint);
   }
 }
