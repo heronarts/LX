@@ -759,10 +759,10 @@ public class JsonFixture extends LXFixture {
       fixture.x.setValue(loadFloat(obj, KEY_X, true));
     }
     if (obj.has(KEY_Y)) {
-      fixture.x.setValue(loadFloat(obj, KEY_Y, true));
+      fixture.y.setValue(loadFloat(obj, KEY_Y, true));
     }
     if (obj.has(KEY_Z)) {
-      fixture.x.setValue(loadFloat(obj, KEY_Z, true));
+      fixture.z.setValue(loadFloat(obj, KEY_Z, true));
     }
     if (obj.has(KEY_YAW)) {
       fixture.yaw.setValue(loadFloat(obj, KEY_YAW, true));
