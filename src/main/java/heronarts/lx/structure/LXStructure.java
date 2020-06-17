@@ -95,8 +95,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
         // Then send the fixture's own direct packets
         for (LXDatagram datagram : fixture.datagrams) {
-          if (this.datagramCount++ < this.maxDatagrams) {
+          if ((this.maxDatagrams < 0) || (this.datagramCount < this.maxDatagrams)) {
             onSendDatagram(datagram, now, colors, brightness);
+            ++this.datagramCount;
           } else {
             if (!this.didWarn) {
               this.didWarn = true;
