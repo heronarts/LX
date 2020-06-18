@@ -215,10 +215,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       if (component.id == ID_UNASSIGNED) {
         component.id = this.idCounter++;
       } else if (component.id <= 0) {
-        throw new IllegalStateException("Component has illegal  non-positive ID: " + component.id + " " + component);
+        throw new IllegalStateException("Component has illegal non-positive ID: " + component.id + " " + component);
       }
       if (this.components.containsKey(component.id)) {
-        throw new IllegalStateException("Component id already registered: " + component.id + " to " + this.components.get(component.id));
+        throw new IllegalStateException("Component id " + component.id + " already registered: " + component + " to " + this.components.get(component.id));
       }
       this.components.put(component.id, component);
     }
@@ -245,8 +245,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
           // what the IDs in the project file refer to.
           this.projectIdMap.put(id, component);
         } else if (this.modelImporting) {
-          // We ignore ID assignment collisions from external model files
-          // A new ID is fine in this case
+          // We ignore ID assignment collisions from external model files.
+          // Sticking with the newly generated ID is fine.
         } else {
           // This can't happen, there should be no reason that we're requesting a component
           // to re-use an existing component ID when we are outside of loading a file
@@ -260,6 +260,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         // Update the component's ID and store it in the global map
         component.id = id;
         this.components.put(id, component);
+
+        // If the restored ID was ahead of our counter, we need to bump the counter
+        // to avoid causing future collisions
+        if (id >= this.idCounter) {
+          this.idCounter = id + 1;
+        }
       }
     }
 
