@@ -123,17 +123,17 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     .setDescription("The second color that is mapped to");
 
   public final CompoundParameter gradientHue =
-    new CompoundParameter("Hue", 0, -360, 360)
+    new CompoundParameter("H-Offset", 0, -360, 360)
     .setDescription("Amount of hue gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter gradientSaturation =
-    new CompoundParameter("Saturation", 0, -100, 100)
+    new CompoundParameter("S-Offset", 0, -100, 100)
     .setDescription("Amount of saturation gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter gradientBrightness =
-    new CompoundParameter("Brightness", 0, -100, 100)
+    new CompoundParameter("B-Offset", 0, -100, 100)
     .setDescription("Amount of brightness gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
