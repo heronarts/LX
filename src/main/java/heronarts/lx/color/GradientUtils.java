@@ -145,6 +145,14 @@ public class GradientUtils {
         LXUtils.lerpf(c1.saturation, c2.saturation, lerp),
         LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
       );
+    }),
+
+    HSV2((c1, c2, lerp) -> {
+      return LXColor.hsb(
+        LXUtils.lerpf(c1.hue, c2.hue, lerp),
+        LXUtils.lerpf(c1.saturation, c2.saturation, lerp),
+        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
+      );
     });
 
     public final BlendFunction function;
@@ -152,7 +160,6 @@ public class GradientUtils {
     private BlendMode(BlendFunction function) {
       this.function = function;
     }
-
   };
 
 }

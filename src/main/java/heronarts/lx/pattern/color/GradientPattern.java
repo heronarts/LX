@@ -21,6 +21,7 @@ package heronarts.lx.pattern.color;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
 import heronarts.lx.color.ColorParameter;
+import heronarts.lx.color.GradientUtils;
 import heronarts.lx.color.GradientUtils.BlendMode;
 import heronarts.lx.color.GradientUtils.ColorStops;
 import heronarts.lx.color.GradientUtils.GradientFunction;
@@ -274,7 +275,7 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     final CoordinateFunction yFunction = (yAmount < 0) ? yMode.invert : yMode.function;
     final CoordinateFunction zFunction = (zAmount < 0) ? zMode.invert : zMode.function;
 
-    final BlendMode blend = this.blendMode.getEnum();
+    final GradientUtils.BlendFunction blendFunction = this.blendMode.getEnum().function;
 
     for (LXPoint p : model.points) {
       float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
@@ -284,7 +285,7 @@ public class GradientPattern extends LXPattern implements GradientFunction {
         0, 1
       );
       int stop = (int) Math.floor(lerp);
-      colors[p.index] = blend.function.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
+      colors[p.index] = blendFunction.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
     }
   }
 }
