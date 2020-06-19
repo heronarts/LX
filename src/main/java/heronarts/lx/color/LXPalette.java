@@ -315,8 +315,15 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
 
     switch (this.transitionMode.getEnum()) {
     case HSV:
+      float fromHue = fromColor.hue.getValuef();
+      float toHue = toColor.hue.getValuef();
+      if (toHue - fromHue > 180) {
+        fromHue += 360;
+      } else if (fromHue - toHue > 180) {
+        toHue += 360;
+      }
       color.primary.setColor(LXColor.hsb(
-        LXUtils.lerpf(fromColor.hue.getValuef(), toColor.hue.getValuef(), lerp),
+        LXUtils.lerpf(fromHue, toHue, lerp),
         LXUtils.lerpf(fromColor.saturation.getValuef(), toColor.saturation.getValuef(), lerp),
         LXUtils.lerpf(fromColor.brightness.getValuef(), toColor.brightness.getValuef(), lerp)
       ));

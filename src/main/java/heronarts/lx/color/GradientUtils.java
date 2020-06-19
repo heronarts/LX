@@ -133,8 +133,15 @@ public class GradientUtils {
     }),
 
     HSV((c1, c2, lerp) -> {
+      float hue1 = c1.hue;
+      float hue2 = c2.hue;
+      if (hue2 - hue1 > 180) {
+        hue1 += 360;
+      } else if (hue1 - hue2 > 180) {
+        hue2 += 360;
+      }
       return LXColor.hsb(
-        LXUtils.lerpf(c1.hue, c2.hue, lerp),
+        LXUtils.lerpf(hue1, hue2, lerp),
         LXUtils.lerpf(c1.saturation, c2.saturation, lerp),
         LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
       );
