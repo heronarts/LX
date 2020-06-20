@@ -171,6 +171,10 @@ public class LX {
   public static final double HALF_PI = Math.PI / 2.;
   public static final double TWO_PI = Math.PI * 2.;
 
+  public static final float PIf = (float) Math.PI;
+  public static final float HALF_PIf = (float) (Math.PI / 2.);
+  public static final float TWO_PIf = (float) (Math.PI * 2.);
+
   public static class InitProfiler {
     private long lastTime;
 
