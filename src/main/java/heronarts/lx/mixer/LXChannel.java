@@ -181,7 +181,7 @@ public class LXChannel extends LXAbstractChannel {
     .setDescription("Mode of auto cycling");
 
   /**
-   * Time in milliseconds after which transition thru the pattern set is automatically initiated.
+   * Time in seconds after which transition thru the pattern set is automatically initiated.
    */
   public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
     new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
