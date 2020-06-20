@@ -387,20 +387,6 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       update();
     }
 
-    private LXPoint getPoint(int i) {
-      if (i < points.size()) {
-        return points.get(i);
-      }
-      int ci = i - points.size();
-      for (LXFixture fixture : children) {
-        if (ci < fixture.points.size()) {
-          return fixture.points.get(ci);
-        }
-        ci -= fixture.points.size();
-      }
-      throw new IllegalArgumentException("Point index " + i + " exceeds fixture bounds: " + this + " (" + totalSize() + ")");
-    }
-
     private void update() {
       for (int i = 0; i < this.num; ++i) {
         this.indexBuffer[i] = getPoint(this.start + i * this.stride).index;
@@ -847,6 +833,30 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       sum += child.totalSize();
     }
     return sum;
+  }
+
+  /**
+   * Retrieves the point at a given offset in this fixture. This may recursively descend into
+   * child fixtures.
+   *
+   * @param i Index relative to this fixture
+   * @return Point at that index, if any
+   */
+  private LXPoint getPoint(int i) {
+    // Check directly owned points first
+    if (i < this.points.size()) {
+      return this.points.get(i);
+    }
+    // Not in those, go to subfixtures...
+    int ci = i - this.points.size();
+    for (LXFixture fixture : children) {
+      int fixtureTotalSize = fixture.totalSize();
+      if (ci < fixtureTotalSize) {
+        return fixture.getPoint(ci);
+      }
+      ci -= fixtureTotalSize;
+    }
+    throw new IllegalArgumentException("Point index " + i + " exceeds fixture bounds: " + this + " (" + totalSize() + ")");
   }
 
   @Override
