@@ -70,7 +70,7 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
   private final Class<? extends T> instanceClass;
   private final JsonObject componentObj;
 
-  private LXClipboardComponent(Class<T> cls, T component) {
+  protected LXClipboardComponent(Class<T> cls, T component) {
     this.componentClass = cls;
     this.instanceClass = component.getClass().asSubclass(cls);
     this.componentObj = LXSerializable.Utils.toObject(component);
