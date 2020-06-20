@@ -1324,8 +1324,9 @@ public class JsonFixture extends LXFixture {
       }
     }
     // Add top level outputs last
+    int totalSize = totalSize();
     for (OutputDefinition output : this.definedOutputs) {
-      buildDatagram(output, 0, this.size);
+      buildDatagram(output, 0, totalSize);
     }
   }
 

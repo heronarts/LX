@@ -387,9 +387,23 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       update();
     }
 
+    private LXPoint getPoint(int i) {
+      if (i < points.size()) {
+        return points.get(i);
+      }
+      int ci = i - points.size();
+      for (LXFixture fixture : children) {
+        if (ci < fixture.points.size()) {
+          return fixture.points.get(ci);
+        }
+        ci -= fixture.points.size();
+      }
+      throw new IllegalArgumentException("Point index " + i + " exceeds fixture bounds: " + this + " (" + totalSize() + ")");
+    }
+
     private void update() {
       for (int i = 0; i < this.num; ++i) {
-        this.indexBuffer[i] = points.get(this.start + i * this.stride).index;
+        this.indexBuffer[i] = getPoint(this.start + i * this.stride).index;
       }
     }
   }
