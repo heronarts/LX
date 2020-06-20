@@ -787,6 +787,15 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       ((LXModulationContainer) this).getModulationEngine().dispose();
     }
 
+    // Remove modulations from any containers up the chain
+    LXComponent parent = getParent();
+    while ((parent != null) && (parent != this.lx.engine)) {
+      if (parent instanceof LXModulationContainer) {
+        ((LXModulationContainer) parent).getModulationEngine().removeModulations(this);
+      }
+      parent = parent.getParent();
+    }
+
     // The global midi, modulation, and snapshot engines need to know we're gone
     this.lx.engine.midi.removeMappings(this);
     this.lx.engine.modulation.removeModulations(this);
