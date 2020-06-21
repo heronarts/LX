@@ -218,15 +218,17 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
     if (enabledAmount < 1) {
       for (int i = 0; i < colors.length; ++i) {
+        int c2 = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
         colors[i] = LXColor.lerp(
           colors[i],
-          this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction),
+          (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK),
           enabledAmount
         );
       }
     } else {
       for (int i = 0; i < colors.length; ++i) {
-        colors[i] = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
+        int c2 = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
+        colors[i] = (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK);
       }
     }
   }
