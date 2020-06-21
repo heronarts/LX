@@ -1347,8 +1347,8 @@ public class JsonFixture extends LXFixture {
       num = fixtureSize;
     }
     int stride = output.stride;
-    if (stride * (num-1) >= fixtureSize) {
-      addWarning("Output specifies excessive size beyond fixture limits: start=" + output.start + " num=" + num + " stride=" + stride);
+    if (start + stride * (num-1) >= fixtureSize) {
+      addWarning("Output specifies excessive size beyond fixture limits: start=" + output.start + " num=" + num + " stride=" + stride + " fixtureSize=" + fixtureSize);
       return;
     }
 
