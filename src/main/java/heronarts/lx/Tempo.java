@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import heronarts.lx.modulator.Click;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -30,7 +29,6 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
-import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 
@@ -92,6 +90,17 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     MIDI,
     OSC;
 
+    public boolean isLooping() {
+      switch (this) {
+      case INTERNAL:
+        return true;
+      case MIDI:
+      case OSC:
+      default:
+        return false;
+      }
+    }
+
     @Override
     public String toString() {
       switch (this) {
@@ -103,25 +112,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   }
 
   public interface Listener {
-    public void onBeat(Tempo tempo, int beat);
-    public void onMeasure(Tempo tempo);
-  }
-
-  /**
-   * Default Tempo {@link Listener} that does a no-op for all types beats.
-   *
-   * Extend this to avoid boilerplate for beat types you don't care about.
-   */
-  public static class AbstractListener implements Listener {
-    @Override
-    public void onBeat(Tempo tempo, int beat) {
-      // default is no-op, override to add custom
-    }
-
-    @Override
-    public void onMeasure(Tempo tempo) {
-      // default is no-op, override to add custom
-    }
+    public default void onBeat(Tempo tempo, int beat) {};
+    public default void onMeasure(Tempo tempo) {};
   }
 
   private final static double MS_PER_MINUTE = 60000;
@@ -168,19 +160,18 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
-  private final Click click = new Click("Beat", new FunctionalParameter() {
-    @Override
-    public double getValue() {
-      return period.getValue() * nudge.getValue();
-    }
-  });
+  private boolean doTrigger = false;
+  private boolean running = false;
+
+  private boolean isBeat = false;
+
+  private double basis = 0;
 
   private long firstTap = 0;
   private long lastTap = 0;
   private int tapCount = 0;
 
   private int beatCount = 0;
-  private boolean manuallyTriggered = false;
 
   private boolean parameterUpdate = false;
 
@@ -196,7 +187,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
     addModulator("nudge", this.nudge);
-    startModulator(this.click);
   }
 
   private static final String PATH_BEAT = "beat";
@@ -258,9 +248,10 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
       }
     } else if (p == this.clockSource) {
       if (this.clockSource.getEnum() == ClockSource.INTERNAL) {
-        this.click.setLooping(true).trigger();
-      } else {
-        this.click.setLooping(false);
+        this.running = true;
+        if (this.basis >= 1) {
+          this.basis = 0;
+        }
       }
     }
   }
@@ -310,7 +301,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
    * @return true if we are on a quarter-note beat
    */
   public boolean beat() {
-    return this.click.click();
+    return this.isBeat;
   }
 
   /**
@@ -324,12 +315,12 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   /**
    * Gets the composite basis of the tempo, which is the beatCount combined with the current
-   * basis cycle
+   * basis cycle.
    *
    * @return Number of full beats completed since beginning of tempo
    */
   public double getCompositeBasis() {
-    return this.beatCount + this.click.getBasis();
+    return this.beatCount + this.basis;
   }
 
   /**
@@ -358,15 +349,33 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
    *
    * @return value from 0-1 indicating phase of beat
    */
-  public double ramp() {
-    return this.click.getBasis();
+  public double basis() {
+    return this.basis;
+  }
+
+  public double basisf() {
+    return (float) this.basis;
   }
 
   /**
-   * Indicates beat phase in floating point
+   * Indicates phase of the current beat. On the beat the value will be 0, then
+   * ramp up to 1 before the next beat triggers. This is deprecated, should
+   * use {@link basis()} instead.
    *
    * @return value from 0-1 indicating phase of beat
    */
+  @Deprecated
+  public double ramp() {
+    return this.basis;
+  }
+
+  /**
+   * Indicates beat phase in floating point. This is deprecated, should
+   * use {@link basisf()} instead.
+   *
+   * @return value from 0-1 indicating phase of beat
+   */
+  @Deprecated
   public float rampf() {
     return (float) this.ramp();
   }
@@ -430,10 +439,14 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     trigger(true);
   }
 
+  /**
+   * Triggers the metronome, setting the beat count to the given explicit value
+   *
+   * @param beat Beat count
+   */
   public void trigger(int beat) {
     this.beatCount = beat;
-    this.click.fire();
-    this.manuallyTriggered = true;
+    this.doTrigger = true;
   }
 
   /**
@@ -442,13 +455,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
    * @param resetBeat True if the beat count should be reset to 0
    */
   public void trigger(boolean resetBeat) {
-    if (!beat()) {
-      this.beatCount = resetBeat ? 0 : this.beatCount + 1;
-      this.click.fire();
-    } else if (resetBeat) {
-      this.beatCount = 0;
-    }
-    this.manuallyTriggered = true;
+    this.beatCount = resetBeat ? 0 : this.beatCount + 1;
+    this.doTrigger = true;
   }
 
   /**
@@ -484,24 +492,48 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   @Override
   public void loop(double deltaMs) {
+    // Run modulators
     super.loop(deltaMs);
-    if (beat()) {
-      if (!this.manuallyTriggered) {
-        ++this.beatCount;
+
+    boolean isBeat = false;
+
+    // Explicit beat trigger, back to the start of the beat
+    if (this.doTrigger) {
+      this.doTrigger = false;
+      this.basis = 0;
+      this.running = true;
+      isBeat = true;
+    } else if (this.running) {
+      this.basis += deltaMs / (this.period.getValue() * this.nudge.getValue());
+      if (this.basis >= 1) {
+        if (this.clockSource.getEnum().isLooping()) {
+          // NOTE: this is overkill but for some crazy fast tempo and slow engine rate we
+          // could hop multiple beats!
+          this.beatCount += (int) this.basis;
+          this.basis = this.basis % 1.;
+          isBeat = true;
+        } else {
+          // We're in a non-looping clock mode (MIDI/OSC), we just stop here at the end
+          // of the beat and wait it out until the next beat comes
+          this.basis = 1;
+          this.running = false;
+        }
       }
+    }
+
+    if (this.isBeat = isBeat) {
       int beatIndex = this.beatCount % this.beatsPerMeasure.getValuei();
       if (beatIndex == 0) {
-        for (Listener listener : listeners) {
+        for (Listener listener : this.listeners) {
           listener.onMeasure(this);
         }
       }
-      for (Listener listener : listeners) {
+      for (Listener listener : this.listeners) {
         listener.onBeat(this, beatIndex);
       }
       if (this.enabled.isOn()) {
         this.trigger.setValue(true);
       }
     }
-    this.manuallyTriggered = false;
   }
 }
