@@ -1031,6 +1031,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     for (LXAbstractChannel channel : toRemove) {
       removeChannel(channel);
     }
+    this.masterBus.dispose();
     super.dispose();
   }
 
