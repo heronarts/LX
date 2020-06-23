@@ -39,6 +39,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.modulation.LXCompoundModulation;
+import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.modulation.LXParameterModulation;
 import heronarts.lx.modulation.LXTriggerModulation;
@@ -84,12 +85,12 @@ public abstract class LXCommand {
    *
    * @param <T> Type of component being referenced
    */
-  protected static class ComponentReference<T extends LXComponent> {
+  public static class ComponentReference<T extends LXComponent> {
 
     private final LX lx;
     private final int componentId;
 
-    protected ComponentReference(T component) {
+    public ComponentReference(T component) {
       this.lx = component.getLX();
       this.componentId = component.getId();
     }
@@ -100,14 +101,14 @@ public abstract class LXCommand {
     }
   }
 
-  protected static class ParameterReference<T extends LXParameter> {
+  public static class ParameterReference<T extends LXParameter> {
 
     private final T rawParameter;
     private final Class<? extends LXComponent> componentCls;
     private final ComponentReference<LXComponent> component;
     private final String parameterPath;
 
-    protected ParameterReference(T parameter) {
+    public ParameterReference(T parameter) {
       LXComponent component = parameter.getParent();
       if (component != null) {
         // If a parameter is registered to a component, then we keep its
@@ -176,7 +177,7 @@ public abstract class LXCommand {
   public abstract void undo(LX lx) throws InvalidCommandException;
 
 
-  private static abstract class RemoveComponent extends LXCommand {
+  public static abstract class RemoveComponent extends LXCommand {
 
     private final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
     private final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
@@ -226,7 +227,15 @@ public abstract class LXCommand {
 
     protected RemoveComponent(LXComponent component) {
       // Tally up all the modulations and triggers that relate to this component and must be restored!
-      removeModulationMappings(component.getLX().engine.modulation, component);
+      LXComponent parent = component.getParent();
+      while (parent != null) {
+        if (parent instanceof LXModulationContainer) {
+          removeModulationMappings(((LXModulationContainer) parent).getModulationEngine(), component);
+        }
+        parent = parent.getParent();
+      }
+
+      // Also top level mappings and snapshot views
       removeMidiMappings(component.getLX().engine.midi, component);
       removeSnapshotViews(component.getLX().engine.snapshots, component);
     }
