@@ -61,6 +61,14 @@ public class GradientUtils {
       setRGB(LXColor.hsb(this.hue, this.saturation, this.brightness));
     }
 
+    public void set(LXDynamicColor color, float hueOffset, float saturationOffset, float brightnessOffset) {
+      int c = color.getColor();
+      this.hue = color.getHuef() + hueOffset;
+      this.saturation = LXUtils.clampf(LXColor.s(c) + saturationOffset, 0, 100);
+      this.brightness = LXUtils.clampf(LXColor.b(c) + brightnessOffset, 0, 100);
+      setRGB(LXColor.hsb(this.hue, this.saturation, this.brightness));
+    }
+
     public void setRGB(int c) {
       this.r = (c & LXColor.R_MASK) >>> LXColor.R_SHIFT;
       this.g = (c & LXColor.G_MASK) >>> LXColor.G_SHIFT;

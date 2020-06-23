@@ -26,6 +26,7 @@ import heronarts.lx.color.GradientUtils.BlendMode;
 import heronarts.lx.color.GradientUtils.ColorStops;
 import heronarts.lx.color.GradientUtils.GradientFunction;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.parameter.CompoundParameter;
@@ -69,6 +70,10 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       int g = (argb & LXColor.G_MASK) >> LXColor.G_SHIFT;
       int b = (argb & LXColor.B_MASK);
       return AVG_FACTOR * (r + g + b);
+    }),
+
+    ALPHA("Alpha", (argb) -> {
+      return INV_255 * (argb >>> LXColor.ALPHA_SHIFT);
     });
 
     private final String name;
@@ -88,6 +93,7 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
   public enum ColorMode {
     FIXED("Fixed"),
     GRADIENT("Gradient"),
+    PRIMARY("Primary"),
     PALETTE("Palette");
 
     public final String label;
@@ -177,7 +183,16 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       this.color2.brightness.setValue(this.color1.brightness.getValue() + this.gradientBrightness.getValue());
       this.color2.saturation.setValue(this.color1.saturation.getValue() + this.gradientSaturation.getValue());
       this.color2.hue.setValue((360 + this.color1.hue.getValue() + this.gradientHue.getValue()) % 360);
+    } else if (this.colorMode.getEnum() == ColorMode.PRIMARY) {
+      LXDynamicColor swatchColor = getSwatchColor();
+      this.color2.brightness.setValue(swatchColor.getBrightness() + this.gradientBrightness.getValue());
+      this.color2.saturation.setValue(swatchColor.getSaturation() + this.gradientSaturation.getValue());
+      this.color2.hue.setValue((360 + swatchColor.getHue() + this.gradientHue.getValue()) % 360);
     }
+  }
+
+  public LXDynamicColor getSwatchColor() {
+    return this.lx.engine.palette.getSwatchColor(this.paletteIndex.getValuei() - 1);
   }
 
   private void setColorStops() {
@@ -188,6 +203,18 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       this.colorStops.stops[1].set(this.color2);
       this.colorStops.setNumStops(2);
       break;
+
+    case PRIMARY:
+      LXDynamicColor swatchColor = getSwatchColor();
+      this.colorStops.stops[0].set(swatchColor);
+      this.colorStops.stops[1].set(swatchColor,
+        this.gradientHue.getValuef(),
+        this.gradientSaturation.getValuef(),
+        this.gradientBrightness.getValuef()
+      );
+      this.colorStops.setNumStops(2);
+      break;
+
     case GRADIENT:
       this.colorStops.stops[0].set(this.color1);
       this.colorStops.stops[1].set(this.color1,
@@ -210,8 +237,9 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
-    setColorStops();
     setGradientColor();
+    setColorStops();
+
 
     final SourceFunction sourceFunction = this.source.getEnum().lerp;
     final BlendFunction blendFunction = this.blendMode.getEnum().function;
