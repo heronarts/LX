@@ -93,20 +93,25 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private static final double POSITION_RANGE = 1000000;
 
-  public final BooleanParameter selected = new BooleanParameter("Selected", false)
-  .setDescription("Whether this fixture is selected for editing");
+  public final BooleanParameter selected =
+    new BooleanParameter("Selected", false)
+    .setDescription("Whether this fixture is selected for editing");
 
-  public final BooleanParameter identify = new BooleanParameter("Identify", false)
-  .setDescription("Causes the fixture to flash red for identification");
+  public final BooleanParameter identify =
+     new BooleanParameter("Identify", false)
+     .setDescription("Causes the fixture to flash red for identification");
 
-  public final BoundedParameter x = new BoundedParameter("X", 0, -POSITION_RANGE, POSITION_RANGE)
-  .setDescription("Base X position of the fixture in space");
+  public final BoundedParameter x =
+    new BoundedParameter("X", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base X position of the fixture in space");
 
-  public final BoundedParameter y = new BoundedParameter("Y", 0, -POSITION_RANGE, POSITION_RANGE)
-  .setDescription("Base Y position of the fixture in space");
+  public final BoundedParameter y =
+    new BoundedParameter("Y", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base Y position of the fixture in space");
 
-  public final BoundedParameter z = new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
-  .setDescription("Base Z position of the fixture in space");
+  public final BoundedParameter z =
+    new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base Z position of the fixture in space");
 
   public final BoundedParameter yaw = (BoundedParameter)
     new BoundedParameter("Yaw", 0, -360, 360)
@@ -123,17 +128,21 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     .setDescription("Rotation of the fixture about its normal vector")
     .setUnits(LXParameter.Units.DEGREES);
 
-  public final BooleanParameter enabled = new BooleanParameter("Enabled", false)
-  .setDescription("Whether output to this fixture is enabled");
+  public final BooleanParameter enabled =
+    new BooleanParameter("Enabled", false)
+    .setDescription("Whether output to this fixture is enabled");
 
-  public final BoundedParameter brightness = new BoundedParameter("Brightness", 1)
-  .setDescription("Brightness level of this fixture");
+  public final BoundedParameter brightness =
+    new BoundedParameter("Brightness", 1)
+    .setDescription("Brightness level of this fixture");
 
-  public final BooleanParameter mute = new BooleanParameter("Mute", false)
-  .setDescription("Mutes this fixture, sending all black pixels");
+  public final BooleanParameter mute =
+    new BooleanParameter("Mute", false)
+    .setDescription("Mutes this fixture, sending all black pixels");
 
-  public final BooleanParameter solo = new BooleanParameter("Solo", false)
-  .setDescription("Solos this fixture, no other fixtures illuminated");
+  public final BooleanParameter solo =
+    new BooleanParameter("Solo", false)
+    .setDescription("Solos this fixture, no other fixtures illuminated");
 
   final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
 
@@ -202,6 +211,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     addParameter("identify", this.identify);
     addParameter("mute", this.mute);
     addParameter("solo", this.solo);
+
+    this.mute.setMappable(true);
+    this.solo.setMappable(true);
   }
 
   @Override

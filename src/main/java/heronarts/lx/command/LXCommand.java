@@ -1889,13 +1889,14 @@ public abstract class LXCommand {
 
     }
 
-    public static class RemoveFixture extends LXCommand {
+    public static class RemoveFixture extends RemoveComponent {
 
       private ComponentReference<LXFixture> fixture;
       private final int index;
       private final JsonObject fixtureObj;
 
       public RemoveFixture(LXFixture fixture) {
+        super(fixture);
         this.fixture = new ComponentReference<LXFixture>(fixture);
         this.fixtureObj = LXSerializable.Utils.toObject(fixture);
         this.index = fixture.getIndex();
@@ -1920,6 +1921,7 @@ public abstract class LXCommand {
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
         }
+        super.undo(lx);
       }
     }
 
