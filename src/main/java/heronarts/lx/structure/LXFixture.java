@@ -212,6 +212,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     addParameter("mute", this.mute);
     addParameter("solo", this.solo);
 
+    this.brightness.setMappable(true);
+    this.enabled.setMappable(true);
+    this.identify.setMappable(true);
     this.mute.setMappable(true);
     this.solo.setMappable(true);
   }
