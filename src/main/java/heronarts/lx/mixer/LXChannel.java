@@ -61,63 +61,16 @@ public class LXChannel extends LXAbstractChannel {
    * channel state is modified.
    */
   public interface Listener extends LXAbstractChannel.Listener {
-    public void groupChanged(LXChannel channel, LXGroup group);
-    public void patternAdded(LXChannel channel, LXPattern pattern);
-    public void patternRemoved(LXChannel channel, LXPattern pattern);
-    public void patternMoved(LXChannel channel, LXPattern pattern);
-    public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern);
-    public void patternDidChange(LXChannel channel, LXPattern pattern);
+    public default void groupChanged(LXChannel channel, LXGroup group) {}
+    public default void patternAdded(LXChannel channel, LXPattern pattern) {}
+    public default void patternRemoved(LXChannel channel, LXPattern pattern) {}
+    public default void patternMoved(LXChannel channel, LXPattern pattern) {}
+    public default void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {}
+    public default void patternDidChange(LXChannel channel, LXPattern pattern) {}
   }
 
   public interface MidiListener {
     public void midiReceived(LXChannel channel, LXShortMessage message);
-  }
-
-  /**
-   * Utility class to extend in cases where only some methods need overriding.
-   */
-  public abstract static class AbstractListener implements Listener {
-
-    @Override
-    public void indexChanged(LXAbstractChannel channel) {
-    }
-
-    @Override
-    public void groupChanged(LXChannel channel, LXGroup group) {
-    }
-
-    @Override
-    public void effectAdded(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectRemoved(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectMoved(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void patternAdded(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternRemoved(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternMoved(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternWillChange(LXChannel channel, LXPattern pattern,
-        LXPattern nextPattern) {
-    }
-
-    @Override
-    public void patternDidChange(LXChannel channel, LXPattern pattern) {
-    }
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();

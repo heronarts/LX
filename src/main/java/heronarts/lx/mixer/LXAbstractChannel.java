@@ -27,7 +27,6 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
-import heronarts.lx.effect.LXEffect;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -40,24 +39,7 @@ import heronarts.lx.parameter.ObjectParameter;
 public abstract class LXAbstractChannel extends LXBus implements LXComponent.Renamable {
 
   public interface Listener extends LXBus.Listener {
-    public void indexChanged(LXAbstractChannel channel);
-  }
-
-  /**
-   * Utility class to extend in cases where only some methods need overriding.
-   */
-  public abstract static class AbstractListener implements Listener {
-    @Override
-    public void indexChanged(LXAbstractChannel channel) {}
-
-    @Override
-    public void effectAdded(LXBus channel, LXEffect effect) {}
-
-    @Override
-    public void effectRemoved(LXBus channel, LXEffect effect) {}
-
-    @Override
-    public void effectMoved(LXBus channel, LXEffect effect) {}
+    public default void indexChanged(LXAbstractChannel channel) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();

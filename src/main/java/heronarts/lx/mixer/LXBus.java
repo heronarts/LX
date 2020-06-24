@@ -50,9 +50,9 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
    * channel state is modified.
    */
   public interface Listener {
-    public void effectAdded(LXBus channel, LXEffect effect);
-    public void effectRemoved(LXBus channel, LXEffect effect);
-    public void effectMoved(LXBus channel, LXEffect effect);
+    public default void effectAdded(LXBus channel, LXEffect effect) {}
+    public default void effectRemoved(LXBus channel, LXEffect effect) {}
+    public default void effectMoved(LXBus channel, LXEffect effect) {}
   }
 
   public interface ClipListener {
