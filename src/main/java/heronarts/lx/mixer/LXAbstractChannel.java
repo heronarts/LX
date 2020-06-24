@@ -97,7 +97,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     .setDescription("Toggles the channel CUE state, determining whether it is shown in the preview window");
 
   public final CompoundParameter fader =
-    new CompoundParameter("Fader", 0)
+    new CompoundParameter("Fader", 1)
     .setDescription("Sets the alpha level of the output of this channel");
 
   public final ObjectParameter<LXBlend> blendMode;
