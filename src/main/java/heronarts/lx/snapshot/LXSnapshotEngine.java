@@ -100,10 +100,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    */
   public final BooleanParameter autoCycleEnabled =
     new BooleanParameter("Auto-Cycle", false)
-    .setDescription("When enabled, this channel will automatically cycle between its patterns");
+    .setDescription("When enabled, the engine will automatically cycle through snapshots");
 
   /**
-   * Auto-cycle to a random pattern, not the next one
+   * Auto-cycle to a random snapshot, not the next one
    */
   public final EnumParameter<AutoCycleMode> autoCycleMode =
     new EnumParameter<AutoCycleMode>("Auto-Cycle Mode", AutoCycleMode.NEXT)
@@ -114,7 +114,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    */
   public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
     new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
-    .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
+    .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
     .setUnits(LXParameter.Units.SECONDS);
 
   /**
