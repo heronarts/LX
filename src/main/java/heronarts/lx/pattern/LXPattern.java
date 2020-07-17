@@ -18,9 +18,6 @@
 
 package heronarts.lx.pattern;
 
-import heronarts.lx.midi.MidiAftertouch;
-import heronarts.lx.midi.MidiControlChange;
-
 import java.util.Map;
 
 import com.google.gson.JsonElement;
@@ -31,11 +28,6 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXTime;
-import heronarts.lx.midi.LXMidiListener;
-import heronarts.lx.midi.MidiNote;
-import heronarts.lx.midi.MidiNoteOn;
-import heronarts.lx.midi.MidiPitchBend;
-import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -44,7 +36,7 @@ import heronarts.lx.parameter.BooleanParameter;
  * A pattern is the core object that the animation engine uses to generate
  * colors for all the points.
  */
-public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXLayeredComponent.Buffered, LXMidiListener, LXOscComponent {
+public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXLayeredComponent.Buffered, LXOscComponent {
 
   /**
    * Placeholder pattern for when a class is missing
@@ -282,36 +274,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * into this pattern is complete.
    */
   public/* abstract */void onTransitionEnd() {
-  }
-
-  @Override
-  public void noteOnReceived(MidiNoteOn note) {
-
-  }
-
-  @Override
-  public void noteOffReceived(MidiNote note) {
-
-  }
-
-  @Override
-  public void controlChangeReceived(MidiControlChange cc) {
-
-  }
-
-  @Override
-  public void programChangeReceived(MidiProgramChange cc) {
-
-  }
-
-  @Override
-  public void pitchBendReceived(MidiPitchBend pitchBend) {
-
-  }
-
-  @Override
-  public void aftertouchReceived(MidiAftertouch aftertouch) {
-
   }
 
 }

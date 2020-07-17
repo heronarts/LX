@@ -21,17 +21,14 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.midi.LXShortMessage;
-import heronarts.lx.midi.MidiNote;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.pattern.LXPattern;
 
-public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Listener, LXChannel.MidiListener {
+public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Listener {
 
   public final PatternClipLane patternLane = new PatternClipLane(this);
-  public final MidiNoteClipLane midiNoteLane = new MidiNoteClipLane(this);
 
   public final LXChannel channel;
 
@@ -39,10 +36,8 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     super(lx, channel, index, false);
     this.channel = channel;
     this.mutableLanes.add(this.patternLane);
-    this.mutableLanes.add(this.midiNoteLane);
 
     channel.addListener(this);
-    channel.addMidiListener(this);
     for (LXPattern pattern : channel.patterns) {
       registerComponent(pattern);
     }
@@ -51,7 +46,6 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   @Override
   public void dispose() {
     this.channel.removeListener(this);
-    this.channel.removeMidiListener(this);
     for (LXPattern pattern : this.channel.patterns) {
       unregisterComponent(pattern);
     }
@@ -106,10 +100,4 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     }
   }
 
-  @Override
-  public void midiReceived(LXChannel channel, LXShortMessage message) {
-    if (message instanceof MidiNote) {
-      this.midiNoteLane.appendEvent(new MidiNoteClipEvent(this.midiNoteLane, (MidiNote) message));
-    }
-  }
 }

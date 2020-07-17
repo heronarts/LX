@@ -4,7 +4,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.midi.MidiNote;
-import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXAbstractChannel;
 
 public class MidiNoteClipEvent extends LXClipEvent {
 
@@ -17,7 +17,7 @@ public class MidiNoteClipEvent extends LXClipEvent {
 
   @Override
   public void execute() {
-    ((LXChannel) lane.clip.bus).midiDispatch(this.midiNote);
+    ((LXAbstractChannel) lane.clip.bus).midiDispatch(this.midiNote);
   }
 
   protected final static String KEY_CHANNEL = "channel";

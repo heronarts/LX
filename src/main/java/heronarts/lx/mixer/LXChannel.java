@@ -24,7 +24,6 @@ import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscEngine;
@@ -69,13 +68,8 @@ public class LXChannel extends LXAbstractChannel {
     public default void patternDidChange(LXChannel channel, LXPattern pattern) {}
   }
 
-  public interface MidiListener {
-    public void midiReceived(LXChannel channel, LXShortMessage message);
-  }
-
   private final List<Listener> listeners = new ArrayList<Listener>();
   private final List<Listener> listenerSnapshot = new ArrayList<Listener>();
-  private final List<MidiListener> midiListeners = new ArrayList<MidiListener>();
 
   public enum AutoCycleMode {
     NEXT,
@@ -104,20 +98,6 @@ public class LXChannel extends LXAbstractChannel {
   public final BooleanParameter controlsExpanded =
     new BooleanParameter("Expanded", true)
     .setDescription("Whether the control elements for the channel device are expanded");
-
-  /**
-   * Whether this channel should listen to MIDI events
-   */
-  public final BooleanParameter midiMonitor =
-    new BooleanParameter("MIDI Monitor", false)
-    .setDescription("Enables or disables monitoring of live MIDI input on this channel");
-
-  /**
-   * Which channel MIDI messages this channel observes
-   */
-  public final EnumParameter<LXMidiEngine.Channel> midiChannel =
-    new EnumParameter<LXMidiEngine.Channel>("MIDI Channel", LXMidiEngine.Channel.OMNI)
-    .setDescription("Determines which MIDI channel is responded to");
 
   /**
    * Whether auto pattern transition is enabled on this channel
@@ -202,8 +182,6 @@ public class LXChannel extends LXAbstractChannel {
     addArray("pattern", this.patterns);
 
     addInternalParameter("controlsExpanded", this.controlsExpanded);
-    addParameter("midiMonitor", this.midiMonitor);
-    addParameter("midiChannel", this.midiChannel);
     addParameter("autoCycleEnabled", this.autoCycleEnabled);
     addParameter("autoCycleMode", this.autoCycleMode);
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
@@ -257,23 +235,6 @@ public class LXChannel extends LXAbstractChannel {
     this.listeners.remove(listener);
   }
 
-  public LXChannel addMidiListener(MidiListener listener) {
-    Objects.requireNonNull(listener, "May not add null LXChannel.MidiListener");
-    if (this.midiListeners.contains(listener)) {
-      throw new IllegalStateException("May not add duplicate LXChannel.MidiListener: " + listener);
-    }
-    this.midiListeners.add(listener);
-    return this;
-  }
-
-  public LXChannel removeMidiListener(MidiListener listener) {
-    if (!this.midiListeners.contains(listener)) {
-      throw new IllegalStateException("May not remove non-registered LXChannel.MidiListener: " + listener);
-    }
-    this.midiListeners.remove(listener);
-    return this;
-  }
-
   public static final String PATH_PATTERN = "pattern";
   public static final String PATH_ACTIVE = "active";
   public static final String PATH_ACTIVE_PATTERN = "activePattern";
@@ -310,13 +271,8 @@ public class LXChannel extends LXAbstractChannel {
     return super.handleOscMessage(message, parts, index);
   }
 
-  public void midiMessage(LXShortMessage message) {
-    for (MidiListener listener : this.midiListeners) {
-      listener.midiReceived(this, message);
-    }
-    midiDispatch(message);
-  }
 
+  @Override
   public void midiDispatch(LXShortMessage message) {
     LXPattern activePattern = getActivePattern();
     message.dispatch(activePattern);
@@ -324,6 +280,7 @@ public class LXChannel extends LXAbstractChannel {
     if (nextPattern != null && nextPattern != activePattern) {
       message.dispatch(nextPattern);
     }
+    super.midiDispatch(message);
   }
 
   LXChannel setGroup(LXGroup group) {
@@ -926,7 +883,6 @@ public class LXChannel extends LXAbstractChannel {
       this.thread.interrupt();
     }
     this.listeners.clear();
-    this.midiListeners.clear();
     super.dispose();
   }
 

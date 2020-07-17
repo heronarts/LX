@@ -125,6 +125,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_EFFECTS.add(heronarts.lx.effect.HueSaturationEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.SparkleEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.StrobeEffect.class);
+    DEFAULT_EFFECTS.add(heronarts.lx.effect.midi.GateEffect.class);
   };
 
   private static final List<Class<? extends LXBlend>> DEFAULT_CHANNEL_BLENDS;

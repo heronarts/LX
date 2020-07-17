@@ -18,9 +18,6 @@
 
 package heronarts.lx.effect;
 
-import heronarts.lx.midi.MidiAftertouch;
-import heronarts.lx.midi.MidiControlChange;
-
 import java.util.Map;
 
 import com.google.gson.JsonElement;
@@ -29,11 +26,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
-import heronarts.lx.midi.LXMidiListener;
-import heronarts.lx.midi.MidiNote;
-import heronarts.lx.midi.MidiNoteOn;
-import heronarts.lx.midi.MidiPitchBend;
-import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
@@ -47,7 +39,7 @@ import heronarts.lx.parameter.MutableParameter;
  * may be stateless or stateful, though typically they operate on a single
  * frame. Only the current frame is provided at runtime.
  */
-public abstract class LXEffect extends LXDeviceComponent implements LXComponent.Renamable, LXMidiListener, LXOscComponent {
+public abstract class LXEffect extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent {
 
   /**
    * Placeholder pattern for when a class is missing
@@ -312,36 +304,6 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   public void dispose() {
     this.enabled.removeListener(this.enabledListener);
     super.dispose();
-  }
-
-  @Override
-  public void noteOnReceived(MidiNoteOn note) {
-
-  }
-
-  @Override
-  public void noteOffReceived(MidiNote note) {
-
-  }
-
-  @Override
-  public void controlChangeReceived(MidiControlChange cc) {
-
-  }
-
-  @Override
-  public void programChangeReceived(MidiProgramChange cc) {
-
-  }
-
-  @Override
-  public void pitchBendReceived(MidiPitchBend pitchBend) {
-
-  }
-
-  @Override
-  public void aftertouchReceived(MidiAftertouch aftertouch) {
-
   }
 
 }
