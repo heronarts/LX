@@ -38,9 +38,11 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.snapshot.LXSnapshot.View;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * The snapshot engine stores snapshots in time of the state of project settings. This includes
@@ -48,6 +50,8 @@ import heronarts.lx.snapshot.LXSnapshot.View;
  * the given time.
  */
 public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXLoopTask {
+
+  private static final int NO_SNAPSHOT_INDEX = -1;
 
   public interface Listener {
     /**
@@ -92,6 +96,28 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     .setDescription("Whether global modulation settings are recalled");
 
   /**
+   * Whether auto pattern transition is enabled on this channel
+   */
+  public final BooleanParameter autoCycleEnabled =
+    new BooleanParameter("Auto-Cycle", false)
+    .setDescription("When enabled, this channel will automatically cycle between its patterns");
+
+  /**
+   * Auto-cycle to a random pattern, not the next one
+   */
+  public final EnumParameter<AutoCycleMode> autoCycleMode =
+    new EnumParameter<AutoCycleMode>("Auto-Cycle Mode", AutoCycleMode.NEXT)
+    .setDescription("Mode of auto cycling");
+
+  /**
+   * Time in seconds after which transition thru the pattern set is automatically initiated.
+   */
+  public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
+    new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
+    .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  /**
    * Amount of time taken in seconds to transition into a new snapshot view
    */
   public final BoundedParameter transitionTimeSecs = (BoundedParameter)
@@ -112,6 +138,28 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
   });
 
+  private double autoCycleProgress = 0;
+
+  private int autoCycleIndex = NO_SNAPSHOT_INDEX;
+
+  private long autoCycleMillis = 0;
+
+  public enum AutoCycleMode {
+    NEXT,
+    RANDOM;
+
+    @Override
+    public String toString() {
+      switch (this) {
+      case NEXT:
+        return "Next";
+      default:
+      case RANDOM:
+        return "Random";
+      }
+    }
+  };
+
   public LXSnapshotEngine(LX lx) {
     super(lx, "Snapshots");
     addArray("snapshot", this.snapshots);
@@ -119,6 +167,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addParameter("recallModulation", this.recallModulation);
     addParameter("transitionEnabled", this.transitionEnabled);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
+    addParameter("autoCycleEnabled", this.autoCycleEnabled);
+    addParameter("autoCycleMode", this.autoCycleMode);
+    addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
   }
 
   public LXSnapshotEngine addListener(Listener listener) {
@@ -254,6 +305,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     boolean mixer = this.recallMixer.isOn();
     boolean modulation = this.recallModulation.isOn();
     boolean transition = false;
+    this.autoCycleMillis = lx.engine.nowMillis;
     if (this.transitionEnabled.isOn()) {
       transition = true;
       this.inTransition = snapshot;
@@ -293,6 +345,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return (this.inTransition != null) ? this.transition.getValue() : 0;
   }
 
+  public double getAutoCycleProgress() {
+    return this.autoCycleProgress;
+  }
+
   @Override
   public void loop(double deltaMs) {
     if (this.inTransition != null) {
@@ -304,6 +360,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
           }
         }
         this.inTransition = null;
+        this.autoCycleMillis = lx.engine.nowMillis;
       } else {
         for (View view : this.inTransition.views) {
           if (view.activeFlag) {
@@ -311,6 +368,48 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
           }
         }
       }
+    } else {
+      this.autoCycleProgress = (this.lx.engine.nowMillis - this.autoCycleMillis) / (1000 * this.autoCycleTimeSecs.getValue());
+      if (this.autoCycleProgress >= 1) {
+        this.autoCycleProgress = 1;
+        if (this.autoCycleEnabled.isOn()) {
+          switch (this.autoCycleMode.getEnum()) {
+          case NEXT:
+            goNextSnapshot();
+            break;
+          case RANDOM:
+            goRandomSnapshot();
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  private void goNextSnapshot() {
+    if (this.snapshots.size() <= 1) {
+      return;
+    }
+    int prevIndex = this.autoCycleIndex;
+    this.autoCycleIndex = (this.autoCycleIndex + 1) % this.snapshots.size();
+    if (this.autoCycleIndex != prevIndex) {
+      recall(this.snapshots.get(this.autoCycleIndex));
+    }
+  }
+
+  private void goRandomSnapshot() {
+    if (this.snapshots.size() <= 1) {
+      return;
+    }
+    List<LXSnapshot> eligible = new ArrayList<LXSnapshot>();
+    for (int i = 0; i < this.snapshots.size(); ++i) {
+      if (i != this.autoCycleIndex) {
+        eligible.add(this.snapshots.get(i));
+      }
+    }
+    int numEligible = eligible.size();
+    if (numEligible > 0) {
+      recall(eligible.get(LXUtils.constrain((int) LXUtils.random(0, numEligible), 0, numEligible - 1)));
     }
   }
 
