@@ -240,6 +240,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       this.mutableSnapshots.add(index, snapshot);
       _reindexSnapshots();
     }
+    if (index <= this.autoCycleIndex) {
+      ++this.autoCycleIndex;
+    }
     for (Listener listener : this.listeners) {
       listener.snapshotAdded(this, snapshot);
     }
@@ -256,10 +259,14 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (!this.snapshots.contains(snapshot)) {
       throw new IllegalStateException("Cannot remove snapshot that is not present: " + snapshot);
     }
+    int index = this.mutableSnapshots.indexOf(snapshot);
     this.mutableSnapshots.remove(snapshot);
     _reindexSnapshots();
     for (Listener listener : this.listeners) {
       listener.snapshotRemoved(this, snapshot);
+    }
+    if (index <= this.autoCycleIndex) {
+      --this.autoCycleIndex;
     }
     snapshot.dispose();
     return this;
@@ -276,11 +283,18 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (!this.snapshots.contains(snapshot)) {
       throw new IllegalArgumentException("Cannot move snapshot not in engine: " + snapshot);
     }
+    LXSnapshot autoCycleSnapshot = null;
+    if (this.autoCycleIndex >= 0 && this.autoCycleIndex < this.snapshots.size()) {
+      autoCycleSnapshot = this.snapshots.get(this.autoCycleIndex);
+    }
     this.mutableSnapshots.remove(snapshot);
     this.mutableSnapshots.add(index, snapshot);
     _reindexSnapshots();
     for (Listener listener : this.listeners) {
       listener.snapshotMoved(this, snapshot);
+    }
+    if (autoCycleSnapshot != null) {
+      this.autoCycleIndex = this.snapshots.indexOf(autoCycleSnapshot);
     }
     return this;
   }
