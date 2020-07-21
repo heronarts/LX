@@ -660,9 +660,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       for (LXComponent child : this.children.values()) {
         child.oscQuery();
       }
-      for (List<? extends LXComponent> array : childArrays.values()) {
+      for (List<? extends LXComponent> array : this.childArrays.values()) {
         for (LXComponent component : array) {
-          component.oscQuery();
+          if (component != null) {
+            component.oscQuery();
+          }
         }
       }
     }
@@ -710,7 +712,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
             if (index == parts.length - 1) {
               return child;
             }
-            return child.path(parts, index + 1);
+            return (child != null) ? child.path(parts, index + 1) : null;
           }
         } catch (NumberFormatException nfx) {
           return null;

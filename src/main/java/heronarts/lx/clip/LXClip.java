@@ -104,7 +104,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public String getPath() {
-    return "clip" + (index + 1);
+    return "clip/" + (index + 1);
   }
 
   @Override
