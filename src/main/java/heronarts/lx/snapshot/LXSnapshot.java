@@ -409,10 +409,16 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Restores the values of this snapshot");
 
+  public final BooleanParameter autoCycleEligible =
+    new BooleanParameter("Cycle", true)
+    .setDescription("Whether the snapshot is eligible for auto-cycle");
+
+
   public LXSnapshot(LX lx) {
     super(lx, "Snapshot");
     setParent(lx.engine.snapshots);
     addParameter("recall", this.recall);
+    addParameter("autoCycleEligible", this.autoCycleEligible);
   }
 
   @Override
