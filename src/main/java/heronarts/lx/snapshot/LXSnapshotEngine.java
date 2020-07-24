@@ -33,6 +33,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand;
+import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -53,6 +54,38 @@ import heronarts.lx.utils.LXUtils;
 public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXLoopTask {
 
   private static final int NO_SNAPSHOT_INDEX = -1;
+
+  public enum MissingChannelMode {
+    IGNORE("Ignore"),
+    DISABLE("Disable");
+
+    public final String label;
+
+    private MissingChannelMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public enum ChannelMode {
+    TOGGLE("Toggle"),
+    FADE("Fade");
+
+    public final String label;
+
+    private ChannelMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
 
   public interface Listener {
     /**
@@ -95,6 +128,14 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   public final BooleanParameter recallModulation =
     new BooleanParameter("Modulation", true)
     .setDescription("Whether global modulation settings are recalled");
+
+  public final EnumParameter<MissingChannelMode> missingChannelMode =
+    new EnumParameter<MissingChannelMode>("Missing Channel", MissingChannelMode.IGNORE)
+    .setDescription("How to handle channels that are not present in the snapshot");
+
+  public final EnumParameter<ChannelMode> channelMode =
+    new EnumParameter<ChannelMode>("Channel Mode", ChannelMode.TOGGLE)
+    .setDescription("How to handle turning channels on/off");
 
   /**
    * Whether auto pattern transition is enabled on this channel
@@ -168,6 +209,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addArray("snapshot", this.snapshots);
     addParameter("recallMixer", this.recallMixer);
     addParameter("recallModulation", this.recallModulation);
+    addParameter("channelMode", this.channelMode);
+    addParameter("missingChannelMode", this.missingChannelMode);
     addParameter("transitionEnabled", this.transitionEnabled);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
     addParameter("autoCycleEnabled", this.autoCycleEnabled);
@@ -324,6 +367,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     recall(snapshot, null);
   }
 
+  private final List<LXSnapshot.View> recallViews =
+    new ArrayList<LXSnapshot.View>();
+
   /**
    * Recall this snapshot, and populate an array of commands which
    * would need to be undone by this operation.
@@ -340,11 +386,23 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       commands.add(new LXCommand.Parameter.SetValue(this.autoCycleCursor, this.autoCycleCursor.getValuei()));
     }
     this.autoCycleCursor.setValue(snapshot.getIndex());
+    this.recallViews.clear();
+    this.recallViews.addAll(snapshot.views);
     if (this.transitionEnabled.isOn()) {
       transition = true;
       this.inTransition = snapshot;
     }
-    for (View view : snapshot.views) {
+
+    // If there are missing channels, add a view to handle them
+    if (this.missingChannelMode.getEnum() == MissingChannelMode.DISABLE) {
+      for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+        if (channel.enabled.isOn() && !snapshot.hasChannelFaderView(channel)) {
+          this.recallViews.add(snapshot.getMissingChannelView(channel));
+        }
+      }
+    }
+
+    for (View view : this.recallViews) {
       if (view.activeFlag = isValidView(view, mixer, modulation)) {
         if (transition) {
           view.startTransition();
@@ -388,7 +446,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (this.inTransition != null) {
       this.transition.loop(deltaMs);
       if (this.transition.finished()) {
-        for (View view : this.inTransition.views) {
+        for (View view : this.recallViews) {
           if (view.activeFlag) {
             view.finishTransition();
           }
@@ -396,7 +454,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
         this.inTransition = null;
         this.autoCycleMillis = lx.engine.nowMillis;
       } else {
-        for (View view : this.inTransition.views) {
+        for (View view : this.recallViews) {
           if (view.activeFlag) {
             view.interpolate(this.transition.getValue());
           }

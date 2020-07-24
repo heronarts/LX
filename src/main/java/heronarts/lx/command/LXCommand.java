@@ -587,6 +587,34 @@ public abstract class LXCommand {
 
   public static class Channel {
 
+    public static class SetFader extends LXCommand {
+
+      private final Parameter.SetNormalized setEnabled;
+      private final Parameter.SetValue setFader;
+
+      public SetFader(LXAbstractChannel channel, boolean enabled, double fader) {
+        this.setEnabled = new Parameter.SetNormalized(channel.enabled, enabled);
+        this.setFader= new Parameter.SetValue(channel.fader, fader);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Set Channel Fader";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.setEnabled.perform(lx);
+        this.setFader.perform(lx);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.setEnabled.undo(lx);
+        this.setFader.undo(lx);
+      }
+    }
+
     public static class AddPattern extends LXCommand {
 
       private final ComponentReference<LXChannel> channel;

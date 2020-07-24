@@ -83,6 +83,11 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     PARAMETER,
 
     /**
+     * Channel fader state
+     */
+    CHANNEL_FADER,
+
+    /**
      * The pattern which is active on a channel
      */
     ACTIVE_PATTERN
@@ -358,6 +363,92 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
   }
 
+  public class ChannelFaderView extends View {
+
+    private final LXAbstractChannel channel;
+    private final boolean enabled;
+    private final double fader;
+
+    private double fromFader, toFader;
+    private boolean wasEnabled;
+
+    private ChannelFaderView(LXAbstractChannel channel) {
+      this(channel, channel.enabled.isOn(), channel.fader.getValue());
+    }
+
+    protected ChannelFaderView(LXAbstractChannel channel, boolean enabled, double fader) {
+      super(ViewScope.MIXER, ViewType.CHANNEL_FADER);
+      this.channel = channel;
+      this.enabled = enabled;
+      this.fader = fader;
+    }
+
+    private ChannelFaderView(LX lx, JsonObject obj) {
+      super(ViewScope.MIXER, ViewType.CHANNEL_FADER);
+      this.channel = (LXAbstractChannel) LXPath.get(lx, obj.get(KEY_CHANNEL_PATH).getAsString());
+      this.enabled = obj.get(KEY_CHANNEL_ENABLED).getAsBoolean();
+      this.fader = obj.get(KEY_CHANNEL_FADER).getAsDouble();
+    }
+
+    @Override
+    public LXCommand getCommand() {
+      return new LXCommand.Channel.SetFader(this.channel, this.enabled, this.fader);
+    }
+
+    @Override
+    protected boolean isDependentOf(LXComponent component) {
+      return component.contains(this.channel);
+    }
+
+    @Override
+    protected void recall() {
+      this.channel.enabled.setValue(this.enabled);
+      this.channel.fader.setValue(this.fader);
+    }
+
+    @Override
+    protected void startTransition() {
+      this.wasEnabled = this.channel.enabled.isOn();
+      if ((this.wasEnabled != this.enabled) && (lx.engine.snapshots.channelMode.getEnum() == LXSnapshotEngine.ChannelMode.FADE)) {
+        if (this.enabled) {
+          this.channel.fader.setValue(this.fromFader = 0);
+          this.toFader = this.fader;
+          this.channel.enabled.setValue(true);
+        } else {
+          this.fromFader = this.channel.fader.getValue();
+          this.toFader = 0;
+        }
+      } else {
+        this.channel.enabled.setValue(this.enabled);
+        this.fromFader = this.channel.fader.getValue();
+        this.toFader = this.fader;
+      }
+    }
+
+    @Override
+    protected void interpolate(double amount) {
+      this.channel.fader.setValue(LXUtils.lerp(this.fromFader, this.toFader, amount));
+    }
+
+    @Override
+    protected void finishTransition() {
+      recall();
+    }
+
+    private static final String KEY_CHANNEL_PATH = "channelPath";
+    private static final String KEY_CHANNEL_ENABLED = "channelEnabled";
+    private static final String KEY_CHANNEL_FADER = "channelFader";
+
+    @Override
+    public void save(LX lx, JsonObject obj) {
+      super.save(lx, obj);
+      obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath());
+      obj.addProperty(KEY_CHANNEL_ENABLED, this.enabled);
+      obj.addProperty(KEY_CHANNEL_FADER, this.fader);
+    }
+
+  }
+
   /**
    * View for which pattern is active on a channel
    */
@@ -458,8 +549,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     addParameterView(ViewScope.MIXER, lx.engine.mixer.crossfader);
     for (LXAbstractChannel bus : lx.engine.mixer.channels) {
       // Top-level bus settings
-      addParameterView(ViewScope.MIXER, bus.enabled);
-      addParameterView(ViewScope.MIXER, bus.fader);
+      addView(new ChannelFaderView(bus));
       addParameterView(ViewScope.MIXER, bus.crossfadeGroup);
 
       // Active pattern settings
@@ -524,6 +614,9 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     case ACTIVE_PATTERN:
       view = new ActivePatternView(getLX(), viewObj);
       break;
+    case CHANNEL_FADER:
+      view = new ChannelFaderView(getLX(), viewObj);
+      break;
     }
     if (view == null) {
       LX.error("Invalid serialized LXSnapshot.View type: " + viewObj.get(View.KEY_TYPE).getAsString());
@@ -557,6 +650,21 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     }
     this.mutableViews.remove(view);
     view.dispose();
+  }
+
+  boolean hasChannelFaderView(LXAbstractChannel channel) {
+    for (View view : this.views) {
+      if (view instanceof ChannelFaderView) {
+        if (((ChannelFaderView) view).channel == channel) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  ChannelFaderView getMissingChannelView(LXAbstractChannel channel) {
+    return new LXSnapshot.ChannelFaderView(channel, false, 0);
   }
 
   @Override
