@@ -402,6 +402,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
           }
         }
       }
+      this.autoCycleProgress = 0;
     } else {
       this.autoCycleProgress = (this.lx.engine.nowMillis - this.autoCycleMillis) / (1000 * this.autoCycleTimeSecs.getValue());
       if (this.autoCycleProgress >= 1) {
