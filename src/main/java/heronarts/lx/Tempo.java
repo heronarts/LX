@@ -101,6 +101,10 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
       }
     }
 
+    public boolean isExternal() {
+      return this != INTERNAL;
+    }
+
     @Override
     public String toString() {
       switch (this) {
@@ -161,7 +165,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private boolean doTrigger = false;
-  private boolean running = false;
+  private boolean running = true;
 
   private boolean isBeat = false;
 
@@ -247,7 +251,11 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
         this.trigger.setValue(false);
       }
     } else if (p == this.clockSource) {
-      if (this.clockSource.getEnum() == ClockSource.INTERNAL) {
+      if (this.clockSource.getEnum().isExternal()) {
+        // Reset and stop clock, wait for trigger
+        this.running = false;
+        this.basis = 0;
+      } else {
         this.running = true;
         if (this.basis >= 1) {
           this.basis = 0;
