@@ -25,6 +25,7 @@ import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
+import heronarts.lx.output.OPCOutput;
 import heronarts.lx.output.OPCSocket;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.LXParameter;
@@ -43,6 +44,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
     addOutputParameter("transport", this.transport);
     addOutputParameter("reverse", this.reverse);
     addParameter("host", this.host);
+    addParameter("port", this.port);
     addParameter("artNetUniverse", this.artNetUniverse);
     addParameter("opcChannel", this.opcChannel);
     addParameter("ddpDataOffset", this.ddpDataOffset);
@@ -104,6 +106,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
         output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
         break;
       }
+      ((OPCOutput) output).setPort(this.port.getValuei());
       break;
     case DDP:
       output = new DDPDatagram(this.lx, toDynamicIndexBuffer(), this.ddpDataOffset.getValuei());
@@ -135,6 +138,10 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
             ((LXOutput.InetOutput) this.output).setAddress(address);
           }
         }
+      } else if (p == this.port) {
+        if (this.output instanceof OPCOutput) {
+          ((OPCOutput) this.output).setPort(this.port.getValuei());
+        }
       } else if (p == this.artNetUniverse) {
         if (this.output instanceof ArtNetDatagram) {
           ((ArtNetDatagram) this.output).setUniverseNumber(this.artNetUniverse.getValuei());
@@ -146,8 +153,8 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
           ((DDPDatagram) this.output).setDataOffset(this.ddpDataOffset.getValuei());
         }
       } else if (p == this.opcChannel) {
-        if (this.output instanceof OPCDatagram) {
-          ((OPCDatagram) this.output).setChannel((byte) this.opcChannel.getValuei());
+        if (this.output instanceof OPCOutput) {
+          ((OPCOutput) this.output).setChannel((byte) this.opcChannel.getValuei());
         }
       } else if (p == this.kinetPort) {
         if (this.output instanceof KinetDatagram) {

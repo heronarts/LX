@@ -24,7 +24,7 @@ import heronarts.lx.model.LXModel;
 /**
  * UDP implementation of http://openpixelcontrol.org/
  */
-public class OPCDatagram extends LXDatagram implements OPCConstants {
+public class OPCDatagram extends LXDatagram implements OPCOutput {
 
   public final static int MAX_DATA_LENGTH = 65535;
 
@@ -55,6 +55,7 @@ public class OPCDatagram extends LXDatagram implements OPCConstants {
     this.buffer[OFFSET_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);
   }
 
+  @Override
   public OPCDatagram setChannel(byte channel) {
     this.buffer[OFFSET_CHANNEL] = channel;
     return this;

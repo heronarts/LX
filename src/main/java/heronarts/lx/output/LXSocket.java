@@ -20,7 +20,6 @@ package heronarts.lx.output;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -29,8 +28,12 @@ import heronarts.lx.LX;
 
 public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOutput {
 
+  public static final int DEFAULT_CONNECT_TIMEOUT_MS = 100;
+
   private InetAddress address = null;
   private int port = NO_PORT;
+  private int connectTimeoutMs = DEFAULT_CONNECT_TIMEOUT_MS;
+
 
   protected Socket socket;
   protected OutputStream output;
@@ -41,6 +44,11 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
 
   protected LXSocket(LX lx, int[] indexBuffer, LXBufferOutput.ByteOrder byteOrder) {
     super(lx, indexBuffer, byteOrder);
+  }
+
+  public LXSocket setConnectTimeout(int connectTimeoutMs) {
+    this.connectTimeoutMs = connectTimeoutMs;
+    return this;
   }
 
   @Override
@@ -78,15 +86,15 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   private void connect() {
     if (this.socket == null) {
       if (this.address != null && this.port != NO_PORT) {
+        InetSocketAddress inetAddress = new InetSocketAddress(this.address, this.port);
         try {
           this.socket = new Socket();
-          this.socket.connect(new InetSocketAddress(this.address, this.port), 100);
+          this.socket.connect(inetAddress, this.connectTimeoutMs);
           this.socket.setTcpNoDelay(true);
           this.output = this.socket.getOutputStream();
           didConnect();
-        } catch (ConnectException cx) {
-          disconnect(cx);
         } catch (IOException iox) {
+          LXOutput.error(getClass().getSimpleName() + " failed connecting to " + inetAddress + ": " + iox.getLocalizedMessage());
           disconnect(iox);
         }
       }
@@ -134,6 +142,7 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
       try {
         this.output.write(getPacketData(colors, glut));
       } catch (IOException iox) {
+        LXOutput.error(getClass().getSimpleName() + " exception writing to " + this.socket.getInetAddress() + ": " + iox.getLocalizedMessage());
         disconnect(iox);
       }
     }

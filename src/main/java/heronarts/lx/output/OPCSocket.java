@@ -24,7 +24,7 @@ import heronarts.lx.model.LXModel;
 /**
  * TCP/IP streaming socket implementation of http://openpixelcontrol.org/
  */
-public class OPCSocket extends LXSocket implements OPCConstants {
+public class OPCSocket extends LXSocket implements OPCOutput {
 
   static final int OFFSET_R = 0;
   static final int OFFSET_G = 1;
@@ -63,6 +63,7 @@ public class OPCSocket extends LXSocket implements OPCConstants {
     this.packetData[OFFSET_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);
   }
 
+  @Override
   public OPCSocket setChannel(byte channel) {
     this.packetData[OFFSET_CHANNEL] = channel;
     return this;

@@ -18,7 +18,11 @@
 
 package heronarts.lx.output;
 
-public interface OPCConstants {
+import heronarts.lx.output.LXOutput.InetOutput;
+
+public interface OPCOutput extends InetOutput {
+
+  public static final int DEFAULT_PORT = 7890;
 
   public static final int HEADER_LEN = 4;
 
@@ -33,4 +37,6 @@ public interface OPCConstants {
   public static final byte COMMAND_SET_PIXEL_COLORS = 0;
   public static final byte COMMAND_SYSTEM_EXCLUSIVE = (byte) 0xff;
 
+
+  public OPCOutput setChannel(byte opcChannel);
 }

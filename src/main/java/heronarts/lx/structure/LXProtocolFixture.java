@@ -23,6 +23,7 @@ import java.net.UnknownHostException;
 
 import heronarts.lx.LX;
 import heronarts.lx.output.LXOutput;
+import heronarts.lx.output.OPCOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -53,6 +54,10 @@ public abstract class LXProtocolFixture extends LXFixture {
   public final StringParameter host =
     new StringParameter("Host", "127.0.0.1")
     .setDescription("Host/IP this fixture transmits to");
+
+  public final DiscreteParameter port =
+    new DiscreteParameter("Port", OPCOutput.DEFAULT_PORT, 0, 65536)
+    .setDescription("Port number this fixture transmits to");
 
   public final BooleanParameter unknownHost =
     new BooleanParameter("Unknown Host", false);

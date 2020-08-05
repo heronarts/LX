@@ -50,6 +50,7 @@ import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
+import heronarts.lx.output.OPCSocket;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -115,6 +116,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_OUTPUT = "output";
   private static final String KEY_OUTPUTS = "outputs";
   private static final String KEY_PROTOCOL = "protocol";
+  private static final String KEY_TRANSPORT = "transport";
   private static final String KEY_HOST = "host";
   private static final String KEY_PORT = "port";
   private static final String KEY_BYTE_ORDER = "byteOrder";
@@ -149,6 +151,10 @@ public class JsonFixture extends LXFixture {
       return this.universeKey;
     }
 
+    public boolean requiresExplicitPort() {
+      return (this == OPC);
+    }
+
     private static ProtocolDefinition get(String key) {
       for (ProtocolDefinition protocol : values()) {
         for (String protocolKey : protocol.protocolKeys) {
@@ -159,6 +165,28 @@ public class JsonFixture extends LXFixture {
       }
       return null;
     }
+  }
+
+
+  private enum TransportDefinition {
+    UDP("udp"),
+    TCP("tcp");
+
+    private final String transportKey;
+
+    private TransportDefinition(String transportKey) {
+      this.transportKey = transportKey;
+    }
+
+    private static TransportDefinition get(String key) {
+      for (TransportDefinition protocol : values()) {
+        if (protocol.transportKey.equals(key)) {
+          return protocol;
+        }
+      }
+      return null;
+    }
+
   }
 
   // A bit superfluous, but avoiding using the LXBufferOutput stuff
@@ -298,6 +326,7 @@ public class JsonFixture extends LXFixture {
     private static final int DEFAULT_PORT = -1;
 
     private final ProtocolDefinition protocol;
+    private final TransportDefinition transport;
     private final ByteOrderDefinition byteOrder;
     private final InetAddress address;
     private final int port;
@@ -307,8 +336,9 @@ public class JsonFixture extends LXFixture {
     private final int stride;
     private final boolean reverse;
 
-    private OutputDefinition(ProtocolDefinition protocol, ByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int start, int num, int stride, boolean reverse) {
+    private OutputDefinition(ProtocolDefinition protocol, TransportDefinition transport, ByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int start, int num, int stride, boolean reverse) {
       this.protocol = protocol;
+      this.transport = transport;
       this.byteOrder = byteOrder;
       this.address = address;
       this.port = port;
@@ -1195,6 +1225,16 @@ public class JsonFixture extends LXFixture {
       addWarning("Output definition must define a valid protocol");
       return;
     }
+
+    TransportDefinition transport = TransportDefinition.UDP;
+    if (outputObj.has(KEY_TRANSPORT)) {
+      transport = TransportDefinition.get(loadString(outputObj, KEY_TRANSPORT, true, "Output must specify valid transport"));
+      if (transport == null) {
+        transport = TransportDefinition.UDP;
+        addWarning("Output should define a valid transport");
+      }
+    }
+
     ByteOrderDefinition byteOrder = ByteOrderDefinition.RGB;
     String byteOrderStr = loadString(outputObj, KEY_BYTE_ORDER, true, "Output must specify a valid string " + KEY_BYTE_ORDER);
     if (byteOrderStr != null) {
@@ -1230,7 +1270,11 @@ public class JsonFixture extends LXFixture {
         addWarning("Output port number must be positive: " + port);
         return;
       }
+    } else if (protocol.requiresExplicitPort()) {
+      addWarning("Protcol " + protocol + " requires an expicit port number to be specified");
+      return;
     }
+
     String universeKey = protocol.getUniverseKey();
     int universe = loadInt(outputObj, universeKey, true, "Output " + universeKey + " must be a valid integer");
     if (universe < 0) {
@@ -1260,7 +1304,7 @@ public class JsonFixture extends LXFixture {
       }
     }
     boolean reverse = loadBoolean(outputObj, KEY_REVERSE, "Output " + KEY_REVERSE + " must be a valid boolean");
-    outputs.add(new OutputDefinition(protocol, byteOrder, address, port, universe, start, num, stride, reverse));
+    outputs.add(new OutputDefinition(protocol, transport, byteOrder, address, port, universe, start, num, stride, reverse));
   }
 
   @Override
@@ -1399,7 +1443,11 @@ public class JsonFixture extends LXFixture {
       bufferOutput = new KinetDatagram(this.lx, indexBuffer, output.universe);
       break;
     case OPC:
-      bufferOutput = new OPCDatagram(this.lx, indexBuffer, byteOrder, (byte) output.universe);
+      if (output.transport == TransportDefinition.TCP) {
+        bufferOutput = new OPCSocket(this.lx, indexBuffer, byteOrder, (byte) output.universe);
+      } else {
+        bufferOutput = new OPCDatagram(this.lx, indexBuffer, byteOrder, (byte) output.universe);
+      }
       break;
     case ARTSYNC:
     default:
