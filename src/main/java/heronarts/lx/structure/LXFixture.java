@@ -31,22 +31,22 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
-import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 
 /**
- * An LXFixture is a rich LXComponent representing a physical lighting fixture which is
- * addressed by a datagram packet. This class encapsulates the ability to configure the
- * dimensions and location of the lighting fixture as well as to specify its otuput modes
+ * An LXFixture is a rich LXComponent representing a physical lighting fixture which may
+ * be addressed by output packets. This class encapsulates the ability to configure the
+ * dimensions and location of the lighting fixture as well as to specify its output modes
  * and protocol.
  */
 public abstract class LXFixture extends LXComponent implements LXFixtureContainer, LXComponent.Renamable {
 
   /**
-   * Output datagram protocols
+   * Output protocols
    */
   public static enum Protocol {
     /**
@@ -148,12 +148,12 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   protected final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
 
-  private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
+  private final List<LXOutput> mutableOutputs = new ArrayList<LXOutput>();
 
   /**
-   * Publicly accessible list of the datagrams that should be sent to this fixture
+   * Publicly accessible list of the outputs that should be sent to this fixture
    */
-  public final List<LXDatagram> datagrams = Collections.unmodifiableList(this.mutableDatagrams);
+  public final List<LXOutput> outputs = Collections.unmodifiableList(this.mutableOutputs);
 
   private final LXMatrix parentTransformMatrix = new LXMatrix();
 
@@ -183,7 +183,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private final Set<LXParameter> geometryParameters = new HashSet<LXParameter>();
 
-  private final Set<LXParameter> datagramParameters = new HashSet<LXParameter>();
+  private final Set<LXParameter> outputParameters = new HashSet<LXParameter>();
 
   private int index = 0;
 
@@ -345,16 +345,16 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   }
 
   /**
-   * Adds a parameter which impacts the output datagrams of the fixture. Whenever
-   * one is changed, the datagrams will be regenerated.
+   * Adds a parameter which impacts the outputs of the fixture. Whenever
+   * one is changed, the outputs will be regenerated.
    *
    * @param path Path to parameter
    * @param parameter Parameter
    * @return this
    */
-  protected LXFixture addDatagramParameter(String path, LXParameter parameter) {
+  protected LXFixture addOutputParameter(String path, LXParameter parameter) {
     addParameter(path, parameter);
-    this.datagramParameters.add(parameter);
+    this.outputParameters.add(parameter);
     return this;
   }
 
@@ -370,8 +370,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         // We don't need to rebuild the whole model here, just update the
         // geometry for affected fixtures
         regenerateGeometry();
-      } else if (this.datagramParameters.contains(p)) {
-        regenerateDatagrams();
+      } else if (this.outputParameters.contains(p)) {
+        regenerateOutputs();
       }
     }
     if (p == this.solo) {
@@ -385,7 +385,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * An internal utility class which dynamically keeps the index values inside
    * an index buffer up to date and in sync with this fixture. Custom fixture
    * classes should use this construct via {@link #toDynamicIndexBuffer()}
-   * in order to keep their datagram indices in sync with the
+   * in order to keep their output indices in sync with the fixture's model
    */
   private class DynamicIndexBuffer {
 
@@ -457,71 +457,71 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private final List<DynamicIndexBuffer> dynamicIndexBuffers = new ArrayList<DynamicIndexBuffer>();
 
-  private void regenerateDatagrams() {
-    // Dispose of all these datagrams
-    for (LXDatagram datagram : this.datagrams) {
-      datagram.dispose();
+  private void regenerateOutputs() {
+    // Dispose of all these outputs
+    for (LXOutput output : this.outputs) {
+      output.dispose();
     }
-    this.mutableDatagrams.clear();
+    this.mutableOutputs.clear();
 
     // Dynamic index buffers are no good anymore
     this.dynamicIndexBuffers.clear();
 
     // Rebuild
-    this.isInBuildDatagrams = true;
-    buildDatagrams();
-    this.isInBuildDatagrams = false;
+    this.isInBuildOutputs = true;
+    buildOutputs();
+    this.isInBuildOutputs = false;
   }
 
-  private boolean isInBuildDatagrams = false;
+  private boolean isInBuildOutputs = false;
 
   /**
    * Subclasses must override this method to provide an implementation that
-   * produces the necessary set of datagrams for this fixture to be sent.
-   * The subclass should call {@link #addDatagram(LXDatagram)} for each datagram.
+   * produces the necessary set of outputs for this fixture to be sent.
+   * The subclass should call {@link #addOutputt(LXOutput)} for each output.
    */
-  protected abstract void buildDatagrams();
+  protected abstract void buildOutputs();
 
   /**
-   * Subclasses may override this method to update their datagrams in the
-   * case that the point indexing of this fixture has changed. Datagrams
+   * Subclasses may override this method to update their outputs in the
+   * case that the point indexing of this fixture has changed. Outputs
    * may be removed and readded inside this method if necessary. If the
    * {@link DynamicIndexBuffer} class has been used to construct indices for
-   * datagrams, then no action should typically be necessary.
+   * outputs, then no action should typically be necessary.
    */
-  protected void reindexDatagrams() {}
+  protected void reindexOutputs() {}
 
   /**
-   * Subclasses call this method to add a datagram to thix fixture. This may only
-   * be called from within the buildDatagrams() function.
+   * Subclasses call this method to add an output to thix fixture. This may only
+   * be called from within the buildOutputs() function.
    *
-   * @param datagram Datagram to add
+   * @param output Output to add
    */
-  protected void addDatagram(LXDatagram datagram) {
-    if (!this.isInBuildDatagrams) {
-      throw new IllegalStateException("May not add datagrams from outside buildDatagrams() method");
+  protected void addOutput(LXOutput output) {
+    if (!this.isInBuildOutputs) {
+      throw new IllegalStateException("May not add outputs from outside buildOutputs() method");
     }
-    Objects.requireNonNull(datagram, "Cannot add null datagram to LXFixture.addDatagram");
-    if (this.mutableDatagrams.contains(datagram)) {
-      throw new IllegalStateException("May not add duplicate LXDatagram to LXFixture: " + datagram);
+    Objects.requireNonNull(output, "Cannot add null output to LXFixture.addOutput");
+    if (this.mutableOutputs.contains(output)) {
+      throw new IllegalStateException("May not add duplicate LXOuutputto LXFixture: " + output);
     }
-    this.mutableDatagrams.add(datagram);
+    this.mutableOutputs.add(output);
   }
 
   /**
-   * Subclasses call this method to remove a datagram from the fixture. This may only
-   * be performed from within the reindexDatagrams or buildDatagrams methods.
+   * Subclasses call this method to remove a output from the fixture. This may only
+   * be performed from within the reindexOutputs or buildOutputs methods.
    *
-   * @param datagram Datagram to remove
+   * @param outtput Output to remove
    */
-  protected void removeDatagram(LXDatagram datagram) {
-    if (!this.isInBuildDatagrams) {
-      throw new IllegalStateException("May not remove datagrams from outside reindexDatagrams() method");
+  protected void removeOutput(LXOutput output) {
+    if (!this.isInBuildOutputs) {
+      throw new IllegalStateException("May not remove outputs from outside reindexOutputs() method");
     }
-    if (!this.mutableDatagrams.contains(datagram)) {
-      throw new IllegalStateException("May not remove non-existent LXDatagram from LXFixture: " + datagram + " " + this);
+    if (!this.mutableOutputs.contains(output)) {
+      throw new IllegalStateException("May not remove non-existent LXOutput from LXFixture: " + output + " " + this);
     }
-    this.mutableDatagrams.remove(datagram);
+    this.mutableOutputs.remove(output);
   }
 
   /**
@@ -548,8 +548,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // going to notify them after this of even more substantive generation change.
     _regenerateGeometry();
 
-    // Rebuild datagram objects
-    regenerateDatagrams();
+    // Rebuild output objects
+    regenerateOutputs();
 
     // Let our container know that our structural generation has changed
     if (this.container != null) {
@@ -656,12 +656,12 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       startIndex += child.totalSize();
     }
 
-    // Only update index buffers and datagrams if any indices were changed
+    // Only update index buffers and outputs if any indices were changed
     if (somethingChanged) {
       for (DynamicIndexBuffer dynamicIndexBuffer : this.dynamicIndexBuffers) {
         dynamicIndexBuffer.update();
       }
-      reindexDatagrams();
+      reindexOutputs();
     }
 
     return somethingChanged;
@@ -879,10 +879,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     for (LXFixture child : this.children) {
       child.dispose();
     }
-    for (LXDatagram datagram : this.datagrams) {
-      datagram.dispose();
+    for (LXOutput output : this.outputs) {
+      output.dispose();
     }
-    this.mutableDatagrams.clear();
+    this.mutableOutputs.clear();
     super.dispose();
   }
 

@@ -23,9 +23,9 @@ import heronarts.lx.LX;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
-import heronarts.lx.output.LXBufferDatagram;
-import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
+import heronarts.lx.output.OPCSocket;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.LXParameter;
 
@@ -35,12 +35,13 @@ import heronarts.lx.parameter.LXParameter;
  */
 public abstract class LXBasicFixture extends LXProtocolFixture {
 
-  private LXBufferDatagram datagram = null;
+  private LXOutput output = null;
 
   protected LXBasicFixture(LX lx, String label) {
     super(lx, label);
-    addDatagramParameter("protocol", this.protocol);
-    addDatagramParameter("reverse", this.reverse);
+    addOutputParameter("protocol", this.protocol);
+    addOutputParameter("transport", this.transport);
+    addOutputParameter("reverse", this.reverse);
     addParameter("host", this.host);
     addParameter("artNetUniverse", this.artNetUniverse);
     addParameter("opcChannel", this.opcChannel);
@@ -49,19 +50,19 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
   }
 
   /**
-   * Accessor for the datagram that corresponds to this fixture
+   * Accessor for the output that corresponds to this fixture
    *
-   * @return Datagram that sends data for this fixture
+   * @return Output that sends data for this fixture
    */
-  public LXDatagram getDatagram() {
-    return this.datagram;
+  public LXOutput getOutput() {
+    return this.output;
   }
 
   @Override
-  protected final void buildDatagrams() {
-    this.datagram = buildDatagram();
-    if (this.datagram != null) {
-      addDatagram(this.datagram);
+  protected void buildOutputs() {
+    this.output = buildOutput();
+    if (this.output != null) {
+      addOutput(this.output);
     }
   }
 
@@ -74,7 +75,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
     }
   }
 
-  protected LXBufferDatagram buildDatagram() {
+  protected LXOutput buildOutput() {
     Protocol protocol = this.protocol.getEnum();
     if (protocol == Protocol.NONE) {
       return null;
@@ -85,60 +86,72 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       return null;
     }
 
-    LXBufferDatagram datagram;
+    LXOutput output;
     switch (protocol) {
     case ARTNET:
-      datagram = new ArtNetDatagram(toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
+      output = new ArtNetDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
       break;
     case SACN:
-      datagram = new StreamingACNDatagram(toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
+      output = new StreamingACNDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
       break;
     case OPC:
-      datagram = new OPCDatagram(toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+      switch (this.transport.getEnum()) {
+      case TCP:
+        output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+        break;
+      default:
+      case UDP:
+        output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+        break;
+      }
       break;
     case DDP:
-      datagram = new DDPDatagram(toDynamicIndexBuffer(), this.ddpDataOffset.getValuei());
+      output = new DDPDatagram(this.lx, toDynamicIndexBuffer(), this.ddpDataOffset.getValuei());
       break;
     case KINET:
-      datagram = new KinetDatagram(toDynamicIndexBuffer(), this.kinetPort.getValuei());
+      output = new KinetDatagram(this.lx, toDynamicIndexBuffer(), this.kinetPort.getValuei());
       break;
     default:
     case NONE:
       throw new IllegalStateException("Unhandled LXBasicFixture protocol type: " + protocol);
     }
 
-    datagram.setAddress(address);
+    if (output instanceof LXOutput.InetOutput) {
+      ((LXOutput.InetOutput) output).setAddress(address);
+    }
 
-    return datagram;
+    return output;
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
-    if (this.datagram != null) {
+    if (this.output != null) {
       if (p == this.host) {
         InetAddress address = resolveHostAddress();
-        this.datagram.enabled.setValue(address != null);
-        if (address != null) {
-          this.datagram.setAddress(address);
+        if (this.output instanceof LXOutput.InetOutput) {
+          this.output.enabled.setValue(address != null);
+          if (address != null) {
+            ((LXOutput.InetOutput) this.output).setAddress(address);
+          }
         }
       } else if (p == this.artNetUniverse) {
-        if (this.datagram instanceof ArtNetDatagram) {
-          ((ArtNetDatagram) this.datagram).setUniverseNumber(this.artNetUniverse.getValuei());
-        } else if (this.datagram instanceof StreamingACNDatagram) {
-          ((StreamingACNDatagram) this.datagram).setUniverseNumber(this.artNetUniverse.getValuei());
+        if (this.output instanceof ArtNetDatagram) {
+          ((ArtNetDatagram) this.output).setUniverseNumber(this.artNetUniverse.getValuei());
+        } else if (this.output instanceof StreamingACNDatagram) {
+          ((StreamingACNDatagram) this.output).setUniverseNumber(this.artNetUniverse.getValuei());
         }
       } else if (p == this.ddpDataOffset) {
-        if (this.datagram instanceof DDPDatagram) {
-          ((DDPDatagram) this.datagram).setDataOffset(this.ddpDataOffset.getValuei());
+        if (this.output instanceof DDPDatagram) {
+          ((DDPDatagram) this.output).setDataOffset(this.ddpDataOffset.getValuei());
         }
       } else if (p == this.opcChannel) {
-        if (this.datagram instanceof OPCDatagram) {
-          ((OPCDatagram) this.datagram).setChannel((byte) this.opcChannel.getValuei());
+        if (this.output instanceof OPCDatagram) {
+          ((OPCDatagram) this.output).setChannel((byte) this.opcChannel.getValuei());
         }
       } else if (p == this.kinetPort) {
-        if (this.datagram instanceof KinetDatagram) {
-          ((KinetDatagram) this.datagram).setKinetPort((byte) this.kinetPort.getValuei());
+        if (this.output instanceof KinetDatagram) {
+          ((KinetDatagram) this.output).setKinetPort((byte) this.kinetPort.getValuei());
         }
       }
     }

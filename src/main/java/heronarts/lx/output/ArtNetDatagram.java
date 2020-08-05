@@ -18,9 +18,10 @@
 
 package heronarts.lx.output;
 
+import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 
-public class ArtNetDatagram extends LXBufferDatagram {
+public class ArtNetDatagram extends LXDatagram {
 
   public final static int ARTNET_PORT = 6454;
   public final static int MAX_DATA_LENGTH = 512;
@@ -40,122 +41,134 @@ public class ArtNetDatagram extends LXBufferDatagram {
   /**
    * Creates an ArtNetDatagram for the given model
    *
+   * @param lx LX instance
    * @param model Model of points
    */
-  public ArtNetDatagram(LXModel model) {
-    this(model, DEFAULT_UNIVERSE);
+  public ArtNetDatagram(LX lx, LXModel model) {
+    this(lx, model, DEFAULT_UNIVERSE);
   }
 
   /**
    * Creates an ArtNetDatagram for the given index buffer
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer
    */
-  public ArtNetDatagram(int[] indexBuffer) {
-    this(indexBuffer, DEFAULT_UNIVERSE);
+  public ArtNetDatagram(LX lx, int[] indexBuffer) {
+    this(lx, indexBuffer, DEFAULT_UNIVERSE);
   }
 
   /**
    * Creates an ArtNetDatagram for the given index buffer and byte ordering
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer
    * @param byteOrder Byte ordering for points
    */
-  public ArtNetDatagram(int[] indexBuffer, ByteOrder byteOrder) {
-    this(indexBuffer, DEFAULT_UNIVERSE, byteOrder);
+  public ArtNetDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder) {
+    this(lx, indexBuffer, byteOrder, DEFAULT_UNIVERSE);
   }
 
   /**
    * Creates an ArtNetDatagram for the given model and universe number
    *
+   * @param lx LX instance
    * @param model Model of points
    * @param universeNumber universe number
    */
-  public ArtNetDatagram(LXModel model, int universeNumber) {
-    this(model.toIndexBuffer(), universeNumber);
+  public ArtNetDatagram(LX lx, LXModel model, int universeNumber) {
+    this(lx, model.toIndexBuffer(), universeNumber);
   }
 
   /**
    * Creates an ArtNetDatagram for the given model, universe, and byte order
    *
+   * @param lx LX instance
    * @param model Model of points
-   * @param universeNumber Universe number
    * @param byteOrder Byte ordering
+   * @param universeNumber Universe number
    */
-  public ArtNetDatagram(LXModel model, int universeNumber, ByteOrder byteOrder) {
-    this(model.toIndexBuffer(), universeNumber, byteOrder);
+  public ArtNetDatagram(LX lx, LXModel model, ByteOrder byteOrder, int universeNumber) {
+    this(lx, model.toIndexBuffer(), byteOrder, universeNumber);
   }
 
   /**
    * Creates an ArtNetDatagram for the given index buffer and universe number
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer
    * @param universeNumber Universe number
    */
-  public ArtNetDatagram(int[] indexBuffer, int universeNumber) {
-    this(indexBuffer, universeNumber, ByteOrder.RGB);
+  public ArtNetDatagram(LX lx, int[] indexBuffer, int universeNumber) {
+    this(lx, indexBuffer, ByteOrder.RGB, universeNumber);
   }
 
   /**
    * Creates an ArtNetDatagram for the given index buffer, universe and byte ordering
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer
-   * @param universeNumber Universe number
    * @param byteOrder Byte ordering
+   * @param universeNumber Universe number
    */
-  public ArtNetDatagram(int[] indexBuffer, int universeNumber, ByteOrder byteOrder) {
-    this(indexBuffer, byteOrder.getNumBytes() * indexBuffer.length, universeNumber, byteOrder);
+  public ArtNetDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int universeNumber) {
+    this(lx, indexBuffer, byteOrder, byteOrder.getNumBytes() * indexBuffer.length, universeNumber);
   }
 
   /**
    * Creates an ArtNetDatagram for the given model, with fixed data length and universe
    *
+   * @param lx LX instance
    * @param model Model
    * @param dataLength Fixed data payload length
    * @param universeNumber Universe number
    */
-  public ArtNetDatagram(LXModel model, int dataLength, int universeNumber) {
-    this(model.toIndexBuffer(), dataLength, universeNumber, ByteOrder.RGB);
+  public ArtNetDatagram(LX lx, LXModel model, int dataLength, int universeNumber) {
+    this(lx, model.toIndexBuffer(), ByteOrder.RGB, dataLength, universeNumber);
   }
 
   /**
    * Creates an ArtNetDatagram with fixed data length for given model, universe, and byte ordering
    *
+   * @param lx LX instance
    * @param model Model of points
+   * @param byteOrder Byte ordering
    * @param dataLength Fixed data payload length
    * @param universeNumber Universe number
-   * @param byteOrder Byte ordering
    */
-  public ArtNetDatagram(LXModel model, int dataLength, int universeNumber, ByteOrder byteOrder) {
-    this(model.toIndexBuffer(), dataLength, universeNumber, byteOrder);
+  public ArtNetDatagram(LX lx, LXModel model, ByteOrder byteOrder, int dataLength, int universeNumber) {
+    this(lx, model.toIndexBuffer(), byteOrder, dataLength, universeNumber);
   }
 
   /**
    * Creates an ArtNetDatagram with fixed data length for given index buffer and universe
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer
    * @param dataLength Fixed data payload length
    * @param universeNumber Universe number
    */
-  public ArtNetDatagram(int[] indexBuffer, int dataLength, int universeNumber) {
-    this(indexBuffer, dataLength, universeNumber, ByteOrder.RGB);
+  public ArtNetDatagram(LX lx, int[] indexBuffer, int dataLength, int universeNumber) {
+    this(lx, indexBuffer, ByteOrder.RGB, dataLength, universeNumber);
   }
 
   /**
    * Creates an ArtNetDatagram with fixed data length for given index buffer, universe, and byte order
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer
+   * @param byteOrder Byte order
    * @param dataLength Fixed data payload length
    * @param universeNumber Universe number
-   * @param byteOrder Byte order
    */
-  public ArtNetDatagram(int[] indexBuffer, int dataLength, int universeNumber, ByteOrder byteOrder) {
-    super(indexBuffer, ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2), byteOrder);
+  public ArtNetDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int dataLength, int universeNumber) {
+    super(lx, indexBuffer, byteOrder, ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2));
 
     // DMX alignment requirement, ensure data length is even number of bytes
     this.dataLength = dataLength + (dataLength % 2);
-
     setPort(ARTNET_PORT);
+
+    validateBufferSize();
 
     this.buffer[0] = 'A';
     this.buffer[1] = 'r';
@@ -210,7 +223,7 @@ public class ArtNetDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getColorBufferPosition() {
+  protected int getDataBufferOffset() {
     return ARTNET_HEADER_LENGTH;
   }
 

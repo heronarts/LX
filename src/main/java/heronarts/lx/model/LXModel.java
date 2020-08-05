@@ -30,7 +30,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
 
@@ -103,9 +103,9 @@ public class LXModel implements LXSerializable {
     new HashMap<String, List<LXModel>>();
 
   /**
-   * An ordered list of datagrams that should be sent for this model.
+   * An ordered list of outputs that should be sent for this model.
    */
-  public final List<LXDatagram> datagrams;
+  public final List<LXOutput> outputs;
 
   /**
    * A list of String keys by which this model type can be identified. Keys are non-empty strings.
@@ -295,7 +295,7 @@ public class LXModel implements LXSerializable {
     this.children = children.clone();
     this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
-    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>());
+    this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
     recomputeGeometry();
   }
 
@@ -332,7 +332,7 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = _points.size();
-    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>());
+    this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
     recomputeGeometry();
   }
 
@@ -358,7 +358,7 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = this.points.length;
-    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>(builder.datagrams));
+    this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>(builder.outputs));
     recomputeGeometry();
     if (isRoot) {
       reindexPoints();

@@ -22,8 +22,6 @@ public interface OPCConstants {
 
   public static final int HEADER_LEN = 4;
 
-  public static final int BYTES_PER_PIXEL = 3;
-
   public static final int OFFSET_CHANNEL = 0;
   public static final int OFFSET_COMMAND = 1;
   public static final int OFFSET_DATA_LEN_MSB = 2;

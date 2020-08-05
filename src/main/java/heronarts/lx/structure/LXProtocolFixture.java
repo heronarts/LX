@@ -37,9 +37,18 @@ import heronarts.lx.parameter.StringParameter;
  */
 public abstract class LXProtocolFixture extends LXFixture {
 
+  public enum Transport {
+    UDP,
+    TCP;
+  }
+
   public final EnumParameter<Protocol> protocol =
     new EnumParameter<Protocol>("Protocol", Protocol.NONE)
     .setDescription("Which lighting data protocol this fixture uses");
+
+  public final EnumParameter<Transport> transport =
+    new EnumParameter<Transport>("Transport", Transport.UDP)
+    .setDescription("Which transport the protocol should use");
 
   public final StringParameter host =
     new StringParameter("Host", "127.0.0.1")

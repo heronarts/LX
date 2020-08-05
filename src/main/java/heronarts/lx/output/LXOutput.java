@@ -18,15 +18,15 @@
 
 package heronarts.lx.output;
 
+import java.net.InetAddress;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.BooleanParameter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * This class represents the output stage from the LX engine to real devices.
@@ -35,9 +35,27 @@ import java.util.List;
  */
 public abstract class LXOutput extends LXComponent {
 
-  private final List<LXOutput> mutableChildren = new ArrayList<LXOutput>();
+  public interface InetOutput {
 
-  public final List<LXOutput> children = Collections.unmodifiableList(this.mutableChildren);
+    public static final int NO_PORT = -1;
+
+    public InetOutput setAddress(InetAddress address);
+    public InetAddress getAddress();
+    public InetOutput setPort(int port);
+    public int getPort();
+  }
+
+  public enum GammaMode {
+    /**
+     * Inherit gamma table from parent
+     */
+    INHERIT,
+
+    /**
+     * Use gamma correction setting in this specific output
+     */
+    DIRECT;
+  }
 
   /**
    * Whether the output is enabled.
@@ -63,6 +81,12 @@ public abstract class LXOutput extends LXComponent {
     .setDescription("Gamma correction on the output, 1 is linear (no gamma)");
 
   /**
+   * Gamma table mode, whether to inherit gamma
+   */
+  public final EnumParameter<GammaMode> gammaMode =
+    new EnumParameter<GammaMode>("Gamma Mode", GammaMode.INHERIT);
+
+  /**
    * Brightness of the output
    */
   public final CompoundParameter brightness =
@@ -78,22 +102,30 @@ public abstract class LXOutput extends LXComponent {
    * A lookup table that maps brightness and index byte to output byte. For high-pixel projects
    * this avoids lots of redundant brightness multiplies at the output.
    */
-  protected final byte[][] gammaLut = new byte[256][256];
+  private byte[][] gammaLut = null;
+
+  private LXOutput gammaDelegate = null;
 
   private void buildGammaTable() {
-    double gamma = this.gamma.getValue();
-    if (gamma == 1) {
-      for (int b = 0; b < 256; ++b) {
-        int bb = b + (b > 127 ? 1 : 0);
-        for (int in = 0; in < 256; ++in) {
-          this.gammaLut[b][in] = (byte) ((in * bb) >> 8);
-        }
+    if (this.gammaMode.getEnum() == GammaMode.DIRECT) {
+      if (this.gammaLut == null) {
+        this.gammaLut = new byte[256][256];
       }
-    } else {
-      double maxInv = 1. / 65025.;
-      for (int b = 0; b < 256; ++b) {
-        for (int in = 0; in < 256; ++in) {
-          this.gammaLut[b][in] = (byte) (0xff & (int) Math.round(Math.pow(in * b * maxInv, gamma) * 255.f));
+
+      double gamma = this.gamma.getValue();
+      if (gamma == 1) {
+        for (int b = 0; b < 256; ++b) {
+          int bb = b + (b > 127 ? 1 : 0);
+          for (int in = 0; in < 256; ++in) {
+            this.gammaLut[b][in] = (byte) ((in * bb) >> 8);
+          }
+        }
+      } else {
+        double maxInv = 1. / 65025.;
+        for (int b = 0; b < 256; ++b) {
+          for (int in = 0; in < 256; ++in) {
+            this.gammaLut[b][in] = (byte) (0xff & (int) Math.round(Math.pow(in * b * maxInv, gamma) * 255.f));
+          }
         }
       }
     }
@@ -108,39 +140,25 @@ public abstract class LXOutput extends LXComponent {
     buildGammaTable();
 
     addParameter("enabled", this.enabled);
+    addParameter("brightness", this.brightness);
     addParameter("fps", this.framesPerSecond);
     addParameter("gamma", this.gamma);
-    addParameter("brightness", this.brightness);
+    addParameter("gammaMode", this.gammaMode);
+  }
+
+  public void setGammaDelegate(LXOutput gammaDelegate) {
+    this.gammaDelegate = gammaDelegate;
+  }
+
+  public void setGroup(LXOutputGroup output) {
+    super.setParent(output);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (p == this.gamma) {
+    if (p == this.gamma || p == this.gammaMode) {
       buildGammaTable();
     }
-  }
-
-  /**
-   * Adds a child to this output, sent after color-correction
-   *
-   * @param child Child output
-   * @return this
-   */
-  public LXOutput addChild(LXOutput child) {
-    child.setParent(this);
-    this.mutableChildren.add(child);
-    return this;
-  }
-
-  /**
-   * Removes a child
-   *
-   * @param child Child output
-   * @return this
-   */
-  public LXOutput removeChild(LXOutput child) {
-    this.mutableChildren.remove(child);
-    return this;
   }
 
   /**
@@ -156,11 +174,11 @@ public abstract class LXOutput extends LXComponent {
   /**
    * Sends data to this output at the pre-corrected brightness
    *
-   * @param colors
-   * @param brightness
-   * @return
+   * @param colors Color buffer
+   * @param brightness Brightness level from parent
+   * @return this
    */
-  private final LXOutput send(int[] colors, double brightness) {
+  public final LXOutput send(int[] colors, double brightness) {
     if (!this.enabled.isOn()) {
       return this;
     }
@@ -173,19 +191,24 @@ public abstract class LXOutput extends LXComponent {
       // Send at the adjusted brightness level
       onSend(colors, brightness);
 
-      // Send to all children, with cascading brightness
-      for (LXOutput child : this.mutableChildren) {
-        child.send(colors, brightness);
-      }
       this.lastFrameMillis = now;
     }
     return this;
   }
 
+  protected byte[] getGammaLut(double brightness) {
+    switch (this.gammaMode.getEnum()) {
+    case DIRECT:
+      return this.gammaLut[(int) Math.round(brightness * 255.f)];
+    default:
+    case INHERIT:
+      LXOutput gammaOutout = (this.gammaDelegate != null) ? this.gammaDelegate : (LXOutput) getParent();
+      return gammaOutout.getGammaLut(brightness);
+    }
+  }
+
   protected void onSend(int[] colors, double brightness) {
-    // Select the right gamma look-up table for our settings
-    byte[] glut = this.gammaLut[(int) Math.round(brightness * 255.f)];
-    onSend(colors, glut);
+    onSend(colors, getGammaLut(brightness));
   }
 
   /**

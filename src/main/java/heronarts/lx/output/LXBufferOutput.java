@@ -20,7 +20,9 @@ package heronarts.lx.output;
 
 import java.util.Objects;
 
-public abstract class LXBufferDatagram extends LXDatagram {
+import heronarts.lx.LX;
+
+public abstract class LXBufferOutput extends LXOutput {
 
   /**
    * Various orderings for RGB buffer data
@@ -75,32 +77,46 @@ public abstract class LXBufferDatagram extends LXDatagram {
 
   protected final int[] indexBuffer;
 
-  protected LXBufferDatagram(int[] indexBuffer, int datagramSize) {
-    this(indexBuffer, datagramSize, ByteOrder.RGB);
+  protected LXBufferOutput(LX lx, int[] indexBuffer) {
+    this(lx, indexBuffer, ByteOrder.RGB);
   }
 
-  protected LXBufferDatagram(int[] indexBuffer, int datagramSize, ByteOrder byteOrder) {
-    super(datagramSize);
-    this.byteOrder = byteOrder;
+  protected LXBufferOutput(LX lx, int[] indexBuffer, ByteOrder byteOrder) {
+    super(lx);
     this.indexBuffer = indexBuffer;
+    this.byteOrder = byteOrder;
   }
 
   /**
-   * Updates the values in the index buffer for this datagram. The indices can change but the size
-   * of the datagram cannot, the indexBuffer must have the same length. It will be copied into the
-   * index buffer object held by the datagram.
+   * Updates the values in the index buffer for this output. The indices can change but the size
+   * of the output buffer cannot, the indexBuffer must have the same length. It will be copied into the
+   * index buffer object held by this output object.
    *
    * @param indexBuffer New index buffer values, must have same length as existing
    * @return this
    */
-  public LXBufferDatagram updateIndexBuffer(int[] indexBuffer) {
-    Objects.requireNonNull(indexBuffer, "May not set null LXBufferDatagram.setIndexBuffer()");
+  public LXBufferOutput updateIndexBuffer(int[] indexBuffer) {
+    Objects.requireNonNull(indexBuffer, "May not set null LXBufferOutput.setIndexBuffer()");
     if (indexBuffer.length != this.indexBuffer.length) {
-      throw new IllegalArgumentException("May not change length of LXBufferDatagram indexBuffer, must make a new Datagram: " + this.indexBuffer.length + " != " + indexBuffer.length);
+      throw new IllegalArgumentException("May not change length of LXBufferOutput indexBuffer, must make a new Output: " + this.indexBuffer.length + " != " + indexBuffer.length);
     }
     System.arraycopy(indexBuffer, 0, this.indexBuffer, 0, indexBuffer.length);
     return this;
   }
+
+  /**
+   * Subclasses should provide a handle to a raw byte buffer
+   *
+   * @return Raw byte buffer for output data
+   */
+  protected abstract byte[] getDataBuffer();
+
+  /**
+   * Offset into raw byte buffer where color data is written
+   *
+   * @return Offset into raw byte buffer for color data
+   */
+  protected abstract int getDataBufferOffset();
 
   /**
    * Sets the byte ordering of data in this datagram buffer
@@ -108,7 +124,7 @@ public abstract class LXBufferDatagram extends LXDatagram {
    * @param byteOrder Byte ordering
    * @return this
    */
-  public LXBufferDatagram setByteOrder(ByteOrder byteOrder) {
+  public LXBufferOutput setByteOrder(ByteOrder byteOrder) {
     if (this.byteOrder.getNumBytes() != byteOrder.getNumBytes()) {
       throw new IllegalArgumentException("May not change number of bytes in order");
     }
@@ -123,15 +139,15 @@ public abstract class LXBufferDatagram extends LXDatagram {
    *
    * @param colors Array of color values
    * @param glut Look-up table of gamma-corrected brightness values
-   * @param indexBuffer Array of point indices
-   * @param offset Offset in buffer to write
    * @return this
    */
-  protected LXBufferDatagram copyPoints(int[] colors, byte[] glut, int[] indexBuffer, int offset) {
+  protected LXBufferOutput updateDataBuffer(int[] colors, byte[] glut) {
+    byte[] buffer = getDataBuffer();
+    int offset = getDataBufferOffset();
     int numBytes = this.byteOrder.getNumBytes();
     if (this.byteOrder.hasWhite()) {
       int[] byteOffset = this.byteOrder.getByteOffset();
-      for (int index : indexBuffer) {
+      for (int index : this.indexBuffer) {
         int color = (index >= 0) ? colors[index] : 0;
         byte r = glut[((color >> 16) & 0xff)];
         byte g = glut[((color >> 8) & 0xff)];
@@ -140,42 +156,23 @@ public abstract class LXBufferDatagram extends LXDatagram {
         r -= w;
         g -= w;
         b -= w;
-        this.buffer[offset + byteOffset[0]] = r;
-        this.buffer[offset + byteOffset[1]] = g;
-        this.buffer[offset + byteOffset[2]] = b;
-        this.buffer[offset + byteOffset[3]] = w;
+        buffer[offset + byteOffset[0]] = r;
+        buffer[offset + byteOffset[1]] = g;
+        buffer[offset + byteOffset[2]] = b;
+        buffer[offset + byteOffset[3]] = w;
         offset += numBytes;
       }
     } else {
       int[] byteOffset = this.byteOrder.getByteOffset();
       for (int index : indexBuffer) {
         int color = (index >= 0) ? colors[index] : 0;
-        this.buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
-        this.buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
-        this.buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
+        buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
+        buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
+        buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
         offset += numBytes;
       }
     }
     return this;
-  }
-
-  /**
-   * Subclasses must implement, indicates where the data offset is to write the color
-   * data into the buffer
-   *
-   * @return data offset position
-   */
-  protected abstract int getColorBufferPosition();
-
-  /**
-   * Subclasses may override to update the sequence number, if one is being used.
-   */
-  protected void updateSequenceNumber() {}
-
-  @Override
-  public final void onSend(int[] colors, byte[] glut) {
-    copyPoints(colors, glut, this.indexBuffer, getColorBufferPosition());
-    updateSequenceNumber();
   }
 
 }

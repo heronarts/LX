@@ -18,6 +18,7 @@
 
 package heronarts.lx.output;
 
+import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 
 /**
@@ -26,7 +27,7 @@ import heronarts.lx.model.LXModel;
  * number on the output device is specified, distinct from the UDP port. For
  * instance, an sPDS-480 has 16 outputs.
  */
-public class KinetDatagram extends LXBufferDatagram {
+public class KinetDatagram extends LXDatagram {
 
   private final static int DMXOUT_HEADER_LENGTH = 21;
   private final static int PORTOUT_HEADER_LENGTH = 24;
@@ -71,46 +72,51 @@ public class KinetDatagram extends LXBufferDatagram {
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
+   * @param lx LX instance
    * @param model Model to output points for
    * @param kinetPort Number of the output port on the kinet power supply
    */
-  public KinetDatagram(LXModel model, int kinetPort) {
-    this(model, kinetPort, Version.PORTOUT);
+  public KinetDatagram(LX lx, LXModel model, int kinetPort) {
+    this(lx, model, kinetPort, Version.PORTOUT);
   }
 
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
+   * @param lx LX instance
    * @param model Model that this datagram outputs points for
    * @param kinetPort Number of the output port on the kinet power supply
    * @param version Version of Kinet Protocol
    */
-  public KinetDatagram(LXModel model, int kinetPort, Version version) {
-    this(model.toIndexBuffer(), kinetPort, version);
+  public KinetDatagram(LX lx, LXModel model, int kinetPort, Version version) {
+    this(lx, model.toIndexBuffer(), kinetPort, version);
   }
 
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
+   * @param lx LX instance
    * @param indexBuffer A list of the point indices that should be sent on this port
    * @param kinetPort Number of the output port on the kinet power supply
    */
-  public KinetDatagram(int[] indexBuffer, int kinetPort) {
-    this(indexBuffer, kinetPort, Version.PORTOUT);
+  public KinetDatagram(LX lx, int[] indexBuffer, int kinetPort) {
+    this(lx, indexBuffer, kinetPort, Version.PORTOUT);
   }
 
   /**
    * Constructs a datagram that sends on the given kinet supply output port
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer that this datagram outputs points for
    * @param kinetPort Number of the output port on the kinet power supply
    * @param version Version of Kinet Protocol
    */
-  public KinetDatagram(int[] indexBuffer, int kinetPort, Version version) {
-    super(indexBuffer, version.getPacketLength(), ByteOrder.RGB);
+  public KinetDatagram(LX lx, int[] indexBuffer, int kinetPort, Version version) {
+    super(lx, indexBuffer, ByteOrder.RGB, version.getPacketLength());
     setPort(KINET_PORT);
-
     this.version = version;
+
+    validateBufferSize();
 
     // Kinet Header
     this.buffer[0] = (byte) 0x04;
@@ -191,7 +197,7 @@ public class KinetDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getColorBufferPosition() {
+  protected int getDataBufferOffset() {
     return this.version.getDataOffset();
   }
 

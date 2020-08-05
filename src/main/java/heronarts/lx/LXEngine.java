@@ -32,7 +32,6 @@ import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
-import heronarts.lx.output.LXDatagramOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutputGroup;
 import heronarts.lx.parameter.BooleanParameter;
@@ -110,7 +109,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
      * specified in the model. Any time the model is changed, this set will be
      * updated.
      */
-    private class ModelOutput extends LXDatagramOutput implements LX.Listener {
+    private class ModelOutput extends LXOutputGroup implements LX.Listener {
       ModelOutput(LX lx) throws SocketException {
         super(lx);
         setModel(lx.model);
@@ -124,22 +123,26 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
 
       private void setModel(LXModel model) {
-        // Clear out all the datagrams from the old model
-        this.datagrams.clear();
-        // Recursively add all dynamic datagrams attached to this model
+        // Clear out all the outputs from the old model
+        clearChildren();
+
+        // Recursively add all dynamic outputs attached to this model
         if (model != null) {
-          addDatagrams(model);
+          addOutputs(model);
         }
       }
 
-      private void addDatagrams(LXModel model) {
-        // Depth-first, a model's children are sent before its own datagram
+      private void addOutputs(LXModel model) {
+        // Depth-first, a model's children are sent before its own output
         for (LXModel child : model.children) {
-          addDatagrams(child);
+          addOutputs(child);
         }
-        // Then send the datagrams for the model itself. For instance, this makes it possible
+
+        // Then send the outputs  for the model itself. For instance, this makes it possible
         // for a parent to send an ArtSync or something after all children send ArtDmx
-        addDatagrams(model.datagrams);
+        for (LXOutput output : model.outputs) {
+          addChild(output);
+        }
       }
     }
 

@@ -46,8 +46,9 @@ import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.ArtSyncDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
-import heronarts.lx.output.LXBufferDatagram;
+import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
@@ -160,39 +161,39 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  // A bit superfluous, but avoiding using the LXBufferDatagram stuff
+  // A bit superfluous, but avoiding using the LXBufferOutput stuff
   // directly as JSON-loading is a separate namespace and want the code
   // to clearly reflect that, as may diverge in the future
   private enum ByteOrderDefinition {
 
-    RGB(LXBufferDatagram.ByteOrder.RGB),
-    RBG(LXBufferDatagram.ByteOrder.RBG),
-    GBR(LXBufferDatagram.ByteOrder.GBR),
-    GRB(LXBufferDatagram.ByteOrder.GRB),
-    BRG(LXBufferDatagram.ByteOrder.BRG),
-    BGR(LXBufferDatagram.ByteOrder.BGR),
+    RGB(LXBufferOutput.ByteOrder.RGB),
+    RBG(LXBufferOutput.ByteOrder.RBG),
+    GBR(LXBufferOutput.ByteOrder.GBR),
+    GRB(LXBufferOutput.ByteOrder.GRB),
+    BRG(LXBufferOutput.ByteOrder.BRG),
+    BGR(LXBufferOutput.ByteOrder.BGR),
 
-    RGBW(LXBufferDatagram.ByteOrder.RGBW),
-    RBGW(LXBufferDatagram.ByteOrder.RBGW),
-    GRBW(LXBufferDatagram.ByteOrder.GRBW),
-    GBRW(LXBufferDatagram.ByteOrder.GBRW),
-    BRGW(LXBufferDatagram.ByteOrder.BRGW),
-    BGRW(LXBufferDatagram.ByteOrder.BGRW),
+    RGBW(LXBufferOutput.ByteOrder.RGBW),
+    RBGW(LXBufferOutput.ByteOrder.RBGW),
+    GRBW(LXBufferOutput.ByteOrder.GRBW),
+    GBRW(LXBufferOutput.ByteOrder.GBRW),
+    BRGW(LXBufferOutput.ByteOrder.BRGW),
+    BGRW(LXBufferOutput.ByteOrder.BGRW),
 
-    WRGB(LXBufferDatagram.ByteOrder.WRGB),
-    WRBG(LXBufferDatagram.ByteOrder.WRBG),
-    WGRB(LXBufferDatagram.ByteOrder.WGRB),
-    WGBR(LXBufferDatagram.ByteOrder.WGBR),
-    WBRG(LXBufferDatagram.ByteOrder.WBRG),
-    WBGR(LXBufferDatagram.ByteOrder.WBGR);
+    WRGB(LXBufferOutput.ByteOrder.WRGB),
+    WRBG(LXBufferOutput.ByteOrder.WRBG),
+    WGRB(LXBufferOutput.ByteOrder.WGRB),
+    WGBR(LXBufferOutput.ByteOrder.WGBR),
+    WBRG(LXBufferOutput.ByteOrder.WBRG),
+    WBGR(LXBufferOutput.ByteOrder.WBGR);
 
-    private final LXBufferDatagram.ByteOrder datagramByteOrder;
+    private final LXBufferOutput.ByteOrder datagramByteOrder;
 
-    private ByteOrderDefinition(LXBufferDatagram.ByteOrder datagramByteOrder) {
+    private ByteOrderDefinition(LXBufferOutput.ByteOrder datagramByteOrder) {
       this.datagramByteOrder = datagramByteOrder;
     }
 
-    private LXBufferDatagram.ByteOrder getDatagramByteOrder() {
+    private LXBufferOutput.ByteOrder getDatagramByteOrder() {
       return this.datagramByteOrder;
     }
 
@@ -1310,27 +1311,27 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
-  protected void buildDatagrams() {
+  protected void buildOutputs() {
     // Add strip-specific outputs
     for (StripDefinition strip : this.definedStrips) {
       for (OutputDefinition output : strip.outputs) {
-        buildDatagram(output, strip.index, strip.numPoints);
+        buildOutput(output, strip.index, strip.numPoints);
       }
     }
     // Add strip-specific outputs
     for (ArcDefinition arc : this.definedArcs) {
       for (OutputDefinition output : arc.outputs) {
-        buildDatagram(output, arc.index, arc.numPoints);
+        buildOutput(output, arc.index, arc.numPoints);
       }
     }
     // Add top level outputs last
     int totalSize = totalSize();
     for (OutputDefinition output : this.definedOutputs) {
-      buildDatagram(output, 0, totalSize);
+      buildOutput(output, 0, totalSize);
     }
   }
 
-  private void buildDatagram(OutputDefinition output, int fixtureOffset, int fixtureSize) {
+  private void buildOutput(OutputDefinition output, int fixtureOffset, int fixtureSize) {
     if (output.protocol == ProtocolDefinition.ARTSYNC) {
       buildArtSyncDatagram(output);
       return;
@@ -1357,11 +1358,11 @@ public class JsonFixture extends LXFixture {
       start = start + stride * (num-1);
       stride = -stride;
     }
-    LXBufferDatagram.ByteOrder byteOrder = output.byteOrder.getDatagramByteOrder();
+    LXBufferOutput.ByteOrder byteOrder = output.byteOrder.getDatagramByteOrder();
 
     int[] indexBuffer = toDynamicIndexBuffer(start, num, stride);
     int dataLength = indexBuffer.length * byteOrder.getNumBytes();
-    LXBufferDatagram bufferDatagram = null;
+    LXBufferOutput bufferOutput = null;
 
     if (dataLength >= (1 << 16)) {
       addWarning("Output packet would have length > 16-bits (" + dataLength + ") - not possible");
@@ -1373,54 +1374,57 @@ public class JsonFixture extends LXFixture {
       if (dataLength > ArtNetDatagram.MAX_DATA_LENGTH) {
         addWarning("Art-Net packet using noncompliant size: " + dataLength +">" + ArtNetDatagram.MAX_DATA_LENGTH);
       }
-      bufferDatagram = new ArtNetDatagram(indexBuffer, output.universe, byteOrder);
+      bufferOutput = new ArtNetDatagram(this.lx, indexBuffer, byteOrder, output.universe);
       break;
     case SACN:
       if (dataLength > StreamingACNDatagram.MAX_DATA_LENGTH) {
         addWarning("Streaming ACN / E1.31 packet using noncompliant size: " + dataLength + ">" + StreamingACNDatagram.MAX_DATA_LENGTH);
       }
-      bufferDatagram = new StreamingACNDatagram(indexBuffer, output.universe, byteOrder);
+      bufferOutput = new StreamingACNDatagram(this.lx, indexBuffer, byteOrder, output.universe);
       break;
     case DDP:
-      if (byteOrder != LXBufferDatagram.ByteOrder.RGB) {
+      if (byteOrder != LXBufferOutput.ByteOrder.RGB) {
         addWarning("DDP packets do not support non-RGB byte order, using RGB");
       }
-      bufferDatagram = new DDPDatagram(indexBuffer, output.universe);
+      bufferOutput = new DDPDatagram(this.lx, indexBuffer, output.universe);
       break;
     case KINET:
-      if (byteOrder != LXBufferDatagram.ByteOrder.RGB) {
+      if (byteOrder != LXBufferOutput.ByteOrder.RGB) {
         addWarning("KiNET packets do not support non-RGB byte order, using RGB");
       }
       if (dataLength > KinetDatagram.MAX_DATA_LENGTH) {
         addWarning("KiNET packets cannot support more than 512 bytes payload, ignoring this output");
         return;
       }
-      bufferDatagram = new KinetDatagram(indexBuffer, output.universe);
+      bufferOutput = new KinetDatagram(this.lx, indexBuffer, output.universe);
       break;
     case OPC:
-      bufferDatagram = new OPCDatagram(indexBuffer, (byte) output.universe, byteOrder);
+      bufferOutput = new OPCDatagram(this.lx, indexBuffer, byteOrder, (byte) output.universe);
       break;
     case ARTSYNC:
     default:
       // Already handled above
       break;
     }
-    if (bufferDatagram != null) {
-      if (output.port != OutputDefinition.DEFAULT_PORT) {
-        bufferDatagram.setPort(output.port);
+    if (bufferOutput != null) {
+      if (bufferOutput instanceof LXOutput.InetOutput) {
+        LXOutput.InetOutput inetOutput = (LXOutput.InetOutput) bufferOutput;
+        if (output.port != OutputDefinition.DEFAULT_PORT) {
+          inetOutput.setPort(output.port);
+        }
+        inetOutput.setAddress(output.address);
       }
-      bufferDatagram.setAddress(output.address);
-      addDatagram(bufferDatagram);
+      addOutput(bufferOutput);
     }
   }
 
   private void buildArtSyncDatagram(OutputDefinition output) {
-    LXDatagram artSync = new ArtSyncDatagram();
+    LXDatagram artSync = new ArtSyncDatagram(this.lx);
     if (output.port != OutputDefinition.DEFAULT_PORT) {
       artSync.setPort(output.port);
     }
     artSync.setAddress(output.address);
-    addDatagram(artSync);
+    addOutput(artSync);
   }
 
   @Override

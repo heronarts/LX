@@ -27,8 +27,7 @@ import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
-import heronarts.lx.output.LXBufferDatagram;
-import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
@@ -127,20 +126,20 @@ public class GridFixture extends LXProtocolFixture {
   public GridFixture(LX lx) {
     super(lx, "Grid");
     addParameter("host", this.host);
-    addDatagramParameter("protocol", this.protocol);
-    addDatagramParameter("artNetUniverse", this.artNetUniverse);
-    addDatagramParameter("opcChannel", this.opcChannel);
-    addDatagramParameter("ddpDataOffset", this.ddpDataOffset);
-    addDatagramParameter("kinetPort", this.kinetPort);
+    addOutputParameter("protocol", this.protocol);
+    addOutputParameter("artNetUniverse", this.artNetUniverse);
+    addOutputParameter("opcChannel", this.opcChannel);
+    addOutputParameter("ddpDataOffset", this.ddpDataOffset);
+    addOutputParameter("kinetPort", this.kinetPort);
 
     addMetricsParameter("numRows", this.numRows);
     addMetricsParameter("numColumns", this.numColumns);
     addGeometryParameter("rowSpacing", this.rowSpacing);
     addGeometryParameter("columnSpacing", this.columnSpacing);
     addGeometryParameter("positionMode", this.positionMode);
-    addDatagramParameter("wiring", this.wiring);
-    addDatagramParameter("splitPacket", this.splitPacket);
-    addDatagramParameter("pointsPerPacket", this.pointsPerPacket);
+    addOutputParameter("wiring", this.wiring);
+    addOutputParameter("splitPacket", this.splitPacket);
+    addOutputParameter("pointsPerPacket", this.pointsPerPacket);
   }
 
   @Override
@@ -148,10 +147,12 @@ public class GridFixture extends LXProtocolFixture {
     super.onParameterChanged(p);
     if (p == this.host) {
       InetAddress address = resolveHostAddress();
-      for (LXDatagram datagram : this.datagrams) {
-        datagram.enabled.setValue(address != null);
-        if (address != null) {
-          datagram.setAddress(address);
+      for (LXOutput output : this.outputs) {
+        if (output instanceof LXOutput.InetOutput) {
+          output.enabled.setValue(address != null);
+          if (address != null) {
+            ((LXOutput.InetOutput) output).setAddress(address);
+          }
         }
       }
     }
@@ -389,7 +390,7 @@ public class GridFixture extends LXProtocolFixture {
   }
 
   @Override
-  protected void buildDatagrams() {
+  protected void buildOutputs() {
     Protocol protocol = this.protocol.getEnum();
     if (protocol == Protocol.NONE) {
       return;
@@ -404,47 +405,47 @@ public class GridFixture extends LXProtocolFixture {
         int chunkSize = Math.min(pointsPerPacket, wiringIndexBuffer.length - i);
         int chunkIndexBuffer[] = new int[chunkSize];
         System.arraycopy(wiringIndexBuffer, i, chunkIndexBuffer, 0, chunkSize);
-        addDatagram(address, chunkIndexBuffer, channel++);
+        addOutput(address, chunkIndexBuffer, channel++);
         i += chunkSize;
       }
     } else {
-      addDatagram(address, wiringIndexBuffer, getProtocolChannel());
+      addOutput(address, wiringIndexBuffer, getProtocolChannel());
     }
   }
 
-  private void addDatagram(InetAddress address, int[] indexBuffer, int channel) {
-    LXBufferDatagram datagram = null;
+  private void addOutput(InetAddress address, int[] indexBuffer, int channel) {
+    LXOutput output = null;
     switch (this.protocol.getEnum()) {
     case ARTNET:
-      datagram = new ArtNetDatagram(indexBuffer, channel);
+      output = new ArtNetDatagram(this.lx, indexBuffer, channel);
       break;
     case SACN:
-      datagram = new StreamingACNDatagram(indexBuffer, channel);
+      output = new StreamingACNDatagram(this.lx, indexBuffer, channel);
       break;
     case DDP:
-      datagram = new DDPDatagram(indexBuffer, channel);
+      output = new DDPDatagram(this.lx, indexBuffer, channel);
       break;
     case KINET:
-      datagram = new KinetDatagram(indexBuffer, channel);
+      output = new KinetDatagram(this.lx, indexBuffer, channel);
       break;
     case OPC:
-      datagram = new OPCDatagram(indexBuffer, (byte) channel);
+      output = new OPCDatagram(this.lx, indexBuffer, (byte) channel);
       break;
     default:
-      LX.error("Undefined datagram protocol in GridFixture: " + this.protocol.getEnum());
+      LX.error("Undefined output protocol in GridFixture: " + this.protocol.getEnum());
       break;
     }
-    if (datagram != null) {
-      datagram.enabled.setValue(address != null);
-      if (address != null) {
-        datagram.setAddress(address);
+    if (output != null) {
+      output.enabled.setValue(address != null);
+      if (address != null && (output instanceof LXOutput.InetOutput)) {
+        ((LXOutput.InetOutput) output).setAddress(address);
       }
-      addDatagram(datagram);
+      addOutput(output);
     }
   }
 
   @Override
-  protected void reindexDatagrams() {
+  protected void reindexOutputs() {
 
   }
 

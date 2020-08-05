@@ -24,9 +24,8 @@ import heronarts.lx.LX;
 import heronarts.lx.model.GridModel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.output.ArtNetDatagram;
-import heronarts.lx.output.FadecandyOutput;
-import heronarts.lx.output.LXDatagramOutput;
-import heronarts.lx.output.OPCOutput;
+import heronarts.lx.output.FadecandySocket;
+import heronarts.lx.output.OPCSocket;
 import heronarts.lx.pattern.LXPattern;
 
 /**
@@ -42,19 +41,17 @@ public class LXHeadless {
 
   public static void addArtNetOutput(LX lx) throws Exception {
     lx.engine.addOutput(
-      new LXDatagramOutput(lx).addDatagram(
-        new ArtNetDatagram(lx.getModel(), 512, 0)
-        .setAddress(InetAddress.getByName("localhost"))
-      )
+      new ArtNetDatagram(lx, lx.getModel(), 512, 0)
+      .setAddress(InetAddress.getByName("localhost"))
     );
   }
 
   public static void addFadeCandyOutput(LX lx) throws Exception {
-    lx.engine.addOutput(new FadecandyOutput(lx, lx.getModel(), "localhost", 9090));
+    lx.engine.addOutput(new FadecandySocket(lx, lx.getModel()).setAddress(InetAddress.getByName("localhost")).setPort(9090));
   }
 
   public static void addOPCOutput(LX lx) throws Exception {
-    lx.engine.addOutput(new OPCOutput(lx, "localhost", 7890));
+    lx.engine.addOutput(new OPCSocket(lx).setAddress(InetAddress.getByName("localhost")).setPort(7890));
   }
 
   public static void main(String[] args) {

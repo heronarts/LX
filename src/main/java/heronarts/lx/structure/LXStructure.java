@@ -39,8 +39,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.model.LXModel;
-import heronarts.lx.output.LXDatagram;
-import heronarts.lx.output.LXDatagramOutput;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.StringParameter;
 
@@ -48,41 +47,32 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   private static final String PROJECT_MODEL = "<Embedded in Project>";
 
-  public class Output extends LXDatagramOutput {
+  public class Output extends LXOutput {
 
-    private int datagramCount = 0;
-    private int maxDatagrams = 0;
+    private int outputCount = 0;
+    private int maxOutputs = 0;
     private boolean didWarn = false;
-
 
     public Output(LX lx) throws SocketException {
       super(lx);
-    }
-
-    @Override
-    public LXDatagramOutput addDatagram(LXDatagram datagram) {
-      throw new UnsupportedOperationException("Adding custom datagrams to LXStructure output is not allowed");
-    }
-
-    @Override
-    public LXDatagramOutput addDatagrams(LXDatagram[] datagram) {
-      throw new UnsupportedOperationException("Adding custom datagrams to LXStructure output is not allowed");
+      this.gammaMode.setValue(GammaMode.DIRECT);
     }
 
     @Override
     protected void onSend(int[] colors, double brightness) {
-      this.maxDatagrams = lx.getPermissions().getMaxDatagrams();
-      this.datagramCount = 0;
-
-      long now = System.currentTimeMillis();
-      beforeSend(colors);
+      this.maxOutputs = lx.getPermissions().getMaxDatagrams();
+      this.outputCount = 0;
       for (LXFixture fixture : fixtures) {
-        onSendFixture(colors, now, brightness, fixture);
+        onSendFixture(fixture, colors, brightness);
       }
-      afterSend(colors);
     }
 
-    private void onSendFixture(int[] colors, long now, double brightness, LXFixture fixture) {
+    @Override
+    protected void onSend(int[] colors, byte[] glut) {
+      throw new UnsupportedOperationException("LXStructure.Output does not use onSend(int[] colors, byte[] glut)");
+    }
+
+    private void onSendFixture(LXFixture fixture, int[] colors, double brightness) {
       // Check enabled state of fixture
       if (fixture.enabled.isOn()) {
         // Adjust by fixture brightness
@@ -90,23 +80,25 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
         // Recursively send all the fixture's children
         for (LXFixture child : fixture.children) {
-          onSendFixture(colors, now, brightness, child);
+          onSendFixture(child, colors, brightness);
         }
 
         // Then send the fixture's own direct packets
-        for (LXDatagram datagram : fixture.datagrams) {
-          if ((this.maxDatagrams < 0) || (this.datagramCount < this.maxDatagrams)) {
-            onSendDatagram(datagram, now, colors, brightness);
-            ++this.datagramCount;
+        for (LXOutput output : fixture.outputs) {
+          output.setGammaDelegate(this);
+          if ((this.maxOutputs < 0) || (this.outputCount < this.maxOutputs)) {
+            output.send(colors, brightness);
+            ++this.outputCount;
           } else {
             if (!this.didWarn) {
               this.didWarn = true;
-              this.lx.pushError(null, "NOTE: Your license is limited to a maximum of " + this.maxDatagrams + " output packets. Your project exceeds this limit. Only the first " + this.maxDatagrams + " active packets will be sent. This warning will not be shown again.");
+              this.lx.pushError(null, "NOTE: Your license is limited to a maximum of " + this.maxOutputs + " output packets. Your project exceeds this limit. Only the first " + this.maxOutputs + " active packets will be sent. This warning will not be shown again.");
             }
           }
         }
       }
     }
+
   }
 
   /**

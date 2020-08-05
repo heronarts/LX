@@ -24,7 +24,7 @@ import heronarts.lx.model.LXModel;
 /**
  * TCP/IP streaming socket implementation of http://openpixelcontrol.org/
  */
-public class OPCOutput extends LXSocketOutput implements OPCConstants {
+public class OPCSocket extends LXSocket implements OPCConstants {
 
   static final int OFFSET_R = 0;
   static final int OFFSET_G = 1;
@@ -32,43 +32,50 @@ public class OPCOutput extends LXSocketOutput implements OPCConstants {
 
   private final byte[] packetData;
 
-  private final int[] indexBuffer;
-
-  public OPCOutput(LX lx, String host, int port) {
-    this(lx, lx.getModel(), host, port);
+  public OPCSocket(LX lx) {
+    this(lx, lx.getModel());
   }
 
-  public OPCOutput(LX lx, LXModel model, String host, int port) {
-    this(lx, model.toIndexBuffer(), host, port);
+  public OPCSocket(LX lx, LXModel model) {
+    this(lx, model.toIndexBuffer());
   }
 
-  public OPCOutput(LX lx, int[] indexBuffer, String host, int port) {
-    super(lx, host, port);
-    this.indexBuffer = indexBuffer;
+  public OPCSocket(LX lx, int[] indexBuffer) {
+    this(lx, indexBuffer, ByteOrder.RGB, CHANNEL_BROADCAST);
+  }
 
-    int dataLength = BYTES_PER_PIXEL * indexBuffer.length;
+  public OPCSocket(LX lx, int[] indexBuffer, byte channel) {
+    this(lx, indexBuffer, ByteOrder.RGB, channel);
+  }
+
+  public OPCSocket(LX lx, int[] indexBuffer, ByteOrder byteOrder) {
+    this(lx, indexBuffer, byteOrder, CHANNEL_BROADCAST);
+  }
+
+  public OPCSocket(LX lx, int[] indexBuffer, ByteOrder byteOrder, byte channel) {
+    super(lx, indexBuffer, byteOrder);
+
+    int dataLength = byteOrder.getNumBytes() * indexBuffer.length;
     this.packetData = new byte[HEADER_LEN + dataLength];
-    this.packetData[OFFSET_CHANNEL] = CHANNEL_BROADCAST;
+    this.packetData[OFFSET_CHANNEL] = channel;
     this.packetData[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;
     this.packetData[OFFSET_DATA_LEN_MSB] = (byte)(dataLength >>> 8);
     this.packetData[OFFSET_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);
   }
 
+  public OPCSocket setChannel(byte channel) {
+    this.packetData[OFFSET_CHANNEL] = channel;
+    return this;
+  }
+
   @Override
-  protected byte[] getPacketData(int[] colors, byte[] glut) {
-    for (int i = 0; i < this.indexBuffer.length; ++i) {
-      int dataOffset = OFFSET_DATA + i * BYTES_PER_PIXEL;
-      int c = colors[this.indexBuffer[i]];
-      this.packetData[dataOffset + OFFSET_R] = glut[(0xFF & (c >> 16))];
-      this.packetData[dataOffset + OFFSET_G] = glut[(0xFF & (c >> 8))];
-      this.packetData[dataOffset + OFFSET_B] = glut[(0xFF & c)];
-    }
+  protected byte[] getDataBuffer() {
     return this.packetData;
   }
 
-  public OPCOutput setChannel(byte channel) {
-    this.packetData[OFFSET_CHANNEL] = channel;
-    return this;
+  @Override
+  protected int getDataBufferOffset() {
+    return HEADER_LEN;
   }
 
 }

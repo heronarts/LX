@@ -23,22 +23,25 @@ import java.io.IOException;
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 
-public class FadecandyOutput extends OPCOutput {
+public class FadecandySocket extends OPCSocket {
+
+  public static final int DEFAULT_PORT = 7890;
 
   private byte firmwareConfig = 0x00;
 
   private String colorCorrection = null;
 
-  public FadecandyOutput(LX lx, String host, int port) {
-    super(lx, host, port);
+  public FadecandySocket(LX lx) {
+    this(lx, lx.getModel());
   }
 
-  public FadecandyOutput(LX lx, LXModel model, String host, int port) {
-    this(lx, model.toIndexBuffer(), host, port);
+  public FadecandySocket(LX lx, LXModel model) {
+    this(lx, model.toIndexBuffer());
   }
 
-  public FadecandyOutput(LX lx, int[] indexBuffer, String host, int port) {
-    super(lx, indexBuffer, host, port);
+  public FadecandySocket(LX lx, int[] indexBuffer) {
+    super(lx, indexBuffer);
+    setPort(DEFAULT_PORT);
   }
 
   @Override
@@ -47,7 +50,7 @@ public class FadecandyOutput extends OPCOutput {
     sendFirmwareConfigPacket();
   }
 
-  public FadecandyOutput setDithering(boolean enabled) {
+  public FadecandySocket setDithering(boolean enabled) {
     if (enabled) {
       this.firmwareConfig &= ~0x01;
     } else {
@@ -57,7 +60,7 @@ public class FadecandyOutput extends OPCOutput {
     return this;
   }
 
-  public FadecandyOutput setInterpolation(boolean enabled) {
+  public FadecandySocket setInterpolation(boolean enabled) {
     if (enabled) {
       this.firmwareConfig &= ~0x02;
     } else {
@@ -67,13 +70,13 @@ public class FadecandyOutput extends OPCOutput {
     return this;
   }
 
-  public FadecandyOutput setStatusLedAuto() {
+  public FadecandySocket setStatusLedAuto() {
     this.firmwareConfig &= 0x0C;
     sendFirmwareConfigPacket();
     return this;
   }
 
-  public FadecandyOutput setStatusLed(boolean on) {
+  public FadecandySocket setStatusLed(boolean on) {
     this.firmwareConfig |= 0x04; // Manual LED control
     if (on) {
       this.firmwareConfig |= 0x08;
@@ -109,13 +112,13 @@ public class FadecandyOutput extends OPCOutput {
     }
   }
 
-  public FadecandyOutput setColorCorrection(float gamma, float red, float green, float blue) {
+  public FadecandySocket setColorCorrection(float gamma, float red, float green, float blue) {
     this.colorCorrection = "{ \"gamma\": " + gamma + ", \"whitepoint\": [" + red + "," + green + "," + blue + "]}";
     sendColorCorrectionPacket();
     return this;
   }
 
-  public FadecandyOutput setColorCorrection(String s) {
+  public FadecandySocket setColorCorrection(String s) {
     this.colorCorrection = s;
     sendColorCorrectionPacket();
     return this;
