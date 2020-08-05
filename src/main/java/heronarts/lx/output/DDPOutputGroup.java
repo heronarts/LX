@@ -19,7 +19,6 @@
 package heronarts.lx.output;
 
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -63,7 +62,6 @@ public class DDPOutputGroup extends LXOutputGroup implements LXOutput.InetOutput
    * @param lx LX instance
    * @param indexBuffer All of the points to send
    * @param chunkSize Number of points to chunk per packet
-   * @throws SocketException if a DatagramSocket could not be created
    */
   public DDPOutputGroup(LX lx, int[] indexBuffer, int chunkSize) {
     super(lx);

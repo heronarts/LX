@@ -478,7 +478,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   /**
    * Subclasses must override this method to provide an implementation that
    * produces the necessary set of outputs for this fixture to be sent.
-   * The subclass should call {@link #addOutputt(LXOutput)} for each output.
+   * The subclass should call {@link #addOutput(LXOutput)} for each output.
    */
   protected abstract void buildOutputs();
 
@@ -512,7 +512,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * Subclasses call this method to remove a output from the fixture. This may only
    * be performed from within the reindexOutputs or buildOutputs methods.
    *
-   * @param outtput Output to remove
+   * @param output Output to remove
    */
   protected void removeOutput(LXOutput output) {
     if (!this.isInBuildOutputs) {

@@ -368,7 +368,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   /**
    * Indicates phase of the current beat. On the beat the value will be 0, then
    * ramp up to 1 before the next beat triggers. This is deprecated, should
-   * use {@link basis()} instead.
+   * use {@link #basis()} instead.
    *
    * @return value from 0-1 indicating phase of beat
    */
@@ -379,7 +379,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   /**
    * Indicates beat phase in floating point. This is deprecated, should
-   * use {@link basisf()} instead.
+   * use {@link #basisf()} instead.
    *
    * @return value from 0-1 indicating phase of beat
    */

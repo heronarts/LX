@@ -130,6 +130,8 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
 
   /**
    * Subclasses may override to take additional actions upon disconnection
+   *
+   * @param x Exception that caused the disconnect if there was one
    */
   protected void didDisconnect(Exception x) {
 
