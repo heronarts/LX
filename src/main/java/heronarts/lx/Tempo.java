@@ -332,6 +332,19 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   }
 
   /**
+   * Gets the basis of the tempo, relative to a division. If specified,
+   * the modulus is automatically taken against 1.
+   *
+   * @param division Tempo division
+   * @param mod Whether to take modulus against 1
+   * @return Basis
+   */
+  public double getBasis(Division division, boolean mod) {
+    double basis = getCompositeBasis() * division.multiplier;
+    return mod ? (basis % 1.) : basis;
+  }
+
+  /**
    * Gets the basis of the tempo, relative to a tempo division. The result is between
    * 0 and 1.
    *
