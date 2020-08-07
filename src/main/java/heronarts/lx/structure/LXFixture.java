@@ -534,7 +534,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     int numPoints = size();
     this.mutablePoints.clear();
     for (int i = 0; i < numPoints; ++i) {
-      LXPoint p = new LXPoint();
+      LXPoint p = constructPoint();
       p.index = this.firstPointIndex + i;
       this.mutablePoints.add(p);
     }
@@ -542,6 +542,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // A new model will have to be created, forget these points
     this.model = null;
     this.modelPoints.clear();
+
+    // Chance for subclasses to do custom prep work
+    beforeRegenerate();
 
     // Regenerate our geometry, note that we bypass regenerateGeometry()
     // here because we don't need to notify our container about the change. We're
@@ -556,6 +559,12 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       this.container.fixtureGenerationChanged(this);
     }
   }
+
+  /**
+   * Subclasses may override this method to do custom preparation work before
+   * {@link #computeGeometryMatrix(LXMatrix)} is called.
+   */
+  protected void beforeRegenerate() {}
 
   private void regenerateGeometry() {
     _regenerateGeometry();
@@ -682,7 +691,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
     // points here to stay safe.
     for (LXPoint p : this.points) {
-      this.modelPoints.add(new LXPoint(p));
+      this.modelPoints.add(constructPoint(p));
     }
 
     // Now iterate over our children and add their points too
@@ -701,9 +710,40 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     // Okay, good to go, construct the model
-    LXModel model = new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKeys());
+    LXModel model = constructModel(this.modelPoints, childModels, getModelKeys());
     model.transform.set(this.geometryMatrix);
     return this.model = model;
+  }
+
+  /**
+   * Subclasses may override this method to use custom model type
+   *
+   * @param modelPoints Points in the model
+   * @param childModels Child models
+   * @param modelKeys Model keys
+   * @return LXModel instance, or concrete subclass
+   */
+  protected LXModel constructModel(List<LXPoint> modelPoints, List<? extends LXModel> childModels, String[] modelKeys) {
+    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), modelKeys);
+  }
+
+  /**
+   * Subclasses may override this method to use custom point types
+   *
+   * @return LXPoint or concrete subclass
+   */
+  protected LXPoint constructPoint() {
+    return new LXPoint();
+  }
+
+  /**
+   * Subclasses may override this method to use custom point types
+   *
+   * @param copy Point to make a copy of
+   * @return LXPoint or concrete subclass
+   */
+  protected LXPoint constructPoint(LXPoint copy) {
+    return new LXPoint(copy);
   }
 
   private List<LXPoint> subpoints(int start, int n, int stride) {
