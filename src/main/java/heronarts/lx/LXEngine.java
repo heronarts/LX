@@ -335,6 +335,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
     LX.initProfiler.log("Engine: Output");
 
+    // Snapshot engine
+    addChild("snapshots", this.snapshots = new LXSnapshotEngine(lx));
+    LX.initProfiler.log("Engine: Snapshots");
+
     // Midi engine
     addChild("midi", this.midi = new LXMidiEngine(lx));
     LX.initProfiler.log("Engine: Midi");
@@ -346,10 +350,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // OSC engine
     addChild("osc", this.osc = new LXOscEngine(lx));
     LX.initProfiler.log("Engine: Osc");
-
-    // Snapshot engine
-    addChild("snapshots", this.snapshots = new LXSnapshotEngine(lx));
-    LX.initProfiler.log("Engine: Snapshots");
 
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
