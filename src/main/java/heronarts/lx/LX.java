@@ -32,6 +32,7 @@ import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.pattern.color.SolidPattern;
+import heronarts.lx.scheduler.LXScheduler;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
 
@@ -289,6 +290,11 @@ public class LX {
   public final LXRegistry registry;
 
   /**
+   * The project scheduler
+   */
+  public final LXScheduler scheduler;
+
+  /**
    * Creates an LX instance with no nodes.
    */
   public LX() {
@@ -331,6 +337,9 @@ public class LX {
     // Load the global preferences before plugin initialization
     this.preferences = new LXPreferences(this);
     this.preferences.load();
+
+    // Scheduler
+    this.scheduler = new LXScheduler(this);
 
     // Construct the engine
     this.engine = new LXEngine(this);
@@ -873,6 +882,8 @@ public class LX {
     } catch (Exception x) {
       LX.error(x, "Exception in openProject: " + x.getLocalizedMessage());
       pushError(x, "Exception in openProject: " + x.getLocalizedMessage());
+    } finally {
+      this.componentRegistry.projectLoading = false;
     }
   }
 
@@ -884,6 +895,10 @@ public class LX {
 
   public void setModelImportFlag(boolean modelImport) {
     this.componentRegistry.modelImporting = modelImport;
+  }
+
+  public void setScheduleLoadingFlag(boolean scheduleLoading) {
+    this.componentRegistry.scheduleLoading = scheduleLoading;
   }
 
   protected final void confirmChangesSaved(String message, Runnable confirm) {

@@ -149,6 +149,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     // Flags that keep track of special loading states in which ID-collisions may occur
     boolean projectLoading = false;
     boolean modelImporting = false;
+    boolean scheduleLoading = false;
 
     // Global map of ID to component
     private final Map<Integer, LXComponent> components = new HashMap<Integer, LXComponent>();
@@ -244,13 +245,13 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
           // has new components, for instance. In that case record in a map
           // what the IDs in the project file refer to.
           this.projectIdMap.put(id, component);
-        } else if (this.modelImporting) {
+        } else if (this.modelImporting || this.scheduleLoading) {
           // We ignore ID assignment collisions from external model files.
           // Sticking with the newly generated ID is fine.
         } else {
           // This can't happen, there should be no reason that we're requesting a component
           // to re-use an existing component ID when we are outside of loading a file
-          throw new IllegalStateException("ID collision outside of project load or model import: " + component + " trying to clobber " + this.components.get(id));
+          throw new IllegalStateException("ID collision outside of project/schedule load or model import: " + component + " trying to clobber " + this.components.get(id));
         }
       } else {
         if (component.id > 0) {

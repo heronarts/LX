@@ -64,7 +64,13 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BooleanParameter("Help Bar", true)
     .setDescription("Whether to show a bottom bar on the UI with helpful tips");
 
+  public final BooleanParameter schedulerEnabled =
+    new BooleanParameter("Project Scheduler Enabed", false)
+    .setDescription("Whether the project scheduler is enabled");
+
   private String projectFileName = null;
+  private String scheduleFileName = null;
+
   private int windowWidth = -1;
   private int windowHeight = -1;
 
@@ -78,6 +84,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.sendCueToOutput.addListener(this);
     this.uiZoom.addListener(this);
     this.showHelpBar.addListener(this);
+    this.schedulerEnabled.addListener(this);
 
     lx.registry.addListener(new LXRegistry.Listener() {
       @Override
@@ -119,8 +126,18 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     save();
   }
 
+  public void setSchedule(File schedule) {
+    if (schedule != null) {
+      this.scheduleFileName = this.lx.getMediaPath(LX.Media.PROJECTS, schedule);
+    } else {
+      this.scheduleFileName = null;
+    }
+    save();
+  }
+
   private static final String KEY_VERSION = "version";
   private static final String KEY_PROJECT_FILE_NAME = "projectFileName";
+  private static final String KEY_SCHEDULE_FILE_NAME = "scheduleFileName";
   private static final String KEY_WINDOW_WIDTH = "windwWidth";
   private static final String KEY_WINDOW_HEIGHT = "windowHeight";
   private static final String KEY_UI_ZOOM = "uiZoom";
@@ -128,6 +145,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_FOCUS_ACTIVE_PATTERN = "focusActivePattern";
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
   private static final String KEY_SHOW_HELP_BAR = "showHelpBar";
+  private static final String KEY_SCHEDULER_ENABLED = "schedulerEnabled";
   private static final String KEY_REGISTRY = "registry";
 
   @Override
@@ -136,6 +154,9 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     if (this.projectFileName != null) {
       object.addProperty(KEY_PROJECT_FILE_NAME, this.projectFileName);
     }
+    if (this.scheduleFileName != null) {
+      object.addProperty(KEY_SCHEDULE_FILE_NAME, this.scheduleFileName);
+    }
     object.addProperty(KEY_WINDOW_WIDTH, this.windowWidth);
     object.addProperty(KEY_WINDOW_HEIGHT, this.windowHeight);
     object.addProperty(KEY_UI_ZOOM, this.uiZoom.getValuei());
@@ -143,6 +164,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_FOCUS_ACTIVE_PATTERN, this.focusActivePattern.isOn());
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
     object.addProperty(KEY_SHOW_HELP_BAR, this.showHelpBar.isOn());
+    object.addProperty(KEY_SCHEDULER_ENABLED, this.schedulerEnabled.isOn());
 
     object.add(KEY_REGISTRY, LXSerializable.Utils.toObject(this.lx, this.lx.registry));
   }
@@ -153,6 +175,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.focusActivePattern, object, KEY_FOCUS_ACTIVE_PATTERN);
     LXSerializable.Utils.loadBoolean(this.sendCueToOutput, object, KEY_SEND_CUE_TO_OUTPUT);
     LXSerializable.Utils.loadBoolean(this.showHelpBar, object, KEY_SHOW_HELP_BAR);
+    LXSerializable.Utils.loadBoolean(this.schedulerEnabled, object, KEY_SCHEDULER_ENABLED);
     LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
     if (object.has(KEY_WINDOW_WIDTH)) {
       this.windowWidth = object.get(KEY_WINDOW_WIDTH).getAsInt();
@@ -165,7 +188,11 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     } else {
       this.projectFileName = null;
     }
-
+    if (object.has(KEY_SCHEDULE_FILE_NAME)) {
+      this.scheduleFileName = object.get(KEY_SCHEDULE_FILE_NAME).getAsString();
+    } else {
+      this.scheduleFileName = null;
+    }
     LXSerializable.Utils.loadObject(this.lx, this.lx.registry, object, KEY_REGISTRY);
   }
 
@@ -229,6 +256,17 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
       }
     } catch (Exception x) {
       LX.error(x, "Unhandled exception loading initial project");
+    }
+  }
+
+  public void loadInitialSchedule() {
+    if (this.scheduleFileName != null) {
+      File scheduleFile = this.lx.getMediaFile(LX.Media.PROJECTS, this.scheduleFileName);
+      if (!scheduleFile.exists()) {
+        LX.error("Last saved schedule file no longer exists: " + this.scheduleFileName);
+      } else {
+        this.lx.scheduler.openSchedule(scheduleFile);
+      }
     }
   }
 

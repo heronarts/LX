@@ -803,6 +803,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     }
 
+    // Run the project scheduler
+    this.lx.scheduler.loop(deltaMs);
+
     // Initialize the model context for this render frame
     this.buffer.render.setModel(this.lx.model);
 
