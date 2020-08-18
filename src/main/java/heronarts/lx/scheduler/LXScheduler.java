@@ -41,6 +41,7 @@ import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.LXParameter;
 
 public class LXScheduler extends LXComponent implements LXLoopTask {
 
@@ -81,12 +82,22 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     .setDescription("Fade time in seconds")
     .setUnits(BoundedParameter.Units.SECONDS);
 
+  public final BooleanParameter dirty =
+    new BooleanParameter("Dirty", false)
+    .setDescription("Whether the schedule has been modified");
+
   public LXScheduler(LX lx) {
     super(lx);
     addParameter("enabled", this.enabled);
     addParameter("fade", this.fade);
     addParameter("fadeTimeSecs", this.fadeTimeSecs);
     addArray("projects", this.entries);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    this.dirty.setValue(true);
   }
 
   public LXScheduler addListener(Listener listener) {
@@ -127,6 +138,7 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     for (Listener listener : this.listeners) {
       listener.entryAdded(this, entry);
     }
+    this.dirty.setValue(true);
     return entry;
   }
 
@@ -139,6 +151,8 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     for (Listener listener : this.listeners) {
       listener.entryRemoved(this, entry);
     }
+    this.dirty.setValue(true);
+    entry.dispose();
     return this;
   }
 
@@ -151,6 +165,7 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     for (Listener listener : this.listeners) {
       listener.entryMoved(this, entry);
     }
+    this.dirty.setValue(true);
     return this;
   }
 
@@ -196,10 +211,12 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
 
   protected void setSchedule(File file, Listener.Change change) {
     this.file = file;
+    this.dirty.setValue(false);
+    this.lx.preferences.setSchedule(file);
     for (Listener listener : this.listeners) {
       listener.scheduleChanged(file, change);
     }
-    this.lx.preferences.setSchedule(file);
+
   }
 
   public void newSchedule() {

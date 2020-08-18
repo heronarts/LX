@@ -24,6 +24,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 
 public class LXScheduledProject extends LXComponent implements LXComponent.Renamable {
@@ -57,6 +58,12 @@ public class LXScheduledProject extends LXComponent implements LXComponent.Renam
     addParameter("hours", this.hours);
     addParameter("minutes", this.minutes);
     addParameter("seconds", this.seconds);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    this.lx.scheduler.dirty.setValue(true);
   }
 
   public void setProject(File projectFile) {
