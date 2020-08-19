@@ -80,10 +80,6 @@ public class LXScheduledProject extends LXComponent implements LXComponent.Renam
   }
 
   public void open() {
-    String fileName = this.projectFile.getString();
-    if (fileName != null) {
-      this.lx.openProject(this.lx.getMediaFile(LX.Media.PROJECTS, fileName, false));
-    }
+    this.lx.scheduler.openEntry(this);
   }
-
 }

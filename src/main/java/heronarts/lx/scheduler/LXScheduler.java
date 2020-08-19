@@ -42,6 +42,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 public class LXScheduler extends LXComponent implements LXLoopTask {
 
@@ -64,6 +65,12 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private File file;
+
+  private LXScheduledProject transitionEntry = null;
+
+  private double transitionProgress = 0;
+
+  private double brightnessLerp = 0;
 
   private final List<LXScheduledProject> mutableEntries = new ArrayList<LXScheduledProject>();
 
@@ -97,6 +104,11 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
+    if (p == this.fade) {
+      if (!this.fade.isOn() && (this.transitionEntry != null)) {
+        finishTransition();
+      }
+    }
     this.dirty.setValue(true);
   }
 
@@ -179,6 +191,14 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
       this.calendar.get(Calendar.SECOND);
   }
 
+  public boolean isInTransition() {
+    return this.transitionEntry != null;
+  }
+
+  public double getTransitionProgress() {
+    return (this.transitionEntry != null) ? this.transitionProgress : 0;
+  }
+
   @Override
   public void loop(double deltaMs) {
     if (!this.lx.preferences.schedulerEnabled.isOn()) {
@@ -186,6 +206,22 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     }
     if (!this.enabled.isOn()) {
       return;
+    }
+
+    if (this.transitionEntry != null) {
+      double newProgress = this.transitionProgress + deltaMs / (1000 * this.fadeTimeSecs.getValue());
+      if (newProgress < .5) {
+        this.transitionProgress = newProgress;
+        this.lx.engine.output.brightness.setValue(LXUtils.lerp(this.brightnessLerp, 0, 2*newProgress));
+      } else if (newProgress < 1) {
+        if (this.transitionProgress < .5) {
+          switchTransitionProject();
+        }
+        this.lx.engine.output.brightness.setValue(LXUtils.lerp(0, this.brightnessLerp, 2 * (newProgress-.5)));
+        this.transitionProgress = newProgress;
+      } else {
+        finishTransition();
+      }
     }
 
     long thisFrameSecsOfDay = getTimeSecsOfDay(this.lx.engine.nowMillis);
@@ -200,11 +236,45 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
         if (thresholdSecsOfDay == 0) {
           // Special handling of midnight
           if (thisFrameSecsOfDay >= thresholdSecsOfDay && prevFrameSecsOfDay > thisFrameSecsOfDay) {
-            entry.open();
+            openEntry(entry);
           }
         } else if (prevFrameSecsOfDay < thresholdSecsOfDay && thresholdSecsOfDay <= thisFrameSecsOfDay) {
-          entry.open();
+          openEntry(entry);
         }
+      }
+    }
+  }
+
+  private void startTransition(LXScheduledProject entry) {
+    this.transitionEntry = entry;
+    this.transitionProgress = 0;
+    this.brightnessLerp = this.lx.engine.output.brightness.getValue();
+  }
+
+  private void switchTransitionProject() {
+    this.lx.openProject(this.lx.getMediaFile(LX.Media.PROJECTS, this.transitionEntry.projectFile.getString(), false));
+    this.brightnessLerp = this.lx.engine.output.brightness.getValue();
+  }
+
+  private void finishTransition() {
+    if (this.transitionProgress < .5) {
+      switchTransitionProject();
+    } else {
+      this.lx.engine.output.brightness.setValue(this.brightnessLerp);
+    }
+    this.transitionEntry = null;
+    this.transitionProgress = 0;
+  }
+
+  protected void openEntry(LXScheduledProject entry) {
+    String fileName = entry.projectFile.getString();
+    if (fileName != null) {
+      if (this.transitionEntry == entry) {
+        finishTransition();
+      } else if (this.fade.isOn() && this.fadeTimeSecs.getValue() > 0) {
+        startTransition(entry);
+      } else {
+        this.lx.openProject(this.lx.getMediaFile(LX.Media.PROJECTS, fileName, false));
       }
     }
   }
@@ -216,7 +286,6 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     for (Listener listener : this.listeners) {
       listener.scheduleChanged(file, change);
     }
-
   }
 
   public void newSchedule() {
