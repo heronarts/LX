@@ -125,6 +125,14 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     new BooleanParameter("Mixer", true)
     .setDescription("Whether mixer settings are recalled");
 
+  public final BooleanParameter recallPattern =
+    new BooleanParameter("Pattern", true)
+    .setDescription("Whether pattern settings are recalled");
+
+  public final BooleanParameter recallEffect =
+    new BooleanParameter("Effects", true)
+    .setDescription("Whether effecct settings are recalled");
+
   public final BooleanParameter recallModulation =
     new BooleanParameter("Modulation", true)
     .setDescription("Whether global modulation settings are recalled");
@@ -209,6 +217,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addArray("snapshot", this.snapshots);
     addParameter("recallMixer", this.recallMixer);
     addParameter("recallModulation", this.recallModulation);
+    addParameter("recallPattern", this.recallPattern);
+    addParameter("recallEffect", this.recallEffect);
     addParameter("channelMode", this.channelMode);
     addParameter("missingChannelMode", this.missingChannelMode);
     addParameter("transitionEnabled", this.transitionEnabled);
@@ -379,7 +389,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    */
   public void recall(LXSnapshot snapshot, List<LXCommand> commands) {
     boolean mixer = this.recallMixer.isOn();
+    boolean pattern = this.recallPattern.isOn();
+    boolean effect = this.recallEffect.isOn();
     boolean modulation = this.recallModulation.isOn();
+
     boolean transition = false;
     this.autoCycleMillis = lx.engine.nowMillis;
     if (commands != null) {
@@ -403,7 +416,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
 
     for (View view : this.recallViews) {
-      if (view.activeFlag = isValidView(view, mixer, modulation)) {
+      if (view.activeFlag = isValidView(view, mixer, pattern, effect, modulation)) {
         if (transition) {
           view.startTransition();
         } else {
@@ -419,18 +432,22 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
   }
 
-  private boolean isValidView(View view, boolean mixer, boolean modulation) {
-    if (view.scope == LXSnapshot.ViewScope.MODULATION) {
-      if (!modulation) {
-        return false;
-      }
-    } else {
-      // Everything else is treated as "mixer" for now
-      if (!mixer) {
-        return false;
-      }
+  private boolean isValidView(View view, boolean mixer, boolean pattern, boolean effect, boolean modulation) {
+    if (!view.enabled.isOn()) {
+      return false;
     }
-    return view.enabled.isOn();
+    switch (view.scope) {
+    case EFFECTS:
+      return effect;
+    case MODULATION:
+      return modulation;
+    case PATTERNS:
+      return pattern;
+    default:
+    case OUTPUT:
+    case MIXER:
+      return mixer;
+    }
   }
 
   public double getTransitionProgress() {
