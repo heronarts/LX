@@ -179,6 +179,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     new BooleanParameter("Transitions", false)
     .setDescription("When enabled, transitions between snapshots use interpolation");
 
+  public final BooleanParameter triggerSnapshotCycle =
+    new BooleanParameter("Trigger Cycle")
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Triggers a snapshot change");
+
   private LXSnapshot inTransition = null;
 
   private LinearEnvelope transition = new LinearEnvelope(0, 1, new FunctionalParameter() {
@@ -227,6 +232,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addParameter("autoCycleMode", this.autoCycleMode);
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
     addParameter("autoCycleIndex", this.autoCycleCursor);
+    addParameter("triggerSnapshotCycle", this.triggerSnapshotCycle);
   }
 
   @Override
@@ -234,6 +240,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     super.onParameterChanged(parameter);
     if (parameter == this.autoCycleEnabled) {
       this.autoCycleMillis = this.lx.engine.nowMillis;
+    } else if (parameter == this.triggerSnapshotCycle) {
+      if (this.triggerSnapshotCycle.isOn()) {
+        this.triggerSnapshotCycle.setValue(false);
+        doSnapshotCycle();
+      }
     }
   }
 
@@ -458,6 +469,17 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return this.autoCycleProgress;
   }
 
+  private void doSnapshotCycle() {
+    switch (this.autoCycleMode.getEnum()) {
+    case NEXT:
+      goNextSnapshot();
+      break;
+    case RANDOM:
+      goRandomSnapshot();
+      break;
+    }
+  }
+
   @Override
   public void loop(double deltaMs) {
     if (this.inTransition != null) {
@@ -483,14 +505,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       if (this.autoCycleProgress >= 1) {
         this.autoCycleProgress = 1;
         if (this.autoCycleEnabled.isOn()) {
-          switch (this.autoCycleMode.getEnum()) {
-          case NEXT:
-            goNextSnapshot();
-            break;
-          case RANDOM:
-            goRandomSnapshot();
-            break;
-          }
+          doSnapshotCycle();
         }
       }
     }
