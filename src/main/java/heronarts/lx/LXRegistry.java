@@ -163,9 +163,10 @@ public class LXRegistry implements LXSerializable {
   private static final List<Class<? extends LXFixture>> DEFAULT_FIXTURES;
   static {
     DEFAULT_FIXTURES = new ArrayList<Class<? extends LXFixture>>();
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.StripFixture.class);
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.GridFixture.class);
     DEFAULT_FIXTURES.add(heronarts.lx.structure.ArcFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.GridFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.PointFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.StripFixture.class);
   };
 
   /**

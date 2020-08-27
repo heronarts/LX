@@ -60,6 +60,7 @@ public class LXModel implements LXSerializable {
     public final static String ROW = "row";
     public final static String COLUMN = "column";
     public final static String STRIP = "strip";
+    public final static String POINT = "point";
     public final static String ARC = "arc";
   }
 
