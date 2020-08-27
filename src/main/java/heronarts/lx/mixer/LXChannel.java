@@ -143,6 +143,11 @@ public class LXChannel extends LXAbstractChannel {
     new MutableParameter("SurfaceFocusLength", 0)
     .setDescription("Control surface focus length");
 
+  public final BooleanParameter triggerPatternCycle =
+    new BooleanParameter("Trigger Pattern")
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Triggers a pattern change on the channel");
+
   private double autoCycleProgress = 0;
   private double transitionProgress = 0;
   private int activePatternIndex = NO_PATTERN_INDEX;
@@ -189,6 +194,7 @@ public class LXChannel extends LXAbstractChannel {
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
     addParameter("transitionBlendMode", this.transitionBlendMode);
     addParameter("focusedPattern", this.focusedPattern);
+    addParameter("triggerPatternCycle", this.triggerPatternCycle);
   }
 
   void updateTransitionBlendOptions() {
@@ -206,6 +212,15 @@ public class LXChannel extends LXAbstractChannel {
     if (p == this.autoCycleEnabled) {
       if (this.transition == null) {
         this.transitionMillis = this.lx.engine.nowMillis;
+      }
+    } else if (p == this.triggerPatternCycle) {
+      if (this.triggerPatternCycle.isOn()) {
+        this.triggerPatternCycle.setValue(false);
+        if (this.transition != null) {
+          finishTransition();
+        } else {
+          doPatternCycle();
+        }
       }
     }
   }
@@ -780,6 +795,17 @@ public class LXChannel extends LXAbstractChannel {
     }
   }
 
+  private void doPatternCycle() {
+    switch (this.autoCycleMode.getEnum()) {
+    case NEXT:
+      goNextPattern();
+      break;
+    case RANDOM:
+      goRandomPattern();
+      break;
+    }
+  }
+
   @Override
   public void loop(double deltaMs) {
     long loopStart = System.nanoTime();
@@ -809,14 +835,7 @@ public class LXChannel extends LXAbstractChannel {
       if (this.autoCycleProgress >= 1) {
         this.autoCycleProgress = 1;
         if (this.autoCycleEnabled.isOn()) {
-          switch (this.autoCycleMode.getEnum()) {
-          case NEXT:
-            goNextPattern();
-            break;
-          case RANDOM:
-            goRandomPattern();
-            break;
-          }
+          doPatternCycle();
         }
       }
     }
