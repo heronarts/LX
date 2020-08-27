@@ -271,7 +271,7 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     if (fileName != null) {
       if (this.transitionEntry == entry) {
         finishTransition();
-      } else if (this.fade.isOn() && this.fadeTimeSecs.getValue() > 0) {
+      } else if (this.enabled.isOn() && this.fade.isOn() && this.fadeTimeSecs.getValue() > 0) {
         startTransition(entry);
       } else {
         this.lx.openProject(this.lx.getMediaFile(LX.Media.PROJECTS, fileName, false));
