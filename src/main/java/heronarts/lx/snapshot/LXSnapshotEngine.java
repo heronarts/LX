@@ -199,8 +199,6 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     new DiscreteParameter("Auto-Cycle", NO_SNAPSHOT_INDEX, NO_SNAPSHOT_INDEX, 0)
     .setDescription("Index for the auto-cycle parameter");
 
-  private long autoCycleMillis = 0;
-
   public enum AutoCycleMode {
     NEXT,
     RANDOM;
@@ -231,7 +229,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addParameter("autoCycleEnabled", this.autoCycleEnabled);
     addParameter("autoCycleMode", this.autoCycleMode);
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
-    addParameter("autoCycleIndex", this.autoCycleCursor);
+    addParameter("autoCycleCursor", this.autoCycleCursor);
     addParameter("triggerSnapshotCycle", this.triggerSnapshotCycle);
   }
 
@@ -239,7 +237,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   public void onParameterChanged(LXParameter parameter) {
     super.onParameterChanged(parameter);
     if (parameter == this.autoCycleEnabled) {
-      this.autoCycleMillis = this.lx.engine.nowMillis;
+      this.autoCycleProgress = 0;
     } else if (parameter == this.triggerSnapshotCycle) {
       if (this.triggerSnapshotCycle.isOn()) {
         this.triggerSnapshotCycle.setValue(false);
@@ -316,7 +314,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       this.mutableSnapshots.add(index, snapshot);
       _reindexSnapshots();
     }
-    this.autoCycleCursor.setRange(-1, this.snapshots.size());
+    this.autoCycleCursor.setRange(NO_SNAPSHOT_INDEX, this.snapshots.size());
     if (index >= 0 && index <= this.autoCycleCursor.getValuei()) {
       this.autoCycleCursor.increment();
     }
@@ -345,7 +343,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (index <= this.autoCycleCursor.getValuei()) {
       this.autoCycleCursor.decrement();
     }
-    this.autoCycleCursor.setRange(-1, this.snapshots.size());
+    this.autoCycleCursor.setRange(NO_SNAPSHOT_INDEX, this.snapshots.size());
     snapshot.dispose();
     return this;
   }
@@ -363,7 +361,6 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
     LXSnapshot autoCycleSnapshot = null;
     int auto = this.autoCycleCursor.getValuei();
-
     if (auto >= 0 && auto < this.snapshots.size()) {
       autoCycleSnapshot = this.snapshots.get(auto);
     }
@@ -405,7 +402,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     boolean modulation = this.recallModulation.isOn();
 
     boolean transition = false;
-    this.autoCycleMillis = lx.engine.nowMillis;
+    this.autoCycleProgress = 0;
     if (commands != null) {
       commands.add(new LXCommand.Parameter.SetValue(this.autoCycleCursor, this.autoCycleCursor.getValuei()));
     }
@@ -491,7 +488,6 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
           }
         }
         this.inTransition = null;
-        this.autoCycleMillis = lx.engine.nowMillis;
       } else {
         for (View view : this.recallViews) {
           if (view.activeFlag) {
@@ -500,13 +496,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
         }
       }
       this.autoCycleProgress = 0;
-    } else {
-      this.autoCycleProgress = (this.lx.engine.nowMillis - this.autoCycleMillis) / (1000 * this.autoCycleTimeSecs.getValue());
+    } else if (this.autoCycleEnabled.isOn()) {
+      this.autoCycleProgress += deltaMs / (1000 * this.autoCycleTimeSecs.getValue());
       if (this.autoCycleProgress >= 1) {
         this.autoCycleProgress = 1;
-        if (this.autoCycleEnabled.isOn()) {
-          doSnapshotCycle();
-        }
+        doSnapshotCycle();
       }
     }
   }

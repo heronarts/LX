@@ -35,6 +35,7 @@ import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -46,6 +47,8 @@ import heronarts.lx.utils.LXUtils;
  * creating coherent color schemes across patterns.
  */
 public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent {
+
+  private static final int NO_SWATCH_INDEX = -1;
 
   public interface Listener {
     public void swatchAdded(LXPalette palette, LXSwatch swatch);
@@ -77,6 +80,37 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
    */
   public final LXDynamicColor color;
 
+  public final BooleanParameter autoCycleEnabled =
+    new BooleanParameter("Auto-Cycle", false)
+    .setDescription("When enabled, the engine will automatically cycle through color swatches");
+
+  /**
+   * Auto-cycle to a random palette, not the next one
+   */
+  public final EnumParameter<AutoCycleMode> autoCycleMode =
+    new EnumParameter<AutoCycleMode>("Auto-Cycle Mode", AutoCycleMode.NEXT)
+    .setDescription("Mode of auto cycling");
+
+  /**
+   * Time in seconds after which transition thru the pattern set is automatically initiated.
+   */
+  public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
+    new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
+    .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
+    .setUnits(LXParameter.Units.SECONDS);
+
+
+  private double autoCycleProgress = 0;
+
+  public final DiscreteParameter autoCycleCursor =
+    new DiscreteParameter("Auto-Cycle", NO_SWATCH_INDEX, NO_SWATCH_INDEX, 0)
+    .setDescription("Index for the auto-cycle parameter");
+
+  public final BooleanParameter triggerSwatchCycle =
+    new BooleanParameter("Trigger Cycle")
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Triggers a swatch change");
+
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
    */
@@ -104,6 +138,22 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     }
   });
 
+  public enum AutoCycleMode {
+    NEXT,
+    RANDOM;
+
+    @Override
+    public String toString() {
+      switch (this) {
+      case NEXT:
+        return "Next";
+      default:
+      case RANDOM:
+        return "Random";
+      }
+    }
+  };
+
   public LXPalette(LX lx) {
     super(lx, "Color Palette");
     addChild("swatch", this.swatch = new LXSwatch(this, false));
@@ -111,7 +161,29 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     addParameter("transitionEnabled", this.transitionEnabled);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
     addParameter("transitionMode", this.transitionMode);
+    addParameter("autoCycleEnabled", this.autoCycleEnabled);
+    addParameter("autoCycleMode", this.autoCycleMode);
+    addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
+    addParameter("autoCycleCursor", this.autoCycleCursor);
+    addParameter("triggerSwatchCycle", this.triggerSwatchCycle);
     this.color = swatch.colors.get(0);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (p == this.autoCycleEnabled) {
+      this.autoCycleProgress = 0;
+    } else if (p == this.triggerSwatchCycle) {
+      if (this.triggerSwatchCycle.isOn()) {
+        this.triggerSwatchCycle.setValue(false);
+        if (this.transitionTarget != null) {
+          finishTransition();
+        } else {
+          doSwatchCycle();
+        }
+      }
+    }
   }
 
   /**
@@ -230,6 +302,10 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       this.mutableSwatches.add(index, swatch);
     }
     _reindexSwatches();
+    this.autoCycleCursor.setRange(-1, this.swatches.size());
+    if (index >= 0 && index <= this.autoCycleCursor.getValuei()) {
+      this.autoCycleCursor.increment();
+    }
     for (Listener listener : this.listeners) {
       listener.swatchAdded(this, swatch);
     }
@@ -246,17 +322,24 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     if (!this.swatches.contains(swatch)) {
       throw new IllegalStateException("Cannot remove swatch not in palette: " + swatch);
     }
+    int index = this.mutableSwatches.indexOf(swatch);
     this.mutableSwatches.remove(swatch);
     _reindexSwatches();
     for (Listener listener : this.listeners) {
       listener.swatchRemoved(this, swatch);
     }
+    if (index <= this.autoCycleCursor.getValuei()) {
+      this.autoCycleCursor.decrement();
+    }
+    this.autoCycleCursor.setRange(NO_SWATCH_INDEX, this.swatches.size());
     swatch.dispose();
     return this;
   }
 
   public LXPalette setSwatch(LXSwatch swatch) {
     JsonObject swatchObj = LXSerializable.Utils.stripIds(LXSerializable.Utils.toObject(swatch));
+    this.autoCycleCursor.setValue(swatch.getIndex());
+    this.autoCycleProgress = 0;
     if (this.transitionEnabled.isOn()) {
       this.transitionFrom = LXSwatch.staticCopy(this.swatch);
       this.transitionTo = LXSwatch.staticCopy(swatch);
@@ -289,14 +372,22 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     return (this.transitionTarget != null) ? this.transition.getValue() : 0;
   }
 
+  public double getAutoCycleProgress() {
+    return this.autoCycleProgress;
+  }
+
+  private void finishTransition() {
+    this.swatch.load(this.lx, this.transitionTarget);
+    this.transitionFrom = null;
+    this.transitionTo = null;
+    this.transitionTarget = null;
+  }
+
   public void loop(double deltaMs) {
     if (this.transitionTarget != null) {
       this.transition.loop(deltaMs);
       if (this.transition.finished()) {
-        this.swatch.load(this.lx, this.transitionTarget);
-        this.transitionFrom = null;
-        this.transitionTo = null;
-        this.transitionTarget = null;
+        finishTransition();
       } else {
         float lerp = this.transition.getBasisf();
         int i = 0;
@@ -304,8 +395,67 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
           _transitionColor(color, i++, lerp);
         }
       }
+      this.autoCycleProgress = 0;
     } else {
       this.swatch.loop(deltaMs);
+      if (this.autoCycleEnabled.isOn()) {
+        this.autoCycleProgress += deltaMs / (1000 * this.autoCycleTimeSecs.getValue());
+        if (this.autoCycleProgress >= 1) {
+          this.autoCycleProgress = 0;
+          doSwatchCycle();
+        }
+      }
+    }
+  }
+
+  private void doSwatchCycle() {
+    switch (this.autoCycleMode.getEnum()) {
+    case NEXT:
+      goNextSwatch();
+      break;
+    case RANDOM:
+      goRandomSwatch();
+      break;
+    }
+  }
+
+  private void goNextSwatch() {
+    if (this.swatches.size() <= 1) {
+      return;
+    }
+    int startIndex = this.autoCycleCursor.getValuei();
+    int nextIndex = (startIndex + 1) % this.swatches.size();
+    while (nextIndex != startIndex) {
+      if (startIndex < 0) {
+        startIndex = 0;
+      }
+      LXSwatch next = this.swatches.get(nextIndex);
+      if (next.autoCycleEligible.isOn()) {
+        setSwatch(next);
+        return;
+      }
+      nextIndex = (nextIndex + 1) % this.swatches.size();
+    }
+  }
+
+  private void goRandomSwatch() {
+    if (this.swatches.size() <= 1) {
+      return;
+    }
+    List<LXSwatch> eligible = new ArrayList<LXSwatch>();
+    int autoIndex = this.autoCycleCursor.getValuei();
+    for (int i = 0; i < this.swatches.size(); ++i) {
+      if (i != autoIndex) {
+        LXSwatch test = this.swatches.get(i);
+        if (test.autoCycleEligible.isOn()) {
+          eligible.add(test);
+        }
+      }
+    }
+    int numEligible = eligible.size();
+    if (numEligible > 0) {
+      LXSwatch random = eligible.get(LXUtils.constrain((int) LXUtils.random(0, numEligible), 0, numEligible - 1));
+      setSwatch(random);
     }
   }
 
@@ -351,11 +501,19 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     if (index < 0 || index >= this.mutableSwatches.size()) {
       throw new IllegalArgumentException("Cannot move swatch to invalid index: " + index);
     }
+    LXSwatch autoCycleSwatch = null;
+    int auto = this.autoCycleCursor.getValuei();
+    if (auto >= 0 && auto < this.swatches.size()) {
+      autoCycleSwatch = this.swatches.get(auto);
+    }
     this.mutableSwatches.remove(swatch);
     this.mutableSwatches.add(index, swatch);
     _reindexSwatches();
     for (Listener listener : this.listeners) {
       listener.swatchMoved(this, swatch);
+    }
+    if (autoCycleSwatch != null) {
+      this.autoCycleCursor.setValue(this.swatches.indexOf(autoCycleSwatch));
     }
     return this;
   }

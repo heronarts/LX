@@ -60,6 +60,10 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Restores the values of this swatch");
 
+  public final BooleanParameter autoCycleEligible =
+    new BooleanParameter("Cycle", true)
+    .setDescription("Whether the swatch is eligible for auto-cycle");
+
   private int index = 0;
 
   public LXSwatch(LX lx) {
@@ -67,6 +71,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     this.mutableColors.add(new LXDynamicColor(this));
     addArray("colors", this.colors);
     addParameter("recall", this.recall);
+    addParameter("autoCycleEligible", this.autoCycleEligible);
   }
 
   LXSwatch(LXPalette palette, boolean setParent) {
