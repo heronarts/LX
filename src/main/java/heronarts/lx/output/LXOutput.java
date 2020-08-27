@@ -167,7 +167,7 @@ public abstract class LXOutput extends LXComponent {
    * @param colors Array of color values
    * @return this
    */
-  public final LXOutput send(int[] colors) {
+  public LXOutput send(int[] colors) {
     return send(colors, 1.);
   }
 

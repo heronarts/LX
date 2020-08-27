@@ -80,13 +80,9 @@ public class LX {
   }
 
   public interface Permissions {
-    public default boolean canSave() {
-      return true;
-    }
+    public boolean canSave();
 
-    public default int getMaxDatagrams() {
-      return -1;
-    }
+    public int getMaxPoints();
   }
 
   public static class Flags {
@@ -238,7 +234,15 @@ public class LX {
   /**
    * Permissions
    */
-  protected Permissions permissions = new Permissions() {};
+  protected Permissions permissions = new Permissions() {
+    public boolean canSave() {
+      return true;
+    }
+
+    public int getMaxPoints() {
+      return -1;
+    }
+  };
 
   /**
    * Error stack

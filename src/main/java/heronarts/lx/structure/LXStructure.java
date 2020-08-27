@@ -49,10 +49,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   public class Output extends LXOutput {
 
-    private int outputCount = 0;
-    private int maxOutputs = 0;
-    private boolean didWarn = false;
-
     public Output(LX lx) throws SocketException {
       super(lx);
       this.gammaMode.setValue(GammaMode.DIRECT);
@@ -60,8 +56,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
     @Override
     protected void onSend(int[] colors, double brightness) {
-      this.maxOutputs = lx.getPermissions().getMaxDatagrams();
-      this.outputCount = 0;
       for (LXFixture fixture : fixtures) {
         onSendFixture(fixture, colors, brightness);
       }
@@ -86,15 +80,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         // Then send the fixture's own direct packets
         for (LXOutput output : fixture.outputs) {
           output.setGammaDelegate(this);
-          if ((this.maxOutputs < 0) || (this.outputCount < this.maxOutputs)) {
-            output.send(colors, brightness);
-            ++this.outputCount;
-          } else {
-            if (!this.didWarn) {
-              this.didWarn = true;
-              this.lx.pushError(null, "NOTE: Your license is limited to a maximum of " + this.maxOutputs + " output packets. Your project exceeds this limit. Only the first " + this.maxOutputs + " active packets will be sent. This warning will not be shown again.");
-            }
-          }
+          output.send(colors, brightness);
         }
       }
     }

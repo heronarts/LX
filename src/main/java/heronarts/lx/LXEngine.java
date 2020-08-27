@@ -104,6 +104,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public class Output extends LXOutputGroup implements LXOscComponent {
 
+    public final BooleanParameter restricted =
+      new BooleanParameter("Restricted", false)
+      .setDescription("Whether output is restricted due to license restrictions");
+
     /**
      * This ModelOutput helper is used for sending dynamic datagrams that are
      * specified in the model. Any time the model is changed, this set will be
@@ -148,12 +152,28 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     Output(LX lx) {
       super(lx);
+      this.restricted.addListener((p) -> {
+        if (this.restricted.isOn()) {
+          int myPoints = lx.model.size;
+          int limitPoints = lx.permissions.getMaxPoints();
+          lx.pushError(null, "You have exceeded the maximum number of points allowed by your license (" + myPoints + " > " + limitPoints + "). Output will be disabled.");
+        }
+      });
+
       try {
         addChild(new ModelOutput(lx));
       } catch (SocketException sx) {
         lx.pushError(sx, "Serious network error, could not create output socket. Program will continue with no network output.\n" + sx.getLocalizedMessage());
         LXOutput.error("Could not create output datagram socket, model will not be able to send");
       }
+    }
+
+    @Override
+    public LXOutput send(int[] colors) {
+      if (!this.restricted.isOn()) {
+        super.send(colors);
+      }
+      return this;
     }
   }
 
@@ -876,19 +896,27 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       // We are multi-threading, lock the double buffer and flip it
       this.buffer.flip();
     }
-    if (isNetworkMultithreaded) {
-      // Notify the network thread of new work to do!
-      synchronized (this.networkThread) {
-        this.networkThread.notify();
+
+    int maxPoints = this.lx.permissions.getMaxPoints();
+    this.output.restricted.setValue(maxPoints >= 0 && this.buffer.copy.main.length > maxPoints);
+
+    if (!this.output.restricted.isOn()) {
+      if (isNetworkMultithreaded) {
+        // Notify the network thread of new work to do!
+        synchronized (this.networkThread) {
+          this.networkThread.notify();
+        }
+        this.profiler.outputNanos = 0;
+      } else {
+        // Or do it ourself here on the engine thread
+        long outputStart = System.nanoTime();
+        Frame sendFrame = isDoubleBuffering ? this.buffer.copy : this.buffer.render;
+        int[] sendColors = (this.lx.flags.sendCueToOutput && sendFrame.cueOn) ? sendFrame.cue : sendFrame.main;
+        this.output.send(sendColors);
+        this.profiler.outputNanos = System.nanoTime() - outputStart;
       }
     } else {
-      // Or do it ourself here on the engine thread
-      long outputStart = System.nanoTime();
-      Frame sendFrame = isDoubleBuffering ? this.buffer.copy : this.buffer.render;
-      int[] sendColors = (this.lx.flags.sendCueToOutput && sendFrame.cueOn) ? sendFrame.cue : sendFrame.main;
-      this.output.send(sendColors);
-
-      this.profiler.outputNanos = System.nanoTime() - outputStart;
+      this.profiler.outputNanos = 0;
     }
 
     // All done running this pass of the engine!
