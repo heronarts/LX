@@ -908,12 +908,16 @@ public class LXChannel extends LXAbstractChannel {
   private static final String KEY_PATTERNS = "patterns";
   private static final String KEY_PATTERN_INDEX = "patternIndex";
   private static final String KEY_GROUP = "group";
+  protected static final String KEY_IS_GROUP = "isGroup";
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     obj.addProperty(KEY_PATTERN_INDEX, this.activePatternIndex);
     obj.add(KEY_PATTERNS, LXSerializable.Utils.toArray(lx, this.patterns));
+    if (isGroup()) {
+      obj.addProperty(KEY_IS_GROUP, true);
+    }
     if (this.group != null) {
       obj.addProperty(KEY_GROUP, this.group.getId());
     }

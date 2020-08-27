@@ -1048,8 +1048,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
   public void loadChannel(JsonObject channelObj, int index) {
     String channelClass = channelObj.get(KEY_CLASS).getAsString();
+    boolean isGroup = channelObj.has(LXChannel.KEY_IS_GROUP);
     LXAbstractChannel channel;
-    if (channelClass.equals("heronarts.lx.mixer.LXGroup")
+    if (isGroup || channelClass.equals("heronarts.lx.mixer.LXGroup")
         // NOTE(mcslee): horrible backwards-compatibility hack, remove at some point
         || channelClass.equals("heronarts.lx.LXGroup")) {
       channel = addGroup(index);
