@@ -31,6 +31,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -381,30 +382,62 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
   }
 
+  public static class IndexBufferSegment {
+    private final int start;
+    private final int num;
+    private final int stride;
+
+    public IndexBufferSegment(int start, int num) {
+      this(start, num, 1);
+    }
+
+    public IndexBufferSegment(int start, int num, int stride) {
+      this(start, num, stride, null);
+    }
+
+    public IndexBufferSegment(int start, int num, int stride, LXBufferOutput.ByteOrder byteOrder) {
+      this.start = start;
+      this.num = num;
+      this.stride = stride;
+    }
+  }
+
   /**
    * An internal utility class which dynamically keeps the index values inside
    * an index buffer up to date and in sync with this fixture. Custom fixture
    * classes should use this construct via {@link #toDynamicIndexBuffer()}
    * in order to keep their output indices in sync with the fixture's model
    */
-  private class DynamicIndexBuffer {
+  public class DynamicIndexBuffer {
 
-    private final int start;
-    private final int num;
-    private final int stride;
+    private final IndexBufferSegment[] segments;
     private final int[] indexBuffer;
 
     private DynamicIndexBuffer(int start, int num, int stride) {
-      this.start = start;
-      this.num = num;
-      this.stride = stride;
-      this.indexBuffer = new int[this.num];
+      this(new IndexBufferSegment(start, num, stride));
+    }
+
+    private DynamicIndexBuffer(IndexBufferSegment ... segments) {
+      this.segments = segments;
+      int size = size();
+      this.indexBuffer = new int[size];
       update();
     }
 
+    private int size() {
+      int sz = 0;
+      for (IndexBufferSegment segment : this.segments) {
+        sz += segment.num;
+      }
+      return sz;
+    }
+
     private void update() {
-      for (int i = 0; i < this.num; ++i) {
-        this.indexBuffer[i] = getPoint(this.start + i * this.stride).index;
+      int i = 0;
+      for (IndexBufferSegment segment : this.segments) {
+        for (int s = 0; s < segment.num; ++s) {
+          this.indexBuffer[i++] = getPoint(segment.start + s * segment.stride).index;
+        }
       }
     }
   }
@@ -450,7 +483,21 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @return Index buffer of the points in this fixture
    */
   protected int[] toDynamicIndexBuffer(int start, int num, int stride) {
-    DynamicIndexBuffer dynamicIndexBuffer = new DynamicIndexBuffer(start, num, stride);
+    return toDynamicIndexBuffer(new IndexBufferSegment(start, num, stride));
+  }
+
+  /**
+   * Get an index buffer version of this fixture. The index buffer will be dynamic
+   * and have its point indices updated automatically anytime this fixture is moved
+   * or the larger structure is rearranged. The buffer will stop being updated
+   * if this fixture's metrics are changed or if it is regenerated for any other
+   * reason.
+   *
+   * @param segments Segments in the index buffer
+   * @return Index buffer of the points in this fixture, as defined by segments
+   */
+  protected int[] toDynamicIndexBuffer(IndexBufferSegment ... segments) {
+    DynamicIndexBuffer dynamicIndexBuffer = new DynamicIndexBuffer(segments);
     this.dynamicIndexBuffers.add(dynamicIndexBuffer);
     return dynamicIndexBuffer.indexBuffer;
   }

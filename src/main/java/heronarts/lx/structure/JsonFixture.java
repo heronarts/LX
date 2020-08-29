@@ -121,13 +121,14 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_PORT = "port";
   private static final String KEY_BYTE_ORDER = "byteOrder";
   private static final String KEY_UNIVERSE = "universe";
-  private static final String KEY_DATA_OFFSET = "dataOffset";
+  private static final String KEY_DDP_DATA_OFFSET = "dataOffset";
   private static final String KEY_KINET_PORT = "kinetPort";
-  private static final String KEY_CHANNEL = "channel";
+  private static final String KEY_OPC_CHANNEL = "channel";
   private static final String KEY_START = "start";
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
   private static final String KEY_REVERSE = "reverse";
+  private static final String KEY_SEGMENTS = "segments";
 
   private static final String LABEL_PLACEHOLDER = "UNKNOWN";
 
@@ -135,8 +136,8 @@ public class JsonFixture extends LXFixture {
     ARTNET(KEY_UNIVERSE, "artnet", "artdmx"),
     ARTSYNC(null, "artsync"),
     SACN(KEY_UNIVERSE, "sacn", "e131"),
-    DDP(KEY_DATA_OFFSET, "ddp"),
-    OPC(KEY_CHANNEL, "opc"),
+    DDP(KEY_DDP_DATA_OFFSET, "ddp"),
+    OPC(KEY_OPC_CHANNEL, "opc"),
     KINET(KEY_KINET_PORT, "kinet");
 
     private final String universeKey;
@@ -215,14 +216,14 @@ public class JsonFixture extends LXFixture {
     WBRG(LXBufferOutput.ByteOrder.WBRG),
     WBGR(LXBufferOutput.ByteOrder.WBGR);
 
-    private final LXBufferOutput.ByteOrder datagramByteOrder;
+    private final LXBufferOutput.ByteOrder byteOrder;
 
-    private ByteOrderDefinition(LXBufferOutput.ByteOrder datagramByteOrder) {
-      this.datagramByteOrder = datagramByteOrder;
+    private ByteOrderDefinition(LXBufferOutput.ByteOrder byteOrder) {
+      this.byteOrder = byteOrder;
     }
 
-    private LXBufferOutput.ByteOrder getDatagramByteOrder() {
-      return this.datagramByteOrder;
+    private LXBufferOutput.ByteOrder getByteOrder() {
+      return this.byteOrder;
     }
 
     private static ByteOrderDefinition get(String order) {
@@ -331,24 +332,34 @@ public class JsonFixture extends LXFixture {
     private final InetAddress address;
     private final int port;
     private final int universe;
-    private final int start;
-    private final int num;
-    private final int stride;
-    private final boolean reverse;
+    private final List<SegmentDefinition> segments;
 
-    private OutputDefinition(ProtocolDefinition protocol, TransportDefinition transport, ByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int start, int num, int stride, boolean reverse) {
+    private OutputDefinition(ProtocolDefinition protocol, TransportDefinition transport, ByteOrderDefinition byteOrder, InetAddress address, int port, int universe, List<SegmentDefinition> segments) {
       this.protocol = protocol;
       this.transport = transport;
       this.byteOrder = byteOrder;
       this.address = address;
       this.port = port;
       this.universe = universe;
+      this.segments = segments;
+    }
+
+  }
+
+  private class SegmentDefinition {
+    private final int start;
+    private final int num;
+    private final int stride;
+    private final boolean reverse;
+    private final ByteOrderDefinition dynamicByteOrder;
+
+    private SegmentDefinition(int start, int num, int stride, boolean reverse, ByteOrderDefinition dynamicByteOrder) {
       this.start = start;
       this.num = num;
       this.stride = stride;
       this.reverse = reverse;
+      this.dynamicByteOrder = dynamicByteOrder;
     }
-
   }
 
   private class StripDefinition {
@@ -1213,7 +1224,7 @@ public class JsonFixture extends LXFixture {
         if (outputElem.isJsonObject()) {
           loadOutput(outputs, outputElem.getAsJsonObject());
         } else if (!outputElem.isJsonNull()) {
-          addWarning(KEY_OUTPUTS + " should only contain arc elements in JSON object format, found invalid: " + outputElem);
+          addWarning(KEY_OUTPUTS + " should only contain output elements in JSON object format, found invalid: " + outputElem);
         }
       }
     }
@@ -1232,21 +1243,6 @@ public class JsonFixture extends LXFixture {
       if (transport == null) {
         transport = TransportDefinition.UDP;
         addWarning("Output should define a valid transport");
-      }
-    }
-
-    ByteOrderDefinition byteOrder = ByteOrderDefinition.RGB;
-    String byteOrderStr = loadString(outputObj, KEY_BYTE_ORDER, true, "Output must specify a valid string " + KEY_BYTE_ORDER);
-    if (byteOrderStr != null) {
-      if (byteOrderStr.isEmpty()) {
-        addWarning("Output must specify non-empty string value for " + KEY_BYTE_ORDER);
-      } else {
-        ByteOrderDefinition definedByteOrder = ByteOrderDefinition.get(byteOrderStr);
-        if (definedByteOrder == null) {
-          addWarning("Unrecognized byte order type: " + byteOrderStr);
-        } else {
-          byteOrder = definedByteOrder;
-        }
       }
     }
 
@@ -1282,29 +1278,99 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
-    int start = loadInt(outputObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
+    // Top level output byte-order
+    ByteOrderDefinition byteOrder = loadByteOrder(outputObj, ByteOrderDefinition.RGB);
+
+    // Load up the segment definitions
+    List<SegmentDefinition> segments = new ArrayList<SegmentDefinition>();
+    loadSegments(segments, outputObj, byteOrder);
+
+    outputs.add(new OutputDefinition(protocol, transport, byteOrder, address, port, universe, segments));
+  }
+
+  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_STRIDE, KEY_REVERSE };
+
+  private void loadSegments(List<SegmentDefinition> segments, JsonObject outputObj, ByteOrderDefinition defaultByteOrder) {
+    if (outputObj.has(KEY_SEGMENTS)) {
+      // Specifying an array of segments, keys should not be there by default
+      for (String segmentKey : SEGMENT_KEYS) {
+        if (outputObj.has(segmentKey)) {
+          addWarning(KEY_OUTPUT + " specifies " + KEY_SEGMENTS + ", may not also specify " + segmentKey + ", will be ignored");
+        }
+      }
+
+      JsonArray segmentsArr = loadArray(outputObj, KEY_SEGMENTS, KEY_SEGMENTS + " must be an array of segments");
+      if (segmentsArr != null) {
+        for (JsonElement segmentElem : segmentsArr) {
+          if (segmentElem.isJsonObject()) {
+            loadSegment(segments, segmentElem.getAsJsonObject(), defaultByteOrder, false);
+          } else if (!segmentElem.isJsonNull()) {
+            addWarning(KEY_SEGMENTS + " should only contain segment elements in JSON object format, found invalid: " + segmentElem);
+          }
+        }
+      }
+    } else {
+      // Just specifying one, no need for segments key, defined directly in output
+      loadSegment(segments, outputObj, defaultByteOrder, true);
+    }
+  }
+
+  private void loadSegment(List<SegmentDefinition> segments, JsonObject segmentObj, ByteOrderDefinition outputByteOrder, boolean isOutput) {
+    int start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
     if (start < 0) {
       addWarning("Output " + KEY_START + " may not be negative");
       return;
     }
     int num = OutputDefinition.ALL_POINTS;
-    if (outputObj.has(KEY_NUM)) {
-      num = loadInt(outputObj, KEY_NUM, true, "Output " + KEY_NUM + " must be a valid integer");
+    if (segmentObj.has(KEY_NUM)) {
+      num = loadInt(segmentObj, KEY_NUM, true, "Output " + KEY_NUM + " must be a valid integer");
       if (num < 0) {
         addWarning("Output " + KEY_NUM + " may not be negative");
         return;
       }
     }
     int stride = 1;
-    if (outputObj.has(KEY_STRIDE)) {
-      stride = loadInt(outputObj, KEY_STRIDE, true, "Output " + KEY_STRIDE + " must be a valid integer");
+    if (segmentObj.has(KEY_STRIDE)) {
+      stride = loadInt(segmentObj, KEY_STRIDE, true, "Output " + KEY_STRIDE + " must be a valid integer");
       if (stride <= 0) {
         addWarning("Output stride must be a positive value, use 'reverse: true' to invert pixel order");
         return;
       }
     }
-    boolean reverse = loadBoolean(outputObj, KEY_REVERSE, "Output " + KEY_REVERSE + " must be a valid boolean");
-    outputs.add(new OutputDefinition(protocol, transport, byteOrder, address, port, universe, start, num, stride, reverse));
+    boolean reverse = loadBoolean(segmentObj, KEY_REVERSE, "Output " + KEY_REVERSE + " must be a valid boolean");
+
+    ByteOrderDefinition segmentByteOrder = null;
+    if (!isOutput) {
+      segmentByteOrder = loadByteOrder(segmentObj, null);
+      if (segmentByteOrder != null) {
+        if (segmentByteOrder.getByteOrder().getNumBytes() != outputByteOrder.getByteOrder().getNumBytes()) {
+          addWarning("Segment byte order must have same number of bytes as output byte order (" +
+            segmentByteOrder.getByteOrder() + " != " + outputByteOrder.getByteOrder() + "), ignoring segment byte order"
+          );
+          segmentByteOrder = null;
+        }
+      }
+    }
+
+    segments.add(new SegmentDefinition(start, num, stride, reverse, segmentByteOrder));
+  }
+
+  private ByteOrderDefinition loadByteOrder(JsonObject obj, ByteOrderDefinition defaultByteOrder) {
+    ByteOrderDefinition byteOrder = defaultByteOrder;
+    String byteOrderStr = loadString(obj, KEY_BYTE_ORDER, true, "Output must specify a valid string " + KEY_BYTE_ORDER);
+    if (byteOrderStr != null) {
+      if (byteOrderStr.isEmpty()) {
+        addWarning("Output must specify non-empty string value for " + KEY_BYTE_ORDER);
+      } else {
+        ByteOrderDefinition definedByteOrder = ByteOrderDefinition.get(byteOrderStr);
+        if (definedByteOrder == null) {
+          addWarning("Unrecognized byte order type: " + byteOrderStr);
+        } else {
+          byteOrder = definedByteOrder;
+        }
+      }
+    }
+    return byteOrder;
   }
 
   @Override
@@ -1381,32 +1447,57 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
-    if (output.start < 0 || (output.start >= fixtureSize)) {
-      addWarning("Output specifies invalid start position: " + output.start + " should be between [0, " + (fixtureSize-1) + "]");
-      return;
+    boolean hasDynamicByteOrder = false;
+
+    List<IndexBufferSegment> segments = new ArrayList<IndexBufferSegment>();
+    for (SegmentDefinition segment : output.segments) {
+
+      if (segment.start < 0 || (segment.start >= fixtureSize)) {
+        addWarning("Output specifies invalid start position: " + segment.start + " should be between [0, " + (fixtureSize-1) + "]");
+        return;
+      }
+
+      int start = segment.start + fixtureOffset;
+      int num = segment.num;
+      if (num == OutputDefinition.ALL_POINTS) {
+        num = fixtureSize;
+      }
+      int stride = segment.stride;
+      if (start + stride * (num-1) >= fixtureSize) {
+        addWarning("Output specifies excessive size beyond fixture limits: start=" + segment.start + " num=" + num + " stride=" + stride + " fixtureSize=" + fixtureSize);
+        return;
+      }
+
+      // Want those backwards? No problem!
+      if (segment.reverse) {
+        start = start + stride * (num-1);
+        stride = -stride;
+      }
+
+      if (segment.dynamicByteOrder != null) {
+        hasDynamicByteOrder = true;
+      }
+
+      segments.add(new IndexBufferSegment(start, num, stride));
     }
 
-    int start = output.start + fixtureOffset;
-    int num = output.num;
-    if (num == OutputDefinition.ALL_POINTS) {
-      num = fixtureSize;
-    }
-    int stride = output.stride;
-    if (start + stride * (num-1) >= fixtureSize) {
-      addWarning("Output specifies excessive size beyond fixture limits: start=" + output.start + " num=" + num + " stride=" + stride + " fixtureSize=" + fixtureSize);
-      return;
-    }
-
-    // Want those backwards? No problem!
-    if (output.reverse) {
-      start = start + stride * (num-1);
-      stride = -stride;
-    }
-    LXBufferOutput.ByteOrder byteOrder = output.byteOrder.getDatagramByteOrder();
-
-    int[] indexBuffer = toDynamicIndexBuffer(start, num, stride);
-    int dataLength = indexBuffer.length * byteOrder.getNumBytes();
+    LXBufferOutput.ByteOrder outputByteOrder = output.byteOrder.getByteOrder();
+    int[] indexBuffer = toDynamicIndexBuffer(segments.toArray(new IndexBufferSegment[0]));
+    LXBufferOutput.ByteOrder[] byteOrderBuffer = null;
+    int dataLength = indexBuffer.length * outputByteOrder.getNumBytes();
     LXBufferOutput bufferOutput = null;
+
+    if (hasDynamicByteOrder) {
+      byteOrderBuffer = new LXBufferOutput.ByteOrder[indexBuffer.length];
+      int i = 0;
+      for (SegmentDefinition segment : output.segments) {
+        LXBufferOutput.ByteOrder segmentByteOrder = (segment.dynamicByteOrder != null) ?
+          segment.dynamicByteOrder.getByteOrder() : outputByteOrder;
+        for (int s = 0; s < segment.num; ++s) {
+          byteOrderBuffer[i++] = segmentByteOrder;
+        }
+      }
+    }
 
     if (dataLength >= (1 << 16)) {
       addWarning("Output packet would have length > 16-bits (" + dataLength + ") - not possible");
@@ -1416,24 +1507,24 @@ public class JsonFixture extends LXFixture {
     switch (output.protocol) {
     case ARTNET:
       if (dataLength > ArtNetDatagram.MAX_DATA_LENGTH) {
-        addWarning("Art-Net packet using noncompliant size: " + dataLength +">" + ArtNetDatagram.MAX_DATA_LENGTH);
+        addWarning("Art-Net packet using noncompliant size: " + dataLength + ">" + ArtNetDatagram.MAX_DATA_LENGTH);
       }
-      bufferOutput = new ArtNetDatagram(this.lx, indexBuffer, byteOrder, output.universe);
+      bufferOutput = new ArtNetDatagram(this.lx, indexBuffer, outputByteOrder, output.universe);
       break;
     case SACN:
       if (dataLength > StreamingACNDatagram.MAX_DATA_LENGTH) {
         addWarning("Streaming ACN / E1.31 packet using noncompliant size: " + dataLength + ">" + StreamingACNDatagram.MAX_DATA_LENGTH);
       }
-      bufferOutput = new StreamingACNDatagram(this.lx, indexBuffer, byteOrder, output.universe);
+      bufferOutput = new StreamingACNDatagram(this.lx, indexBuffer, outputByteOrder, output.universe);
       break;
     case DDP:
-      if (byteOrder != LXBufferOutput.ByteOrder.RGB) {
+      if (outputByteOrder != LXBufferOutput.ByteOrder.RGB) {
         addWarning("DDP packets do not support non-RGB byte order, using RGB");
       }
       bufferOutput = new DDPDatagram(this.lx, indexBuffer, output.universe);
       break;
     case KINET:
-      if (byteOrder != LXBufferOutput.ByteOrder.RGB) {
+      if (outputByteOrder != LXBufferOutput.ByteOrder.RGB) {
         addWarning("KiNET packets do not support non-RGB byte order, using RGB");
       }
       if (dataLength > KinetDatagram.MAX_DATA_LENGTH) {
@@ -1444,9 +1535,9 @@ public class JsonFixture extends LXFixture {
       break;
     case OPC:
       if (output.transport == TransportDefinition.TCP) {
-        bufferOutput = new OPCSocket(this.lx, indexBuffer, byteOrder, (byte) output.universe);
+        bufferOutput = new OPCSocket(this.lx, indexBuffer, outputByteOrder, (byte) output.universe);
       } else {
-        bufferOutput = new OPCDatagram(this.lx, indexBuffer, byteOrder, (byte) output.universe);
+        bufferOutput = new OPCDatagram(this.lx, indexBuffer, outputByteOrder, (byte) output.universe);
       }
       break;
     case ARTSYNC:
@@ -1455,6 +1546,10 @@ public class JsonFixture extends LXFixture {
       break;
     }
     if (bufferOutput != null) {
+      // Set a dynamic byte order if we have one
+      if (byteOrderBuffer != null) {
+        bufferOutput.setByteOrder(byteOrderBuffer);
+      }
       if (bufferOutput instanceof LXOutput.InetOutput) {
         LXOutput.InetOutput inetOutput = (LXOutput.InetOutput) bufferOutput;
         if (output.port != OutputDefinition.DEFAULT_PORT) {

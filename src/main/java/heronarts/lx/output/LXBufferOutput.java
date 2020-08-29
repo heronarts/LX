@@ -77,6 +77,13 @@ public abstract class LXBufferOutput extends LXOutput {
 
   protected final int[] indexBuffer;
 
+  /**
+   * Wacky option to have a different byte-order per-pixel, which may be used
+   * in rare cases by JSONFixture. This is supported but generally discouraged,
+   * as it obviously creates a great opportunity for confusion.
+   */
+  protected ByteOrder[] byteOrderBuffer = null;
+
   protected LXBufferOutput(LX lx, int[] indexBuffer) {
     this(lx, indexBuffer, ByteOrder.RGB);
   }
@@ -119,7 +126,7 @@ public abstract class LXBufferOutput extends LXOutput {
   protected abstract int getDataBufferOffset();
 
   /**
-   * Sets the byte ordering of data in this datagram buffer
+   * Sets the byte ordering of data in this buffer
    *
    * @param byteOrder Byte ordering
    * @return this
@@ -129,6 +136,30 @@ public abstract class LXBufferOutput extends LXOutput {
       throw new IllegalArgumentException("May not change number of bytes in order");
     }
     this.byteOrder = byteOrder;
+    return this;
+  }
+
+  /**
+   * Sets a dynamic byte ordering on this output, where every index position
+   * may have a distinct byte ordering. They must all have the same byte length
+   * as the original byte order. Intermixing different byte-lengths is not supported.
+   *
+   * @param byteOrderBuffer Array of byte orderings
+   * @return this
+   */
+  public LXBufferOutput setByteOrder(ByteOrder[] byteOrderBuffer) {
+    if (byteOrderBuffer.length != this.indexBuffer.length) {
+      throw new IllegalArgumentException("Invalid byte order buffer length: " + byteOrderBuffer.length + " != " + this.indexBuffer.length);
+    }
+    for (ByteOrder byteOrder : byteOrderBuffer) {
+      if (byteOrder == null) {
+        throw new IllegalArgumentException("Dynamic byte order may not contain null entries");
+      }
+      if (byteOrder.getNumBytes() != this.byteOrder.getNumBytes()) {
+        throw new IllegalArgumentException("Dynamic byte order may not have variable size (" + byteOrder + " != " + this.byteOrder + ")");
+      }
+    }
+    this.byteOrderBuffer = byteOrderBuffer;
     return this;
   }
 
@@ -144,32 +175,64 @@ public abstract class LXBufferOutput extends LXOutput {
   protected LXBufferOutput updateDataBuffer(int[] colors, byte[] glut) {
     byte[] buffer = getDataBuffer();
     int offset = getDataBufferOffset();
-    int numBytes = this.byteOrder.getNumBytes();
-    if (this.byteOrder.hasWhite()) {
-      int[] byteOffset = this.byteOrder.getByteOffset();
-      for (int index : this.indexBuffer) {
-        int color = (index >= 0) ? colors[index] : 0;
-        byte r = glut[((color >> 16) & 0xff)];
-        byte g = glut[((color >> 8) & 0xff)];
-        byte b = glut[(color & 0xff)];
-        byte w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
-        r -= w;
-        g -= w;
-        b -= w;
-        buffer[offset + byteOffset[0]] = r;
-        buffer[offset + byteOffset[1]] = g;
-        buffer[offset + byteOffset[2]] = b;
-        buffer[offset + byteOffset[3]] = w;
-        offset += numBytes;
+
+    if (this.byteOrderBuffer != null) {
+      // Wacky dynamic byte order mode!
+      for (int i = 0; i < this.indexBuffer.length; ++i) {
+        int index = this.indexBuffer[i];
+        ByteOrder byteOrder = this.byteOrderBuffer[i];
+        int[] byteOffset = byteOrder.getByteOffset();
+        if (byteOrder.hasWhite()) {
+          int color = (index >= 0) ? colors[index] : 0;
+          int r = ((color >> 16) & 0xff);
+          int g = ((color >> 8) & 0xff);
+          int b = (color & 0xff);
+          int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+          r -= w;
+          g -= w;
+          b -= w;
+          buffer[offset + byteOffset[0]] = glut[r];
+          buffer[offset + byteOffset[1]] = glut[g];
+          buffer[offset + byteOffset[2]] = glut[b];
+          buffer[offset + byteOffset[3]] = glut[w];
+        } else {
+          int color = (index >= 0) ? colors[index] : 0;
+          buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
+          buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
+          buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
+        }
+        offset += byteOrder.getNumBytes();
       }
+
     } else {
-      int[] byteOffset = this.byteOrder.getByteOffset();
-      for (int index : indexBuffer) {
-        int color = (index >= 0) ? colors[index] : 0;
-        buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
-        buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
-        buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
-        offset += numBytes;
+
+      int numBytes = this.byteOrder.getNumBytes();
+      if (this.byteOrder.hasWhite()) {
+        int[] byteOffset = this.byteOrder.getByteOffset();
+        for (int index : this.indexBuffer) {
+          int color = (index >= 0) ? colors[index] : 0;
+          int r = ((color >> 16) & 0xff);
+          int g = ((color >> 8) & 0xff);
+          int b = (color & 0xff);
+          int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+          r -= w;
+          g -= w;
+          b -= w;
+          buffer[offset + byteOffset[0]] = glut[r];
+          buffer[offset + byteOffset[1]] = glut[g];
+          buffer[offset + byteOffset[2]] = glut[b];
+          buffer[offset + byteOffset[3]] = glut[w];
+          offset += numBytes;
+        }
+      } else {
+        int[] byteOffset = this.byteOrder.getByteOffset();
+        for (int index : indexBuffer) {
+          int color = (index >= 0) ? colors[index] : 0;
+          buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
+          buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
+          buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
+          offset += numBytes;
+        }
       }
     }
     return this;
