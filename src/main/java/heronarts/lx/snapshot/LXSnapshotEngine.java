@@ -131,7 +131,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
 
   public final BooleanParameter recallEffect =
     new BooleanParameter("Effects", true)
-    .setDescription("Whether effecct settings are recalled");
+    .setDescription("Whether effect settings are recalled");
 
   public final BooleanParameter recallModulation =
     new BooleanParameter("Modulation", true)
