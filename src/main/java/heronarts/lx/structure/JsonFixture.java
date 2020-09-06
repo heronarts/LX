@@ -484,6 +484,11 @@ public class JsonFixture extends LXFixture {
   public void onParameterChanged(LXParameter p) {
     if (p == this.fixtureType) {
       loadFixture(true);
+    } else if (p == this.enabled) {
+      // JSON fixture enabled cascades down children...
+      for (LXFixture child : this.children) {
+        child.enabled.setValue(this.enabled.isOn());
+      }
     }
     super.onParameterChanged(p);
   }
