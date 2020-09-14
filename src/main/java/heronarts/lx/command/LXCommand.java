@@ -19,7 +19,9 @@
 package heronarts.lx.command;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.JsonObject;
 
@@ -2045,6 +2047,57 @@ public abstract class LXCommand {
           remove.undo(lx);
         }
       }
+    }
+
+    public static class ModifyFixturePositions extends LXCommand {
+
+      private final Map<String, LXCommand.Parameter.SetValue> setValues =
+        new HashMap<String, LXCommand.Parameter.SetValue>();
+
+      public ModifyFixturePositions() {}
+
+      @Override
+      public String getDescription() {
+        return "Modify Fixture Position";
+      }
+
+      private boolean inUpdate = false;
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.inUpdate) {
+          return;
+        }
+        for (LXCommand.Parameter.SetValue setValue : this.setValues.values()) {
+          setValue.perform(lx);
+        }
+      }
+
+      public void update(LX lx, LXParameter parameter, double delta) {
+        this.inUpdate = true;
+        String path = parameter.getCanonicalPath();
+        LXCommand.Parameter.SetValue setValue = null;
+        if (this.setValues.containsKey(path)) {
+          setValue = this.setValues.get(path);
+          setValue.update(parameter.getValue() + delta);
+        } else {
+          setValue = new LXCommand.Parameter.SetValue(parameter, parameter.getValue() + delta);
+          this.setValues.put(path, setValue);
+        }
+
+        // Set the value
+        setValue.perform(lx);
+        lx.command.perform(this);
+        this.inUpdate = false;
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (LXCommand.Parameter.SetValue setValue : this.setValues.values()) {
+          setValue.undo(lx);
+        }
+      }
+
     }
   }
 

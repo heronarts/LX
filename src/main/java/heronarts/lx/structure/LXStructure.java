@@ -38,6 +38,7 @@ import com.google.gson.stream.JsonWriter;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
@@ -420,16 +421,32 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure translateSelectedFixtures(float tx, float ty, float tz) {
+    return translateSelectedFixtures(tx, ty, tz, null);
+  }
+
+  public LXStructure translateSelectedFixtures(float tx, float ty, float tz, LXCommand.Structure.ModifyFixturePositions action) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
         if (tx != 0) {
-          fixture.x.incrementValue(tx);
+          if (action != null) {
+            action.update(this.lx, fixture.x, tx);
+          } else {
+            fixture.x.incrementValue(tx);
+          }
         }
         if (ty != 0) {
-          fixture.y.incrementValue(ty);
+          if (action != null) {
+            action.update(this.lx, fixture.y, ty);
+          } else {
+            fixture.y.incrementValue(ty);
+          }
         }
         if (tz != 0) {
-          fixture.z.incrementValue(tz);
+          if (action != null) {
+            action.update(this.lx, fixture.z, tz);
+          } else {
+            fixture.z.incrementValue(tz);
+          }
         }
       }
     }
@@ -437,13 +454,25 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure rotateSelectedFixtures(float theta, float phi) {
+    return rotateSelectedFixtures(theta, phi, null);
+  }
+
+  public LXStructure rotateSelectedFixtures(float theta, float phi, LXCommand.Structure.ModifyFixturePositions action) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
         if (theta != 0) {
-          fixture.yaw.incrementValue(theta * 180 / Math.PI);
+          if (action != null) {
+            action.update(this.lx, fixture.yaw, theta * 180 / Math.PI);
+          } else {
+            fixture.yaw.incrementValue(theta * 180 / Math.PI);
+          }
         }
         if (phi != 0) {
-          fixture.pitch.incrementValue(phi * 180 / Math.PI);
+          if (action != null) {
+            action.update(this.lx, fixture.pitch, phi * 180 / Math.PI);
+          } else {
+            fixture.pitch.incrementValue(phi * 180 / Math.PI);
+          }
         }
       }
     }
