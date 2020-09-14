@@ -239,7 +239,8 @@ public class JsonFixture extends LXFixture {
   public enum ParameterType {
     STRING,
     INT,
-    FLOAT;
+    FLOAT,
+    BOOLEAN;
 
     private static ParameterType get(String str) {
       for (ParameterType type : values()) {
@@ -261,6 +262,7 @@ public class JsonFixture extends LXFixture {
     public final DiscreteParameter intParameter;
     public final BoundedParameter floatParameter;
     public final StringParameter stringParameter;
+    public final BooleanParameter booleanParameter;
 
     private boolean isReferenced = false;
 
@@ -278,16 +280,25 @@ public class JsonFixture extends LXFixture {
         this.stringParameter = (StringParameter) parameter;
         this.intParameter = null;
         this.floatParameter = null;
+        this.booleanParameter = null;
         break;
       case INT:
         this.stringParameter = null;
         this.intParameter = (DiscreteParameter) parameter;
         this.floatParameter = null;
+        this.booleanParameter = null;
         break;
       case FLOAT:
         this.stringParameter = null;
         this.intParameter = null;
         this.floatParameter = (BoundedParameter) parameter;
+        this.booleanParameter = null;
+        break;
+      case BOOLEAN:
+        this.stringParameter = null;
+        this.intParameter = null;
+        this.floatParameter = null;
+        this.booleanParameter = (BooleanParameter) parameter;;
         break;
       default:
         throw new IllegalStateException("Unknown ParameterType: " + type);
@@ -305,6 +316,10 @@ public class JsonFixture extends LXFixture {
 
     private ParameterDefinition(String name, String label, String description, float defaultFloat) {
       this(name, label, description, ParameterType.FLOAT, new BoundedParameter(name, defaultFloat, Float.MIN_VALUE, Float.MAX_VALUE));
+    }
+
+    private ParameterDefinition(String name, String label, String description, boolean defaultBoolean) {
+      this(name, label, description, ParameterType.BOOLEAN, new BooleanParameter(name, defaultBoolean));
     }
 
     private void dispose() {
@@ -659,6 +674,14 @@ public class JsonFixture extends LXFixture {
           parameterValue = String.valueOf(parameter.parameter.getValue());
         }
         break;
+      case BOOLEAN:
+        if (parameter.type == ParameterType.BOOLEAN) {
+          parameterValue = String.valueOf(parameter.booleanParameter.isOn());
+        } else {
+          addWarning("Cannot load non-boolean variable ${" + parameterName + "} into a boolean type: " + key);
+          return null;
+        }
+        break;
       }
       result.append(expression, index, matcher.start());
       result.append(parameterValue);
@@ -723,10 +746,15 @@ public class JsonFixture extends LXFixture {
     return 0f;
   }
 
-  private boolean loadBoolean(JsonObject obj, String key, String warning) {
+  private boolean loadBoolean(JsonObject obj, String key, boolean variablesAllowed, String warning) {
     if (obj.has(key)) {
       JsonElement boolElem = obj.get(key);
       if (boolElem.isJsonPrimitive()) {
+        JsonPrimitive boolPrimitive = boolElem.getAsJsonPrimitive();
+        if (variablesAllowed && boolPrimitive.isString()) {
+          // TODO: perhaps in the future we support boolean expressions? waiting for a use case to justify it first...
+          return Boolean.parseBoolean(replaceVariables(obj, key, boolPrimitive.getAsString(), ParameterType.BOOLEAN));
+        }
         return boolElem.getAsBoolean();
       }
       addWarning(warning);
@@ -973,7 +1001,12 @@ public class JsonFixture extends LXFixture {
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringValue));
         break;
-      default:
+      case BOOLEAN:
+        boolean booleanValue = defaultElem.getAsBoolean();
+        if (this.jsonParameterValues.has(parameterName)) {
+          booleanValue = this.jsonParameterContext.loadBoolean(this.jsonParameterValues, parameterName, true, "Child parameter should be a boolean: " + parameterName);
+        }
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, booleanValue));
         break;
       }
 
@@ -1342,7 +1375,7 @@ public class JsonFixture extends LXFixture {
         return;
       }
     }
-    boolean reverse = loadBoolean(segmentObj, KEY_REVERSE, "Output " + KEY_REVERSE + " must be a valid boolean");
+    boolean reverse = loadBoolean(segmentObj, KEY_REVERSE, true, "Output " + KEY_REVERSE + " must be a valid boolean");
 
     ByteOrderDefinition segmentByteOrder = null;
     if (!isOutput) {
@@ -1630,6 +1663,9 @@ public class JsonFixture extends LXFixture {
         break;
       case STRING:
         jsonParameters.addProperty(parameter.name, parameter.stringParameter.getString());
+        break;
+      case BOOLEAN:
+        jsonParameters.addProperty(parameter.name, parameter.booleanParameter.isOn());
         break;
       }
     }
