@@ -100,6 +100,10 @@ public class LXUtils {
     return (int) (v1 + (v2 - v1) * amt);
   }
 
+  public static int lerpi(int v1, int v2, double amt) {
+    return (int) (v1 + (v2 - v1) * amt);
+  }
+
   public static double tri(double t) {
     t = t - Math.floor(t);
     if (t < 0.25) {

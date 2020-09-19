@@ -316,7 +316,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       } else if (this.parameter instanceof LXNormalizedParameter) {
         ((LXNormalizedParameter) this.parameter).setNormalized(LXUtils.lerp(this.fromNormalized, this.normalizedValue, amount));
       } else if (this.parameter instanceof DiscreteParameter) {
-        ((DiscreteParameter) this.parameter).setValue((int) LXUtils.lerp(this.fromInt, this.intValue, amount));
+        ((DiscreteParameter) this.parameter).setValue(Math.round(LXUtils.lerpi(this.fromInt, this.intValue, amount)));
       } else {
         this.parameter.setValue(LXUtils.lerp(this.fromValue, this.value, amount));
       }
