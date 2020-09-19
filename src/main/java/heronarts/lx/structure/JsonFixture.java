@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -62,6 +63,7 @@ import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
+import heronarts.lx.utils.LXUtils;
 
 public class JsonFixture extends LXFixture {
 
@@ -458,6 +460,7 @@ public class JsonFixture extends LXFixture {
   private final List<ArcDefinition> definedArcs = new ArrayList<ArcDefinition>();
   private final List<OutputDefinition> definedOutputs = new ArrayList<OutputDefinition>();
   private final LinkedHashMap<String, ParameterDefinition> definedParameters = new LinkedHashMap<String, ParameterDefinition>();
+  private final LinkedHashMap<String, ParameterDefinition> reloadParameterValues = new LinkedHashMap<String, ParameterDefinition>();
 
   private int size = 0;
 
@@ -532,7 +535,12 @@ public class JsonFixture extends LXFixture {
   private boolean isLoaded = false;
 
   public void reload() {
+    this.reloadParameterValues.clear();
+    for (Map.Entry<String, ParameterDefinition> entry : this.definedParameters.entrySet()) {
+      this.reloadParameterValues.put(entry.getKey(), entry.getValue());
+    }
     reload(true);
+    this.reloadParameterValues.clear();
   }
 
   private void reload(boolean reloadParameters) {
@@ -967,11 +975,18 @@ public class JsonFixture extends LXFixture {
         continue;
       }
 
+      ParameterDefinition reloadDefinition = this.reloadParameterValues.get(parameterName);
+      if (reloadDefinition != null && reloadDefinition.type != type) {
+        reloadDefinition = null;
+      }
+
       switch (type) {
       case FLOAT:
         float floatValue = defaultElem.getAsFloat();
         if (this.jsonParameterValues.has(parameterName)) {
           floatValue = this.jsonParameterContext.loadFloat(this.jsonParameterValues, parameterName, true);
+        } else if (reloadDefinition != null) {
+          floatValue = reloadDefinition.floatParameter.getValuef();
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, floatValue));
         break;
@@ -991,6 +1006,8 @@ public class JsonFixture extends LXFixture {
         int intValue = defaultElem.getAsInt();
         if (this.jsonParameterValues.has(parameterName)) {
           intValue = this.jsonParameterContext.loadInt(this.jsonParameterValues, parameterName, true, "Child parameter should be an int: " + parameterName);
+        } else if (reloadDefinition != null) {
+          intValue = LXUtils.constrain(reloadDefinition.intParameter.getValuei(), minInt, maxInt);
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, intValue, minInt, maxInt));
         break;
@@ -998,6 +1015,8 @@ public class JsonFixture extends LXFixture {
         String stringValue = defaultElem.getAsString();
         if (this.jsonParameterValues.has(parameterName)) {
           stringValue = this.jsonParameterContext.loadString(this.jsonParameterValues, parameterName, true, "Child parameter should be an string: " + parameterName);
+        } else if (reloadDefinition != null) {
+          stringValue = reloadDefinition.stringParameter.getString();
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringValue));
         break;
@@ -1005,6 +1024,8 @@ public class JsonFixture extends LXFixture {
         boolean booleanValue = defaultElem.getAsBoolean();
         if (this.jsonParameterValues.has(parameterName)) {
           booleanValue = this.jsonParameterContext.loadBoolean(this.jsonParameterValues, parameterName, true, "Child parameter should be a boolean: " + parameterName);
+        } else if (reloadDefinition != null) {
+          booleanValue = reloadDefinition.booleanParameter.isOn();
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, booleanValue));
         break;
