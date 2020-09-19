@@ -97,11 +97,7 @@ public class LXUtils {
   }
 
   public static int lerpi(int v1, int v2, float amt) {
-    return (int) (v1 + (v2 - v1) * amt);
-  }
-
-  public static int lerpi(int v1, int v2, double amt) {
-    return (int) (v1 + (v2 - v1) * amt);
+    return Math.round(v1 + (v2 - v1) * amt);
   }
 
   public static double tri(double t) {
