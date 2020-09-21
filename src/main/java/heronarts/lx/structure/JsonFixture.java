@@ -25,6 +25,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -131,6 +132,9 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_STRIDE = "stride";
   private static final String KEY_REVERSE = "reverse";
   private static final String KEY_SEGMENTS = "segments";
+
+  // Metadata
+  private static final String KEY_META = "meta";
 
   private static final String LABEL_PLACEHOLDER = "UNKNOWN";
 
@@ -388,14 +392,16 @@ public class JsonFixture extends LXFixture {
     private final float pointSpacing;
     private final LXMatrix transform;
     private final List<OutputDefinition> outputs;
+    private final Map<String, String> metaData;
     private final String[] modelKeys;
 
-    private StripDefinition(int numPoints, float pointSpacing, LXVector origin, LXMatrix transform, List<OutputDefinition> outputs, String[] modelKeys) {
+    private StripDefinition(int numPoints, float pointSpacing, LXVector origin, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] modelKeys) {
       this.index = size;
       this.numPoints = numPoints;
       this.pointSpacing = pointSpacing;
       this.transform = transform;
       this.outputs = outputs;
+      this.metaData = metaData;
       this.modelKeys = modelKeys;
       size += numPoints;
     }
@@ -412,9 +418,10 @@ public class JsonFixture extends LXFixture {
     private final boolean isCenter;
     private final LXMatrix transform;
     private final List<OutputDefinition> outputs;
+    private final Map<String, String> metaData;
     private final String[] modelKeys;
 
-    private ArcDefinition(int numPoints, float radius, float degrees, boolean isCenter, LXMatrix transform, List<OutputDefinition> outputs, String[] modelKeys) {
+    private ArcDefinition(int numPoints, float radius, float degrees, boolean isCenter, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] modelKeys) {
       this.index = size;
       this.numPoints = numPoints;
       this.radius = radius;
@@ -422,6 +429,7 @@ public class JsonFixture extends LXFixture {
       this.isCenter = isCenter;
       this.transform = transform;
       this.outputs = outputs;
+      this.metaData = metaData;
       this.modelKeys = modelKeys;
       size += numPoints;
     }
@@ -462,6 +470,8 @@ public class JsonFixture extends LXFixture {
   private final LinkedHashMap<String, ParameterDefinition> definedParameters = new LinkedHashMap<String, ParameterDefinition>();
   private final LinkedHashMap<String, ParameterDefinition> reloadParameterValues = new LinkedHashMap<String, ParameterDefinition>();
 
+  private final Map<String, String> metaData = new HashMap<String, String>();
+
   private int size = 0;
 
   private final JsonFixture jsonParameterContext;
@@ -496,6 +506,11 @@ public class JsonFixture extends LXFixture {
   @Override
   protected String[] getModelKeys() {
     return this.modelKeys;
+  }
+
+  @Override
+  protected Map<String, String> getMetaData() {
+    return this.metaData;
   }
 
   @Override
@@ -558,6 +573,7 @@ public class JsonFixture extends LXFixture {
     this.definedStrips.clear();
     this.definedArcs.clear();
     this.definedOutputs.clear();
+    this.metaData.clear();
 
     // Clear the children
     for (LXFixture child : this.children) {
@@ -605,6 +621,8 @@ public class JsonFixture extends LXFixture {
 
       loadOutputs(this.definedOutputs, obj);
 
+      loadMetaData(obj, this.metaData);
+
     } catch (JsonParseException jpx) {
       String message = jpx.getLocalizedMessage();
       Throwable cause = jpx.getCause();
@@ -645,7 +663,7 @@ public class JsonFixture extends LXFixture {
 
   private static final Pattern parameterPattern = Pattern.compile("\\$\\{([a-zA-Z0-9]+)\\}");
 
-  private String replaceVariables(JsonObject obj, String key, String expression, ParameterType returnType) {
+  private String replaceVariables(String key, String expression, ParameterType returnType) {
     StringBuilder result = new StringBuilder();
     int index = 0;
     Matcher matcher = parameterPattern.matcher(expression);
@@ -702,7 +720,7 @@ public class JsonFixture extends LXFixture {
   }
 
   private float evaluateVariableExpression(JsonObject obj, String key, String expression, ParameterType type) {
-    String substitutedExpression = replaceVariables(obj, key, expression, type);
+    String substitutedExpression = replaceVariables(key, expression, type);
     if (substitutedExpression == null) {
       return 0;
     }
@@ -761,7 +779,7 @@ public class JsonFixture extends LXFixture {
         JsonPrimitive boolPrimitive = boolElem.getAsJsonPrimitive();
         if (variablesAllowed && boolPrimitive.isString()) {
           // TODO: perhaps in the future we support boolean expressions? waiting for a use case to justify it first...
-          return Boolean.parseBoolean(replaceVariables(obj, key, boolPrimitive.getAsString(), ParameterType.BOOLEAN));
+          return Boolean.parseBoolean(replaceVariables(key, boolPrimitive.getAsString(), ParameterType.BOOLEAN));
         }
         return boolElem.getAsBoolean();
       }
@@ -801,7 +819,7 @@ public class JsonFixture extends LXFixture {
       JsonElement stringElem = obj.get(key);
       if (stringElem.isJsonPrimitive() && stringElem.getAsJsonPrimitive().isString()) {
         if (variablesAllowed) {
-          return replaceVariables(obj, key, stringElem.getAsString(), ParameterType.STRING);
+          return replaceVariables(key, stringElem.getAsString(), ParameterType.STRING);
         } else {
           return stringElem.getAsString();
         }
@@ -1121,7 +1139,10 @@ public class JsonFixture extends LXFixture {
     List<OutputDefinition> outputs = new ArrayList<OutputDefinition>();
     loadOutputs(outputs, stripObj);
 
-    this.definedStrips.add(new StripDefinition(numPoints, spacing, origin, transform, outputs, modelKeys));
+    Map<String, String> stripMetaData = new HashMap<String, String>();
+    loadMetaData(stripObj, stripMetaData);
+
+    this.definedStrips.add(new StripDefinition(numPoints, spacing, origin, transform, outputs, stripMetaData, modelKeys));
   }
 
   private void loadArcs(JsonObject obj) {
@@ -1221,7 +1242,10 @@ public class JsonFixture extends LXFixture {
     List<OutputDefinition> outputs = new ArrayList<OutputDefinition>();
     loadOutputs(outputs, arcObj);
 
-    this.definedArcs.add(new ArcDefinition(numPoints, radius, degrees, isCenter, transform, outputs, modelKeys));
+    Map<String, String> arcMetaData = new HashMap<String, String>();
+    loadMetaData(arcObj, arcMetaData);
+
+    this.definedArcs.add(new ArcDefinition(numPoints, radius, degrees, isCenter, transform, outputs, arcMetaData, modelKeys));
   }
 
   private void loadChildren(JsonObject obj) {
@@ -1262,9 +1286,10 @@ public class JsonFixture extends LXFixture {
       }
     }
     loadGeometry(child, childObj);
+    loadMetaData(childObj, child.metaData);
 
-    // TODO(mcslee): should we allow adding datagrams here? if so do they supercede
-    // those in the child?
+    // TODO(mcslee): should we allow adding outputs here? if so do they supercede
+    // those of the child or are they in addition?
 
     addChild(child, true);
   }
@@ -1345,6 +1370,21 @@ public class JsonFixture extends LXFixture {
     loadSegments(segments, outputObj, byteOrder);
 
     outputs.add(new OutputDefinition(protocol, transport, byteOrder, address, port, universe, segments));
+  }
+
+  private void loadMetaData(JsonObject obj, Map<String, String> metaData) {
+    JsonObject metaDataObj = loadObject(obj, KEY_META, KEY_META + " must be a JSON object");
+    if (metaDataObj != null) {
+      for (Map.Entry<String, JsonElement> entry : metaDataObj.entrySet()) {
+        String key = entry.getKey();
+        JsonElement value = entry.getValue();
+        if (!value.isJsonPrimitive()) {
+          addWarning("Meta data values must be primtives, key has invalid type: " + key);
+        } else {
+          metaData.put(key, replaceVariables(key, value.getAsJsonPrimitive().getAsString(), ParameterType.STRING));
+        }
+      }
+    }
   }
 
   private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_STRIDE, KEY_REVERSE };
@@ -1633,10 +1673,10 @@ public class JsonFixture extends LXFixture {
   protected Submodel[] toSubmodels() {
     List<Submodel> submodels = new ArrayList<Submodel>();
     for (StripDefinition strip : this.definedStrips) {
-      submodels.add(new Submodel(strip.index, strip.numPoints, strip.modelKeys));
+      submodels.add(new Submodel(strip.index, strip.numPoints, strip.metaData, strip.modelKeys));
     }
     for (ArcDefinition arc : this.definedArcs) {
-      submodels.add(new Submodel(arc.index, arc.numPoints, arc.modelKeys));
+      submodels.add(new Submodel(arc.index, arc.numPoints, arc.metaData, arc.modelKeys));
     }
     return submodels.toArray(new Submodel[0]);
   }

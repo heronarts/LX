@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -771,7 +772,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @return LXModel instance, or concrete subclass
    */
   protected LXModel constructModel(List<LXPoint> modelPoints, List<? extends LXModel> childModels, String[] modelKeys) {
-    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), modelKeys);
+    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), modelKeys);
   }
 
   /**
@@ -781,6 +782,16 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    */
   protected LXPoint constructPoint() {
     return new LXPoint();
+  }
+
+  /**
+   * Subclasses may override to provide a map of String key/value pairs that are attached
+   * as metadata onto the resulting LXModel object
+   *
+   * @return Map of key-value String pairs, or null if none
+   */
+  protected Map<String, String> getMetaData() {
+    return null;
   }
 
   /**
@@ -853,7 +864,34 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      * @param keys Model type key identifier for submodel
      */
     public Submodel(int start, int n, int stride, String ... keys) {
-      super(subpoints(start, n, stride), keys);
+      this(start, n, stride, null, keys);
+    }
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     * @param metaData Metadata for this submodel
+     * @param keys Model type key identifier for submodel
+     */
+    public Submodel(int start, int n, Map<String, String> metaData, String ... keys) {
+      this(start, n, 1, metaData, keys);
+    }
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     * @param stride Stride size for selecting submodel points
+     * @param metaData Metadata for submodel
+     * @param keys Model type key identifier for submodel
+     */
+    public Submodel(int start, int n, int stride, Map<String, String> metaData, String ... keys) {
+      super(subpoints(start, n, stride), metaData, keys);
       this.transform.set(geometryMatrix);
     }
   }
