@@ -93,7 +93,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
    * is not a user-facing API.
    */
   public interface ModelListener {
-    public void modelChanged(LXModel model);
+    public void structureChanged(LXModel model);
+    public void structureGenerationChanged(LXModel model);
   }
 
   // Internal implementation only
@@ -523,8 +524,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.modelFile = null;
     this.modelName.setValue(model.getClass().getSimpleName() + ".class");
     this.isStatic.setValue(true);
-    this.modelListener.modelChanged(this.model);
-
+    this.modelListener.structureChanged(this.model);
     return this;
   }
 
@@ -562,7 +562,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       submodels[fixtureIndex++] = fixtureModel;
     }
     this.model = new LXModel(submodels).normalizePoints();
-    this.modelListener.modelChanged(this.model);
+    this.modelListener.structureChanged(this.model);
 
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");
@@ -576,6 +576,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public void fixtureGeometryChanged(LXFixture fixture) {
     // We need to re-normalize our model, things have changed
     this.model.update(true, true);
+    this.modelListener.structureGenerationChanged(this.model);
 
     // Denote that file is modified
     if (this.modelFile != null) {

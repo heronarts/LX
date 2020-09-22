@@ -200,7 +200,27 @@ public class LX {
    * Listener for top-level events
    */
   public interface Listener {
+    /**
+     * Fired whenever a new model instance is set on this LX instance. The
+     * passed model is an entirely new object that has not been set before.
+     *
+     * @param lx LX instance
+     * @param model Model instance
+     */
     default public void modelChanged(LX lx, LXModel model) {}
+
+    /**
+     * Fired when the generation of a model has been changed. This is the same
+     * model instance that has already been set on LX, but it has been modified.
+     * This is also fired the very first time a model is set (e.g. generation 0
+     * for the model). Listeners that wish to take generic action based upon any new
+     * model geometry, whether it's an existing or new model, may listen to just
+     * this method.
+     *
+     * @param lx LX instance
+     * @param model model instance
+     */
+    default public void modelGenerationChanged(LX lx, LXModel model) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -330,7 +350,16 @@ public class LX {
     } else {
       this.model = model;
     }
-    this.structure.setModelListener((newModel) -> { setModel(newModel); });
+    this.structure.setModelListener(new LXStructure.ModelListener() {
+      public void structureChanged(LXModel model) {
+        setModel(model);
+      }
+      public void structureGenerationChanged(LXModel model) {
+        for (Listener listener : listeners) {
+          listener.modelGenerationChanged(LX.this, model);
+        }
+      }
+    });
     LX.initProfiler.log("Model");
 
     // Custom content loader
@@ -501,6 +530,9 @@ public class LX {
     this.model = model;
     for (Listener listener : this.listeners) {
       listener.modelChanged(this, model);
+    }
+    for (Listener listener : this.listeners) {
+      listener.modelGenerationChanged(this, model);
     }
 
     // Dispose of the old model after notifying listeners of model change
