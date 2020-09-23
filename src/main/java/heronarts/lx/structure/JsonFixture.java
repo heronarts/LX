@@ -1288,6 +1288,9 @@ public class JsonFixture extends LXFixture {
     loadGeometry(child, childObj);
     loadMetaData(childObj, child.metaData);
 
+    // Ensure child has correct enabled status
+    child.enabled.setValue(this.enabled.isOn());
+
     // TODO(mcslee): should we allow adding outputs here? if so do they supercede
     // those of the child or are they in addition?
 
