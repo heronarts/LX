@@ -19,6 +19,8 @@
 package heronarts.lx;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -26,9 +28,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
+import com.google.gson.JsonParseException;
 import heronarts.lx.blend.AddBlend;
 import heronarts.lx.blend.DarkestBlend;
 import heronarts.lx.blend.DifferenceBlend;
@@ -222,13 +225,42 @@ public class LXRegistry implements LXSerializable {
   public final List<Class<? extends LXFixture>> fixtures =
     Collections.unmodifiableList(this.mutableFixtures);
 
+  /**
+   * JSON fixture type
+   */
+  public class JsonFixture {
 
-  private final List<String> mutableJsonFixtures = new ArrayList<String>();
+    public final String type;
+    public final boolean isVisible;
+
+    private static final String KEY_IS_VISIBLE = "isVisible";
+
+    public JsonFixture(File file, String prefix) {
+      String fileName = prefix + file.getName();
+      boolean isVisible = false;
+
+      try (FileReader fr = new FileReader(file)) {
+        JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+        isVisible = !obj.has(KEY_IS_VISIBLE) || obj.get(KEY_IS_VISIBLE).getAsBoolean();
+      } catch (JsonParseException jpx) {
+        LX.error(jpx, "JSON fixture file is not valid JSON: " + file.getAbsolutePath());
+      } catch (FileNotFoundException fnfx) {
+        LX.error(fnfx, "JSON fixture file does not exist: " + file.getAbsolutePath());
+      } catch (IOException iox) {
+        LX.error(iox, "Error reading JSON fixture file: " + file.getAbsolutePath());
+      }
+
+      this.type = fileName.substring(0, fileName.length() - ".lxf".length());
+      this.isVisible = isVisible;
+    }
+  }
+
+  private final List<JsonFixture> mutableJsonFixtures = new ArrayList<JsonFixture>();
 
   /**
    * The list of globally registered JSON fixture types
    */
-  public final List<String> jsonFixtures =
+  public final List<JsonFixture> jsonFixtures =
    Collections.unmodifiableList(this.mutableJsonFixtures);
 
   private final List<LXClassLoader.Package> mutablePackages = new ArrayList<LXClassLoader.Package>();
@@ -501,7 +533,6 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
-
   /**
    * Register an effect class with the engine
    *
@@ -622,21 +653,24 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
-  public LXRegistry addJsonFixture(String fixture) {
+  private LXRegistry addJsonFixture(File fixture, String prefix) {
     Objects.requireNonNull(fixture, "May not add null LXRegistry.addJsonFixture");
     checkRegistration();
-    if (this.mutableJsonFixtures.contains(fixture)) {
-      throw new IllegalStateException("Cannot double-register JSON fixture: " + fixture);
-    }
-    this.mutableJsonFixtures.add(fixture);
+    this.mutableJsonFixtures.add(new JsonFixture(fixture, prefix));
     return this;
   }
 
-  public void addJsonFixtures(File fixtureDir) {
+  private void addJsonFixtures(File fixtureDir) {
+    addJsonFixtures(fixtureDir, "");
+  }
+
+  private void addJsonFixtures(File fixtureDir, String prefix) {
     if (fixtureDir.exists() && fixtureDir.isDirectory()) {
-      for (String fixture : fixtureDir.list()) {
-        if (fixture.endsWith(".lxf")) {
-          addJsonFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
+      for (File fixture : fixtureDir.listFiles()) {
+        if (fixture.isDirectory()) {
+          addJsonFixtures(fixture, prefix + fixture.getName() + "/");
+        } else if (fixture.getName().endsWith(".lxf")) {
+          addJsonFixture(fixture, prefix);
         }
       }
     }
