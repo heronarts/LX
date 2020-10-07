@@ -241,6 +241,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     return this.index;
   }
 
+  protected int getFirstPointIndex() {
+    return this.firstPointIndex;
+  }
+
   private void setContainer(LXFixtureContainer container) {
     Objects.requireNonNull(container, "Cannot set null on LXFixture.setContainer");
     if (this.container != null) {
@@ -582,7 +586,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     int numPoints = size();
     this.mutablePoints.clear();
     for (int i = 0; i < numPoints; ++i) {
-      LXPoint p = constructPoint();
+      LXPoint p = constructPoint(i);
       p.index = this.firstPointIndex + i;
       this.mutablePoints.add(p);
     }
@@ -739,7 +743,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
     // points here to stay safe.
     for (LXPoint p : this.points) {
-      this.modelPoints.add(constructPoint(p));
+      this.modelPoints.add(copyPoint(p));
     }
 
     // Now iterate over our children and add their points too
@@ -778,10 +782,21 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   /**
    * Subclasses may override this method to use custom point types
    *
+   * @param localIndex Index of the point relative to this fixture
    * @return LXPoint or concrete subclass
    */
-  protected LXPoint constructPoint() {
+  protected LXPoint constructPoint(int localIndex) {
     return new LXPoint();
+  }
+
+  /**
+   * Subclasses may override this method to use custom point types
+   *
+   * @param copy Point to make a copy of
+   * @return LXPoint or concrete subclass, should be deep copy of the original
+   */
+  protected LXPoint copyPoint(LXPoint copy) {
+    return new LXPoint(copy);
   }
 
   /**
@@ -794,15 +809,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     return null;
   }
 
-  /**
-   * Subclasses may override this method to use custom point types
-   *
-   * @param copy Point to make a copy of
-   * @return LXPoint or concrete subclass
-   */
-  protected LXPoint constructPoint(LXPoint copy) {
-    return new LXPoint(copy);
-  }
+
 
   private List<LXPoint> subpoints(int start, int n, int stride) {
     List<LXPoint> subpoints = new ArrayList<LXPoint>(n);
