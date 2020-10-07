@@ -29,6 +29,8 @@ import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
+import heronarts.lx.output.OPCOutput;
+import heronarts.lx.output.OPCSocket;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -126,6 +128,7 @@ public class GridFixture extends LXProtocolFixture {
   public GridFixture(LX lx) {
     super(lx, "Grid");
     addParameter("host", this.host);
+    addParameter("port", this.port);
     addOutputParameter("protocol", this.protocol);
     addOutputParameter("artNetUniverse", this.artNetUniverse);
     addOutputParameter("opcChannel", this.opcChannel);
@@ -153,6 +156,12 @@ public class GridFixture extends LXProtocolFixture {
           if (address != null) {
             ((LXOutput.InetOutput) output).setAddress(address);
           }
+        }
+      }
+    } else if (p == this.port) {
+      for (LXOutput output : this.outputs) {
+        if (output instanceof OPCOutput) {
+          ((OPCOutput) output).setPort(this.port.getValuei());
         }
       }
     }
@@ -429,7 +438,16 @@ public class GridFixture extends LXProtocolFixture {
       output = new KinetDatagram(this.lx, indexBuffer, channel);
       break;
     case OPC:
-      output = new OPCDatagram(this.lx, indexBuffer, (byte) channel);
+      switch (this.transport.getEnum()) {
+      case TCP:
+        output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) channel);
+        break;
+      default:
+      case UDP:
+        output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) channel);
+        break;
+      }
+      ((OPCOutput) output).setPort(this.port.getValuei());
       break;
     default:
       LX.error("Undefined output protocol in GridFixture: " + this.protocol.getEnum());
