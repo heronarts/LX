@@ -1095,15 +1095,13 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
 
     // Load child components
-    if (obj.has(KEY_CHILDREN)) {
-      JsonObject children = obj.getAsJsonObject(KEY_CHILDREN);
-      for (String path : this.children.keySet()) {
-        LXComponent child = this.children.get(path);
-        if (children.has(path)) {
-          child.load(lx, children.getAsJsonObject(path));
-        } else {
-          child.load(lx, new JsonObject());
-        }
+    JsonObject children = obj.has(KEY_CHILDREN) ? obj.getAsJsonObject(KEY_CHILDREN) : new JsonObject();
+    for (String path : this.children.keySet()) {
+      LXComponent child = this.children.get(path);
+      if (children.has(path)) {
+        child.load(lx, children.getAsJsonObject(path));
+      } else {
+        child.load(lx, new JsonObject());
       }
     }
   }
