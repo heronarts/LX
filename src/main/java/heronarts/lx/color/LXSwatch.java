@@ -32,7 +32,6 @@ import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 
 /**
@@ -52,8 +51,6 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
   private final List<LXDynamicColor> mutableColors = new ArrayList<LXDynamicColor>();
 
   public final List<LXDynamicColor> colors = Collections.unmodifiableList(this.mutableColors);
-
-  public final DiscreteParameter numColors = new DiscreteParameter("Num", 1, 1, MAX_COLORS + 1);
 
   public final BooleanParameter recall =
     new BooleanParameter("Recall", false)
