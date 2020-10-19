@@ -634,11 +634,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @param geometryMatrix The geometry transformation matrix for this object
    */
   protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
-    float degreesToRadians = (float) Math.PI / 180;
     geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
-    geometryMatrix.rotateY(this.yaw.getValuef() * degreesToRadians);
-    geometryMatrix.rotateX(this.pitch.getValuef() * degreesToRadians);
-    geometryMatrix.rotateZ(this.roll.getValuef() * degreesToRadians);
+    geometryMatrix.rotateY((float) Math.toRadians(this.yaw.getValue()));
+    geometryMatrix.rotateX((float) Math.toRadians(this.pitch.getValue()));
+    geometryMatrix.rotateZ((float) Math.toRadians(this.roll.getValue()));
   }
 
   private void _regenerateGeometry() {

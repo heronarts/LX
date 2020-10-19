@@ -18,6 +18,8 @@
 
 package heronarts.lx.transform;
 
+import heronarts.lx.utils.LXUtils;
+
 /**
  * A 4x4 matrix for 3-D transformations
  */
@@ -210,8 +212,8 @@ public class LXMatrix {
   }
 
   public LXMatrix rotateX(float rx) {
-    float cos = (float) Math.cos(rx);
-    float sin = (float) Math.sin(rx);
+    float cos = LXUtils.cosf(rx);
+    float sin = LXUtils.sinf(rx);
     return multiply(
       1,    0,    0,  0,
       0,  cos, -sin,  0,
@@ -221,8 +223,8 @@ public class LXMatrix {
   }
 
   public LXMatrix rotateY(float ry) {
-    float cos = (float) Math.cos(ry);
-    float sin = (float) Math.sin(ry);
+    float cos = LXUtils.cosf(ry);
+    float sin = LXUtils.sinf(ry);
     return multiply(
        cos,  0, sin,  0,
          0,  1,   0,  0,
@@ -232,8 +234,8 @@ public class LXMatrix {
   }
 
   public LXMatrix rotateZ(float rz) {
-    float cos = (float) Math.cos(rz);
-    float sin = (float) Math.sin(rz);
+    float cos = LXUtils.cosf(rz);
+    float sin = LXUtils.sinf(rz);
     return multiply(
       cos, -sin,  0,  0,
       sin,  cos,  0,  0,
@@ -292,6 +294,16 @@ public class LXMatrix {
    */
   public LXMatrix identity() {
     return set(IDENTITY);
+  }
+
+  @Override
+  public String toString() {
+    return "[" +
+      "[" + this.m11 + " " + this.m12 + " " + this.m13 + " " + this.m14 + "]" +
+      "[" + this.m21 + " " + this.m22 + " " + this.m23 + " " + this.m24 + "]" +
+      "[" + this.m31 + " " + this.m32 + " " + this.m33 + " " + this.m34 + "]" +
+      "[" + this.m41 + " " + this.m42 + " " + this.m43 + " " + this.m44 + "]" +
+      "]";
   }
 
 }

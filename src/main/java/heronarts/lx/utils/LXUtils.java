@@ -150,6 +150,28 @@ public class LXUtils {
   }
 
   /**
+   * Returns a floating-point rounded value of the sin function to 8 decimal places.
+   * This is often useful because Math.sin(Math.PI) is NOT actually 0.
+   *
+   * @param radians Radians to take sin of
+   * @return Result rounded to 8 decimal places
+   */
+  public static float sinf(double radians) {
+    return Float.valueOf(String.format("%8f", Math.sin(radians)));
+  }
+
+  /**
+   * Returns a floating-point rounded value of the cos function to 8 decimal places.
+   * This is often useful because Math.sin(Math.PI) is NOT actually 0.
+   *
+   * @param radians Radians to take cos of
+   * @return Result rounded to 8 decimal places
+   */
+  public static float cosf(double radians) {
+    return Float.valueOf(String.format("%8f", Math.cos(radians)));
+  }
+
+  /**
    * This function computes a random value at the coordinate (x,y,z).
    * Adjacent random values are continuous but the noise fluctuates
    * its randomness with period 1, i.e. takes on wholly unrelated values
