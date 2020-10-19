@@ -82,6 +82,10 @@ public class NoisePattern extends LXPattern {
 
     RADIAL("Radial", (p, normalized, offset) -> {
       return p.rcn + offset * normalized;
+    }),
+
+    NONE("None", (p, normalized, offset) -> {
+      return .5f + offset;
     });
 
     public final String name;
