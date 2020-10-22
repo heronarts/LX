@@ -18,15 +18,27 @@
 
 package heronarts.lx.output;
 
+import heronarts.lx.LX;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.BoundedParameter;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
 
-public abstract class LXDatagram {
+public abstract class LXDatagram extends LXBufferOutput implements LXOutput.InetOutput {
+
+  private static DatagramSocket defaultSocket = null;
+
+  private static DatagramSocket getDefaultSocket() throws SocketException {
+    if (defaultSocket == null) {
+      defaultSocket = new DatagramSocket();
+    }
+    return defaultSocket;
+  }
 
   protected static class ErrorState {
     // Destination address
@@ -61,12 +73,7 @@ public abstract class LXDatagram {
 
   final DatagramPacket packet;
 
-  /**
-   * Whether this datagram is active
-   */
-  public final BooleanParameter enabled =
-    new BooleanParameter("Enabled", true)
-    .setDescription("Whether this datagram is active");
+  private DatagramSocket socket;
 
   /**
    * Whether this datagram is in an error state
@@ -75,19 +82,33 @@ public abstract class LXDatagram {
     new BooleanParameter("Error", false)
     .setDescription("Whether there have been errors sending to this datagram address");
 
-  /**
-   * Brightness of the datagram
-   */
-  public final BoundedParameter brightness =
-    new BoundedParameter("Brightness", 1)
-    .setDescription("Level of the output");
+  protected LXDatagram(LX lx, int[] indexBuffer, int datagramSize) {
+    this(lx, indexBuffer, ByteOrder.RGB, datagramSize);
+  }
 
-  protected LXDatagram(int datagramSize) {
+  protected LXDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int datagramSize) {
+    super(lx, indexBuffer, byteOrder);
+
     this.buffer = new byte[datagramSize];
     for (int i = 0; i < datagramSize; ++i) {
       this.buffer[i] = 0;
     }
     this.packet = new DatagramPacket(this.buffer, datagramSize);
+  }
+
+  protected void validateBufferSize() {
+    // Validate that the data size on this thing is valid...
+    int dataSize = this.buffer.length - getDataBufferOffset();
+    if (dataSize < this.indexBuffer.length * this.byteOrder.getNumBytes()) {
+      String cls = getClass().getSimpleName();
+      throw new IllegalArgumentException(cls + " dataSize " + dataSize + " is insufficient for indexBuffer of length " + this.indexBuffer.length + " with ByteOrder " + this.byteOrder.toString());
+    }
+
+  }
+
+  public LXDatagram setSocket(DatagramSocket socket) {
+    this.socket = socket;
+    return this;
   }
 
   protected ErrorState getErrorState() {
@@ -103,6 +124,7 @@ public abstract class LXDatagram {
    * @param address Destination address
    * @return this
    */
+  @Override
   public LXDatagram setAddress(InetAddress address) {
     this.errorState = null;
     this.packet.setAddress(address);
@@ -114,6 +136,7 @@ public abstract class LXDatagram {
    *
    * @return Destination address
    */
+  @Override
   public InetAddress getAddress() {
     return this.packet.getAddress();
   }
@@ -124,6 +147,7 @@ public abstract class LXDatagram {
    * @param port Port number
    * @return this
    */
+  @Override
   public LXDatagram setPort(int port) {
     this.errorState = null;
     this.packet.setPort(port);
@@ -135,9 +159,24 @@ public abstract class LXDatagram {
    *
    * @return Destination port number
    */
+  @Override
   public int getPort() {
     return this.packet.getPort();
   }
+
+  /**
+   * Returns the data buffer
+   */
+  @Override
+  public byte[] getDataBuffer() {
+    return this.buffer;
+  }
+
+  /**
+   * Subclasses may override to update a sequence number in the packet when
+   * appropriate as part of the protocol.
+   */
+  protected void updateSequenceNumber() {}
 
   /**
    * Invoked by engine to send this packet when new color data is available. The
@@ -147,11 +186,55 @@ public abstract class LXDatagram {
    * @param colors Color buffer
    * @param glut Look-up table with gamma-adjusted brightness values
    */
-  public abstract void onSend(int[] colors, byte[] glut);
+  @Override
+  protected void onSend(int[] colors, byte[] glut) {
+    // Check for error state on this datagram's output
+    ErrorState datagramErrorState = getErrorState();
+    if (datagramErrorState.sendAfter >= this.lx.engine.nowMillis) {
+      // This datagram can't be sent now... mark its error state
+      this.error.setValue(true);
+      return;
+    }
+
+    // Update the data buffer and sequence number
+    updateDataBuffer(colors, glut);
+    updateSequenceNumber();
+
+    // Try sending the packet
+    try {
+      DatagramSocket socket = (this.socket != null) ? this.socket : LXDatagram.getDefaultSocket();
+      socket.send(this.packet);
+      if (datagramErrorState.failureCount > 0) {
+        LXOutput.log("Recovered connectivity to " + datagramErrorState.destination);
+      }
+      // Sent fine! All good here...
+      datagramErrorState.failureCount = 0;
+      datagramErrorState.sendAfter = 0;
+      this.error.setValue(false);
+    } catch (IOException iox) {
+      this.error.setValue(true);
+      if (datagramErrorState.failureCount == 0) {
+        LXOutput.error("IOException sending to "
+            + datagramErrorState.destination + " (" + iox.getLocalizedMessage()
+            + "), will initiate backoff after 3 consecutive failures");
+      }
+      ++datagramErrorState.failureCount;
+      if (datagramErrorState.failureCount >= 3) {
+        int pow = Math.min(5, datagramErrorState.failureCount - 3);
+        long waitFor = (long) (50 * Math.pow(2, pow));
+        LXOutput.error("Retrying " + datagramErrorState.destination
+            + " in " + waitFor + "ms" + " (" + datagramErrorState.failureCount
+            + " consecutive failures)");
+        datagramErrorState.sendAfter = this.lx.engine.nowMillis + waitFor;
+      }
+    }
+
+  }
 
   /**
    * Invoked when the datagram is no longer needed. Typically a no-op, but subclasses
    * may override if cleanup work is necessary.
    */
+  @Override
   public void dispose() {}
 }

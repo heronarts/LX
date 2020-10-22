@@ -19,24 +19,37 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
+import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.MidiNote;
 import heronarts.lx.mixer.LXAbstractChannel;
 
-public abstract class LXAbstractChannelClip extends LXClip {
+public abstract class LXAbstractChannelClip extends LXClip implements LXAbstractChannel.MidiListener {
 
   public final LXAbstractChannel channel;
+  public final MidiNoteClipLane midiNoteLane = new MidiNoteClipLane(this);
 
   protected LXAbstractChannelClip(LX lx, LXAbstractChannel channel, int index, boolean registerListener) {
     super(lx, channel, index, registerListener);
-
     this.channel = channel;
+    this.mutableLanes.add(this.midiNoteLane);
     channel.fader.addListener(this.parameterRecorder);
     channel.enabled.addListener(this.parameterRecorder);
+
+    channel.addMidiListener(this);
+  }
+
+  @Override
+  public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
+    if (message instanceof MidiNote) {
+      this.midiNoteLane.appendEvent(new MidiNoteClipEvent(this.midiNoteLane, (MidiNote) message));
+    }
   }
 
   @Override
   public void dispose() {
     this.channel.fader.removeListener(this.parameterRecorder);
     this.channel.enabled.removeListener(this.parameterRecorder);
+    this.channel.removeMidiListener(this);
     super.dispose();
   }
 

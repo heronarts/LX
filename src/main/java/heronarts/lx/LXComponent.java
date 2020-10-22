@@ -149,6 +149,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     // Flags that keep track of special loading states in which ID-collisions may occur
     boolean projectLoading = false;
     boolean modelImporting = false;
+    boolean scheduleLoading = false;
 
     // Global map of ID to component
     private final Map<Integer, LXComponent> components = new HashMap<Integer, LXComponent>();
@@ -215,10 +216,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       if (component.id == ID_UNASSIGNED) {
         component.id = this.idCounter++;
       } else if (component.id <= 0) {
-        throw new IllegalStateException("Component has illegal  non-positive ID: " + component.id + " " + component);
+        throw new IllegalStateException("Component has illegal non-positive ID: " + component.id + " " + component);
       }
       if (this.components.containsKey(component.id)) {
-        throw new IllegalStateException("Component id already registered: " + component.id + " to " + this.components.get(component.id));
+        throw new IllegalStateException("Component id " + component.id + " already registered: " + component + " to " + this.components.get(component.id));
       }
       this.components.put(component.id, component);
     }
@@ -244,13 +245,13 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
           // has new components, for instance. In that case record in a map
           // what the IDs in the project file refer to.
           this.projectIdMap.put(id, component);
-        } else if (this.modelImporting) {
-          // We ignore ID assignment collisions from external model files
-          // A new ID is fine in this case
+        } else if (this.modelImporting || this.scheduleLoading) {
+          // We ignore ID assignment collisions from external model files.
+          // Sticking with the newly generated ID is fine.
         } else {
           // This can't happen, there should be no reason that we're requesting a component
           // to re-use an existing component ID when we are outside of loading a file
-          throw new IllegalStateException("ID collision outside of project load or model import: " + component + " trying to clobber " + this.components.get(id));
+          throw new IllegalStateException("ID collision outside of project/schedule load or model import: " + component + " trying to clobber " + this.components.get(id));
         }
       } else {
         if (component.id > 0) {
@@ -260,6 +261,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         // Update the component's ID and store it in the global map
         component.id = id;
         this.components.put(id, component);
+
+        // If the restored ID was ahead of our counter, we need to bump the counter
+        // to avoid causing future collisions
+        if (id >= this.idCounter) {
+          this.idCounter = id + 1;
+        }
       }
     }
 
@@ -654,9 +661,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       for (LXComponent child : this.children.values()) {
         child.oscQuery();
       }
-      for (List<? extends LXComponent> array : childArrays.values()) {
+      for (List<? extends LXComponent> array : this.childArrays.values()) {
         for (LXComponent component : array) {
-          component.oscQuery();
+          if (component != null) {
+            component.oscQuery();
+          }
         }
       }
     }
@@ -704,7 +713,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
             if (index == parts.length - 1) {
               return child;
             }
-            return child.path(parts, index + 1);
+            return (child != null) ? child.path(parts, index + 1) : null;
           }
         } catch (NumberFormatException nfx) {
           return null;
@@ -779,6 +788,15 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     // Remove the modulation engine for any component that has one
     if (this instanceof LXModulationContainer) {
       ((LXModulationContainer) this).getModulationEngine().dispose();
+    }
+
+    // Remove modulations from any containers up the chain
+    LXComponent parent = getParent();
+    while ((parent != null) && (parent != this.lx.engine)) {
+      if (parent instanceof LXModulationContainer) {
+        ((LXModulationContainer) parent).getModulationEngine().removeModulations(this);
+      }
+      parent = parent.getParent();
     }
 
     // The global midi, modulation, and snapshot engines need to know we're gone
@@ -1077,15 +1095,13 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
 
     // Load child components
-    if (obj.has(KEY_CHILDREN)) {
-      JsonObject children = obj.getAsJsonObject(KEY_CHILDREN);
-      for (String path : this.children.keySet()) {
-        LXComponent child = this.children.get(path);
-        if (children.has(path)) {
-          child.load(lx, children.getAsJsonObject(path));
-        } else {
-          child.load(lx, new JsonObject());
-        }
+    JsonObject children = obj.has(KEY_CHILDREN) ? obj.getAsJsonObject(KEY_CHILDREN) : new JsonObject();
+    for (String path : this.children.keySet()) {
+      LXComponent child = this.children.get(path);
+      if (children.has(path)) {
+        child.load(lx, children.getAsJsonObject(path));
+      } else {
+        child.load(lx, new JsonObject());
       }
     }
   }

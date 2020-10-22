@@ -68,6 +68,10 @@ public class ADSREnvelope extends LXModulator implements LXNormalizedParameter {
     this(label, new FixedParameter(startValue), new FixedParameter(endValue), attack, decay, sustain, release, new FixedParameter(1));
   }
 
+  public ADSREnvelope(String label, double startValue, double endValue, LXParameter attack, LXParameter decay, LXParameter sustain, LXParameter release, LXParameter shape) {
+    this(label, new FixedParameter(startValue), new FixedParameter(endValue), attack, decay, sustain, release, shape);
+  }
+
   public ADSREnvelope(String label, double startValue, LXParameter endValue, LXParameter attack, LXParameter decay, LXParameter sustain, LXParameter release) {
     this(label, new FixedParameter(startValue), endValue, attack, decay, sustain, release, new FixedParameter(1));
   }

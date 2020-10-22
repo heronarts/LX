@@ -24,6 +24,7 @@ import java.util.Map;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.color.ColorParameter;
@@ -88,7 +89,11 @@ public interface LXSerializable {
         JsonElement value = obj.get(path);
         try {
           if (parameter instanceof StringParameter) {
-            ((StringParameter) parameter).setValue(value.getAsString());
+            if (value instanceof JsonNull) {
+              ((StringParameter) parameter).setValue(null);
+            } else {
+              ((StringParameter) parameter).setValue(value.getAsString());
+            }
           } else if (parameter instanceof BooleanParameter) {
             ((BooleanParameter) parameter).setValue(value.getAsBoolean());
           } else if (parameter instanceof DiscreteParameter) {

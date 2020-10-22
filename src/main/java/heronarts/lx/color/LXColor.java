@@ -47,6 +47,7 @@ public class LXColor {
   public static final int G_MASK = 0x0000ff00;
   public static final int B_MASK = 0x000000ff;
   public static final int RB_MASK = R_MASK | B_MASK;
+  public static final int RGB_MASK = R_MASK | G_MASK | B_MASK;
 
   public static final int ALPHA_SHIFT = 24;
   public static final int R_SHIFT = 16;
@@ -165,11 +166,14 @@ public class LXColor {
     return (r+r+r+b+g+g+g+g >> 3) * BRIGHTNESS_SCALE;
   }
 
-  private static final double GRAY_SCALE = 255. / 100.;
-  private static final double GRAY_SCALE_FLOAT = 255f / 100f;
-
+  /**
+   * Produces a grayscale color based upon value from 0-100
+   *
+   * @param brightness Brightness value from 0-100
+   * @return Gray
+   */
   public static int gray(double brightness) {
-    int b = 0xff & (int) (brightness * GRAY_SCALE);
+    int b = 0xff & (int) (brightness * 2.559);
     return
       LXColor.ALPHA_MASK |
       (b << R_SHIFT) |
@@ -177,8 +181,44 @@ public class LXColor {
       b;
   }
 
+  /**
+   * Produces a grayscale color based upon normalized value from 0-1
+   *
+   * @param brightness Brightness value from 0-1
+   * @return Gray
+   */
+  public static int grayn(double brightness) {
+    int b = 0xff & (int) (brightness * 255.9);
+    return
+      LXColor.ALPHA_MASK |
+      (b << R_SHIFT) |
+      (b << G_SHIFT) |
+      b;
+  }
+
+  /**
+   * Produces a grayscale color based upon value from 0-100
+   *
+   * @param brightness Brightness value from 0-100
+   * @return Gray
+   */
   public static int gray(float brightness) {
-    int b = 0xff & (int) (brightness * GRAY_SCALE_FLOAT);
+    int b = 0xff & (int) (brightness * 2.559f);
+    return
+      LXColor.ALPHA_MASK |
+      (b  << R_SHIFT) |
+      (b  << G_SHIFT) |
+      b;
+  }
+
+  /**
+   * Produces a grayscale color based upon normalized value from 0-1
+   *
+   * @param brightness Brightness value from 0-1
+   * @return Gray
+   */
+  public static int grayn(float brightness) {
+    int b = 0xff & (int) (brightness * 255.9f);
     return
       LXColor.ALPHA_MASK |
       (b  << R_SHIFT) |

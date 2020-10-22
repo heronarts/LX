@@ -97,7 +97,7 @@ public class LXUtils {
   }
 
   public static int lerpi(int v1, int v2, float amt) {
-    return (int) (v1 + (v2 - v1) * amt);
+    return Math.round(v1 + (v2 - v1) * amt);
   }
 
   public static double tri(double t) {
@@ -147,6 +147,28 @@ public class LXUtils {
     } else {
       return Math.min(v1 - v2, v2 + modulus - v1);
     }
+  }
+
+  /**
+   * Returns a floating-point rounded value of the sin function to 8 decimal places.
+   * This is often useful because Math.sin(Math.PI) is NOT actually 0.
+   *
+   * @param radians Radians to take sin of
+   * @return Result rounded to 8 decimal places
+   */
+  public static float sinf(double radians) {
+    return Float.valueOf(String.format("%8f", Math.sin(radians)));
+  }
+
+  /**
+   * Returns a floating-point rounded value of the cos function to 8 decimal places.
+   * This is often useful because Math.sin(Math.PI) is NOT actually 0.
+   *
+   * @param radians Radians to take cos of
+   * @return Result rounded to 8 decimal places
+   */
+  public static float cosf(double radians) {
+    return Float.valueOf(String.format("%8f", Math.cos(radians)));
   }
 
   /**

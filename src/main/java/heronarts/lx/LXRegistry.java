@@ -19,14 +19,19 @@
 package heronarts.lx;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-
+import com.google.gson.JsonParseException;
 import heronarts.lx.blend.AddBlend;
 import heronarts.lx.blend.DarkestBlend;
 import heronarts.lx.blend.DifferenceBlend;
@@ -107,7 +112,9 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_PATTERNS = new ArrayList<Class<? extends LXPattern>>();
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.GradientPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.SolidPattern.class);
+    DEFAULT_PATTERNS.add(heronarts.lx.pattern.form.PlanesPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.texture.NoisePattern.class);
+    DEFAULT_PATTERNS.add(heronarts.lx.pattern.texture.SparklePattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.test.TestPattern.class);
   };
 
@@ -119,7 +126,9 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_EFFECTS.add(heronarts.lx.effect.DynamicsEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.InvertEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.HueSaturationEffect.class);
+    DEFAULT_EFFECTS.add(heronarts.lx.effect.SparkleEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.StrobeEffect.class);
+    DEFAULT_EFFECTS.add(heronarts.lx.effect.midi.GateEffect.class);
   };
 
   private static final List<Class<? extends LXBlend>> DEFAULT_CHANNEL_BLENDS;
@@ -157,9 +166,10 @@ public class LXRegistry implements LXSerializable {
   private static final List<Class<? extends LXFixture>> DEFAULT_FIXTURES;
   static {
     DEFAULT_FIXTURES = new ArrayList<Class<? extends LXFixture>>();
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.StripFixture.class);
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.GridFixture.class);
     DEFAULT_FIXTURES.add(heronarts.lx.structure.ArcFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.GridFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.PointFixture.class);
+    DEFAULT_FIXTURES.add(heronarts.lx.structure.StripFixture.class);
   };
 
   /**
@@ -215,14 +225,51 @@ public class LXRegistry implements LXSerializable {
   public final List<Class<? extends LXFixture>> fixtures =
     Collections.unmodifiableList(this.mutableFixtures);
 
+  /**
+   * JSON fixture type
+   */
+  public class JsonFixture {
 
-  private final List<String> mutableJsonFixtures = new ArrayList<String>();
+    public final String type;
+    public final boolean isVisible;
+
+    private static final String KEY_IS_VISIBLE = "isVisible";
+
+    public JsonFixture(File file, String prefix) {
+      String fileName = prefix + file.getName();
+      boolean isVisible = false;
+
+      try (FileReader fr = new FileReader(file)) {
+        JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+        isVisible = !obj.has(KEY_IS_VISIBLE) || obj.get(KEY_IS_VISIBLE).getAsBoolean();
+      } catch (JsonParseException jpx) {
+        LX.error(jpx, "JSON fixture file is not valid JSON: " + file.getAbsolutePath());
+      } catch (FileNotFoundException fnfx) {
+        LX.error(fnfx, "JSON fixture file does not exist: " + file.getAbsolutePath());
+      } catch (IOException iox) {
+        LX.error(iox, "Error reading JSON fixture file: " + file.getAbsolutePath());
+      }
+
+      this.type = fileName.substring(0, fileName.length() - ".lxf".length());
+      this.isVisible = isVisible;
+    }
+  }
+
+  private final List<JsonFixture> mutableJsonFixtures = new ArrayList<JsonFixture>();
 
   /**
    * The list of globally registered JSON fixture types
    */
-  public final List<String> jsonFixtures =
+  public final List<JsonFixture> jsonFixtures =
    Collections.unmodifiableList(this.mutableJsonFixtures);
+
+  private final List<LXClassLoader.Package> mutablePackages = new ArrayList<LXClassLoader.Package>();
+
+  /**
+   * Registered packages
+   */
+  public final List<LXClassLoader.Package> packages = Collections.unmodifiableList(this.mutablePackages);
+
 
   private final List<Plugin> mutablePlugins = new ArrayList<Plugin>();
 
@@ -236,7 +283,7 @@ public class LXRegistry implements LXSerializable {
     public final Class<? extends LXPlugin> clazz;
     public LXPlugin instance;
     private boolean hasError = false;
-    private boolean isEnabled = true;
+    private boolean isEnabled = false;
     private Exception exception = null;
 
     private Plugin(Class<? extends LXPlugin> clazz) {
@@ -341,6 +388,7 @@ public class LXRegistry implements LXSerializable {
   public void reloadContent() {
     LX.log("Reloading custom content folders");
     this.classLoader.dispose();
+    this.mutablePackages.clear();
     this.contentReloading = true;
 
     // The previous classLoader is now disposed. Note that the classes it defined
@@ -357,6 +405,41 @@ public class LXRegistry implements LXSerializable {
     // Notify listeners of change
     for (Listener listener : this.listeners) {
       listener.contentChanged(this.lx);
+    }
+  }
+
+  void addPackage(LXClassLoader.Package pack) {
+    this.mutablePackages.add(pack);
+  }
+
+  public void installPackage(File file) {
+    if (!file.exists() || file.isDirectory()) {
+      this.lx.pushError(null, "Package file does not exist or is a directory: " + file);
+      return;
+    }
+    File destinationFile = lx.getMediaFile(LX.Media.CONTENT, file.getName(), true);
+    if (destinationFile.exists()) {
+      this.lx.pushError(null, "Package file already exists: " + destinationFile.getName());
+      return;
+    }
+    try {
+      Files.copy(file.toPath(), destinationFile.toPath());
+      reloadContent();
+    } catch (IOException iox) {
+      this.lx.pushError(iox, "Could not copy package file " + file.getName() + " to the content folder: " + iox.getLocalizedMessage());
+    }
+  }
+
+  public void uninstallPackage(LXClassLoader.Package pack) {
+    File destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName(), true);
+    try {
+      if (destinationFile.exists()) {
+        destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName() + "-" + java.time.Instant.now().getEpochSecond(), true);
+      }
+      Files.move(pack.jarFile.toPath(), destinationFile.toPath());
+      reloadContent();
+    } catch (IOException iox) {
+      this.lx.pushError(iox, "Could not remove package file " + pack.jarFile.getName());
     }
   }
 
@@ -449,7 +532,6 @@ public class LXRegistry implements LXSerializable {
     }
     return this;
   }
-
 
   /**
    * Register an effect class with the engine
@@ -571,21 +653,24 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
-  public LXRegistry addJsonFixture(String fixture) {
+  private LXRegistry addJsonFixture(File fixture, String prefix) {
     Objects.requireNonNull(fixture, "May not add null LXRegistry.addJsonFixture");
     checkRegistration();
-    if (this.mutableJsonFixtures.contains(fixture)) {
-      throw new IllegalStateException("Cannot double-register JSON fixture: " + fixture);
-    }
-    this.mutableJsonFixtures.add(fixture);
+    this.mutableJsonFixtures.add(new JsonFixture(fixture, prefix));
     return this;
   }
 
-  public void addJsonFixtures(File fixtureDir) {
+  private void addJsonFixtures(File fixtureDir) {
+    addJsonFixtures(fixtureDir, "");
+  }
+
+  private void addJsonFixtures(File fixtureDir, String prefix) {
     if (fixtureDir.exists() && fixtureDir.isDirectory()) {
-      for (String fixture : fixtureDir.list()) {
-        if (fixture.endsWith(".lxf")) {
-          addJsonFixture(fixture.substring(0, fixture.length() - ".lxf".length()));
+      for (File fixture : fixtureDir.listFiles()) {
+        if (fixture.isDirectory()) {
+          addJsonFixtures(fixture, prefix + fixture.getName() + "/");
+        } else if (fixture.getName().endsWith(".lxf")) {
+          addJsonFixture(fixture, prefix);
         }
       }
     }

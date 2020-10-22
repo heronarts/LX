@@ -18,8 +18,11 @@
 
 package heronarts.lx.output;
 
-import java.net.SocketException;
+import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 
@@ -31,19 +34,24 @@ import heronarts.lx.model.LXModel;
  * If greater customization over framing and chunking is required, it may be preferable
  * to construct DDPDatagram packets manually.
  */
-public class DDPOutput extends LXDatagramOutput {
+public class DDPOutputGroup extends LXOutputGroup implements LXOutput.InetOutput {
+
+  private final List<DDPDatagram> datagrams = new ArrayList<DDPDatagram>();
+
+  private InetAddress address = null;
+  private int port = NO_PORT;
 
   public static final int DEFAULT_CHUNK_SIZE = 400;
 
-  public DDPOutput(LX lx, LXModel model) throws SocketException {
+  public DDPOutputGroup(LX lx, LXModel model) {
     this(lx, model.toIndexBuffer());
   }
 
-  public DDPOutput(LX lx, LXModel model, int chunkSize) throws SocketException {
+  public DDPOutputGroup(LX lx, LXModel model, int chunkSize) {
     this(lx, model.toIndexBuffer(), chunkSize);
   }
 
-  public DDPOutput(LX lx, int[] indexBuffer) throws SocketException {
+  public DDPOutputGroup(LX lx, int[] indexBuffer) {
     this(lx, indexBuffer, DEFAULT_CHUNK_SIZE);
   }
 
@@ -54,19 +62,19 @@ public class DDPOutput extends LXDatagramOutput {
    * @param lx LX instance
    * @param indexBuffer All of the points to send
    * @param chunkSize Number of points to chunk per packet
-   * @throws SocketException if a DatagramSocket could not be created
    */
-  public DDPOutput(LX lx, int[] indexBuffer, int chunkSize) throws SocketException {
+  public DDPOutputGroup(LX lx, int[] indexBuffer, int chunkSize) {
     super(lx);
     int total = indexBuffer.length;
     int start = 0;
     while (start < total) {
       int end = Math.min(start + chunkSize, total);
       int[] chunk = Arrays.copyOfRange(indexBuffer, start, end);
-      DDPDatagram datagram = new DDPDatagram(chunk);
+      DDPDatagram datagram = new DDPDatagram(lx, chunk);
       datagram.setDataOffset(start);
       datagram.setPushFlag(end == total);
-      addDatagram(datagram);
+      this.datagrams.add(datagram);
+      addChild(datagram);
       start = end;
     }
   }
@@ -79,7 +87,7 @@ public class DDPOutput extends LXDatagramOutput {
    * @param pushAll Whether to set the push flag on all packets
    * @return this
    */
-  public DDPOutput setPushAll(boolean pushAll) {
+  public DDPOutputGroup setPushAll(boolean pushAll) {
     int i = 0;
     int len = this.datagrams.size();
     for (LXDatagram datagram : this.datagrams) {
@@ -90,11 +98,31 @@ public class DDPOutput extends LXDatagramOutput {
   }
 
   @Override
-  public LXDatagramOutput addDatagram(LXDatagram datagram) {
-    if (!(datagram instanceof DDPDatagram)) {
-      throw new IllegalArgumentException("May not add non-DDPDatagram to DDPOutput");
+  public InetOutput setAddress(InetAddress address) {
+    this.address = address;
+    for (DDPDatagram datagram : this.datagrams) {
+      datagram.setAddress(address);
     }
-    return super.addDatagram(datagram);
+    return this;
+  }
+
+  @Override
+  public InetAddress getAddress() {
+    return this.address;
+  }
+
+  @Override
+  public InetOutput setPort(int port) {
+    this.port = port;
+    for (DDPDatagram datagram : this.datagrams) {
+      datagram.setPort(port);
+    }
+    return this;
+  }
+
+  @Override
+  public int getPort() {
+    return this.port;
   }
 
 }

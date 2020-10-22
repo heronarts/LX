@@ -242,7 +242,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     super.loop(deltaMs);
   }
 
-  private int startMeasure = 0;
+  private int lastMeasure = 0;
 
   @Override
   protected final double computeValue(double deltaMs) {
@@ -252,15 +252,17 @@ public abstract class LXPeriodicModulator extends LXModulator {
     double periodv = this.period.getValue();
     if (this.tempoSync.isOn()) {
       if (this.tempoLock.isOn()) {
-        this.basis = this.lx.engine.tempo.getBasis(this.tempoDivision.getEnum());
-        int measure = (int) basis;
+        double rawBasis = this.lx.engine.tempo.getBasis(this.tempoDivision.getEnum(), false);
+        int measure = (int) rawBasis;
+        this.basis = rawBasis % 1.;
         if (this.restarted) {
           this.restarted = false;
-          this.startMeasure = measure;
-        } else if ((measure != this.startMeasure) && !this.looping.isOn()) {
+        } else if ((measure != this.lastMeasure) && !this.looping.isOn()) {
           this.basis = 1;
+          this.finished = true;
+          this.stop();
         }
-        this.startMeasure = measure;
+        this.lastMeasure = measure;
       } else {
         this.basis += deltaMs / this.lx.engine.tempo.period.getValue() * this.tempoDivision.getEnum().multiplier;
       }

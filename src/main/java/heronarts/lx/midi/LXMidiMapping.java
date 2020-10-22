@@ -44,7 +44,10 @@ public abstract class LXMidiMapping implements LXSerializable {
 
   private static LXParameter getParameter(LX lx, JsonObject obj) {
     if (obj.has(LXComponent.KEY_PATH)) {
-      return (LXParameter) LXPath.get(lx, obj.get(LXComponent.KEY_PATH).getAsString());
+      LXPath parameter = LXPath.get(lx, obj.get(LXComponent.KEY_PATH).getAsString());
+      if (parameter instanceof LXParameter) {
+        return (LXParameter) parameter;
+      }
     }
     return lx
       .getProjectComponent(obj.get(LXComponent.KEY_COMPONENT_ID).getAsInt())

@@ -50,9 +50,9 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
    * channel state is modified.
    */
   public interface Listener {
-    public void effectAdded(LXBus channel, LXEffect effect);
-    public void effectRemoved(LXBus channel, LXEffect effect);
-    public void effectMoved(LXBus channel, LXEffect effect);
+    public default void effectAdded(LXBus channel, LXEffect effect) {}
+    public default void effectRemoved(LXBus channel, LXEffect effect) {}
+    public default void effectMoved(LXBus channel, LXEffect effect) {}
   }
 
   public interface ClipListener {
@@ -99,6 +99,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   LXBus(LX lx, String label) {
     super(lx, label);
     addArray("effect", this.effects);
+    addArray("clip", this.clips);
     addParameter("arm", this.arm);
     addParameter("selected", this.selected);
   }

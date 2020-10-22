@@ -32,7 +32,6 @@ import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 
 /**
@@ -53,12 +52,14 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
 
   public final List<LXDynamicColor> colors = Collections.unmodifiableList(this.mutableColors);
 
-  public final DiscreteParameter numColors = new DiscreteParameter("Num", 1, 1, MAX_COLORS + 1);
-
   public final BooleanParameter recall =
     new BooleanParameter("Recall", false)
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Restores the values of this swatch");
+
+  public final BooleanParameter autoCycleEligible =
+    new BooleanParameter("Cycle", true)
+    .setDescription("Whether the swatch is eligible for auto-cycle");
 
   private int index = 0;
 
@@ -67,6 +68,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     this.mutableColors.add(new LXDynamicColor(this));
     addArray("colors", this.colors);
     addParameter("recall", this.recall);
+    addParameter("autoCycleEligible", this.autoCycleEligible);
   }
 
   LXSwatch(LXPalette palette, boolean setParent) {

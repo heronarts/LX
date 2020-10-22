@@ -202,7 +202,9 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
             }
             break;
           }
+          break;
         }
+
         if (message != null) {
           message.setInput(LXMidiInput.this);
           engine.queueInputMessage(message);

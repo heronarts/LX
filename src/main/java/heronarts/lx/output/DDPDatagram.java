@@ -18,6 +18,7 @@
 
 package heronarts.lx.output;
 
+import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 
 /**
@@ -26,7 +27,7 @@ import heronarts.lx.model.LXModel;
  *
  * The specification is available at http://www.3waylabs.com/ddp/
  */
-public class DDPDatagram extends LXBufferDatagram {
+public class DDPDatagram extends LXDatagram {
 
   public final static int MAX_DATA_LENGTH = 65535;
 
@@ -36,18 +37,18 @@ public class DDPDatagram extends LXBufferDatagram {
   private static final int FLAGS_INDEX = 0;
   private static final int OFFSET_DATA_OFFSET = 4;
 
-  public DDPDatagram(LXModel model) {
-    this(model.toIndexBuffer());
+  public DDPDatagram(LX lx, LXModel model) {
+    this(lx, model.toIndexBuffer());
   }
 
-  public DDPDatagram(int[] indexBuffer) {
-    this(indexBuffer, 0);
+  public DDPDatagram(LX lx, int[] indexBuffer) {
+    this(lx, indexBuffer, 0);
   }
 
-  public DDPDatagram(int[] indexBuffer, int dataOffset) {
-    super(indexBuffer, HEADER_LENGTH + indexBuffer.length * 3, ByteOrder.RGB);
+  public DDPDatagram(LX lx, int[] indexBuffer, int dataOffset) {
+    super(lx, indexBuffer, ByteOrder.RGB, HEADER_LENGTH + indexBuffer.length * 3);
     setPort(DEFAULT_PORT);
-    int dataLen = indexBuffer.length * 3;
+    validateBufferSize();
 
     // Flags: V V x T S R Q P
     this.buffer[0] = 0x41;
@@ -65,6 +66,7 @@ public class DDPDatagram extends LXBufferDatagram {
     setDataOffset(dataOffset);
 
     // Data length
+    int dataLen = indexBuffer.length * 3;
     this.buffer[8] = (byte) (0xff & (dataLen >> 8));
     this.buffer[9] = (byte) (0xff & dataLen);
   }
@@ -99,7 +101,7 @@ public class DDPDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getColorBufferPosition() {
+  protected int getDataBufferOffset() {
     return HEADER_LENGTH;
   }
 }

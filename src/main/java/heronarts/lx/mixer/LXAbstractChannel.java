@@ -28,6 +28,8 @@ import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.midi.LXMidiEngine;
+import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -40,25 +42,14 @@ import heronarts.lx.parameter.ObjectParameter;
 public abstract class LXAbstractChannel extends LXBus implements LXComponent.Renamable {
 
   public interface Listener extends LXBus.Listener {
-    public void indexChanged(LXAbstractChannel channel);
+    public default void indexChanged(LXAbstractChannel channel) {}
   }
 
-  /**
-   * Utility class to extend in cases where only some methods need overriding.
-   */
-  public abstract static class AbstractListener implements Listener {
-    @Override
-    public void indexChanged(LXAbstractChannel channel) {}
-
-    @Override
-    public void effectAdded(LXBus channel, LXEffect effect) {}
-
-    @Override
-    public void effectRemoved(LXBus channel, LXEffect effect) {}
-
-    @Override
-    public void effectMoved(LXBus channel, LXEffect effect) {}
+  public interface MidiListener {
+    public void midiReceived(LXAbstractChannel channel, LXShortMessage message);
   }
+
+  private final List<MidiListener> midiListeners = new ArrayList<MidiListener>();
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
@@ -115,8 +106,22 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     .setDescription("Toggles the channel CUE state, determining whether it is shown in the preview window");
 
   public final CompoundParameter fader =
-    new CompoundParameter("Fader", 0)
+    new CompoundParameter("Fader", 1)
     .setDescription("Sets the alpha level of the output of this channel");
+
+  /**
+   * Whether this channel should listen to MIDI events
+   */
+  public final BooleanParameter midiMonitor =
+    new BooleanParameter("MIDI Monitor", false)
+    .setDescription("Enables or disables monitoring of live MIDI input on this channel");
+
+  /**
+   * Which channel MIDI messages this channel observes
+   */
+  public final EnumParameter<LXMidiEngine.Channel> midiChannel =
+    new EnumParameter<LXMidiEngine.Channel>("MIDI Channel", LXMidiEngine.Channel.OMNI)
+    .setDescription("Determines which MIDI channel is responded to");
 
   public final ObjectParameter<LXBlend> blendMode;
 
@@ -183,6 +188,25 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("fader", this.fader);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
+    addParameter("midiMonitor", this.midiMonitor);
+    addParameter("midiChannel", this.midiChannel);
+  }
+
+  public LXAbstractChannel addMidiListener(MidiListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXChannel.MidiListener");
+    if (this.midiListeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXChannel.MidiListener: " + listener);
+    }
+    this.midiListeners.add(listener);
+    return this;
+  }
+
+  public LXAbstractChannel removeMidiListener(MidiListener listener) {
+    if (!this.midiListeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXChannel.MidiListener: " + listener);
+    }
+    this.midiListeners.remove(listener);
+    return this;
   }
 
   void updateChannelBlendOptions() {
@@ -217,6 +241,33 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
       this.activeBlend.onInactive();
       this.activeBlend = this.blendMode.getObject();
       this.activeBlend.onActive();
+    }
+  }
+
+  /**
+   * Invoked by the MIDI/OSC/Clip engines when this channel should process a
+   * MIDI message. This will notify the channel's listeners.
+   *
+   * @param message Message to process
+   */
+  public void midiMessage(LXShortMessage message) {
+    for (MidiListener listener : this.midiListeners) {
+      listener.midiReceived(this, message);
+    }
+    midiDispatch(message);
+  }
+
+  /**
+   * Dispatch a MIDI message to all the active devices on this channel, without
+   * notifying listeners.
+   *
+   * @param message Message
+   */
+  public void midiDispatch(LXShortMessage message) {
+    for (LXEffect effect : this.effects) {
+      if (effect.enabled.isOn()) {
+        message.dispatch(effect);
+      }
     }
   }
 
@@ -284,12 +335,13 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   @Override
   public void dispose() {
-    this.blendBuffer.dispose();
-    this.listeners.clear();
     synchronized (this.thread) {
       this.thread.interrupt();
     }
     super.dispose();
+    this.blendBuffer.dispose();
+    this.midiListeners.clear();
+    this.listeners.clear();
   }
 
 }

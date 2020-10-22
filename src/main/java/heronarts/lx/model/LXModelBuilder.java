@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 
 /**
  * A utility class with a simple interface, used to procedurally construct
@@ -43,7 +43,7 @@ public class LXModelBuilder {
 
   LXModel model = null;
 
-  final List<LXDatagram> datagrams = new ArrayList<LXDatagram>();
+  final List<LXOutput> outputs = new ArrayList<LXOutput>();
 
   /**
    * Construct a model-builder with the default model key
@@ -139,15 +139,15 @@ public class LXModelBuilder {
   }
 
   /**
-   * Add a datagram to this model
+   * Add a output to this model
    *
-   * @param datagram Datagram object
+   * @param output Output object
    * @return this
    */
-  public LXModelBuilder addDatagram(LXDatagram datagram) {
+  public LXModelBuilder addOutput(LXOutput output) {
     checkEditState();
-    Objects.requireNonNull(datagram, "May not add null LXModelBuilder.addDatagram()");
-    this.datagrams.add(datagram);
+    Objects.requireNonNull(output, "May not add null LXModelBuilder.addOutput()");
+    this.outputs.add(output);
     return this;
   }
 

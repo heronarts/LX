@@ -31,7 +31,8 @@ import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
-import heronarts.lx.pattern.test.TestPattern;
+import heronarts.lx.pattern.color.SolidPattern;
+import heronarts.lx.scheduler.LXScheduler;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
 
@@ -66,7 +67,7 @@ import com.google.gson.stream.JsonWriter;
  */
 public class LX {
 
-  public static final String VERSION = "0.2.0";
+  public static final String VERSION = "0.2.1";
 
   public static class InstantiationException extends Exception {
 
@@ -76,6 +77,12 @@ public class LX {
       super(underlying);
     }
 
+  }
+
+  public interface Permissions {
+    public boolean canSave();
+
+    public int getMaxPoints();
   }
 
   public static class Flags {
@@ -98,7 +105,8 @@ public class LX {
     FIXTURES("Fixtures"),
     PROJECTS("Projects"),
     MODELS("Models"),
-    LOGS("Logs");
+    LOGS("Logs"),
+    DELETED("Deleted");
 
     private final String dirName;
 
@@ -108,6 +116,10 @@ public class LX {
 
     public String getDirName() {
       return this.dirName;
+    }
+
+    private boolean isBootstrap() {
+      return (this != DELETED);
     }
   }
 
@@ -156,6 +168,10 @@ public class LX {
   public static final double HALF_PI = Math.PI / 2.;
   public static final double TWO_PI = Math.PI * 2.;
 
+  public static final float PIf = (float) Math.PI;
+  public static final float HALF_PIf = (float) (Math.PI / 2.);
+  public static final float TWO_PIf = (float) (Math.PI * 2.);
+
   public static class InitProfiler {
     private long lastTime;
 
@@ -184,7 +200,27 @@ public class LX {
    * Listener for top-level events
    */
   public interface Listener {
+    /**
+     * Fired whenever a new model instance is set on this LX instance. The
+     * passed model is an entirely new object that has not been set before.
+     *
+     * @param lx LX instance
+     * @param model Model instance
+     */
     default public void modelChanged(LX lx, LXModel model) {}
+
+    /**
+     * Fired when the generation of a model has been changed. This is the same
+     * model instance that has already been set on LX, but it has been modified.
+     * This is also fired the very first time a model is set (e.g. generation 0
+     * for the model). Listeners that wish to take generic action based upon any new
+     * model geometry, whether it's an existing or new model, may listen to just
+     * this method.
+     *
+     * @param lx LX instance
+     * @param model model instance
+     */
+    default public void modelGenerationChanged(LX lx, LXModel model) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -214,6 +250,19 @@ public class LX {
    * Configuration flags
    */
   public final Flags flags;
+
+  /**
+   * Permissions
+   */
+  protected Permissions permissions = new Permissions() {
+    public boolean canSave() {
+      return true;
+    }
+
+    public int getMaxPoints() {
+      return -1;
+    }
+  };
 
   /**
    * Error stack
@@ -265,6 +314,11 @@ public class LX {
   public final LXRegistry registry;
 
   /**
+   * The project scheduler
+   */
+  public final LXScheduler scheduler;
+
+  /**
    * Creates an LX instance with no nodes.
    */
   public LX() {
@@ -296,13 +350,29 @@ public class LX {
     } else {
       this.model = model;
     }
-    this.structure.setModelListener((newModel) -> { setModel(newModel); });
+    this.structure.setModelListener(new LXStructure.ModelListener() {
+      public void structureChanged(LXModel model) {
+        setModel(model);
+      }
+      public void structureGenerationChanged(LXModel model) {
+        for (Listener listener : listeners) {
+          listener.modelGenerationChanged(LX.this, model);
+        }
+      }
+    });
     LX.initProfiler.log("Model");
 
     // Custom content loader
     this.registry = instantiateRegistry(this);
     this.registry.initialize();
     LX.initProfiler.log("Registry");
+
+    // Load the global preferences before plugin initialization
+    this.preferences = new LXPreferences(this);
+    this.preferences.load();
+
+    // Scheduler
+    this.scheduler = new LXScheduler(this);
 
     // Construct the engine
     this.engine = new LXEngine(this);
@@ -311,14 +381,6 @@ public class LX {
 
     // Midi
     this.engine.midi.initialize();
-
-    // Add a default channel
-    this.engine.mixer.addChannel(new LXPattern[] { new TestPattern(this) }).fader.setValue(1);
-    LX.initProfiler.log("Default Channel");
-
-    // Load the global preferences before plugin initialization
-    this.preferences = new LXPreferences(this);
-    this.preferences.load();
 
     // Initialize plugins!
     if (this.flags.initialize != null) {
@@ -349,6 +411,10 @@ public class LX {
     }
 
     this.failure.setValue(message);
+  }
+
+  public Permissions getPermissions() {
+    return this.permissions;
   }
 
   public LX pushError(Exception exception) {
@@ -464,6 +530,9 @@ public class LX {
     this.model = model;
     for (Listener listener : this.listeners) {
       listener.modelChanged(this, model);
+    }
+    for (Listener listener : this.listeners) {
+      listener.modelGenerationChanged(this, model);
     }
 
     // Dispose of the old model after notifying listeners of model change
@@ -750,6 +819,10 @@ public class LX {
   }
 
   public void saveProject(File file) {
+    if (!this.permissions.canSave()) {
+      return;
+    }
+
     JsonObject obj = new JsonObject();
     obj.addProperty(KEY_VERSION, LX.VERSION);
     obj.addProperty(KEY_TIMESTAMP, System.currentTimeMillis());
@@ -807,6 +880,10 @@ public class LX {
         this.structure.load(this, new JsonObject());
       }
       this.engine.load(this, new JsonObject());
+
+      LXChannel channel = this.engine.mixer.addChannel(new LXPattern[] { new SolidPattern(this, 0xffff0000) });
+      channel.fader.setValue(1);
+
       setProject(null, ProjectListener.Change.NEW);
     });
   }
@@ -841,6 +918,8 @@ public class LX {
     } catch (Exception x) {
       LX.error(x, "Exception in openProject: " + x.getLocalizedMessage());
       pushError(x, "Exception in openProject: " + x.getLocalizedMessage());
+    } finally {
+      this.componentRegistry.projectLoading = false;
     }
   }
 
@@ -852,6 +931,10 @@ public class LX {
 
   public void setModelImportFlag(boolean modelImport) {
     this.componentRegistry.modelImporting = modelImport;
+  }
+
+  public void setScheduleLoadingFlag(boolean scheduleLoading) {
+    this.componentRegistry.scheduleLoading = scheduleLoading;
   }
 
   protected final void confirmChangesSaved(String message, Runnable confirm) {
@@ -1053,10 +1136,12 @@ public class LX {
     if (studioDir.isDirectory()) {
       flags.mediaPath = studioDir.getPath();
       for (LX.Media type : LX.Media.values()) {
-        File contentDir = new File(studioDir, type.getDirName());
-        if (!contentDir.exists()) {
-          LX.log("Creating directory: " + contentDir);
-          contentDir.mkdir();
+        if (type.isBootstrap()) {
+          File contentDir = new File(studioDir, type.getDirName());
+          if (!contentDir.exists()) {
+            LX.log("Creating directory: " + contentDir);
+            contentDir.mkdir();
+          }
         }
       }
     } else {

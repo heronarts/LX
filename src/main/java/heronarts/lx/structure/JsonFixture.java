@@ -25,8 +25,10 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,9 +48,11 @@ import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.ArtSyncDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
-import heronarts.lx.output.LXBufferDatagram;
+import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
+import heronarts.lx.output.OPCSocket;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -60,6 +64,7 @@ import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
+import heronarts.lx.utils.LXUtils;
 
 public class JsonFixture extends LXFixture {
 
@@ -114,17 +119,22 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_OUTPUT = "output";
   private static final String KEY_OUTPUTS = "outputs";
   private static final String KEY_PROTOCOL = "protocol";
+  private static final String KEY_TRANSPORT = "transport";
   private static final String KEY_HOST = "host";
   private static final String KEY_PORT = "port";
   private static final String KEY_BYTE_ORDER = "byteOrder";
   private static final String KEY_UNIVERSE = "universe";
-  private static final String KEY_DATA_OFFSET = "dataOffset";
+  private static final String KEY_DDP_DATA_OFFSET = "dataOffset";
   private static final String KEY_KINET_PORT = "kinetPort";
-  private static final String KEY_CHANNEL = "channel";
+  private static final String KEY_OPC_CHANNEL = "channel";
   private static final String KEY_START = "start";
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
   private static final String KEY_REVERSE = "reverse";
+  private static final String KEY_SEGMENTS = "segments";
+
+  // Metadata
+  private static final String KEY_META = "meta";
 
   private static final String LABEL_PLACEHOLDER = "UNKNOWN";
 
@@ -132,8 +142,8 @@ public class JsonFixture extends LXFixture {
     ARTNET(KEY_UNIVERSE, "artnet", "artdmx"),
     ARTSYNC(null, "artsync"),
     SACN(KEY_UNIVERSE, "sacn", "e131"),
-    DDP(KEY_DATA_OFFSET, "ddp"),
-    OPC(KEY_CHANNEL, "opc"),
+    DDP(KEY_DDP_DATA_OFFSET, "ddp"),
+    OPC(KEY_OPC_CHANNEL, "opc"),
     KINET(KEY_KINET_PORT, "kinet");
 
     private final String universeKey;
@@ -148,6 +158,10 @@ public class JsonFixture extends LXFixture {
       return this.universeKey;
     }
 
+    public boolean requiresExplicitPort() {
+      return (this == OPC);
+    }
+
     private static ProtocolDefinition get(String key) {
       for (ProtocolDefinition protocol : values()) {
         for (String protocolKey : protocol.protocolKeys) {
@@ -160,40 +174,62 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  // A bit superfluous, but avoiding using the LXBufferDatagram stuff
+
+  private enum TransportDefinition {
+    UDP("udp"),
+    TCP("tcp");
+
+    private final String transportKey;
+
+    private TransportDefinition(String transportKey) {
+      this.transportKey = transportKey;
+    }
+
+    private static TransportDefinition get(String key) {
+      for (TransportDefinition protocol : values()) {
+        if (protocol.transportKey.equals(key)) {
+          return protocol;
+        }
+      }
+      return null;
+    }
+
+  }
+
+  // A bit superfluous, but avoiding using the LXBufferOutput stuff
   // directly as JSON-loading is a separate namespace and want the code
   // to clearly reflect that, as may diverge in the future
   private enum ByteOrderDefinition {
 
-    RGB(LXBufferDatagram.ByteOrder.RGB),
-    RBG(LXBufferDatagram.ByteOrder.RBG),
-    GBR(LXBufferDatagram.ByteOrder.GBR),
-    GRB(LXBufferDatagram.ByteOrder.GRB),
-    BRG(LXBufferDatagram.ByteOrder.BRG),
-    BGR(LXBufferDatagram.ByteOrder.BGR),
+    RGB(LXBufferOutput.ByteOrder.RGB),
+    RBG(LXBufferOutput.ByteOrder.RBG),
+    GBR(LXBufferOutput.ByteOrder.GBR),
+    GRB(LXBufferOutput.ByteOrder.GRB),
+    BRG(LXBufferOutput.ByteOrder.BRG),
+    BGR(LXBufferOutput.ByteOrder.BGR),
 
-    RGBW(LXBufferDatagram.ByteOrder.RGBW),
-    RBGW(LXBufferDatagram.ByteOrder.RBGW),
-    GRBW(LXBufferDatagram.ByteOrder.GRBW),
-    GBRW(LXBufferDatagram.ByteOrder.GBRW),
-    BRGW(LXBufferDatagram.ByteOrder.BRGW),
-    BGRW(LXBufferDatagram.ByteOrder.BGRW),
+    RGBW(LXBufferOutput.ByteOrder.RGBW),
+    RBGW(LXBufferOutput.ByteOrder.RBGW),
+    GRBW(LXBufferOutput.ByteOrder.GRBW),
+    GBRW(LXBufferOutput.ByteOrder.GBRW),
+    BRGW(LXBufferOutput.ByteOrder.BRGW),
+    BGRW(LXBufferOutput.ByteOrder.BGRW),
 
-    WRGB(LXBufferDatagram.ByteOrder.WRGB),
-    WRBG(LXBufferDatagram.ByteOrder.WRBG),
-    WGRB(LXBufferDatagram.ByteOrder.WGRB),
-    WGBR(LXBufferDatagram.ByteOrder.WGBR),
-    WBRG(LXBufferDatagram.ByteOrder.WBRG),
-    WBGR(LXBufferDatagram.ByteOrder.WBGR);
+    WRGB(LXBufferOutput.ByteOrder.WRGB),
+    WRBG(LXBufferOutput.ByteOrder.WRBG),
+    WGRB(LXBufferOutput.ByteOrder.WGRB),
+    WGBR(LXBufferOutput.ByteOrder.WGBR),
+    WBRG(LXBufferOutput.ByteOrder.WBRG),
+    WBGR(LXBufferOutput.ByteOrder.WBGR);
 
-    private final LXBufferDatagram.ByteOrder datagramByteOrder;
+    private final LXBufferOutput.ByteOrder byteOrder;
 
-    private ByteOrderDefinition(LXBufferDatagram.ByteOrder datagramByteOrder) {
-      this.datagramByteOrder = datagramByteOrder;
+    private ByteOrderDefinition(LXBufferOutput.ByteOrder byteOrder) {
+      this.byteOrder = byteOrder;
     }
 
-    private LXBufferDatagram.ByteOrder getDatagramByteOrder() {
-      return this.datagramByteOrder;
+    private LXBufferOutput.ByteOrder getByteOrder() {
+      return this.byteOrder;
     }
 
     private static ByteOrderDefinition get(String order) {
@@ -209,7 +245,8 @@ public class JsonFixture extends LXFixture {
   public enum ParameterType {
     STRING,
     INT,
-    FLOAT;
+    FLOAT,
+    BOOLEAN;
 
     private static ParameterType get(String str) {
       for (ParameterType type : values()) {
@@ -231,6 +268,7 @@ public class JsonFixture extends LXFixture {
     public final DiscreteParameter intParameter;
     public final BoundedParameter floatParameter;
     public final StringParameter stringParameter;
+    public final BooleanParameter booleanParameter;
 
     private boolean isReferenced = false;
 
@@ -248,16 +286,25 @@ public class JsonFixture extends LXFixture {
         this.stringParameter = (StringParameter) parameter;
         this.intParameter = null;
         this.floatParameter = null;
+        this.booleanParameter = null;
         break;
       case INT:
         this.stringParameter = null;
         this.intParameter = (DiscreteParameter) parameter;
         this.floatParameter = null;
+        this.booleanParameter = null;
         break;
       case FLOAT:
         this.stringParameter = null;
         this.intParameter = null;
         this.floatParameter = (BoundedParameter) parameter;
+        this.booleanParameter = null;
+        break;
+      case BOOLEAN:
+        this.stringParameter = null;
+        this.intParameter = null;
+        this.floatParameter = null;
+        this.booleanParameter = (BooleanParameter) parameter;;
         break;
       default:
         throw new IllegalStateException("Unknown ParameterType: " + type);
@@ -275,6 +322,10 @@ public class JsonFixture extends LXFixture {
 
     private ParameterDefinition(String name, String label, String description, float defaultFloat) {
       this(name, label, description, ParameterType.FLOAT, new BoundedParameter(name, defaultFloat, Float.MIN_VALUE, Float.MAX_VALUE));
+    }
+
+    private ParameterDefinition(String name, String label, String description, boolean defaultBoolean) {
+      this(name, label, description, ParameterType.BOOLEAN, new BooleanParameter(name, defaultBoolean));
     }
 
     private void dispose() {
@@ -297,27 +348,39 @@ public class JsonFixture extends LXFixture {
     private static final int DEFAULT_PORT = -1;
 
     private final ProtocolDefinition protocol;
+    private final TransportDefinition transport;
     private final ByteOrderDefinition byteOrder;
     private final InetAddress address;
     private final int port;
     private final int universe;
-    private final int start;
-    private final int num;
-    private final int stride;
-    private final boolean reverse;
+    private final List<SegmentDefinition> segments;
 
-    private OutputDefinition(ProtocolDefinition protocol, ByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int start, int num, int stride, boolean reverse) {
+    private OutputDefinition(ProtocolDefinition protocol, TransportDefinition transport, ByteOrderDefinition byteOrder, InetAddress address, int port, int universe, List<SegmentDefinition> segments) {
       this.protocol = protocol;
+      this.transport = transport;
       this.byteOrder = byteOrder;
       this.address = address;
       this.port = port;
       this.universe = universe;
+      this.segments = segments;
+    }
+
+  }
+
+  private class SegmentDefinition {
+    private final int start;
+    private final int num;
+    private final int stride;
+    private final boolean reverse;
+    private final ByteOrderDefinition dynamicByteOrder;
+
+    private SegmentDefinition(int start, int num, int stride, boolean reverse, ByteOrderDefinition dynamicByteOrder) {
       this.start = start;
       this.num = num;
       this.stride = stride;
       this.reverse = reverse;
+      this.dynamicByteOrder = dynamicByteOrder;
     }
-
   }
 
   private class StripDefinition {
@@ -329,14 +392,16 @@ public class JsonFixture extends LXFixture {
     private final float pointSpacing;
     private final LXMatrix transform;
     private final List<OutputDefinition> outputs;
+    private final Map<String, String> metaData;
     private final String[] modelKeys;
 
-    private StripDefinition(int numPoints, float pointSpacing, LXVector origin, LXMatrix transform, List<OutputDefinition> outputs, String[] modelKeys) {
+    private StripDefinition(int numPoints, float pointSpacing, LXVector origin, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] modelKeys) {
       this.index = size;
       this.numPoints = numPoints;
       this.pointSpacing = pointSpacing;
       this.transform = transform;
       this.outputs = outputs;
+      this.metaData = metaData;
       this.modelKeys = modelKeys;
       size += numPoints;
     }
@@ -353,9 +418,10 @@ public class JsonFixture extends LXFixture {
     private final boolean isCenter;
     private final LXMatrix transform;
     private final List<OutputDefinition> outputs;
+    private final Map<String, String> metaData;
     private final String[] modelKeys;
 
-    private ArcDefinition(int numPoints, float radius, float degrees, boolean isCenter, LXMatrix transform, List<OutputDefinition> outputs, String[] modelKeys) {
+    private ArcDefinition(int numPoints, float radius, float degrees, boolean isCenter, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] modelKeys) {
       this.index = size;
       this.numPoints = numPoints;
       this.radius = radius;
@@ -363,6 +429,7 @@ public class JsonFixture extends LXFixture {
       this.isCenter = isCenter;
       this.transform = transform;
       this.outputs = outputs;
+      this.metaData = metaData;
       this.modelKeys = modelKeys;
       size += numPoints;
     }
@@ -401,6 +468,9 @@ public class JsonFixture extends LXFixture {
   private final List<ArcDefinition> definedArcs = new ArrayList<ArcDefinition>();
   private final List<OutputDefinition> definedOutputs = new ArrayList<OutputDefinition>();
   private final LinkedHashMap<String, ParameterDefinition> definedParameters = new LinkedHashMap<String, ParameterDefinition>();
+  private final LinkedHashMap<String, ParameterDefinition> reloadParameterValues = new LinkedHashMap<String, ParameterDefinition>();
+
+  private final Map<String, String> metaData = new HashMap<String, String>();
 
   private int size = 0;
 
@@ -439,9 +509,19 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
+  protected Map<String, String> getMetaData() {
+    return this.metaData;
+  }
+
+  @Override
   public void onParameterChanged(LXParameter p) {
     if (p == this.fixtureType) {
       loadFixture(true);
+    } else if (p == this.enabled) {
+      // JSON fixture enabled cascades down children...
+      for (LXFixture child : this.children) {
+        child.enabled.setValue(this.enabled.isOn());
+      }
     }
     super.onParameterChanged(p);
   }
@@ -470,7 +550,12 @@ public class JsonFixture extends LXFixture {
   private boolean isLoaded = false;
 
   public void reload() {
+    this.reloadParameterValues.clear();
+    for (Map.Entry<String, ParameterDefinition> entry : this.definedParameters.entrySet()) {
+      this.reloadParameterValues.put(entry.getKey(), entry.getValue());
+    }
     reload(true);
+    this.reloadParameterValues.clear();
   }
 
   private void reload(boolean reloadParameters) {
@@ -488,6 +573,7 @@ public class JsonFixture extends LXFixture {
     this.definedStrips.clear();
     this.definedArcs.clear();
     this.definedOutputs.clear();
+    this.metaData.clear();
 
     // Clear the children
     for (LXFixture child : this.children) {
@@ -508,7 +594,7 @@ public class JsonFixture extends LXFixture {
     }
     this.isLoaded = true;
 
-    File fixtureFile = this.lx.getMediaFile(LX.Media.FIXTURES, this.fixtureType.getString() + ".lxf", false);
+    File fixtureFile = this.lx.getMediaFile(LX.Media.FIXTURES, this.fixtureType.getString().replace("/", File.separator) + ".lxf", false);
     if (!fixtureFile.exists()) {
       setError("Invalid fixture type, could not find file: " + fixtureFile);
       return;
@@ -534,6 +620,8 @@ public class JsonFixture extends LXFixture {
       loadChildren(obj);
 
       loadOutputs(this.definedOutputs, obj);
+
+      loadMetaData(obj, this.metaData);
 
     } catch (JsonParseException jpx) {
       String message = jpx.getLocalizedMessage();
@@ -575,7 +663,7 @@ public class JsonFixture extends LXFixture {
 
   private static final Pattern parameterPattern = Pattern.compile("\\$\\{([a-zA-Z0-9]+)\\}");
 
-  private String replaceVariables(JsonObject obj, String key, String expression, ParameterType returnType) {
+  private String replaceVariables(String key, String expression, ParameterType returnType) {
     StringBuilder result = new StringBuilder();
     int index = 0;
     Matcher matcher = parameterPattern.matcher(expression);
@@ -612,6 +700,14 @@ public class JsonFixture extends LXFixture {
           parameterValue = String.valueOf(parameter.parameter.getValue());
         }
         break;
+      case BOOLEAN:
+        if (parameter.type == ParameterType.BOOLEAN) {
+          parameterValue = String.valueOf(parameter.booleanParameter.isOn());
+        } else {
+          addWarning("Cannot load non-boolean variable ${" + parameterName + "} into a boolean type: " + key);
+          return null;
+        }
+        break;
       }
       result.append(expression, index, matcher.start());
       result.append(parameterValue);
@@ -624,7 +720,7 @@ public class JsonFixture extends LXFixture {
   }
 
   private float evaluateVariableExpression(JsonObject obj, String key, String expression, ParameterType type) {
-    String substitutedExpression = replaceVariables(obj, key, expression, type);
+    String substitutedExpression = replaceVariables(key, expression, type);
     if (substitutedExpression == null) {
       return 0;
     }
@@ -676,10 +772,15 @@ public class JsonFixture extends LXFixture {
     return 0f;
   }
 
-  private boolean loadBoolean(JsonObject obj, String key, String warning) {
+  private boolean loadBoolean(JsonObject obj, String key, boolean variablesAllowed, String warning) {
     if (obj.has(key)) {
       JsonElement boolElem = obj.get(key);
       if (boolElem.isJsonPrimitive()) {
+        JsonPrimitive boolPrimitive = boolElem.getAsJsonPrimitive();
+        if (variablesAllowed && boolPrimitive.isString()) {
+          // TODO: perhaps in the future we support boolean expressions? waiting for a use case to justify it first...
+          return Boolean.parseBoolean(replaceVariables(key, boolPrimitive.getAsString(), ParameterType.BOOLEAN));
+        }
         return boolElem.getAsBoolean();
       }
       addWarning(warning);
@@ -718,7 +819,7 @@ public class JsonFixture extends LXFixture {
       JsonElement stringElem = obj.get(key);
       if (stringElem.isJsonPrimitive() && stringElem.getAsJsonPrimitive().isString()) {
         if (variablesAllowed) {
-          return replaceVariables(obj, key, stringElem.getAsString(), ParameterType.STRING);
+          return replaceVariables(key, stringElem.getAsString(), ParameterType.STRING);
         } else {
           return stringElem.getAsString();
         }
@@ -759,10 +860,10 @@ public class JsonFixture extends LXFixture {
       fixture.x.setValue(loadFloat(obj, KEY_X, true));
     }
     if (obj.has(KEY_Y)) {
-      fixture.x.setValue(loadFloat(obj, KEY_Y, true));
+      fixture.y.setValue(loadFloat(obj, KEY_Y, true));
     }
     if (obj.has(KEY_Z)) {
-      fixture.x.setValue(loadFloat(obj, KEY_Z, true));
+      fixture.z.setValue(loadFloat(obj, KEY_Z, true));
     }
     if (obj.has(KEY_YAW)) {
       fixture.yaw.setValue(loadFloat(obj, KEY_YAW, true));
@@ -892,11 +993,18 @@ public class JsonFixture extends LXFixture {
         continue;
       }
 
+      ParameterDefinition reloadDefinition = this.reloadParameterValues.get(parameterName);
+      if (reloadDefinition != null && reloadDefinition.type != type) {
+        reloadDefinition = null;
+      }
+
       switch (type) {
       case FLOAT:
         float floatValue = defaultElem.getAsFloat();
         if (this.jsonParameterValues.has(parameterName)) {
           floatValue = this.jsonParameterContext.loadFloat(this.jsonParameterValues, parameterName, true);
+        } else if (reloadDefinition != null) {
+          floatValue = reloadDefinition.floatParameter.getValuef();
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, floatValue));
         break;
@@ -916,6 +1024,8 @@ public class JsonFixture extends LXFixture {
         int intValue = defaultElem.getAsInt();
         if (this.jsonParameterValues.has(parameterName)) {
           intValue = this.jsonParameterContext.loadInt(this.jsonParameterValues, parameterName, true, "Child parameter should be an int: " + parameterName);
+        } else if (reloadDefinition != null) {
+          intValue = LXUtils.constrain(reloadDefinition.intParameter.getValuei(), minInt, maxInt);
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, intValue, minInt, maxInt));
         break;
@@ -923,10 +1033,19 @@ public class JsonFixture extends LXFixture {
         String stringValue = defaultElem.getAsString();
         if (this.jsonParameterValues.has(parameterName)) {
           stringValue = this.jsonParameterContext.loadString(this.jsonParameterValues, parameterName, true, "Child parameter should be an string: " + parameterName);
+        } else if (reloadDefinition != null) {
+          stringValue = reloadDefinition.stringParameter.getString();
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringValue));
         break;
-      default:
+      case BOOLEAN:
+        boolean booleanValue = defaultElem.getAsBoolean();
+        if (this.jsonParameterValues.has(parameterName)) {
+          booleanValue = this.jsonParameterContext.loadBoolean(this.jsonParameterValues, parameterName, true, "Child parameter should be a boolean: " + parameterName);
+        } else if (reloadDefinition != null) {
+          booleanValue = reloadDefinition.booleanParameter.isOn();
+        }
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, booleanValue));
         break;
       }
 
@@ -1020,7 +1139,10 @@ public class JsonFixture extends LXFixture {
     List<OutputDefinition> outputs = new ArrayList<OutputDefinition>();
     loadOutputs(outputs, stripObj);
 
-    this.definedStrips.add(new StripDefinition(numPoints, spacing, origin, transform, outputs, modelKeys));
+    Map<String, String> stripMetaData = new HashMap<String, String>();
+    loadMetaData(stripObj, stripMetaData);
+
+    this.definedStrips.add(new StripDefinition(numPoints, spacing, origin, transform, outputs, stripMetaData, modelKeys));
   }
 
   private void loadArcs(JsonObject obj) {
@@ -1120,7 +1242,10 @@ public class JsonFixture extends LXFixture {
     List<OutputDefinition> outputs = new ArrayList<OutputDefinition>();
     loadOutputs(outputs, arcObj);
 
-    this.definedArcs.add(new ArcDefinition(numPoints, radius, degrees, isCenter, transform, outputs, modelKeys));
+    Map<String, String> arcMetaData = new HashMap<String, String>();
+    loadMetaData(arcObj, arcMetaData);
+
+    this.definedArcs.add(new ArcDefinition(numPoints, radius, degrees, isCenter, transform, outputs, arcMetaData, modelKeys));
   }
 
   private void loadChildren(JsonObject obj) {
@@ -1161,9 +1286,13 @@ public class JsonFixture extends LXFixture {
       }
     }
     loadGeometry(child, childObj);
+    loadMetaData(childObj, child.metaData);
 
-    // TODO(mcslee): should we allow adding datagrams here? if so do they supercede
-    // those in the child?
+    // Ensure child has correct enabled status
+    child.enabled.setValue(this.enabled.isOn());
+
+    // TODO(mcslee): should we allow adding outputs here? if so do they supercede
+    // those of the child or are they in addition?
 
     addChild(child, true);
   }
@@ -1182,7 +1311,7 @@ public class JsonFixture extends LXFixture {
         if (outputElem.isJsonObject()) {
           loadOutput(outputs, outputElem.getAsJsonObject());
         } else if (!outputElem.isJsonNull()) {
-          addWarning(KEY_OUTPUTS + " should only contain arc elements in JSON object format, found invalid: " + outputElem);
+          addWarning(KEY_OUTPUTS + " should only contain output elements in JSON object format, found invalid: " + outputElem);
         }
       }
     }
@@ -1194,18 +1323,13 @@ public class JsonFixture extends LXFixture {
       addWarning("Output definition must define a valid protocol");
       return;
     }
-    ByteOrderDefinition byteOrder = ByteOrderDefinition.RGB;
-    String byteOrderStr = loadString(outputObj, KEY_BYTE_ORDER, true, "Output must specify a valid string " + KEY_BYTE_ORDER);
-    if (byteOrderStr != null) {
-      if (byteOrderStr.isEmpty()) {
-        addWarning("Output must specify non-empty string value for " + KEY_BYTE_ORDER);
-      } else {
-        ByteOrderDefinition definedByteOrder = ByteOrderDefinition.get(byteOrderStr);
-        if (definedByteOrder == null) {
-          addWarning("Unrecognized byte order type: " + byteOrderStr);
-        } else {
-          byteOrder = definedByteOrder;
-        }
+
+    TransportDefinition transport = TransportDefinition.UDP;
+    if (outputObj.has(KEY_TRANSPORT)) {
+      transport = TransportDefinition.get(loadString(outputObj, KEY_TRANSPORT, true, "Output must specify valid transport"));
+      if (transport == null) {
+        transport = TransportDefinition.UDP;
+        addWarning("Output should define a valid transport");
       }
     }
 
@@ -1229,7 +1353,11 @@ public class JsonFixture extends LXFixture {
         addWarning("Output port number must be positive: " + port);
         return;
       }
+    } else if (protocol.requiresExplicitPort()) {
+      addWarning("Protcol " + protocol + " requires an expicit port number to be specified");
+      return;
     }
+
     String universeKey = protocol.getUniverseKey();
     int universe = loadInt(outputObj, universeKey, true, "Output " + universeKey + " must be a valid integer");
     if (universe < 0) {
@@ -1237,29 +1365,114 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
-    int start = loadInt(outputObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
+    // Top level output byte-order
+    ByteOrderDefinition byteOrder = loadByteOrder(outputObj, ByteOrderDefinition.RGB);
+
+    // Load up the segment definitions
+    List<SegmentDefinition> segments = new ArrayList<SegmentDefinition>();
+    loadSegments(segments, outputObj, byteOrder);
+
+    outputs.add(new OutputDefinition(protocol, transport, byteOrder, address, port, universe, segments));
+  }
+
+  private void loadMetaData(JsonObject obj, Map<String, String> metaData) {
+    JsonObject metaDataObj = loadObject(obj, KEY_META, KEY_META + " must be a JSON object");
+    if (metaDataObj != null) {
+      for (Map.Entry<String, JsonElement> entry : metaDataObj.entrySet()) {
+        String key = entry.getKey();
+        JsonElement value = entry.getValue();
+        if (!value.isJsonPrimitive()) {
+          addWarning("Meta data values must be primtives, key has invalid type: " + key);
+        } else {
+          metaData.put(key, replaceVariables(key, value.getAsJsonPrimitive().getAsString(), ParameterType.STRING));
+        }
+      }
+    }
+  }
+
+  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_STRIDE, KEY_REVERSE };
+
+  private void loadSegments(List<SegmentDefinition> segments, JsonObject outputObj, ByteOrderDefinition defaultByteOrder) {
+    if (outputObj.has(KEY_SEGMENTS)) {
+      // Specifying an array of segments, keys should not be there by default
+      for (String segmentKey : SEGMENT_KEYS) {
+        if (outputObj.has(segmentKey)) {
+          addWarning(KEY_OUTPUT + " specifies " + KEY_SEGMENTS + ", may not also specify " + segmentKey + ", will be ignored");
+        }
+      }
+
+      JsonArray segmentsArr = loadArray(outputObj, KEY_SEGMENTS, KEY_SEGMENTS + " must be an array of segments");
+      if (segmentsArr != null) {
+        for (JsonElement segmentElem : segmentsArr) {
+          if (segmentElem.isJsonObject()) {
+            loadSegment(segments, segmentElem.getAsJsonObject(), defaultByteOrder, false);
+          } else if (!segmentElem.isJsonNull()) {
+            addWarning(KEY_SEGMENTS + " should only contain segment elements in JSON object format, found invalid: " + segmentElem);
+          }
+        }
+      }
+    } else {
+      // Just specifying one, no need for segments key, defined directly in output
+      loadSegment(segments, outputObj, defaultByteOrder, true);
+    }
+  }
+
+  private void loadSegment(List<SegmentDefinition> segments, JsonObject segmentObj, ByteOrderDefinition outputByteOrder, boolean isOutput) {
+    int start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
     if (start < 0) {
       addWarning("Output " + KEY_START + " may not be negative");
       return;
     }
     int num = OutputDefinition.ALL_POINTS;
-    if (outputObj.has(KEY_NUM)) {
-      num = loadInt(outputObj, KEY_NUM, true, "Output " + KEY_NUM + " must be a valid integer");
+    if (segmentObj.has(KEY_NUM)) {
+      num = loadInt(segmentObj, KEY_NUM, true, "Output " + KEY_NUM + " must be a valid integer");
       if (num < 0) {
         addWarning("Output " + KEY_NUM + " may not be negative");
         return;
       }
     }
     int stride = 1;
-    if (outputObj.has(KEY_STRIDE)) {
-      stride = loadInt(outputObj, KEY_STRIDE, true, "Output " + KEY_STRIDE + " must be a valid integer");
+    if (segmentObj.has(KEY_STRIDE)) {
+      stride = loadInt(segmentObj, KEY_STRIDE, true, "Output " + KEY_STRIDE + " must be a valid integer");
       if (stride <= 0) {
         addWarning("Output stride must be a positive value, use 'reverse: true' to invert pixel order");
         return;
       }
     }
-    boolean reverse = loadBoolean(outputObj, KEY_REVERSE, "Output " + KEY_REVERSE + " must be a valid boolean");
-    outputs.add(new OutputDefinition(protocol, byteOrder, address, port, universe, start, num, stride, reverse));
+    boolean reverse = loadBoolean(segmentObj, KEY_REVERSE, true, "Output " + KEY_REVERSE + " must be a valid boolean");
+
+    ByteOrderDefinition segmentByteOrder = null;
+    if (!isOutput) {
+      segmentByteOrder = loadByteOrder(segmentObj, null);
+      if (segmentByteOrder != null) {
+        if (segmentByteOrder.getByteOrder().getNumBytes() != outputByteOrder.getByteOrder().getNumBytes()) {
+          addWarning("Segment byte order must have same number of bytes as output byte order (" +
+            segmentByteOrder.getByteOrder() + " != " + outputByteOrder.getByteOrder() + "), ignoring segment byte order"
+          );
+          segmentByteOrder = null;
+        }
+      }
+    }
+
+    segments.add(new SegmentDefinition(start, num, stride, reverse, segmentByteOrder));
+  }
+
+  private ByteOrderDefinition loadByteOrder(JsonObject obj, ByteOrderDefinition defaultByteOrder) {
+    ByteOrderDefinition byteOrder = defaultByteOrder;
+    String byteOrderStr = loadString(obj, KEY_BYTE_ORDER, true, "Output must specify a valid string " + KEY_BYTE_ORDER);
+    if (byteOrderStr != null) {
+      if (byteOrderStr.isEmpty()) {
+        addWarning("Output must specify non-empty string value for " + KEY_BYTE_ORDER);
+      } else {
+        ByteOrderDefinition definedByteOrder = ByteOrderDefinition.get(byteOrderStr);
+        if (definedByteOrder == null) {
+          addWarning("Unrecognized byte order type: " + byteOrderStr);
+        } else {
+          byteOrder = definedByteOrder;
+        }
+      }
+    }
+    return byteOrder;
   }
 
   @Override
@@ -1310,57 +1523,83 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
-  protected void buildDatagrams() {
+  protected void buildOutputs() {
     // Add strip-specific outputs
     for (StripDefinition strip : this.definedStrips) {
       for (OutputDefinition output : strip.outputs) {
-        buildDatagram(output, strip.index, strip.numPoints);
+        buildOutput(output, strip.index, strip.numPoints);
       }
     }
     // Add strip-specific outputs
     for (ArcDefinition arc : this.definedArcs) {
       for (OutputDefinition output : arc.outputs) {
-        buildDatagram(output, arc.index, arc.numPoints);
+        buildOutput(output, arc.index, arc.numPoints);
       }
     }
     // Add top level outputs last
+    int totalSize = totalSize();
     for (OutputDefinition output : this.definedOutputs) {
-      buildDatagram(output, 0, this.size);
+      buildOutput(output, 0, totalSize);
     }
   }
 
-  private void buildDatagram(OutputDefinition output, int fixtureOffset, int fixtureSize) {
+  private void buildOutput(OutputDefinition output, int fixtureOffset, int fixtureSize) {
     if (output.protocol == ProtocolDefinition.ARTSYNC) {
       buildArtSyncDatagram(output);
       return;
     }
 
-    if (output.start < 0 || (output.start >= fixtureSize)) {
-      addWarning("Output specifies invalid start position: " + output.start + " should be between [0, " + (fixtureSize-1) + "]");
-      return;
+    boolean hasDynamicByteOrder = false;
+
+    List<IndexBufferSegment> segments = new ArrayList<IndexBufferSegment>();
+    for (SegmentDefinition segment : output.segments) {
+
+      if (segment.start < 0 || (segment.start >= fixtureSize)) {
+        addWarning("Output specifies invalid start position: " + segment.start + " should be between [0, " + (fixtureSize-1) + "]");
+        return;
+      }
+
+      int start = segment.start + fixtureOffset;
+      int num = segment.num;
+      if (num == OutputDefinition.ALL_POINTS) {
+        num = fixtureSize;
+      }
+      int stride = segment.stride;
+      if (start + stride * (num-1) >= fixtureSize) {
+        addWarning("Output specifies excessive size beyond fixture limits: start=" + segment.start + " num=" + num + " stride=" + stride + " fixtureSize=" + fixtureSize);
+        return;
+      }
+
+      // Want those backwards? No problem!
+      if (segment.reverse) {
+        start = start + stride * (num-1);
+        stride = -stride;
+      }
+
+      if (segment.dynamicByteOrder != null) {
+        hasDynamicByteOrder = true;
+      }
+
+      segments.add(new IndexBufferSegment(start, num, stride));
     }
 
-    int start = output.start + fixtureOffset;
-    int num = output.num;
-    if (num == OutputDefinition.ALL_POINTS) {
-      num = fixtureSize;
-    }
-    int stride = output.stride;
-    if (stride * (num-1) >= fixtureSize) {
-      addWarning("Output specifies excessive size beyond fixture limits: start=" + output.start + " num=" + num + " stride=" + stride);
-      return;
-    }
+    LXBufferOutput.ByteOrder outputByteOrder = output.byteOrder.getByteOrder();
+    int[] indexBuffer = toDynamicIndexBuffer(segments.toArray(new IndexBufferSegment[0]));
+    LXBufferOutput.ByteOrder[] byteOrderBuffer = null;
+    int dataLength = indexBuffer.length * outputByteOrder.getNumBytes();
+    LXBufferOutput bufferOutput = null;
 
-    // Want those backwards? No problem!
-    if (output.reverse) {
-      start = start + stride * (num-1);
-      stride = -stride;
+    if (hasDynamicByteOrder) {
+      byteOrderBuffer = new LXBufferOutput.ByteOrder[indexBuffer.length];
+      int i = 0;
+      for (SegmentDefinition segment : output.segments) {
+        LXBufferOutput.ByteOrder segmentByteOrder = (segment.dynamicByteOrder != null) ?
+          segment.dynamicByteOrder.getByteOrder() : outputByteOrder;
+        for (int s = 0; s < segment.num; ++s) {
+          byteOrderBuffer[i++] = segmentByteOrder;
+        }
+      }
     }
-    LXBufferDatagram.ByteOrder byteOrder = output.byteOrder.getDatagramByteOrder();
-
-    int[] indexBuffer = toDynamicIndexBuffer(start, num, stride);
-    int dataLength = indexBuffer.length * byteOrder.getNumBytes();
-    LXBufferDatagram bufferDatagram = null;
 
     if (dataLength >= (1 << 16)) {
       addWarning("Output packet would have length > 16-bits (" + dataLength + ") - not possible");
@@ -1370,66 +1609,77 @@ public class JsonFixture extends LXFixture {
     switch (output.protocol) {
     case ARTNET:
       if (dataLength > ArtNetDatagram.MAX_DATA_LENGTH) {
-        addWarning("Art-Net packet using noncompliant size: " + dataLength +">" + ArtNetDatagram.MAX_DATA_LENGTH);
+        addWarning("Art-Net packet using noncompliant size: " + dataLength + ">" + ArtNetDatagram.MAX_DATA_LENGTH);
       }
-      bufferDatagram = new ArtNetDatagram(indexBuffer, output.universe, byteOrder);
+      bufferOutput = new ArtNetDatagram(this.lx, indexBuffer, outputByteOrder, output.universe);
       break;
     case SACN:
       if (dataLength > StreamingACNDatagram.MAX_DATA_LENGTH) {
         addWarning("Streaming ACN / E1.31 packet using noncompliant size: " + dataLength + ">" + StreamingACNDatagram.MAX_DATA_LENGTH);
       }
-      bufferDatagram = new StreamingACNDatagram(indexBuffer, output.universe, byteOrder);
+      bufferOutput = new StreamingACNDatagram(this.lx, indexBuffer, outputByteOrder, output.universe);
       break;
     case DDP:
-      if (byteOrder != LXBufferDatagram.ByteOrder.RGB) {
+      if (outputByteOrder != LXBufferOutput.ByteOrder.RGB) {
         addWarning("DDP packets do not support non-RGB byte order, using RGB");
       }
-      bufferDatagram = new DDPDatagram(indexBuffer, output.universe);
+      bufferOutput = new DDPDatagram(this.lx, indexBuffer, output.universe);
       break;
     case KINET:
-      if (byteOrder != LXBufferDatagram.ByteOrder.RGB) {
+      if (outputByteOrder != LXBufferOutput.ByteOrder.RGB) {
         addWarning("KiNET packets do not support non-RGB byte order, using RGB");
       }
       if (dataLength > KinetDatagram.MAX_DATA_LENGTH) {
         addWarning("KiNET packets cannot support more than 512 bytes payload, ignoring this output");
         return;
       }
-      bufferDatagram = new KinetDatagram(indexBuffer, output.universe);
+      bufferOutput = new KinetDatagram(this.lx, indexBuffer, output.universe);
       break;
     case OPC:
-      bufferDatagram = new OPCDatagram(indexBuffer, (byte) output.universe, byteOrder);
+      if (output.transport == TransportDefinition.TCP) {
+        bufferOutput = new OPCSocket(this.lx, indexBuffer, outputByteOrder, (byte) output.universe);
+      } else {
+        bufferOutput = new OPCDatagram(this.lx, indexBuffer, outputByteOrder, (byte) output.universe);
+      }
       break;
     case ARTSYNC:
     default:
       // Already handled above
       break;
     }
-    if (bufferDatagram != null) {
-      if (output.port != OutputDefinition.DEFAULT_PORT) {
-        bufferDatagram.setPort(output.port);
+    if (bufferOutput != null) {
+      // Set a dynamic byte order if we have one
+      if (byteOrderBuffer != null) {
+        bufferOutput.setByteOrder(byteOrderBuffer);
       }
-      bufferDatagram.setAddress(output.address);
-      addDatagram(bufferDatagram);
+      if (bufferOutput instanceof LXOutput.InetOutput) {
+        LXOutput.InetOutput inetOutput = (LXOutput.InetOutput) bufferOutput;
+        if (output.port != OutputDefinition.DEFAULT_PORT) {
+          inetOutput.setPort(output.port);
+        }
+        inetOutput.setAddress(output.address);
+      }
+      addOutput(bufferOutput);
     }
   }
 
   private void buildArtSyncDatagram(OutputDefinition output) {
-    LXDatagram artSync = new ArtSyncDatagram();
+    LXDatagram artSync = new ArtSyncDatagram(this.lx);
     if (output.port != OutputDefinition.DEFAULT_PORT) {
       artSync.setPort(output.port);
     }
     artSync.setAddress(output.address);
-    addDatagram(artSync);
+    addOutput(artSync);
   }
 
   @Override
   protected Submodel[] toSubmodels() {
     List<Submodel> submodels = new ArrayList<Submodel>();
     for (StripDefinition strip : this.definedStrips) {
-      submodels.add(new Submodel(strip.index, strip.numPoints, strip.modelKeys));
+      submodels.add(new Submodel(strip.index, strip.numPoints, strip.metaData, strip.modelKeys));
     }
     for (ArcDefinition arc : this.definedArcs) {
-      submodels.add(new Submodel(arc.index, arc.numPoints, arc.modelKeys));
+      submodels.add(new Submodel(arc.index, arc.numPoints, arc.metaData, arc.modelKeys));
     }
     return submodels.toArray(new Submodel[0]);
   }
@@ -1477,6 +1727,9 @@ public class JsonFixture extends LXFixture {
         break;
       case STRING:
         jsonParameters.addProperty(parameter.name, parameter.stringParameter.getString());
+        break;
+      case BOOLEAN:
+        jsonParameters.addProperty(parameter.name, parameter.booleanParameter.isOn());
         break;
       }
     }

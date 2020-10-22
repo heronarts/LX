@@ -19,7 +19,9 @@
 package heronarts.lx.command;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.JsonObject;
 
@@ -39,6 +41,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.modulation.LXCompoundModulation;
+import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.modulation.LXParameterModulation;
 import heronarts.lx.modulation.LXTriggerModulation;
@@ -84,12 +87,12 @@ public abstract class LXCommand {
    *
    * @param <T> Type of component being referenced
    */
-  protected static class ComponentReference<T extends LXComponent> {
+  public static class ComponentReference<T extends LXComponent> {
 
     private final LX lx;
     private final int componentId;
 
-    protected ComponentReference(T component) {
+    public ComponentReference(T component) {
       this.lx = component.getLX();
       this.componentId = component.getId();
     }
@@ -100,14 +103,14 @@ public abstract class LXCommand {
     }
   }
 
-  protected static class ParameterReference<T extends LXParameter> {
+  public static class ParameterReference<T extends LXParameter> {
 
     private final T rawParameter;
     private final Class<? extends LXComponent> componentCls;
     private final ComponentReference<LXComponent> component;
     private final String parameterPath;
 
-    protected ParameterReference(T parameter) {
+    public ParameterReference(T parameter) {
       LXComponent component = parameter.getParent();
       if (component != null) {
         // If a parameter is registered to a component, then we keep its
@@ -176,7 +179,7 @@ public abstract class LXCommand {
   public abstract void undo(LX lx) throws InvalidCommandException;
 
 
-  private static abstract class RemoveComponent extends LXCommand {
+  public static abstract class RemoveComponent extends LXCommand {
 
     private final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
     private final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
@@ -226,7 +229,15 @@ public abstract class LXCommand {
 
     protected RemoveComponent(LXComponent component) {
       // Tally up all the modulations and triggers that relate to this component and must be restored!
-      removeModulationMappings(component.getLX().engine.modulation, component);
+      LXComponent parent = component.getParent();
+      while (parent != null) {
+        if (parent instanceof LXModulationContainer) {
+          removeModulationMappings(((LXModulationContainer) parent).getModulationEngine(), component);
+        }
+        parent = parent.getParent();
+      }
+
+      // Also top level mappings and snapshot views
       removeMidiMappings(component.getLX().engine.midi, component);
       removeSnapshotViews(component.getLX().engine.snapshots, component);
     }
@@ -577,6 +588,34 @@ public abstract class LXCommand {
   }
 
   public static class Channel {
+
+    public static class SetFader extends LXCommand {
+
+      private final Parameter.SetNormalized setEnabled;
+      private final Parameter.SetValue setFader;
+
+      public SetFader(LXAbstractChannel channel, boolean enabled, double fader) {
+        this.setEnabled = new Parameter.SetNormalized(channel.enabled, enabled);
+        this.setFader= new Parameter.SetValue(channel.fader, fader);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Set Channel Fader";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.setEnabled.perform(lx);
+        this.setFader.perform(lx);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.setEnabled.undo(lx);
+        this.setFader.undo(lx);
+      }
+    }
 
     public static class AddPattern extends LXCommand {
 
@@ -1153,6 +1192,7 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXModulationEngine> modulation;
       private final Class<? extends LXModulator> modulatorClass;
+      private final int modulationColor;
       private JsonObject modulatorObj;
       private ComponentReference<LXModulator> modulator;
 
@@ -1160,10 +1200,19 @@ public abstract class LXCommand {
         this(modulation, modulatorClass, null);
       }
 
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, int modulationColor) {
+        this(modulation, modulatorClass, null, modulationColor);
+      }
+
       public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, JsonObject modulatorObj) {
+        this(modulation, modulatorClass, modulatorObj, -1);
+      }
+
+      public AddModulator(LXModulationEngine modulation, Class<? extends LXModulator> modulatorClass, JsonObject modulatorObj, int modulationColor) {
         this.modulation = new ComponentReference<LXModulationEngine>(modulation);
         this.modulatorClass = modulatorClass;
         this.modulatorObj = modulatorObj;
+        this.modulationColor = modulationColor;
       }
 
       @Override
@@ -1175,6 +1224,9 @@ public abstract class LXCommand {
       public void perform(LX lx) throws InvalidCommandException {
         try {
           LXModulator instance = lx.instantiateModulator(this.modulatorClass);
+          if (this.modulationColor >= 0) {
+            instance.modulationColor.setValue(this.modulationColor);
+          }
           if (this.modulatorObj != null) {
             instance.load(lx, this.modulatorObj);
           } else {
@@ -1867,13 +1919,14 @@ public abstract class LXCommand {
 
     }
 
-    public static class RemoveFixture extends LXCommand {
+    public static class RemoveFixture extends RemoveComponent {
 
       private ComponentReference<LXFixture> fixture;
       private final int index;
       private final JsonObject fixtureObj;
 
       public RemoveFixture(LXFixture fixture) {
+        super(fixture);
         this.fixture = new ComponentReference<LXFixture>(fixture);
         this.fixtureObj = LXSerializable.Utils.toObject(fixture);
         this.index = fixture.getIndex();
@@ -1898,6 +1951,7 @@ public abstract class LXCommand {
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
         }
+        super.undo(lx);
       }
     }
 
@@ -1993,6 +2047,57 @@ public abstract class LXCommand {
           remove.undo(lx);
         }
       }
+    }
+
+    public static class ModifyFixturePositions extends LXCommand {
+
+      private final Map<String, LXCommand.Parameter.SetValue> setValues =
+        new HashMap<String, LXCommand.Parameter.SetValue>();
+
+      public ModifyFixturePositions() {}
+
+      @Override
+      public String getDescription() {
+        return "Modify Fixture Position";
+      }
+
+      private boolean inUpdate = false;
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.inUpdate) {
+          return;
+        }
+        for (LXCommand.Parameter.SetValue setValue : this.setValues.values()) {
+          setValue.perform(lx);
+        }
+      }
+
+      public void update(LX lx, LXParameter parameter, double delta) {
+        this.inUpdate = true;
+        String path = parameter.getCanonicalPath();
+        LXCommand.Parameter.SetValue setValue = null;
+        if (this.setValues.containsKey(path)) {
+          setValue = this.setValues.get(path);
+          setValue.update(parameter.getValue() + delta);
+        } else {
+          setValue = new LXCommand.Parameter.SetValue(parameter, parameter.getValue() + delta);
+          this.setValues.put(path, setValue);
+        }
+
+        // Set the value
+        setValue.perform(lx);
+        lx.command.perform(this);
+        this.inUpdate = false;
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (LXCommand.Parameter.SetValue setValue : this.setValues.values()) {
+          setValue.undo(lx);
+        }
+      }
+
     }
   }
 

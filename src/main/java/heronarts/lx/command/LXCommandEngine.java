@@ -71,17 +71,25 @@ public class LXCommandEngine {
       this.redoChanged.bang();
 
     } catch (InvalidCommandException icx) {
-      this.lx.pushError(icx, "Unexpected error performing action " + command.getName() + "\n" + icx.getMessage());
+      this.lx.pushError(icx, "Unexpected error performing action " + command.getName() + "\n" + getErrorMessage(icx));
       LX.error(icx, "Unexpected error performing action " + command + " - bad internal state?");
       clear();
     } catch (Exception x) {
-      this.lx.pushError(x, "Unexpected error performing action " + command.getName() + "\n" + x.getLocalizedMessage());
+      this.lx.pushError(x, "Unexpected error performing action " + command.getName() + "\n" + getErrorMessage(x));
       LX.error(x, "Unexpected error performing action " + command + " - bad internal state?");
       clear();
     }
 
     this.dirty.setValue(true);
     return this;
+  }
+
+  private String getErrorMessage(Exception x) {
+    String msg = x.getLocalizedMessage();
+    if (msg != null) {
+      return msg;
+    }
+    return x.getClass().getSimpleName();
   }
 
   public boolean isDirty() {

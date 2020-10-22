@@ -38,9 +38,9 @@ import com.google.gson.stream.JsonWriter;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.model.LXModel;
-import heronarts.lx.output.LXDatagram;
-import heronarts.lx.output.LXDatagramOutput;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.StringParameter;
 
@@ -48,32 +48,26 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   private static final String PROJECT_MODEL = "<Embedded in Project>";
 
-  public class Output extends LXDatagramOutput {
+  public class Output extends LXOutput {
+
     public Output(LX lx) throws SocketException {
       super(lx);
-    }
-
-    @Override
-    public LXDatagramOutput addDatagram(LXDatagram datagram) {
-      throw new UnsupportedOperationException("Adding custom datagrams to LXStructure output is not allowed");
-    }
-
-    @Override
-    public LXDatagramOutput addDatagrams(LXDatagram[] datagram) {
-      throw new UnsupportedOperationException("Adding custom datagrams to LXStructure output is not allowed");
+      this.gammaMode.setValue(GammaMode.DIRECT);
     }
 
     @Override
     protected void onSend(int[] colors, double brightness) {
-      long now = System.currentTimeMillis();
-      beforeSend(colors);
       for (LXFixture fixture : fixtures) {
-        onSendFixture(colors, now, brightness, fixture);
+        onSendFixture(fixture, colors, brightness);
       }
-      afterSend(colors);
     }
 
-    private void onSendFixture(int[] colors, long now, double brightness, LXFixture fixture) {
+    @Override
+    protected void onSend(int[] colors, byte[] glut) {
+      throw new UnsupportedOperationException("LXStructure.Output does not use onSend(int[] colors, byte[] glut)");
+    }
+
+    private void onSendFixture(LXFixture fixture, int[] colors, double brightness) {
       // Check enabled state of fixture
       if (fixture.enabled.isOn()) {
         // Adjust by fixture brightness
@@ -81,15 +75,17 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
         // Recursively send all the fixture's children
         for (LXFixture child : fixture.children) {
-          onSendFixture(colors, now, brightness, child);
+          onSendFixture(child, colors, brightness);
         }
 
         // Then send the fixture's own direct packets
-        for (LXDatagram datagram : fixture.datagrams) {
-          onSendDatagram(datagram, now, colors, brightness);
+        for (LXOutput output : fixture.outputs) {
+          output.setGammaDelegate(this);
+          output.send(colors, brightness);
         }
       }
     }
+
   }
 
   /**
@@ -97,7 +93,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
    * is not a user-facing API.
    */
   public interface ModelListener {
-    public void modelChanged(LXModel model);
+    public void structureChanged(LXModel model);
+    public void structureGenerationChanged(LXModel model);
   }
 
   // Internal implementation only
@@ -425,16 +422,32 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure translateSelectedFixtures(float tx, float ty, float tz) {
+    return translateSelectedFixtures(tx, ty, tz, null);
+  }
+
+  public LXStructure translateSelectedFixtures(float tx, float ty, float tz, LXCommand.Structure.ModifyFixturePositions action) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
         if (tx != 0) {
-          fixture.x.incrementValue(tx);
+          if (action != null) {
+            action.update(this.lx, fixture.x, tx);
+          } else {
+            fixture.x.incrementValue(tx);
+          }
         }
         if (ty != 0) {
-          fixture.y.incrementValue(ty);
+          if (action != null) {
+            action.update(this.lx, fixture.y, ty);
+          } else {
+            fixture.y.incrementValue(ty);
+          }
         }
         if (tz != 0) {
-          fixture.z.incrementValue(tz);
+          if (action != null) {
+            action.update(this.lx, fixture.z, tz);
+          } else {
+            fixture.z.incrementValue(tz);
+          }
         }
       }
     }
@@ -442,13 +455,25 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure rotateSelectedFixtures(float theta, float phi) {
+    return rotateSelectedFixtures(theta, phi, null);
+  }
+
+  public LXStructure rotateSelectedFixtures(float theta, float phi, LXCommand.Structure.ModifyFixturePositions action) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
         if (theta != 0) {
-          fixture.yaw.incrementValue(theta * 180 / Math.PI);
+          if (action != null) {
+            action.update(this.lx, fixture.yaw, theta * 180 / Math.PI);
+          } else {
+            fixture.yaw.incrementValue(theta * 180 / Math.PI);
+          }
         }
         if (phi != 0) {
-          fixture.pitch.incrementValue(phi * 180 / Math.PI);
+          if (action != null) {
+            action.update(this.lx, fixture.pitch, phi * 180 / Math.PI);
+          } else {
+            fixture.pitch.incrementValue(phi * 180 / Math.PI);
+          }
         }
       }
     }
@@ -499,8 +524,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.modelFile = null;
     this.modelName.setValue(model.getClass().getSimpleName() + ".class");
     this.isStatic.setValue(true);
-    this.modelListener.modelChanged(this.model);
-
+    this.modelListener.structureChanged(this.model);
     return this;
   }
 
@@ -538,7 +562,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       submodels[fixtureIndex++] = fixtureModel;
     }
     this.model = new LXModel(submodels).normalizePoints();
-    this.modelListener.modelChanged(this.model);
+    this.modelListener.structureChanged(this.model);
 
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");
@@ -552,6 +576,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public void fixtureGeometryChanged(LXFixture fixture) {
     // We need to re-normalize our model, things have changed
     this.model.update(true, true);
+    this.modelListener.structureGenerationChanged(this.model);
 
     // Denote that file is modified
     if (this.modelFile != null) {

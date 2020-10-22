@@ -21,6 +21,10 @@ package heronarts.lx.pattern.color;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
 import heronarts.lx.color.ColorParameter;
+import heronarts.lx.color.GradientUtils;
+import heronarts.lx.color.GradientUtils.BlendMode;
+import heronarts.lx.color.GradientUtils.ColorStops;
+import heronarts.lx.color.GradientUtils.GradientFunction;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXSwatch;
@@ -33,7 +37,7 @@ import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.COLOR)
-public class GradientPattern extends LXPattern {
+public class GradientPattern extends LXPattern implements GradientFunction {
 
   public enum ColorMode {
     FIXED("Fixed"),
@@ -50,34 +54,6 @@ public class GradientPattern extends LXPattern {
     public String toString() {
       return this.label;
     }
-  };
-
-  private interface BlendFunction {
-    int blend(ColorStop c1, ColorStop c2, float lerp);
-  }
-
-  public enum BlendMode {
-    RGB((c1, c2, lerp) -> {
-      int r = LXUtils.lerpi(c1.r, c2.r, lerp);
-      int g = LXUtils.lerpi(c1.g, c2.g, lerp);
-      int b = LXUtils.lerpi(c1.b, c2.b, lerp);
-      return LXColor.rgba(r, g, b, 255);
-    }),
-
-    HSV((c1, c2, lerp) -> {
-      return LXColor.hsb(
-        LXUtils.lerpf(c1.hue, c2.hue, lerp),
-        LXUtils.lerpf(c1.saturation, c2.saturation, lerp),
-        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
-      );
-    });
-
-    public final BlendFunction function;
-
-    private BlendMode(BlendFunction function) {
-      this.function = function;
-    }
-
   };
 
   private interface CoordinateFunction {
@@ -139,9 +115,13 @@ public class GradientPattern extends LXPattern {
     .setDescription("How many color stops to use in the palette");
 
   public final CompoundParameter gradient =
-    new CompoundParameter("Amount", 0, -360, 360)
-    .setDescription("Amount of total color gradient")
+    new CompoundParameter("Amount", 0, -1, 1)
+    .setDescription("Amount of color gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter gradientRange =
+    new CompoundParameter("Range", 360, 0, 360 * 10)
+    .setDescription("Range of total possible color gradient");
 
   public final EnumParameter<CoordinateMode> xMode =
     new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
@@ -185,8 +165,7 @@ public class GradientPattern extends LXPattern {
     .setDescription("Sets the offset of the hue spread point on the Z axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  private final ColorStop[] stops = new ColorStop[LXSwatch.MAX_COLORS + 1];
-  private int numStops = 0;
+  private final ColorStops colorStops = new ColorStops();
 
   public GradientPattern(LX lx) {
     super(lx);
@@ -205,15 +184,13 @@ public class GradientPattern extends LXPattern {
     addParameter("zMode", this.zMode);
     addParameter("paletteIndex", this.paletteIndex);
     addParameter("paletteStops", this.paletteStops);
-
-    for (int i = 0; i < stops.length; ++i) {
-      this.stops[i] = new ColorStop();
-    }
+    addParameter("gradientRange", this.gradientRange);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     if (this.gradient == p ||
+        this.gradientRange == p ||
         this.colorMode == p ||
         this.paletteIndex == p ||
         this.fixedColor.hue == p) {
@@ -226,10 +203,12 @@ public class GradientPattern extends LXPattern {
   }
 
   private void setSecondaryColor() {
+    double gradient = this.gradient.getValue() * this.gradientRange.getValue();
+
     switch (this.colorMode.getEnum()) {
     case FIXED:
       this.secondaryColor.setColor(LXColor.hsb(
-        this.fixedColor.hue.getValue() + this.gradient.getValue(),
+        this.fixedColor.hue.getValue() + gradient,
         this.fixedColor.saturation.getValue(),
         this.fixedColor.brightness.getValue()
       ));
@@ -238,7 +217,7 @@ public class GradientPattern extends LXPattern {
       LXDynamicColor primary = getPrimaryColor();
       int c = primary.getColor();
       this.secondaryColor.setColor(LXColor.hsb(
-        primary.getHue() + this.gradient.getValue(),
+        primary.getHue() + gradient,
         LXColor.s(c),
         LXColor.b(c)
       ));
@@ -248,92 +227,35 @@ public class GradientPattern extends LXPattern {
     }
   }
 
-  private class ColorStop {
-    private float hue;
-    private float saturation;
-    private float brightness;
-    private int r;
-    private int g;
-    private int b;
-
-    private void set(ColorParameter color) {
-      set(color, 0);
-    }
-
-    private void set(ColorParameter color, float hueOffset) {
-      this.hue = color.hue.getValuef() + hueOffset;
-      this.saturation = color.saturation.getValuef();
-      this.brightness = color.saturation.getValuef();
-      setRGB(LXColor.hsb(this.hue, this.saturation, this.brightness));
-    }
-
-    private void set(LXDynamicColor color) {
-      set(color, 0);
-    }
-
-    private void set(LXDynamicColor color, float hueOffset) {
-      int c = color.getColor();
-      this.hue = color.getHuef() + hueOffset;
-      this.saturation = LXColor.s(c);
-      this.brightness = LXColor.b(c);
-      setRGB(LXColor.hsb(this.hue, this.saturation, this.brightness));
-    }
-
-    private void setRGB(int c) {
-      this.r = (c & LXColor.R_MASK) >>> LXColor.R_SHIFT;
-      this.g = (c & LXColor.G_MASK) >>> LXColor.G_SHIFT;
-      this.b = (c & LXColor.B_MASK);
-    }
-
-    private void set(ColorStop that) {
-      this.hue = that.hue;
-      this.saturation = that.saturation;
-      this.brightness = that.brightness;
-      this.r = that.r;
-      this.g = that.g;
-      this.b = that.b;
-    }
-  }
-
   private void setColorStops() {
+    float gradientf = this.gradient.getValuef() * this.gradientRange.getValuef();
+
     switch (this.colorMode.getEnum()) {
     case FIXED:
-      this.stops[0].set(this.fixedColor);
-      this.stops[1].set(this.fixedColor, this.gradient.getValuef());
-      this.numStops = 2;
+      this.colorStops.stops[0].set(this.fixedColor);
+      this.colorStops.stops[1].set(this.fixedColor, gradientf);
+      this.colorStops.setNumStops(2);
       break;
     case PRIMARY:
       LXDynamicColor swatchColor = getPrimaryColor();
-      this.stops[0].set(swatchColor);
-      this.stops[1].set(swatchColor, this.gradient.getValuef());
+      this.colorStops.stops[0].set(swatchColor);
+      this.colorStops.stops[1].set(swatchColor, gradientf);
+      this.colorStops.setNumStops(2);
       setSecondaryColor();
-      this.numStops = 2;
       break;
     case PALETTE:
-      int first = Math.min(this.paletteIndex.getValuei() - 1, this.lx.engine.palette.swatch.colors.size() - 1);
-      int last = first + this.paletteStops.getValuei();
-      int i = 0;
-      int j = 0;
-      for (LXDynamicColor color : this.lx.engine.palette.swatch.colors) {
-        if (j >= first && j < last) {
-          this.stops[i++].set(color);
-        }
-        ++j;
-      }
-      this.numStops = i;
-      if (i > 0) {
-        this.stops[i].set(this.stops[i-1]);
-      }
-
+      this.colorStops.setPaletteGradient(
+        this.lx.engine.palette,
+        this.paletteIndex.getValuei() - 1,
+        this.paletteStops.getValuei()
+      );
       break;
     }
   }
 
+  @Override
   public int getGradientColor(float lerp) {
-    final BlendMode blend = this.blendMode.getEnum();
-    lerp *= (this.numStops - 1);
-    int stop = (int) Math.floor(lerp);
-    return blend.function.blend(this.stops[stop], this.stops[stop+1], lerp - stop);
+    return this.colorStops.getColor(lerp, this.blendMode.getEnum().function);
   }
 
   @Override
@@ -363,17 +285,17 @@ public class GradientPattern extends LXPattern {
     final CoordinateFunction yFunction = (yAmount < 0) ? yMode.invert : yMode.function;
     final CoordinateFunction zFunction = (zAmount < 0) ? zMode.invert : zMode.function;
 
-    final BlendMode blend = this.blendMode.getEnum();
+    final GradientUtils.BlendFunction blendFunction = this.blendMode.getEnum().function;
 
     for (LXPoint p : model.points) {
-      float lerp = (this.numStops - 1) * LXUtils.clampf(
+      float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
         xAmount * xFunction.getCoordinate(p, p.xn, xOffset) +
         yAmount * yFunction.getCoordinate(p, p.yn, yOffset) +
         zAmount * zFunction.getCoordinate(p, p.zn, zOffset),
         0, 1
       );
       int stop = (int) Math.floor(lerp);
-      colors[p.index] = blend.function.blend(this.stops[stop], this.stops[stop+1], lerp - stop);
+      colors[p.index] = blendFunction.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
     }
   }
 }

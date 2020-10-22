@@ -26,6 +26,8 @@ import heronarts.lx.parameter.DiscreteParameter;
  */
 public class DiscreteColorParameter extends DiscreteParameter {
 
+  public static final int NUM_PRIMARY_COLORS = 8;
+
 //  Colors are sampled from:
 //  for (int i = 0; i < 12; ++i) {
 //    print("0x" + Integer.toHexString(color(i * 360 / 12, 100, 100)) + ", ");

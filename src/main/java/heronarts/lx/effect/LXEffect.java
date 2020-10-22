@@ -18,9 +18,6 @@
 
 package heronarts.lx.effect;
 
-import heronarts.lx.midi.MidiAftertouch;
-import heronarts.lx.midi.MidiControlChange;
-
 import java.util.Map;
 
 import com.google.gson.JsonElement;
@@ -29,11 +26,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
-import heronarts.lx.midi.LXMidiListener;
-import heronarts.lx.midi.MidiNote;
-import heronarts.lx.midi.MidiNoteOn;
-import heronarts.lx.midi.MidiPitchBend;
-import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
@@ -47,7 +39,7 @@ import heronarts.lx.parameter.MutableParameter;
  * may be stateless or stateful, though typically they operate on a single
  * frame. Only the current frame is provided at runtime.
  */
-public abstract class LXEffect extends LXDeviceComponent implements LXComponent.Renamable, LXMidiListener, LXOscComponent {
+public abstract class LXEffect extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent {
 
   /**
    * Placeholder pattern for when a class is missing
@@ -100,8 +92,9 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     new BooleanParameter("Enabled", true)
     .setDescription("Whether the effect is enabled");
 
-  protected final MutableParameter enabledDampingAttack = new MutableParameter(100);
-  protected final MutableParameter enabledDampingRelease =  new MutableParameter(100);
+  protected boolean hasDamping = true;
+  protected final MutableParameter enabledDampingAttack = new MutableParameter(250);
+  protected final MutableParameter enabledDampingRelease =  new MutableParameter(250);
   protected final LinearEnvelope enabledDamped = new LinearEnvelope(1, 1, 0);
 
   private boolean initialize = true;
@@ -118,10 +111,14 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
 
   private final LXParameterListener enabledListener = (p) -> {
     if (this.enabled.isOn()) {
-      this.enabledDamped.setRangeFromHereTo(1, this.enabledDampingAttack.getValue()).start();
+      if (this.hasDamping) {
+        this.enabledDamped.setRangeFromHereTo(1, this.enabledDampingAttack.getValue()).start();
+      }
       this.onEnable = true;
     } else {
-      this.enabledDamped.setRangeFromHereTo(0, this.enabledDampingRelease.getValue()).start();
+      if (this.hasDamping) {
+        this.enabledDamped.setRangeFromHereTo(0, this.enabledDampingRelease.getValue()).start();
+      }
       this.onDisable = true;
     }
   };
@@ -132,6 +129,46 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     this.enabled.addListener(this.enabledListener);
     addParameter("enabled", this.enabled);
     addModulator(this.enabledDamped);
+  }
+
+  /**
+   * Sets whether this effect uses damping or not
+   *
+   * @param hasDamping If true, damping employed when effect is turned on/off
+   * @return this
+   */
+  public LXEffect setDamping(boolean hasDamping) {
+    this.hasDamping = hasDamping;
+    return this;
+  }
+
+  /**
+   * Set the amount of damping time used when this effect
+   * is enabled and disabled.
+   *
+   * @param dampingTimeMs Damping time in milliseconds
+   * @return this
+   */
+  public LXEffect setDampingTime(double dampingTimeMs) {
+    this.hasDamping = true;
+    this.enabledDampingAttack.setValue(dampingTimeMs);
+    this.enabledDampingRelease.setValue(dampingTimeMs);
+    return this;
+  }
+
+  /**
+   * Set the amount of damping time used when this effect
+   * is enabled and disabled.
+   *
+   * @param dampingTimeEnabledMs Damping time in milliseconds when effect enabled
+   * @param dampingTimeDisabledMs Damping time in milliseconds when effect disabled
+   * @return this
+   */
+  protected LXEffect setDampingTime(double dampingTimeEnabledMs, double dampingTimeDisabledMs) {
+    this.hasDamping = true;
+    this.enabledDampingAttack.setValue(dampingTimeEnabledMs);
+    this.enabledDampingRelease.setValue(dampingTimeDisabledMs);
+    return this;
   }
 
   @Override
@@ -237,15 +274,19 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     if (this.onEnable) {
       onEnable();
       this.onEnable = false;
-    } else if (this.onDisable && this.enabledDamped.finished()) {
+    } else if (this.onDisable && (!this.hasDamping || this.enabledDamped.finished())) {
       onDisable();
       this.onDisable = false;
     }
 
     long runStart = System.nanoTime();
-    double enabledDamped = this.enabledDamped.getValue();
-    if (enabledDamped > 0) {
-      run(deltaMs, enabledDamped);
+    if (this.hasDamping) {
+      double enabledDamped = this.enabledDamped.getValue();
+      if (enabledDamped > 0) {
+        run(deltaMs, enabledDamped);
+      }
+    } else {
+      run(deltaMs, this.enabled.isOn() ? 1 : 0);
     }
     this.profiler.runNanos = System.nanoTime() - runStart;
   }
@@ -263,36 +304,6 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   public void dispose() {
     this.enabled.removeListener(this.enabledListener);
     super.dispose();
-  }
-
-  @Override
-  public void noteOnReceived(MidiNoteOn note) {
-
-  }
-
-  @Override
-  public void noteOffReceived(MidiNote note) {
-
-  }
-
-  @Override
-  public void controlChangeReceived(MidiControlChange cc) {
-
-  }
-
-  @Override
-  public void programChangeReceived(MidiProgramChange cc) {
-
-  }
-
-  @Override
-  public void pitchBendReceived(MidiPitchBend pitchBend) {
-
-  }
-
-  @Override
-  public void aftertouchReceived(MidiAftertouch aftertouch) {
-
   }
 
 }

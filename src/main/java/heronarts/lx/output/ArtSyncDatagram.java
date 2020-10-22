@@ -18,12 +18,14 @@
 
 package heronarts.lx.output;
 
+import heronarts.lx.LX;
+
 public class ArtSyncDatagram extends LXDatagram {
 
   private final static int ARTSYNC_HEADER_LENGTH = 14;
 
-  public ArtSyncDatagram() {
-    super(ARTSYNC_HEADER_LENGTH);
+  public ArtSyncDatagram(LX lx) {
+    super(lx, new int[0], ARTSYNC_HEADER_LENGTH);
     setPort(ArtNetDatagram.ARTNET_PORT);
 
     this.buffer[0] = 'A';
@@ -43,8 +45,8 @@ public class ArtSyncDatagram extends LXDatagram {
   }
 
   @Override
-  public void onSend(int[] colors, byte[] glut) {
-    // Nothing else needed!
+  protected int getDataBufferOffset() {
+    return 0;
   }
 
 }

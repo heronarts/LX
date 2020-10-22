@@ -24,7 +24,6 @@ import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscEngine;
@@ -61,68 +60,16 @@ public class LXChannel extends LXAbstractChannel {
    * channel state is modified.
    */
   public interface Listener extends LXAbstractChannel.Listener {
-    public void groupChanged(LXChannel channel, LXGroup group);
-    public void patternAdded(LXChannel channel, LXPattern pattern);
-    public void patternRemoved(LXChannel channel, LXPattern pattern);
-    public void patternMoved(LXChannel channel, LXPattern pattern);
-    public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern);
-    public void patternDidChange(LXChannel channel, LXPattern pattern);
-  }
-
-  public interface MidiListener {
-    public void midiReceived(LXChannel channel, LXShortMessage message);
-  }
-
-  /**
-   * Utility class to extend in cases where only some methods need overriding.
-   */
-  public abstract static class AbstractListener implements Listener {
-
-    @Override
-    public void indexChanged(LXAbstractChannel channel) {
-    }
-
-    @Override
-    public void groupChanged(LXChannel channel, LXGroup group) {
-    }
-
-    @Override
-    public void effectAdded(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectRemoved(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectMoved(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void patternAdded(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternRemoved(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternMoved(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternWillChange(LXChannel channel, LXPattern pattern,
-        LXPattern nextPattern) {
-    }
-
-    @Override
-    public void patternDidChange(LXChannel channel, LXPattern pattern) {
-    }
+    public default void groupChanged(LXChannel channel, LXGroup group) {}
+    public default void patternAdded(LXChannel channel, LXPattern pattern) {}
+    public default void patternRemoved(LXChannel channel, LXPattern pattern) {}
+    public default void patternMoved(LXChannel channel, LXPattern pattern) {}
+    public default void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {}
+    public default void patternDidChange(LXChannel channel, LXPattern pattern) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
   private final List<Listener> listenerSnapshot = new ArrayList<Listener>();
-  private final List<MidiListener> midiListeners = new ArrayList<MidiListener>();
 
   public enum AutoCycleMode {
     NEXT,
@@ -153,20 +100,6 @@ public class LXChannel extends LXAbstractChannel {
     .setDescription("Whether the control elements for the channel device are expanded");
 
   /**
-   * Whether this channel should listen to MIDI events
-   */
-  public final BooleanParameter midiMonitor =
-    new BooleanParameter("MIDI Monitor", false)
-    .setDescription("Enables or disables monitoring of live MIDI input on this channel");
-
-  /**
-   * Which channel MIDI messages this channel observes
-   */
-  public final EnumParameter<LXMidiEngine.Channel> midiChannel =
-    new EnumParameter<LXMidiEngine.Channel>("MIDI Channel", LXMidiEngine.Channel.OMNI)
-    .setDescription("Determines which MIDI channel is responded to");
-
-  /**
    * Whether auto pattern transition is enabled on this channel
    */
   public final BooleanParameter autoCycleEnabled =
@@ -181,7 +114,7 @@ public class LXChannel extends LXAbstractChannel {
     .setDescription("Mode of auto cycling");
 
   /**
-   * Time in milliseconds after which transition thru the pattern set is automatically initiated.
+   * Time in seconds after which transition thru the pattern set is automatically initiated.
    */
   public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
     new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
@@ -209,6 +142,11 @@ public class LXChannel extends LXAbstractChannel {
   public final MutableParameter controlSurfaceFocusLength = (MutableParameter)
     new MutableParameter("SurfaceFocusLength", 0)
     .setDescription("Control surface focus length");
+
+  public final BooleanParameter triggerPatternCycle =
+    new BooleanParameter("Trigger Pattern")
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Triggers a pattern change on the channel");
 
   private double autoCycleProgress = 0;
   private double transitionProgress = 0;
@@ -249,8 +187,6 @@ public class LXChannel extends LXAbstractChannel {
     addArray("pattern", this.patterns);
 
     addInternalParameter("controlsExpanded", this.controlsExpanded);
-    addParameter("midiMonitor", this.midiMonitor);
-    addParameter("midiChannel", this.midiChannel);
     addParameter("autoCycleEnabled", this.autoCycleEnabled);
     addParameter("autoCycleMode", this.autoCycleMode);
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
@@ -258,6 +194,7 @@ public class LXChannel extends LXAbstractChannel {
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
     addParameter("transitionBlendMode", this.transitionBlendMode);
     addParameter("focusedPattern", this.focusedPattern);
+    addParameter("triggerPatternCycle", this.triggerPatternCycle);
   }
 
   void updateTransitionBlendOptions() {
@@ -275,6 +212,15 @@ public class LXChannel extends LXAbstractChannel {
     if (p == this.autoCycleEnabled) {
       if (this.transition == null) {
         this.transitionMillis = this.lx.engine.nowMillis;
+      }
+    } else if (p == this.triggerPatternCycle) {
+      if (this.triggerPatternCycle.isOn()) {
+        this.triggerPatternCycle.setValue(false);
+        if (this.transition != null) {
+          finishTransition();
+        } else {
+          doPatternCycle();
+        }
       }
     }
   }
@@ -302,23 +248,6 @@ public class LXChannel extends LXAbstractChannel {
     }
     super.removeListener(listener);
     this.listeners.remove(listener);
-  }
-
-  public LXChannel addMidiListener(MidiListener listener) {
-    Objects.requireNonNull(listener, "May not add null LXChannel.MidiListener");
-    if (this.midiListeners.contains(listener)) {
-      throw new IllegalStateException("May not add duplicate LXChannel.MidiListener: " + listener);
-    }
-    this.midiListeners.add(listener);
-    return this;
-  }
-
-  public LXChannel removeMidiListener(MidiListener listener) {
-    if (!this.midiListeners.contains(listener)) {
-      throw new IllegalStateException("May not remove non-registered LXChannel.MidiListener: " + listener);
-    }
-    this.midiListeners.remove(listener);
-    return this;
   }
 
   public static final String PATH_PATTERN = "pattern";
@@ -357,13 +286,8 @@ public class LXChannel extends LXAbstractChannel {
     return super.handleOscMessage(message, parts, index);
   }
 
-  public void midiMessage(LXShortMessage message) {
-    for (MidiListener listener : this.midiListeners) {
-      listener.midiReceived(this, message);
-    }
-    midiDispatch(message);
-  }
 
+  @Override
   public void midiDispatch(LXShortMessage message) {
     LXPattern activePattern = getActivePattern();
     message.dispatch(activePattern);
@@ -371,6 +295,7 @@ public class LXChannel extends LXAbstractChannel {
     if (nextPattern != null && nextPattern != activePattern) {
       message.dispatch(nextPattern);
     }
+    super.midiDispatch(message);
   }
 
   LXChannel setGroup(LXGroup group) {
@@ -870,6 +795,17 @@ public class LXChannel extends LXAbstractChannel {
     }
   }
 
+  private void doPatternCycle() {
+    switch (this.autoCycleMode.getEnum()) {
+    case NEXT:
+      goNextPattern();
+      break;
+    case RANDOM:
+      goRandomPattern();
+      break;
+    }
+  }
+
   @Override
   public void loop(double deltaMs) {
     long loopStart = System.nanoTime();
@@ -899,14 +835,7 @@ public class LXChannel extends LXAbstractChannel {
       if (this.autoCycleProgress >= 1) {
         this.autoCycleProgress = 1;
         if (this.autoCycleEnabled.isOn()) {
-          switch (this.autoCycleMode.getEnum()) {
-          case NEXT:
-            goNextPattern();
-            break;
-          case RANDOM:
-            goRandomPattern();
-            break;
-          }
+          doPatternCycle();
         }
       }
     }
@@ -919,6 +848,11 @@ public class LXChannel extends LXAbstractChannel {
     if (activePattern != null) {
       activePattern.loop(deltaMs);
       colors = activePattern.getColors();
+    } else {
+      // No patterns here, blank the channel.
+      for (int i = 0; i < colors.length; ++i) {
+        colors[i] = 0xff000000;
+      }
     }
 
     // Run transition!
@@ -968,19 +902,22 @@ public class LXChannel extends LXAbstractChannel {
       this.thread.interrupt();
     }
     this.listeners.clear();
-    this.midiListeners.clear();
     super.dispose();
   }
 
   private static final String KEY_PATTERNS = "patterns";
   private static final String KEY_PATTERN_INDEX = "patternIndex";
   private static final String KEY_GROUP = "group";
+  protected static final String KEY_IS_GROUP = "isGroup";
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     obj.addProperty(KEY_PATTERN_INDEX, this.activePatternIndex);
     obj.add(KEY_PATTERNS, LXSerializable.Utils.toArray(lx, this.patterns));
+    if (isGroup()) {
+      obj.addProperty(KEY_IS_GROUP, true);
+    }
     if (this.group != null) {
       obj.addProperty(KEY_GROUP, this.group.getId());
     }

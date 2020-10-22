@@ -131,7 +131,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @return String description, or numerical value
    */
   public String getOption() {
-    return (this.options != null) ? this.options[getValuei()] : Integer.toString(getValuei());
+    return (this.options != null) ? this.options[getValuei()] : getFormatter().format(getValuei());
   }
 
   /**

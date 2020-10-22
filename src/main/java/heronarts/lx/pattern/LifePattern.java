@@ -133,7 +133,7 @@ public class LifePattern extends LXModelPattern<GridModel> {
         this.transition();
       }
     }
-    double ramp = this.lx.engine.tempo.ramp();
+    double basis = this.lx.engine.tempo.basis();
     for (int i = 0; i < this.model.size; ++i) {
       double b = 0;
       switch (this.state[i]) {
@@ -141,13 +141,13 @@ public class LifePattern extends LXModelPattern<GridModel> {
         b = 100;
         break;
       case BIRTHING:
-        b = ramp * 100;
+        b = basis * 100;
         break;
       case DEAD:
         b = 0;
         break;
       case DYING:
-        b = 100 * (1 - ramp);
+        b = 100 * (1 - basis);
         break;
       }
       this.colors[i] = LXColor.gray(b);

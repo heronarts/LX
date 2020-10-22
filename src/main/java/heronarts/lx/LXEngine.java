@@ -32,7 +32,6 @@ import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
-import heronarts.lx.output.LXDatagramOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutputGroup;
 import heronarts.lx.parameter.BooleanParameter;
@@ -105,12 +104,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public class Output extends LXOutputGroup implements LXOscComponent {
 
+    public final BooleanParameter restricted =
+      new BooleanParameter("Restricted", false)
+      .setDescription("Whether output is restricted due to license restrictions");
+
     /**
      * This ModelOutput helper is used for sending dynamic datagrams that are
      * specified in the model. Any time the model is changed, this set will be
      * updated.
      */
-    private class ModelOutput extends LXDatagramOutput implements LX.Listener {
+    private class ModelOutput extends LXOutputGroup implements LX.Listener {
       ModelOutput(LX lx) throws SocketException {
         super(lx);
         setModel(lx.model);
@@ -124,33 +127,53 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
 
       private void setModel(LXModel model) {
-        // Clear out all the datagrams from the old model
-        this.datagrams.clear();
-        // Recursively add all dynamic datagrams attached to this model
+        // Clear out all the outputs from the old model
+        clearChildren();
+
+        // Recursively add all dynamic outputs attached to this model
         if (model != null) {
-          addDatagrams(model);
+          addOutputs(model);
         }
       }
 
-      private void addDatagrams(LXModel model) {
-        // Depth-first, a model's children are sent before its own datagram
+      private void addOutputs(LXModel model) {
+        // Depth-first, a model's children are sent before its own output
         for (LXModel child : model.children) {
-          addDatagrams(child);
+          addOutputs(child);
         }
-        // Then send the datagrams for the model itself. For instance, this makes it possible
+
+        // Then send the outputs  for the model itself. For instance, this makes it possible
         // for a parent to send an ArtSync or something after all children send ArtDmx
-        addDatagrams(model.datagrams);
+        for (LXOutput output : model.outputs) {
+          addChild(output);
+        }
       }
     }
 
     Output(LX lx) {
       super(lx);
+      this.restricted.addListener((p) -> {
+        if (this.restricted.isOn()) {
+          int myPoints = lx.model.size;
+          int limitPoints = lx.permissions.getMaxPoints();
+          lx.pushError(null, "You have exceeded the maximum number of points allowed by your license (" + myPoints + " > " + limitPoints + "). Output will be disabled.");
+        }
+      });
+
       try {
         addChild(new ModelOutput(lx));
       } catch (SocketException sx) {
         lx.pushError(sx, "Serious network error, could not create output socket. Program will continue with no network output.\n" + sx.getLocalizedMessage());
         LXOutput.error("Could not create output datagram socket, model will not be able to send");
       }
+    }
+
+    @Override
+    public LXOutput send(int[] colors) {
+      if (!this.restricted.isOn()) {
+        super.send(colors);
+      }
+      return this;
     }
   }
 
@@ -332,6 +355,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
     LX.initProfiler.log("Engine: Output");
 
+    // Snapshot engine
+    addChild("snapshots", this.snapshots = new LXSnapshotEngine(lx));
+    LX.initProfiler.log("Engine: Snapshots");
+
     // Midi engine
     addChild("midi", this.midi = new LXMidiEngine(lx));
     LX.initProfiler.log("Engine: Midi");
@@ -343,10 +370,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // OSC engine
     addChild("osc", this.osc = new LXOscEngine(lx));
     LX.initProfiler.log("Engine: Osc");
-
-    // Snapshot engine
-    addChild("snapshots", this.snapshots = new LXSnapshotEngine(lx));
-    LX.initProfiler.log("Engine: Snapshots");
 
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
@@ -800,6 +823,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     }
 
+    // Run the project scheduler
+    this.lx.scheduler.loop(deltaMs);
+
     // Initialize the model context for this render frame
     this.buffer.render.setModel(this.lx.model);
 
@@ -870,19 +896,27 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       // We are multi-threading, lock the double buffer and flip it
       this.buffer.flip();
     }
-    if (isNetworkMultithreaded) {
-      // Notify the network thread of new work to do!
-      synchronized (this.networkThread) {
-        this.networkThread.notify();
+
+    int maxPoints = this.lx.permissions.getMaxPoints();
+    this.output.restricted.setValue(maxPoints >= 0 && this.buffer.copy.main.length > maxPoints);
+
+    if (!this.output.restricted.isOn()) {
+      if (isNetworkMultithreaded) {
+        // Notify the network thread of new work to do!
+        synchronized (this.networkThread) {
+          this.networkThread.notify();
+        }
+        this.profiler.outputNanos = 0;
+      } else {
+        // Or do it ourself here on the engine thread
+        long outputStart = System.nanoTime();
+        Frame sendFrame = isDoubleBuffering ? this.buffer.copy : this.buffer.render;
+        int[] sendColors = (this.lx.flags.sendCueToOutput && sendFrame.cueOn) ? sendFrame.cue : sendFrame.main;
+        this.output.send(sendColors);
+        this.profiler.outputNanos = System.nanoTime() - outputStart;
       }
     } else {
-      // Or do it ourself here on the engine thread
-      long outputStart = System.nanoTime();
-      Frame sendFrame = isDoubleBuffering ? this.buffer.copy : this.buffer.render;
-      int[] sendColors = (this.lx.flags.sendCueToOutput && sendFrame.cueOn) ? sendFrame.cue : sendFrame.main;
-      this.output.send(sendColors);
-
-      this.profiler.outputNanos = System.nanoTime() - outputStart;
+      this.profiler.outputNanos = 0;
     }
 
     // All done running this pass of the engine!

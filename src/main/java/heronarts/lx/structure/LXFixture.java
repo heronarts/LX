@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -31,22 +32,23 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
-import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXBufferOutput;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 
 /**
- * An LXFixture is a rich LXComponent representing a physical lighting fixture which is
- * addressed by a datagram packet. This class encapsulates the ability to configure the
- * dimensions and location of the lighting fixture as well as to specify its otuput modes
+ * An LXFixture is a rich LXComponent representing a physical lighting fixture which may
+ * be addressed by output packets. This class encapsulates the ability to configure the
+ * dimensions and location of the lighting fixture as well as to specify its output modes
  * and protocol.
  */
 public abstract class LXFixture extends LXComponent implements LXFixtureContainer, LXComponent.Renamable {
 
   /**
-   * Output datagram protocols
+   * Output protocols
    */
   public static enum Protocol {
     /**
@@ -93,20 +95,25 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private static final double POSITION_RANGE = 1000000;
 
-  public final BooleanParameter selected = new BooleanParameter("Selected", false)
-  .setDescription("Whether this fixture is selected for editing");
+  public final BooleanParameter selected =
+    new BooleanParameter("Selected", false)
+    .setDescription("Whether this fixture is selected for editing");
 
-  public final BooleanParameter identify = new BooleanParameter("Identify", false)
-  .setDescription("Causes the fixture to flash red for identification");
+  public final BooleanParameter identify =
+     new BooleanParameter("Identify", false)
+     .setDescription("Causes the fixture to flash red for identification");
 
-  public final BoundedParameter x = new BoundedParameter("X", 0, -POSITION_RANGE, POSITION_RANGE)
-  .setDescription("Base X position of the fixture in space");
+  public final BoundedParameter x =
+    new BoundedParameter("X", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base X position of the fixture in space");
 
-  public final BoundedParameter y = new BoundedParameter("Y", 0, -POSITION_RANGE, POSITION_RANGE)
-  .setDescription("Base Y position of the fixture in space");
+  public final BoundedParameter y =
+    new BoundedParameter("Y", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base Y position of the fixture in space");
 
-  public final BoundedParameter z = new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
-  .setDescription("Base Z position of the fixture in space");
+  public final BoundedParameter z =
+    new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
+    .setDescription("Base Z position of the fixture in space");
 
   public final BoundedParameter yaw = (BoundedParameter)
     new BoundedParameter("Yaw", 0, -360, 360)
@@ -123,28 +130,32 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     .setDescription("Rotation of the fixture about its normal vector")
     .setUnits(LXParameter.Units.DEGREES);
 
-  public final BooleanParameter enabled = new BooleanParameter("Enabled", false)
-  .setDescription("Whether output to this fixture is enabled");
+  public final BooleanParameter enabled =
+    new BooleanParameter("Enabled", false)
+    .setDescription("Whether output to this fixture is enabled");
 
-  public final BoundedParameter brightness = new BoundedParameter("Brightness", 1)
-  .setDescription("Brightness level of this fixture");
+  public final BoundedParameter brightness =
+    new BoundedParameter("Brightness", 1)
+    .setDescription("Brightness level of this fixture");
 
-  public final BooleanParameter mute = new BooleanParameter("Mute", false)
-  .setDescription("Mutes this fixture, sending all black pixels");
+  public final BooleanParameter mute =
+    new BooleanParameter("Mute", false)
+    .setDescription("Mutes this fixture, sending all black pixels");
 
-  public final BooleanParameter solo = new BooleanParameter("Solo", false)
-  .setDescription("Solos this fixture, no other fixtures illuminated");
+  public final BooleanParameter solo =
+    new BooleanParameter("Solo", false)
+    .setDescription("Solos this fixture, no other fixtures illuminated");
 
   final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
 
   protected final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
 
-  private final List<LXDatagram> mutableDatagrams = new ArrayList<LXDatagram>();
+  private final List<LXOutput> mutableOutputs = new ArrayList<LXOutput>();
 
   /**
-   * Publicly accessible list of the datagrams that should be sent to this fixture
+   * Publicly accessible list of the outputs that should be sent to this fixture
    */
-  public final List<LXDatagram> datagrams = Collections.unmodifiableList(this.mutableDatagrams);
+  public final List<LXOutput> outputs = Collections.unmodifiableList(this.mutableOutputs);
 
   private final LXMatrix parentTransformMatrix = new LXMatrix();
 
@@ -174,7 +185,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private final Set<LXParameter> geometryParameters = new HashSet<LXParameter>();
 
-  private final Set<LXParameter> datagramParameters = new HashSet<LXParameter>();
+  private final Set<LXParameter> outputParameters = new HashSet<LXParameter>();
 
   private int index = 0;
 
@@ -202,6 +213,12 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     addParameter("identify", this.identify);
     addParameter("mute", this.mute);
     addParameter("solo", this.solo);
+
+    this.brightness.setMappable(true);
+    this.enabled.setMappable(true);
+    this.identify.setMappable(true);
+    this.mute.setMappable(true);
+    this.solo.setMappable(true);
   }
 
   @Override
@@ -222,6 +239,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   public int getIndex() {
     return this.index;
+  }
+
+  protected int getFirstPointIndex() {
+    return this.firstPointIndex;
   }
 
   private void setContainer(LXFixtureContainer container) {
@@ -330,16 +351,16 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   }
 
   /**
-   * Adds a parameter which impacts the output datagrams of the fixture. Whenever
-   * one is changed, the datagrams will be regenerated.
+   * Adds a parameter which impacts the outputs of the fixture. Whenever
+   * one is changed, the outputs will be regenerated.
    *
    * @param path Path to parameter
    * @param parameter Parameter
    * @return this
    */
-  protected LXFixture addDatagramParameter(String path, LXParameter parameter) {
+  protected LXFixture addOutputParameter(String path, LXParameter parameter) {
     addParameter(path, parameter);
-    this.datagramParameters.add(parameter);
+    this.outputParameters.add(parameter);
     return this;
   }
 
@@ -355,8 +376,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         // We don't need to rebuild the whole model here, just update the
         // geometry for affected fixtures
         regenerateGeometry();
-      } else if (this.datagramParameters.contains(p)) {
-        regenerateDatagrams();
+      } else if (this.outputParameters.contains(p)) {
+        regenerateOutputs();
       }
     }
     if (p == this.solo) {
@@ -366,30 +387,62 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
   }
 
+  public static class IndexBufferSegment {
+    private final int start;
+    private final int num;
+    private final int stride;
+
+    public IndexBufferSegment(int start, int num) {
+      this(start, num, 1);
+    }
+
+    public IndexBufferSegment(int start, int num, int stride) {
+      this(start, num, stride, null);
+    }
+
+    public IndexBufferSegment(int start, int num, int stride, LXBufferOutput.ByteOrder byteOrder) {
+      this.start = start;
+      this.num = num;
+      this.stride = stride;
+    }
+  }
+
   /**
    * An internal utility class which dynamically keeps the index values inside
    * an index buffer up to date and in sync with this fixture. Custom fixture
    * classes should use this construct via {@link #toDynamicIndexBuffer()}
-   * in order to keep their datagram indices in sync with the
+   * in order to keep their output indices in sync with the fixture's model
    */
-  private class DynamicIndexBuffer {
+  public class DynamicIndexBuffer {
 
-    private final int start;
-    private final int num;
-    private final int stride;
+    private final IndexBufferSegment[] segments;
     private final int[] indexBuffer;
 
     private DynamicIndexBuffer(int start, int num, int stride) {
-      this.start = start;
-      this.num = num;
-      this.stride = stride;
-      this.indexBuffer = new int[this.num];
+      this(new IndexBufferSegment(start, num, stride));
+    }
+
+    private DynamicIndexBuffer(IndexBufferSegment ... segments) {
+      this.segments = segments;
+      int size = size();
+      this.indexBuffer = new int[size];
       update();
     }
 
+    private int size() {
+      int sz = 0;
+      for (IndexBufferSegment segment : this.segments) {
+        sz += segment.num;
+      }
+      return sz;
+    }
+
     private void update() {
-      for (int i = 0; i < this.num; ++i) {
-        this.indexBuffer[i] = points.get(this.start + i * this.stride).index;
+      int i = 0;
+      for (IndexBufferSegment segment : this.segments) {
+        for (int s = 0; s < segment.num; ++s) {
+          this.indexBuffer[i++] = getPoint(segment.start + s * segment.stride).index;
+        }
       }
     }
   }
@@ -435,78 +488,92 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @return Index buffer of the points in this fixture
    */
   protected int[] toDynamicIndexBuffer(int start, int num, int stride) {
-    DynamicIndexBuffer dynamicIndexBuffer = new DynamicIndexBuffer(start, num, stride);
+    return toDynamicIndexBuffer(new IndexBufferSegment(start, num, stride));
+  }
+
+  /**
+   * Get an index buffer version of this fixture. The index buffer will be dynamic
+   * and have its point indices updated automatically anytime this fixture is moved
+   * or the larger structure is rearranged. The buffer will stop being updated
+   * if this fixture's metrics are changed or if it is regenerated for any other
+   * reason.
+   *
+   * @param segments Segments in the index buffer
+   * @return Index buffer of the points in this fixture, as defined by segments
+   */
+  protected int[] toDynamicIndexBuffer(IndexBufferSegment ... segments) {
+    DynamicIndexBuffer dynamicIndexBuffer = new DynamicIndexBuffer(segments);
     this.dynamicIndexBuffers.add(dynamicIndexBuffer);
     return dynamicIndexBuffer.indexBuffer;
   }
 
   private final List<DynamicIndexBuffer> dynamicIndexBuffers = new ArrayList<DynamicIndexBuffer>();
 
-  private void regenerateDatagrams() {
-    // Dispose of all these datagrams
-    for (LXDatagram datagram : this.datagrams) {
-      datagram.dispose();
+  private void regenerateOutputs() {
+    // Dispose of all these outputs
+    for (LXOutput output : this.outputs) {
+      output.dispose();
     }
-    this.mutableDatagrams.clear();
+    this.mutableOutputs.clear();
 
     // Dynamic index buffers are no good anymore
     this.dynamicIndexBuffers.clear();
 
     // Rebuild
-    this.isInBuildDatagrams = true;
-    buildDatagrams();
-    this.isInBuildDatagrams = false;
+    this.isInBuildOutputs = true;
+    buildOutputs();
+    this.isInBuildOutputs = false;
   }
 
-  private boolean isInBuildDatagrams = false;
+  private boolean isInBuildOutputs = false;
 
   /**
    * Subclasses must override this method to provide an implementation that
-   * produces the necessary set of datagrams for this fixture to be sent.
-   * The subclass should call {@link #addDatagram(LXDatagram)} for each datagram.
+   * produces the necessary set of outputs for this fixture to be sent.
+   * The subclass should call {@link #addOutput(LXOutput)} for each output.
    */
-  protected abstract void buildDatagrams();
+  protected abstract void buildOutputs();
 
   /**
-   * Subclasses may override this method to update their datagrams in the
-   * case that the point indexing of this fixture has changed. Datagrams
+   * Subclasses may override this method to update their outputs in the
+   * case that the point indexing of this fixture has changed. Outputs
    * may be removed and readded inside this method if necessary. If the
    * {@link DynamicIndexBuffer} class has been used to construct indices for
-   * datagrams, then no action should typically be necessary.
+   * outputs, then no action should typically be necessary.
    */
-  protected void reindexDatagrams() {}
+  protected void reindexOutputs() {}
 
   /**
-   * Subclasses call this method to add a datagram to thix fixture. This may only
-   * be called from within the buildDatagrams() function.
+   * Subclasses call this method to add an output to thix fixture. This may only
+   * be called from within the buildOutputs() function.
    *
-   * @param datagram Datagram to add
+   * @param output Output to add
    */
-  protected void addDatagram(LXDatagram datagram) {
-    if (!this.isInBuildDatagrams) {
-      throw new IllegalStateException("May not add datagrams from outside buildDatagrams() method");
+  protected void addOutput(LXOutput output) {
+    if (!this.isInBuildOutputs) {
+      throw new IllegalStateException("May not add outputs from outside buildOutputs() method");
     }
-    Objects.requireNonNull(datagram, "Cannot add null datagram to LXFixture.addDatagram");
-    if (this.mutableDatagrams.contains(datagram)) {
-      throw new IllegalStateException("May not add duplicate LXDatagram to LXFixture: " + datagram);
+    Objects.requireNonNull(output, "Cannot add null output to LXFixture.addOutput");
+    if (this.mutableOutputs.contains(output)) {
+      throw new IllegalStateException("May not add duplicate LXOuutputto LXFixture: " + output);
     }
-    this.mutableDatagrams.add(datagram);
+    this.mutableOutputs.add(output);
   }
 
   /**
-   * Subclasses call this method to remove a datagram from the fixture. This may only
-   * be performed from within the reindexDatagrams or buildDatagrams methods.
+   * Subclasses call this method to remove a output from the fixture. This may only
+   * be performed from within the reindexOutputs or buildOutputs methods.
    *
-   * @param datagram Datagram to remove
+   * @param output Output to remove
    */
-  protected void removeDatagram(LXDatagram datagram) {
-    if (!this.isInBuildDatagrams) {
-      throw new IllegalStateException("May not remove datagrams from outside reindexDatagrams() method");
+  protected void removeOutput(LXOutput output) {
+    if (!this.isInBuildOutputs) {
+      throw new IllegalStateException("May not remove outputs from outside reindexOutputs() method");
     }
-    if (!this.mutableDatagrams.contains(datagram)) {
-      throw new IllegalStateException("May not remove non-existent LXDatagram from LXFixture: " + datagram + " " + this);
+    if (!this.mutableOutputs.contains(output)) {
+      throw new IllegalStateException("May not remove non-existent LXOutput from LXFixture: " + output + " " + this);
     }
-    this.mutableDatagrams.remove(datagram);
+    this.mutableOutputs.remove(output);
   }
 
   /**
@@ -519,7 +586,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     int numPoints = size();
     this.mutablePoints.clear();
     for (int i = 0; i < numPoints; ++i) {
-      LXPoint p = new LXPoint();
+      LXPoint p = constructPoint(i);
       p.index = this.firstPointIndex + i;
       this.mutablePoints.add(p);
     }
@@ -528,19 +595,28 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     this.model = null;
     this.modelPoints.clear();
 
+    // Chance for subclasses to do custom prep work
+    beforeRegenerate();
+
     // Regenerate our geometry, note that we bypass regenerateGeometry()
     // here because we don't need to notify our container about the change. We're
     // going to notify them after this of even more substantive generation change.
     _regenerateGeometry();
 
-    // Rebuild datagram objects
-    regenerateDatagrams();
+    // Rebuild output objects
+    regenerateOutputs();
 
     // Let our container know that our structural generation has changed
     if (this.container != null) {
       this.container.fixtureGenerationChanged(this);
     }
   }
+
+  /**
+   * Subclasses may override this method to do custom preparation work before
+   * {@link #computeGeometryMatrix(LXMatrix)} is called.
+   */
+  protected void beforeRegenerate() {}
 
   private void regenerateGeometry() {
     _regenerateGeometry();
@@ -558,11 +634,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @param geometryMatrix The geometry transformation matrix for this object
    */
   protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
-    float degreesToRadians = (float) Math.PI / 180;
     geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
-    geometryMatrix.rotateY(this.yaw.getValuef() * degreesToRadians);
-    geometryMatrix.rotateX(this.pitch.getValuef() * degreesToRadians);
-    geometryMatrix.rotateZ(this.roll.getValuef() * degreesToRadians);
+    geometryMatrix.rotateY((float) Math.toRadians(this.yaw.getValue()));
+    geometryMatrix.rotateX((float) Math.toRadians(this.pitch.getValue()));
+    geometryMatrix.rotateZ((float) Math.toRadians(this.roll.getValue()));
   }
 
   private void _regenerateGeometry() {
@@ -641,12 +716,12 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       startIndex += child.totalSize();
     }
 
-    // Only update index buffers and datagrams if any indices were changed
+    // Only update index buffers and outputs if any indices were changed
     if (somethingChanged) {
       for (DynamicIndexBuffer dynamicIndexBuffer : this.dynamicIndexBuffers) {
         dynamicIndexBuffer.update();
       }
-      reindexDatagrams();
+      reindexOutputs();
     }
 
     return somethingChanged;
@@ -667,7 +742,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // The indices passed to the UI cannot be changed mid-flight, so we make new copies of all
     // points here to stay safe.
     for (LXPoint p : this.points) {
-      this.modelPoints.add(new LXPoint(p));
+      this.modelPoints.add(copyPoint(p));
     }
 
     // Now iterate over our children and add their points too
@@ -686,10 +761,54 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     // Okay, good to go, construct the model
-    LXModel model = new LXModel(this.modelPoints, childModels.toArray(new LXModel[0]), getModelKeys());
+    LXModel model = constructModel(this.modelPoints, childModels, getModelKeys());
     model.transform.set(this.geometryMatrix);
     return this.model = model;
   }
+
+  /**
+   * Subclasses may override this method to use custom model type
+   *
+   * @param modelPoints Points in the model
+   * @param childModels Child models
+   * @param modelKeys Model keys
+   * @return LXModel instance, or concrete subclass
+   */
+  protected LXModel constructModel(List<LXPoint> modelPoints, List<? extends LXModel> childModels, String[] modelKeys) {
+    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), modelKeys);
+  }
+
+  /**
+   * Subclasses may override this method to use custom point types
+   *
+   * @param localIndex Index of the point relative to this fixture
+   * @return LXPoint or concrete subclass
+   */
+  protected LXPoint constructPoint(int localIndex) {
+    return new LXPoint();
+  }
+
+  /**
+   * Subclasses may override this method to use custom point types
+   *
+   * @param copy Point to make a copy of
+   * @return LXPoint or concrete subclass, should be deep copy of the original
+   */
+  protected LXPoint copyPoint(LXPoint copy) {
+    return new LXPoint(copy);
+  }
+
+  /**
+   * Subclasses may override to provide a map of String key/value pairs that are attached
+   * as metadata onto the resulting LXModel object
+   *
+   * @return Map of key-value String pairs, or null if none
+   */
+  protected Map<String, String> getMetaData() {
+    return null;
+  }
+
+
 
   private List<LXPoint> subpoints(int start, int n, int stride) {
     List<LXPoint> subpoints = new ArrayList<LXPoint>(n);
@@ -751,7 +870,34 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      * @param keys Model type key identifier for submodel
      */
     public Submodel(int start, int n, int stride, String ... keys) {
-      super(subpoints(start, n, stride), keys);
+      this(start, n, stride, null, keys);
+    }
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     * @param metaData Metadata for this submodel
+     * @param keys Model type key identifier for submodel
+     */
+    public Submodel(int start, int n, Map<String, String> metaData, String ... keys) {
+      this(start, n, 1, metaData, keys);
+    }
+
+    /**
+     * Subclasses may use this helper to construct a submodel object from a set of
+     * points in this model.
+     *
+     * @param start Start index
+     * @param n Number of points in the submodel
+     * @param stride Stride size for selecting submodel points
+     * @param metaData Metadata for submodel
+     * @param keys Model type key identifier for submodel
+     */
+    public Submodel(int start, int n, int stride, Map<String, String> metaData, String ... keys) {
+      super(subpoints(start, n, stride), metaData, keys);
       this.transform.set(geometryMatrix);
     }
   }
@@ -835,15 +981,39 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     return sum;
   }
 
+  /**
+   * Retrieves the point at a given offset in this fixture. This may recursively descend into
+   * child fixtures.
+   *
+   * @param i Index relative to this fixture
+   * @return Point at that index, if any
+   */
+  private LXPoint getPoint(int i) {
+    // Check directly owned points first
+    if (i < this.points.size()) {
+      return this.points.get(i);
+    }
+    // Not in those, go to subfixtures...
+    int ci = i - this.points.size();
+    for (LXFixture fixture : children) {
+      int fixtureTotalSize = fixture.totalSize();
+      if (ci < fixtureTotalSize) {
+        return fixture.getPoint(ci);
+      }
+      ci -= fixtureTotalSize;
+    }
+    throw new IllegalArgumentException("Point index " + i + " exceeds fixture bounds: " + this + " (" + totalSize() + ")");
+  }
+
   @Override
   public void dispose() {
     for (LXFixture child : this.children) {
       child.dispose();
     }
-    for (LXDatagram datagram : this.datagrams) {
-      datagram.dispose();
+    for (LXOutput output : this.outputs) {
+      output.dispose();
     }
-    this.mutableDatagrams.clear();
+    this.mutableOutputs.clear();
     super.dispose();
   }
 

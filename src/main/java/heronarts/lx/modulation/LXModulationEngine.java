@@ -214,6 +214,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   @Override
   public <T extends LXModulator> T removeModulator(T modulator) {
+    // NOTE(mcslee): this may not be strictly necessary? The dispose() call in
+    // super.removeModulator is probably going to do it again...
     removeModulations(modulator);
     super.removeModulator(modulator);
     for (Listener listener : this.listeners) {

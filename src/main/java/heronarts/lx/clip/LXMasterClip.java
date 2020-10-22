@@ -26,4 +26,10 @@ public class LXMasterClip extends LXClip {
     lx.engine.mixer.crossfader.addListener(this.parameterRecorder);
     registerComponent(lx.engine.palette);
   }
+
+  @Override
+  public void dispose() {
+    lx.engine.mixer.crossfader.removeListener(this.parameterRecorder);
+    super.dispose();
+  }
 }

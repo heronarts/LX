@@ -30,7 +30,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
 
@@ -60,6 +60,7 @@ public class LXModel implements LXSerializable {
     public final static String ROW = "row";
     public final static String COLUMN = "column";
     public final static String STRIP = "strip";
+    public final static String POINT = "point";
     public final static String ARC = "arc";
   }
 
@@ -92,6 +93,11 @@ public class LXModel implements LXSerializable {
   private final List<LXPoint> pointList;
 
   /**
+   * An immutable map of String key/value pairs, metadata on the model object
+   */
+  public final Map<String, String> metaData;
+
+  /**
    * An immutable list of all the children of this model
    */
   public final LXModel[] children;
@@ -103,9 +109,9 @@ public class LXModel implements LXSerializable {
     new HashMap<String, List<LXModel>>();
 
   /**
-   * An ordered list of datagrams that should be sent for this model.
+   * An ordered list of outputs that should be sent for this model.
    */
-  public final List<LXDatagram> datagrams;
+  public final List<LXOutput> outputs;
 
   /**
    * A list of String keys by which this model type can be identified. Keys are non-empty strings.
@@ -264,7 +270,18 @@ public class LXModel implements LXSerializable {
    * @param keys Key identifiers for the model type
    */
   public LXModel(List<LXPoint> points, String ... keys) {
-    this(points, new LXModel[0], keys);
+    this(points, new LXModel[0], null, keys);
+  }
+
+  /**
+   * Constructs a model from a list of points
+   *
+   * @param points Points in the model
+   * @param metaData Metadata for the model
+   * @param keys Key identifiers for the model type
+   */
+  public LXModel(List<LXPoint> points, Map<String, String> metaData, String ... keys) {
+    this(points, new LXModel[0], metaData, keys);
   }
 
   /**
@@ -289,13 +306,34 @@ public class LXModel implements LXSerializable {
    * @param keys Key identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, String ... keys) {
+    this(points, children, null, keys);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param metaData Metadata map
+   * @param keys Key identifier for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, String ... keys) {
     this.keys = validateKeys(keys);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
     addChildren(children);
     this.children = children.clone();
     this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
-    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>());
+    this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
+
+    Map<String, String> mutableMetadata = new HashMap<String, String>();
+    if (metaData != null) {
+      mutableMetadata.putAll(metaData);
+    }
+    this.metaData = Collections.unmodifiableMap(mutableMetadata);
+
     recomputeGeometry();
   }
 
@@ -332,7 +370,8 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = _points.size();
-    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>());
+    this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
+    this.metaData = Collections.unmodifiableMap(new HashMap<String, String>());
     recomputeGeometry();
   }
 
@@ -358,7 +397,8 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = this.points.length;
-    this.datagrams = Collections.unmodifiableList(new ArrayList<LXDatagram>(builder.datagrams));
+    this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>(builder.outputs));
+    this.metaData = Collections.unmodifiableMap(new HashMap<String, String>());
     recomputeGeometry();
     if (isRoot) {
       reindexPoints();
@@ -465,6 +505,16 @@ public class LXModel implements LXSerializable {
   public List<LXModel> sub(String key) {
     List<LXModel> sub = this.subDict.get(key);
     return (sub == null) ? EMPTY_LIST : sub;
+  }
+
+  /**
+   * Gets a meta data property
+   *
+   * @param key Meta data key
+   * @return Value if there is one, otherwise null
+   */
+  public String meta(String key) {
+    return this.metaData.get(key);
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();

@@ -62,6 +62,10 @@ public class ADEnvelope extends LXModulator implements LXNormalizedParameter {
     this(label, new FixedParameter(startValue), new FixedParameter(endValue), attack, decay, new FixedParameter(1));
   }
 
+  public ADEnvelope(String label, double startValue, double endValue, LXParameter attack, LXParameter decay, LXParameter shape) {
+    this(label, new FixedParameter(startValue), new FixedParameter(endValue), attack, decay, shape);
+  }
+
   public ADEnvelope(String label, double startValue, LXParameter endValue, LXParameter attack, LXParameter decay) {
     this(label, new FixedParameter(startValue), endValue, attack, decay, new FixedParameter(1));
   }

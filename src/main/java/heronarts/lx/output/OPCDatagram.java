@@ -18,40 +18,44 @@
 
 package heronarts.lx.output;
 
+import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 
 /**
  * UDP implementation of http://openpixelcontrol.org/
  */
-public class OPCDatagram extends LXBufferDatagram implements OPCConstants {
+public class OPCDatagram extends LXDatagram implements OPCOutput {
 
   public final static int MAX_DATA_LENGTH = 65535;
 
-  public OPCDatagram(LXModel model) {
-    this(model, CHANNEL_BROADCAST);
+  public OPCDatagram(LX lx, LXModel model) {
+    this(lx, model, CHANNEL_BROADCAST);
   }
 
-  public OPCDatagram(LXModel model, byte channel) {
-    this(model.toIndexBuffer(), channel);
+  public OPCDatagram(LX lx, LXModel model, byte channel) {
+    this(lx, model.toIndexBuffer(), channel);
   }
 
-  public OPCDatagram(int[] indexBuffer) {
-    this(indexBuffer, CHANNEL_BROADCAST);
+  public OPCDatagram(LX lx, int[] indexBuffer) {
+    this(lx, indexBuffer, CHANNEL_BROADCAST);
   }
 
-  public OPCDatagram(int[] indexBuffer, byte channel) {
-    this(indexBuffer, channel, ByteOrder.RGB);
+  public OPCDatagram(LX lx, int[] indexBuffer, byte channel) {
+    this(lx, indexBuffer, ByteOrder.RGB, channel);
   }
 
-  public OPCDatagram(int[] indexBuffer, byte channel, ByteOrder byteOrder) {
-    super(indexBuffer, OPCOutput.HEADER_LEN + byteOrder.getNumBytes() * indexBuffer.length, byteOrder);
+  public OPCDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, byte channel) {
+    super(lx, indexBuffer, byteOrder, OPCSocket.HEADER_LEN + byteOrder.getNumBytes() * indexBuffer.length);
     int dataLength = byteOrder.getNumBytes() * indexBuffer.length;
+    validateBufferSize();
+
     this.buffer[OFFSET_CHANNEL] = channel;
     this.buffer[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;
     this.buffer[OFFSET_DATA_LEN_MSB] = (byte)(dataLength >>> 8);
     this.buffer[OFFSET_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);
   }
 
+  @Override
   public OPCDatagram setChannel(byte channel) {
     this.buffer[OFFSET_CHANNEL] = channel;
     return this;
@@ -62,7 +66,7 @@ public class OPCDatagram extends LXBufferDatagram implements OPCConstants {
   }
 
   @Override
-  protected int getColorBufferPosition() {
+  protected int getDataBufferOffset() {
     return OFFSET_DATA;
   }
 

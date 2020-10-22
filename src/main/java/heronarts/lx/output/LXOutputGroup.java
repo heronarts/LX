@@ -18,6 +18,10 @@
 
 package heronarts.lx.output;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import heronarts.lx.LX;
 
 /**
@@ -25,17 +29,66 @@ import heronarts.lx.LX;
  */
 public class LXOutputGroup extends LXOutput {
 
+  private final List<LXOutput> mutableChildren = new ArrayList<LXOutput>();
+
+  public final List<LXOutput> children = Collections.unmodifiableList(this.mutableChildren);
+
   public LXOutputGroup(LX lx) {
     this(lx, "Output");
   }
 
   public LXOutputGroup(LX lx, String label) {
     super(lx, label);
+    this.gammaMode.setValue(GammaMode.DIRECT);
+  }
+
+  /**
+   * Adds a child to this output, sent after color-correction
+   *
+   * @param child Child output
+   * @return this
+   */
+  public LXOutputGroup addChild(LXOutput child) {
+    if (this.children.contains(child)) {
+      throw new IllegalStateException("May not add duplicate child to LXOutputGroup: " + child);
+    }
+    child.setGroup(this);
+    this.mutableChildren.add(child);
+    return this;
+  }
+
+  /**
+   * Removes a child
+   *
+   * @param child Child output
+   * @return this
+   */
+  public LXOutputGroup removeChild(LXOutput child) {
+    if (!this.children.contains(child)) {
+      throw new IllegalStateException("May not add remove non-existent child from LXOutputGroup: " + child);
+    }
+    this.mutableChildren.remove(child);
+    return this;
+  }
+
+  protected LXOutputGroup clearChildren() {
+    this.mutableChildren.clear();
+    return this;
   }
 
   @Override
-  protected void onSend(int[] colors, byte[] lut) {
-    // Do nothing, parent class will send children
+  protected void onSend(int[] colors, double brightness) {
+    super.onSend(colors, brightness);
+
+    //  Send to all children, with cascading brightness
+    for (LXOutput child : this.children) {
+      child.send(colors, brightness);
+    }
+  }
+
+  @Override
+  protected void onSend(int[] colors, byte[] glut) {
+    // Nothing, child dispatch is handled by the onSend(int[], double) method
   }
 
 }

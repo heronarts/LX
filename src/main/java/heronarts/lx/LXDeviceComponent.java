@@ -27,6 +27,7 @@ import java.util.List;
 
 import com.google.gson.JsonObject;
 
+import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -38,7 +39,7 @@ import heronarts.lx.parameter.LXParameter;
  * A component which may have its own scoped user-level modulators. The concrete subclasses
  * of this are Patterns and Effects.
  */
-public abstract class LXDeviceComponent extends LXLayeredComponent implements LXModulationContainer, LXOscComponent {
+public abstract class LXDeviceComponent extends LXLayeredComponent implements LXModulationContainer, LXOscComponent, LXMidiListener {
 
   public static final Comparator<Class<? extends LXDeviceComponent>> DEVICE_CATEGORY_NAME_SORT =
     new Comparator<Class<? extends LXDeviceComponent>>() {

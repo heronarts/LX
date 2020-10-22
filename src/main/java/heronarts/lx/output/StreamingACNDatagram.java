@@ -28,7 +28,7 @@ import heronarts.lx.model.LXModel;
  *
  * See: https://tsp.esta.org/tsp/documents/docs/ANSI_E1-31-2018.pdf
  */
-public class StreamingACNDatagram extends LXBufferDatagram {
+public class StreamingACNDatagram extends LXDatagram {
 
   protected final static int OFFSET_DMX_DATA = 126;
   protected final static int OFFSET_SEQUENCE_NUMBER = 111;
@@ -48,72 +48,96 @@ public class StreamingACNDatagram extends LXBufferDatagram {
   /**
    * Creates a StreamingACNDatagram for the given model
    *
+   * @param lx LX instance
    * @param model Model of points
    */
-  public StreamingACNDatagram(LXModel model) {
-    this(model, DEFAULT_UNIVERSE_NUMBER);
+  public StreamingACNDatagram(LX lx, LXModel model) {
+    this(lx, model, DEFAULT_UNIVERSE_NUMBER);
   }
 
   /**
    * Constructs a StreamingACNDatagram on default universe
    *
+   * @param lx LX instance
    * @param indexBuffer Points to send on this universe
    */
-  public StreamingACNDatagram(int[] indexBuffer) {
-    this(indexBuffer, DEFAULT_UNIVERSE_NUMBER);
+  public StreamingACNDatagram(LX lx, int[] indexBuffer) {
+    this(lx, indexBuffer, DEFAULT_UNIVERSE_NUMBER);
   }
 
   /**
    * Creates a StreamingACNDatagram for the model on given universe
    *
+   * @param lx LX instance
    * @param model Model of points
    * @param universeNumber Universe number
    */
-  public StreamingACNDatagram(LXModel model, int universeNumber) {
-    this(model.toIndexBuffer(), universeNumber);
+  public StreamingACNDatagram(LX lx, LXModel model, int universeNumber) {
+    this(lx, model.toIndexBuffer(), universeNumber);
   }
 
   /**
    * Constructs a datagram, sends the list of point indices on the given
    * universe number.
    *
+   * @param lx LX instance
    * @param indexBuffer List of point indices to encode in packet
    * @param universeNumber Universe number
    */
-  public StreamingACNDatagram(int[] indexBuffer, int universeNumber) {
-    this(indexBuffer, universeNumber, ByteOrder.RGB);
+  public StreamingACNDatagram(LX lx, int[] indexBuffer, int universeNumber) {
+    this(lx, indexBuffer, ByteOrder.RGB, universeNumber);
   }
 
   /**
    * Creates a StreamingACNDatagrm for given index buffer on universe and byte order
    *
+   * @param lx LX instance
    * @param indexBuffer Index buffer
    * @param universeNumber Universe number
    * @param byteOrder Byte order
    */
-  public StreamingACNDatagram(int[] indexBuffer, int universeNumber, ByteOrder byteOrder) {
-    this(indexBuffer, indexBuffer.length * byteOrder.getNumBytes(), universeNumber, byteOrder);
+  public StreamingACNDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int universeNumber) {
+    this(lx, indexBuffer, byteOrder, indexBuffer.length * byteOrder.getNumBytes(), universeNumber);
   }
 
   /**
-   * Subclasses may override for a custom payload with fixed size, not necessarily
-   * based upon an array of point indices - such as custom DMX data
+   * Subclasses may use this constructor for datagrams with custom DMX data of a fixed length.
    *
-   * @param dataSize Fixed data payload size
+   * @param lx LX instance
+   * @param dataSize Data size
    * @param universeNumber Universe number
    */
-  protected StreamingACNDatagram(int dataSize, int universeNumber) {
-    this(null, dataSize, universeNumber);
+  protected StreamingACNDatagram(LX lx, int dataSize, int universeNumber) {
+    this(lx, new int[0], ByteOrder.RGB, dataSize, universeNumber);
   }
 
-  private StreamingACNDatagram(int[] indexBuffer, int dataSize, int universeNumber) {
-    this(indexBuffer, dataSize, universeNumber, ByteOrder.RGB);
+  /**
+   * Creates a StreamingACNDatagram for a given index buffer with fixed data size and universe number
+   *
+   * @param lx LX instance
+   * @param indexBuffer Index buffer
+   * @param dataSize Fixed DMX data size
+   * @param universeNumber Universe number
+   */
+  public StreamingACNDatagram(LX lx, int[] indexBuffer, int dataSize, int universeNumber) {
+    this(lx, indexBuffer, ByteOrder.RGB, dataSize, universeNumber);
   }
 
-  private StreamingACNDatagram(int[] indexBuffer, int dataSize, int universeNumber, ByteOrder byteOrder) {
-    super(indexBuffer, OFFSET_DMX_DATA + dataSize, byteOrder);
+  /**
+   * Creates a StreamingACNDatagram for a given index buffer with fixed data size and universe number
+   *
+   * @param lx LX instance
+   * @param indexBuffer Index buffer
+   * @param byteOrder Byte order
+   * @param dataSize Fixed DMX data size
+   * @param universeNumber Universe number
+   */
+  public StreamingACNDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int dataSize, int universeNumber) {
+    super(lx, indexBuffer, byteOrder, OFFSET_DMX_DATA + dataSize);
     setPort(DEFAULT_PORT);
     setUniverseNumber(universeNumber);
+
+    validateBufferSize();
 
     int flagLength;
 
@@ -259,7 +283,7 @@ public class StreamingACNDatagram extends LXBufferDatagram {
   }
 
   @Override
-  protected int getColorBufferPosition() {
+  protected int getDataBufferOffset() {
     return OFFSET_DMX_DATA;
   }
 
