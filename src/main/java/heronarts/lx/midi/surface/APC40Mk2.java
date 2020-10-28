@@ -795,9 +795,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       case DETAIL_VIEW:
         this.lx.engine.mixer.cueB.toggle();
         return;
-      case BANK:
-        this.lx.engine.mixer.crossfaderBlendMode.increment();
-        return;
       case STOP_ALL_CLIPS:
         this.lx.engine.mixer.stopClips();
         return;
