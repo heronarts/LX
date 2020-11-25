@@ -69,7 +69,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
     private void onSendFixture(LXFixture fixture, int[] colors, double brightness) {
       // Check enabled state of fixture
-      if (fixture.enabled.isOn()) {
+      if (!fixture.deactivate.isOn() && fixture.enabled.isOn()) {
         // Adjust by fixture brightness
         brightness *= fixture.brightness.getValue();
 
@@ -552,14 +552,24 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       return;
     }
 
-    LXModel[] submodels = new LXModel[this.fixtures.size()];
+    // Count active fixtures
+    int activeFixtures = 0;
+    for (LXFixture fixture : this.fixtures) {
+      if (!fixture.deactivate.isOn()) {
+        ++activeFixtures;
+      }
+    }
+
+    LXModel[] submodels = new LXModel[activeFixtures];
     int pointIndex = 0;
     int fixtureIndex = 0;
     for (LXFixture fixture : this.fixtures) {
-      fixture.reindex(pointIndex);
-      LXModel fixtureModel = fixture.toModel();
-      pointIndex += fixtureModel.size;
-      submodels[fixtureIndex++] = fixtureModel;
+      if (!fixture.deactivate.isOn()) {
+        fixture.reindex(pointIndex);
+        LXModel fixtureModel = fixture.toModel();
+        pointIndex += fixtureModel.size;
+        submodels[fixtureIndex++] = fixtureModel;
+      }
     }
     this.model = new LXModel(submodels).normalizePoints();
     this.modelListener.structureChanged(this.model);

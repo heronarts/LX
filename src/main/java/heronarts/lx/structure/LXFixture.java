@@ -130,6 +130,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     .setDescription("Rotation of the fixture about its normal vector")
     .setUnits(LXParameter.Units.DEGREES);
 
+  public final BooleanParameter deactivate =
+    new BooleanParameter("Deactivate", false)
+    .setDescription("Whether to deactivate this fixture");
+
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled", false)
     .setDescription("Whether output to this fixture is enabled");
@@ -208,6 +212,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
     // Output parameters
     addParameter("selected", this.selected);
+    addParameter("deactivate", this.deactivate);
     addParameter("enabled", this.enabled);
     addParameter("brightness", this.brightness);
     addParameter("identify", this.identify);
@@ -378,6 +383,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         regenerateGeometry();
       } else if (this.outputParameters.contains(p)) {
         regenerateOutputs();
+      } else if (this.deactivate == p) {
+        this.container.fixtureGenerationChanged(this);
       }
     }
     if (p == this.solo) {
