@@ -63,7 +63,7 @@ public abstract class LXParameterModulation extends LXComponent {
 
   protected int index = -1;
 
-  private final LXModulationEngine scope;
+  public final LXModulationEngine scope;
   public final LXParameter source;
   public final LXParameter target;
 

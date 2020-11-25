@@ -1404,8 +1404,7 @@ public abstract class LXCommand {
       private ComponentReference<LXCompoundModulation> modulation;
       private final JsonObject modulationObj;
 
-      public RemoveModulation(LXModulationEngine engine,
-        LXCompoundModulation modulation) {
+      public RemoveModulation(LXModulationEngine engine, LXCompoundModulation modulation) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.modulation = new ComponentReference<LXCompoundModulation>(
           modulation);
@@ -1435,6 +1434,39 @@ public abstract class LXCommand {
       }
     }
 
+    public static class RemoveModulations extends LXCommand {
+
+      private final ParameterReference<CompoundParameter> compoundParameter;
+
+      private final List<RemoveModulation> removeModulations = new ArrayList<RemoveModulation>();
+
+      public RemoveModulations(CompoundParameter parameter) {
+        this.compoundParameter = new ParameterReference<CompoundParameter>(parameter);
+        for (LXCompoundModulation modulation : parameter.modulations) {
+          this.removeModulations.add(new RemoveModulation(modulation.scope, modulation));
+        }
+      }
+
+      @Override
+      public void perform(LX lx) {
+        for (RemoveModulation remove : this.removeModulations) {
+          remove.perform(lx);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (RemoveModulation remove : this.removeModulations) {
+          remove.undo(lx);
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Modulations";
+      }
+    }
+
     public static class AddTrigger extends LXCommand {
 
       private final ComponentReference<LXModulationEngine> engine;
@@ -1442,8 +1474,7 @@ public abstract class LXCommand {
       private final ParameterReference<BooleanParameter> target;
       private ComponentReference<LXTriggerModulation> trigger;
 
-      public AddTrigger(LXModulationEngine engine, BooleanParameter source,
-        BooleanParameter target) {
+      public AddTrigger(LXModulationEngine engine, BooleanParameter source, BooleanParameter target) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.source = new ParameterReference<BooleanParameter>(source);
         this.target = new ParameterReference<BooleanParameter>(target);
@@ -1479,8 +1510,7 @@ public abstract class LXCommand {
       private ComponentReference<LXTriggerModulation> trigger;
       private final JsonObject triggerObj;
 
-      public RemoveTrigger(LXModulationEngine engine,
-        LXTriggerModulation trigger) {
+      public RemoveTrigger(LXModulationEngine engine, LXTriggerModulation trigger) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
         this.triggerObj = LXSerializable.Utils.toObject(trigger);
