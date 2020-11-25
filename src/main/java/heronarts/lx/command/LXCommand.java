@@ -1436,12 +1436,9 @@ public abstract class LXCommand {
 
     public static class RemoveModulations extends LXCommand {
 
-      private final ParameterReference<CompoundParameter> compoundParameter;
-
       private final List<RemoveModulation> removeModulations = new ArrayList<RemoveModulation>();
 
       public RemoveModulations(CompoundParameter parameter) {
-        this.compoundParameter = new ParameterReference<CompoundParameter>(parameter);
         for (LXCompoundModulation modulation : parameter.modulations) {
           this.removeModulations.add(new RemoveModulation(modulation.scope, modulation));
         }
