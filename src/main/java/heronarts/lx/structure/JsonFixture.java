@@ -1257,7 +1257,7 @@ public class JsonFixture extends LXFixture {
       if (childElem.isJsonObject()) {
         loadChild(childElem.getAsJsonObject());
       } else if (!childElem.isJsonNull()) {
-        addWarning(KEY_CHILDREN + " should only contain childd elements in JSON object format, found invalid: " + childElem);
+        addWarning(KEY_CHILDREN + " should only contain child elements in JSON object format, found invalid: " + childElem);
       }
     }
   }
