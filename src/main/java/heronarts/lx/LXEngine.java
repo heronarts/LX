@@ -856,6 +856,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Add fixture identification very last
     int identifyColor = LXColor.hsb(0, 100, Math.abs(-100 + (runStart / 8000000) % 200));
     for (LXFixture fixture : this.lx.structure.fixtures) {
+      if (fixture.deactivate.isOn()) {
+        // Does not apply to deactivated fixtures
+        continue;
+      }
       if (fixture.mute.isOn()) {
         int start = fixture.getIndexBufferOffset();
         int end = start + fixture.totalSize();
