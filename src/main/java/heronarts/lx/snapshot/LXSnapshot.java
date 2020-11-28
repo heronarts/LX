@@ -30,6 +30,8 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXLayer;
+import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.color.ColorParameter;
@@ -238,7 +240,11 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
     private ParameterView(LX lx, JsonObject obj) {
       super(lx, obj);
-      this.parameter = (LXParameter) LXPath.get(lx, obj.get(KEY_PARAMETER_PATH).getAsString());
+      String path = obj.get(KEY_PARAMETER_PATH).getAsString();
+      this.parameter = (LXParameter) LXPath.get(lx, path);
+      if (this.parameter == null) {
+        throw new IllegalStateException("Cannot create snapshot view of non-existent parameter: " + path);
+      }
       this.component = this.parameter.getParent();
       if (this.component == null) {
         throw new IllegalStateException("Cannot store a snapshot view of a parameter with no parent");
@@ -563,6 +569,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
               addParameterView(ViewScope.PATTERNS, p);
             }
           }
+          addLayeredView(ViewScope.PATTERNS, pattern);
         }
       }
 
@@ -575,6 +582,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
               addParameterView(ViewScope.EFFECTS, p);
             }
           }
+          addLayeredView(ViewScope.EFFECTS, effect);
         } else {
           // If the effect is off, then we only recall that it is off
           addParameterView(ViewScope.EFFECTS, effect.enabled);
@@ -587,6 +595,15 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       for (LXParameter p : modulator.getParameters()) {
         addParameterView(ViewScope.MODULATION, p);
       }
+    }
+  }
+
+  private void addLayeredView(ViewScope scope, LXLayeredComponent component) {
+    for (LXParameter p : component.getParameters()) {
+      addParameterView(scope, p);
+    }
+    for (LXLayer layer : component.getLayers()) {
+      addLayeredView(scope, layer);
     }
   }
 
@@ -708,7 +725,11 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     if (obj.has(KEY_VIEWS)) {
       JsonArray viewsArray = obj.getAsJsonArray(KEY_VIEWS);
       for (JsonElement viewElement : viewsArray) {
-        addView(viewElement.getAsJsonObject());
+        try {
+          addView(viewElement.getAsJsonObject());
+        } catch (Exception x) {
+          LX.error(x, "Invalid view in snapshot: " + viewElement.toString());
+        }
       }
     }
   }
