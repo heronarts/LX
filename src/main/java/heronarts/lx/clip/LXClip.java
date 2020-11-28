@@ -30,6 +30,8 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXLayer;
+import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXRunnableComponent;
 import heronarts.lx.LXSerializable;
@@ -236,6 +238,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         ((LXListenableNormalizedParameter) p).addListener(this.parameterRecorder);
       }
     }
+    if (component instanceof LXLayeredComponent) {
+      for (LXLayer layer : ((LXLayeredComponent) component).getLayers()) {
+        registerComponent(layer);
+      }
+    }
   }
 
   protected void unregisterComponent(LXComponent component) {
@@ -249,6 +256,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
             listener.parameterLaneRemoved(this, lane);
           }
         }
+      }
+    }
+    if (component instanceof LXLayeredComponent) {
+      for (LXLayer layer : ((LXLayeredComponent) component).getLayers()) {
+        unregisterComponent(layer);
       }
     }
   }
