@@ -600,7 +600,9 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
   private void addLayeredView(ViewScope scope, LXLayeredComponent component) {
     for (LXParameter p : component.getParameters()) {
-      addParameterView(scope, p);
+      if (p != component.label) {
+        addParameterView(scope, p);
+      }
     }
     for (LXLayer layer : component.getLayers()) {
       addLayeredView(scope, layer);
