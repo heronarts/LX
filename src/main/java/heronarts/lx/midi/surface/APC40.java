@@ -123,7 +123,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   public static final int DEVICE_LEFT = 60;
   public static final int DEVICE_RIGHT = 61;
 
-  public static final int DETAIL_VIEW= 62;
+  public static final int DETAIL_VIEW = 62;
   public static final int REC_QUANTIZE = 63;
   public static final int MIDI_OVERDUB = 64;
   public static final int METRONOME = 65;
