@@ -178,6 +178,8 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
    */
   protected void updateSequenceNumber() {}
 
+  private static int slowPacketCount = 0;
+
   /**
    * Invoked by engine to send this packet when new color data is available. The
    * LXDatagram should update the packet object accordingly to contain the
@@ -203,7 +205,19 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
     // Try sending the packet
     try {
       DatagramSocket socket = (this.socket != null) ? this.socket : LXDatagram.getDefaultSocket();
+      long latencyCheck = System.currentTimeMillis();
       socket.send(this.packet);
+      if (System.currentTimeMillis() - latencyCheck > 0) {
+        // Check that this call is not blocking, this issue has been noticed by multiple users on
+        // Raspberry Pi systems, when any address being sent is unresolvable, the output queues fill causing
+        // major framerate degradation to all addresses. A solution for this (thanks to Brian Bulkowski)
+        // is documented on the wiki. On Mac/Windows this never seems to be an issue, streaming as many
+        // UDP packets as you like to an unresolvable address will not choke the system.
+        if (++slowPacketCount == 10) {
+          LX.error("Calls to DatagramSocket.send() appear to be unexpectedly blocking, you may be sending to an unresolvable address or network queues may be saturated. If you are on Linux/Raspberry-Pi, consult the following URL for guidance on relevant kernel parameters: https://github.com/heronarts/LXStudio/wiki/Raspberry-Pi");
+        }
+      }
+
       if (datagramErrorState.failureCount > 0) {
         LXOutput.log("Recovered connectivity to " + datagramErrorState.destination);
       }
