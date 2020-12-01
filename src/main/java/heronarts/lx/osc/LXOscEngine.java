@@ -138,7 +138,12 @@ public class LXOscEngine extends LXComponent {
     @Override
     public void oscMessage(OscMessage message) {
       try {
-        String[] parts = message.getAddressPattern().getValue().split("/");
+        String raw = message.getAddressPattern().getValue();
+        String trim = raw.trim();
+        if (trim != raw) {
+          error("Trailing whitespace in OSC address pattern: \"" + raw + "\"");
+        }
+        String[] parts = trim.split("/");
         if (parts[1].equals(lx.engine.getPath())) {
           lx.engine.handleOscMessage(message, parts, 2);
         } else {
