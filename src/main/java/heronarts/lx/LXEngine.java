@@ -490,6 +490,21 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   /**
+   * Utility method to shut down and join the engine thread, only when specifically in P3 mode.
+   *
+   * @return this
+   */
+  public LXEngine onP3DidDispose() {
+    if (!this.lx.flags.isP3LX) {
+      throw new IllegalStateException("LXEngine.onP3DidDispose() should only be called from Processing dispose() method");
+    }
+    if (isThreaded()) {
+      _setThreaded(false);
+    }
+    return this;
+  }
+
+  /**
    * Utility method for P3LX mode, invoked from the Processing draw thread to give
    * a chance to change the threading state before the draw loop.
    */
