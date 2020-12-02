@@ -31,6 +31,15 @@ import java.util.Map;
 
 public abstract class LXDatagram extends LXBufferOutput implements LXOutput.InetOutput {
 
+  public static class BufferException extends IllegalStateException {
+
+    private static final long serialVersionUID = 1L;
+
+    public BufferException(String message) {
+      super(message);
+    }
+  }
+
   private static DatagramSocket defaultSocket = null;
 
   private static DatagramSocket getDefaultSocket() throws SocketException {
@@ -101,7 +110,7 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
     int dataSize = this.buffer.length - getDataBufferOffset();
     if (dataSize < this.indexBuffer.length * this.byteOrder.getNumBytes()) {
       String cls = getClass().getSimpleName();
-      throw new IllegalArgumentException(cls + " dataSize " + dataSize + " is insufficient for indexBuffer of length " + this.indexBuffer.length + " with ByteOrder " + this.byteOrder.toString());
+      throw new BufferException(cls + " dataSize " + dataSize + " is insufficient for indexBuffer of length " + this.indexBuffer.length + " with ByteOrder " + this.byteOrder.toString());
     }
 
   }

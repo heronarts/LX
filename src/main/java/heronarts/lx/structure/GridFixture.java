@@ -27,6 +27,7 @@ import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
+import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.OPCOutput;
@@ -424,34 +425,39 @@ public class GridFixture extends LXProtocolFixture {
 
   private void addOutput(InetAddress address, int[] indexBuffer, int channel) {
     LXOutput output = null;
-    switch (this.protocol.getEnum()) {
-    case ARTNET:
-      output = new ArtNetDatagram(this.lx, indexBuffer, channel);
-      break;
-    case SACN:
-      output = new StreamingACNDatagram(this.lx, indexBuffer, channel);
-      break;
-    case DDP:
-      output = new DDPDatagram(this.lx, indexBuffer, channel);
-      break;
-    case KINET:
-      output = new KinetDatagram(this.lx, indexBuffer, channel);
-      break;
-    case OPC:
-      switch (this.transport.getEnum()) {
-      case TCP:
-        output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) channel);
+    try {
+      switch (this.protocol.getEnum()) {
+      case ARTNET:
+        output = new ArtNetDatagram(this.lx, indexBuffer, channel);
+        break;
+      case SACN:
+        output = new StreamingACNDatagram(this.lx, indexBuffer, channel);
+        break;
+      case DDP:
+        output = new DDPDatagram(this.lx, indexBuffer, channel);
+        break;
+      case KINET:
+        output = new KinetDatagram(this.lx, indexBuffer, channel);
+        break;
+      case OPC:
+        switch (this.transport.getEnum()) {
+        case TCP:
+          output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) channel);
+          break;
+        default:
+        case UDP:
+          output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) channel);
+          break;
+        }
+        ((OPCOutput) output).setPort(this.port.getValuei());
         break;
       default:
-      case UDP:
-        output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) channel);
+        LX.error("Undefined output protocol in GridFixture: " + this.protocol.getEnum());
         break;
       }
-      ((OPCOutput) output).setPort(this.port.getValuei());
-      break;
-    default:
-      LX.error("Undefined output protocol in GridFixture: " + this.protocol.getEnum());
-      break;
+    } catch (LXDatagram.BufferException ldbx) {
+      LX.error(ldbx, ldbx.getLocalizedMessage());
+      this.lx.pushError(ldbx);
     }
     if (output != null) {
       output.enabled.setValue(address != null);
@@ -460,6 +466,7 @@ public class GridFixture extends LXProtocolFixture {
       }
       addOutput(output);
     }
+
   }
 
   @Override

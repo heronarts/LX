@@ -23,6 +23,7 @@ import heronarts.lx.LX;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
+import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.OPCOutput;
@@ -88,35 +89,40 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       return null;
     }
 
-    LXOutput output;
-    switch (protocol) {
-    case ARTNET:
-      output = new ArtNetDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
-      break;
-    case SACN:
-      output = new StreamingACNDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
-      break;
-    case OPC:
-      switch (this.transport.getEnum()) {
-      case TCP:
-        output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+    try {
+      LXOutput output;
+      switch (protocol) {
+      case ARTNET:
+        output = new ArtNetDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
+        break;
+      case SACN:
+        output = new StreamingACNDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
+        break;
+      case OPC:
+        switch (this.transport.getEnum()) {
+        case TCP:
+          output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+          break;
+        default:
+        case UDP:
+          output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+          break;
+        }
+        ((OPCOutput) output).setPort(this.port.getValuei());
+        break;
+      case DDP:
+        output = new DDPDatagram(this.lx, toDynamicIndexBuffer(), this.ddpDataOffset.getValuei());
+        break;
+      case KINET:
+        output = new KinetDatagram(this.lx, toDynamicIndexBuffer(), this.kinetPort.getValuei());
         break;
       default:
-      case UDP:
-        output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
-        break;
+      case NONE:
+        throw new IllegalStateException("Unhandled LXBasicFixture protocol type: " + protocol);
       }
-      ((OPCOutput) output).setPort(this.port.getValuei());
-      break;
-    case DDP:
-      output = new DDPDatagram(this.lx, toDynamicIndexBuffer(), this.ddpDataOffset.getValuei());
-      break;
-    case KINET:
-      output = new KinetDatagram(this.lx, toDynamicIndexBuffer(), this.kinetPort.getValuei());
-      break;
-    default:
-    case NONE:
-      throw new IllegalStateException("Unhandled LXBasicFixture protocol type: " + protocol);
+    } catch (LXDatagram.BufferException ldbx) {
+      LX.error(ldbx, ldbx.getLocalizedMessage());
+      this.lx.pushError(ldbx);
     }
 
     if (output instanceof LXOutput.InetOutput) {
