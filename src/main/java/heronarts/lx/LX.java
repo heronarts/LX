@@ -1245,7 +1245,7 @@ public class LX {
         if (++i < args.length) {
           setLogFile(new File(args[i]));
         }
-      } else if (args[i].endsWith(".lxp")) {
+      } else if (args[i].endsWith(".lxp") || args[i].endsWith(".lxs")) {
         projectFile = new File(args[i]);
       }
     }
@@ -1256,11 +1256,18 @@ public class LX {
   public static void headless(Flags flags, File projectFile) {
     LX lx = new LX(flags);
     if (projectFile != null) {
+      boolean isSchedule = projectFile.getName().endsWith(".lxs");
       if (!projectFile.exists()) {
-        LX.error("Project file does not exist: " + projectFile);
+        LX.error((isSchedule ? "Schedule" : "Project") + " file does not exist: " + projectFile);
       } else {
-        LX.log("Opening initial project file: " + projectFile);
-        lx.openProject(projectFile);
+        if (isSchedule) {
+          lx.preferences.schedulerEnabled.setValue(true);
+          LX.log("Opening schedule file: " + projectFile);
+          lx.scheduler.openSchedule(projectFile, true);
+        } else {
+          LX.log("Opening initial project file: " + projectFile);
+          lx.openProject(projectFile);
+        }
       }
     }
     LX.log("Starting headless engine...");
