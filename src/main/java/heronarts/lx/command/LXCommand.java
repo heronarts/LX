@@ -1728,9 +1728,18 @@ public abstract class LXCommand {
     public static class AddSnapshot extends LXCommand {
 
       private ComponentReference<LXSnapshot> snapshot;
+      private JsonObject initialObj = null;
       private JsonObject snapshotObj = null;
+      private final int index;
 
-      public AddSnapshot() {}
+      public AddSnapshot() {
+        this.index = -1;
+      }
+
+      public AddSnapshot(JsonObject snapshotObj, int index) {
+        this.initialObj = snapshotObj;
+        this.index = index;
+      }
 
       @Override
       public String getDescription() {
@@ -1740,13 +1749,20 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         if (this.snapshotObj == null) {
-          LXSnapshot instance = lx.engine.snapshots.addSnapshot();
+          LXSnapshot instance;
+          if (this.initialObj != null) {
+            instance = new LXSnapshot(lx);
+            instance.load(lx, this.initialObj);
+            lx.engine.snapshots.addSnapshot(instance, this.index);
+          } else {
+            instance = lx.engine.snapshots.addSnapshot();
+          }
           this.snapshot = new ComponentReference<LXSnapshot>(instance);
           this.snapshotObj = LXSerializable.Utils.toObject(lx, instance);
         } else {
           LXSnapshot instance = new LXSnapshot(lx);
-          this.snapshot = new ComponentReference<LXSnapshot>(instance);
           instance.load(lx, this.snapshotObj);
+          this.snapshot = new ComponentReference<LXSnapshot>(instance);
           lx.engine.snapshots.addSnapshot(instance);
         }
       }
