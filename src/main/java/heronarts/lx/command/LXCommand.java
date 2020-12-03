@@ -267,12 +267,14 @@ public abstract class LXCommand {
     public static class Reset extends LXCommand {
       private final ParameterReference<LXParameter> parameter;
       private final double originalValue;
+      private final String originalString;
 
       public Reset(LXParameter parameter) {
         this.parameter = new ParameterReference<LXParameter>(parameter);
         this.originalValue = (parameter instanceof CompoundParameter)
           ? ((CompoundParameter) parameter).getBaseValue()
           : parameter.getValue();
+        this.originalString = (parameter instanceof StringParameter) ? ((StringParameter) parameter).getString() : null;
       }
 
       @Override
@@ -287,7 +289,11 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) {
-        this.parameter.get().setValue(this.originalValue);
+        LXParameter parameter = this.parameter.get();
+        if (parameter instanceof StringParameter) {
+          ((StringParameter) parameter).setValue(this.originalString);
+        }
+        parameter.setValue(this.originalValue);
       }
     }
 
@@ -1605,6 +1611,14 @@ public abstract class LXCommand {
       private ComponentReference<LXSwatch> swatch;
       private JsonObject swatchObj;
       private int index = -1;
+      private JsonObject initialObj;
+
+      public SaveSwatch() {}
+
+      public SaveSwatch(JsonObject initialObj, int index) {
+        this.index = index;
+        this.initialObj = initialObj;
+      }
 
       @Override
       public String getDescription() {
@@ -1616,7 +1630,12 @@ public abstract class LXCommand {
         if (this.swatch != null) {
           lx.engine.palette.addSwatch(this.swatchObj, this.index);
         } else {
-          LXSwatch swatch = lx.engine.palette.saveSwatch();
+          LXSwatch swatch;
+          if (this.initialObj != null) {
+            swatch = lx.engine.palette.addSwatch(this.initialObj, this.index);
+          } else {
+            swatch = lx.engine.palette.saveSwatch();
+          }
           this.index = swatch.getIndex();
           this.swatchObj = LXSerializable.Utils.toObject(swatch);
           this.swatch = new ComponentReference<LXSwatch>(swatch);

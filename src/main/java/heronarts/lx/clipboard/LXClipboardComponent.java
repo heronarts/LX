@@ -26,6 +26,7 @@ import com.google.gson.stream.JsonWriter;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
@@ -68,8 +69,14 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
   }
 
   public static class Snapshot extends LXClipboardComponent<LXSnapshot> {
-    public Snapshot(LXSnapshot Snapshot) {
-      super(LXSnapshot.class, Snapshot);
+    public Snapshot(LXSnapshot snapshot) {
+      super(LXSnapshot.class, snapshot);
+    }
+  }
+
+  public static class Swatch extends LXClipboardComponent<LXSwatch> {
+    public Swatch(LXSwatch swatch) {
+      super(LXSwatch.class, swatch);
     }
   }
 
