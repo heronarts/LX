@@ -547,6 +547,14 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     return this.index;
   }
 
+  /**
+   * Update this snapshot to reflect the current program state
+   */
+  public void update() {
+    clearViews();
+    initialize();
+  }
+
   // Internal engine-only call, initializes a new snapshot with views of everything
   // relevant in the project scope. It's a bit of an arbitrary selection at the moment
   void initialize() {
@@ -671,6 +679,13 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     view.dispose();
   }
 
+  private void clearViews() {
+    // Remove all the existing views
+    for (int i = this.views.size() - 1; i >= 0; --i) {
+      removeView(this.views.get(i));
+    }
+  }
+
   boolean hasChannelFaderView(LXAbstractChannel channel) {
     for (View view : this.views) {
       if (view instanceof ChannelFaderView) {
@@ -724,6 +739,9 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
   @Override
   public void load(LX lx, JsonObject obj) {
     super.load(lx, obj);
+
+    clearViews();
+
     if (obj.has(KEY_VIEWS)) {
       JsonArray viewsArray = obj.getAsJsonArray(KEY_VIEWS);
       for (JsonElement viewElement : viewsArray) {

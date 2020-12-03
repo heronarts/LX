@@ -1833,9 +1833,36 @@ public abstract class LXCommand {
       }
     }
 
+    public static class Update extends LXCommand {
+
+      private final ComponentReference<LXSnapshot> snapshot;
+      private JsonObject previousState;
+
+      public Update(LXSnapshot snapshot) {
+        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Update Snapshot";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.previousState = LXSerializable.Utils.toObject(lx, this.snapshot.get());
+        this.snapshot.get().update();
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.snapshot.get().load(lx, this.previousState);
+      }
+
+    }
+
     public static class Recall extends LXCommand {
 
-      private ComponentReference<LXSnapshot> snapshot;
+      private final ComponentReference<LXSnapshot> snapshot;
       private final List<LXCommand> commands = new ArrayList<LXCommand>();
 
       public Recall(LXSnapshot snapshot) {
@@ -1861,7 +1888,7 @@ public abstract class LXCommand {
       }
     }
 
-    public static class RemoveView extends LXCommand {
+    private static class RemoveView extends LXCommand {
 
       private ComponentReference<LXSnapshot> snapshot;
       private LXSnapshot.View view;
