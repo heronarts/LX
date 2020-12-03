@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import heronarts.lx.LX;
+import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCOutput;
 import heronarts.lx.parameter.BooleanParameter;
@@ -50,6 +51,10 @@ public abstract class LXProtocolFixture extends LXFixture {
   public final EnumParameter<Transport> transport =
     new EnumParameter<Transport>("Transport", Transport.UDP)
     .setDescription("Which transport the protocol should use");
+
+  public final EnumParameter<LXBufferOutput.ByteOrder> byteOrder =
+    new EnumParameter<LXBufferOutput.ByteOrder>("Byte Order", LXBufferOutput.ByteOrder.RGB)
+    .setDescription("Which byte ordering the output uses");
 
   public final StringParameter host =
     new StringParameter("Host", "127.0.0.1")

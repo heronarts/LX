@@ -1620,20 +1620,14 @@ public class JsonFixture extends LXFixture {
       bufferOutput = new StreamingACNDatagram(this.lx, indexBuffer, outputByteOrder, output.universe);
       break;
     case DDP:
-      if (outputByteOrder != LXBufferOutput.ByteOrder.RGB) {
-        addWarning("DDP packets do not support non-RGB byte order, using RGB");
-      }
-      bufferOutput = new DDPDatagram(this.lx, indexBuffer, output.universe);
+      bufferOutput = new DDPDatagram(this.lx, indexBuffer, outputByteOrder, output.universe);
       break;
     case KINET:
-      if (outputByteOrder != LXBufferOutput.ByteOrder.RGB) {
-        addWarning("KiNET packets do not support non-RGB byte order, using RGB");
-      }
       if (dataLength > KinetDatagram.MAX_DATA_LENGTH) {
         addWarning("KiNET packets cannot support more than 512 bytes payload, ignoring this output");
         return;
       }
-      bufferOutput = new KinetDatagram(this.lx, indexBuffer, output.universe);
+      bufferOutput = new KinetDatagram(this.lx, indexBuffer, outputByteOrder, output.universe);
       break;
     case OPC:
       if (output.transport == TransportDefinition.TCP) {

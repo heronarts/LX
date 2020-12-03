@@ -89,7 +89,7 @@ public class KinetDatagram extends LXDatagram {
    * @param version Version of Kinet Protocol
    */
   public KinetDatagram(LX lx, LXModel model, int kinetPort, Version version) {
-    this(lx, model.toIndexBuffer(), kinetPort, version);
+    this(lx, model.toIndexBuffer(), ByteOrder.RGB, kinetPort, version);
   }
 
   /**
@@ -100,7 +100,19 @@ public class KinetDatagram extends LXDatagram {
    * @param kinetPort Number of the output port on the kinet power supply
    */
   public KinetDatagram(LX lx, int[] indexBuffer, int kinetPort) {
-    this(lx, indexBuffer, kinetPort, Version.PORTOUT);
+    this(lx, indexBuffer, ByteOrder.RGB, kinetPort, Version.PORTOUT);
+  }
+
+  /**
+   * Constructs a datagram that sends on the given kinet supply output port
+   *
+   * @param lx LX instance
+   * @param indexBuffer A list of the point indices that should be sent on this port
+   * @param byteOrder Which byte ordering to use for the output
+   * @param kinetPort Number of the output port on the kinet power supply
+   */
+  public KinetDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int kinetPort) {
+    this(lx, indexBuffer, byteOrder, kinetPort, Version.PORTOUT);
   }
 
   /**
@@ -108,11 +120,12 @@ public class KinetDatagram extends LXDatagram {
    *
    * @param lx LX instance
    * @param indexBuffer Index buffer that this datagram outputs points for
+   * @param byteOrder Which byte ordering to use for the output
    * @param kinetPort Number of the output port on the kinet power supply
    * @param version Version of Kinet Protocol
    */
-  public KinetDatagram(LX lx, int[] indexBuffer, int kinetPort, Version version) {
-    super(lx, indexBuffer, ByteOrder.RGB, version.getPacketLength());
+  public KinetDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int kinetPort, Version version) {
+    super(lx, indexBuffer, byteOrder, version.getPacketLength());
     setPort(KINET_PORT);
     this.version = version;
 

@@ -42,6 +42,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
   protected LXBasicFixture(LX lx, String label) {
     super(lx, label);
     addOutputParameter("protocol", this.protocol);
+    addOutputParameter("byteOrder", this.byteOrder);
     addOutputParameter("transport", this.transport);
     addOutputParameter("reverse", this.reverse);
     addParameter("host", this.host);
@@ -93,28 +94,28 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       LXOutput output;
       switch (protocol) {
       case ARTNET:
-        output = new ArtNetDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
+        output = new ArtNetDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), this.artNetUniverse.getValuei());
         break;
       case SACN:
-        output = new StreamingACNDatagram(this.lx, toDynamicIndexBuffer(), this.artNetUniverse.getValuei());
+        output = new StreamingACNDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), this.artNetUniverse.getValuei());
         break;
       case OPC:
         switch (this.transport.getEnum()) {
         case TCP:
-          output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+          output = new OPCSocket(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), (byte) this.opcChannel.getValuei());
           break;
         default:
         case UDP:
-          output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) this.opcChannel.getValuei());
+          output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), (byte) this.opcChannel.getValuei());
           break;
         }
         ((OPCOutput) output).setPort(this.port.getValuei());
         break;
       case DDP:
-        output = new DDPDatagram(this.lx, toDynamicIndexBuffer(), this.ddpDataOffset.getValuei());
+        output = new DDPDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), this.ddpDataOffset.getValuei());
         break;
       case KINET:
-        output = new KinetDatagram(this.lx, toDynamicIndexBuffer(), this.kinetPort.getValuei());
+        output = new KinetDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), this.kinetPort.getValuei());
         break;
       default:
       case NONE:

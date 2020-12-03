@@ -131,6 +131,8 @@ public class GridFixture extends LXProtocolFixture {
     addParameter("host", this.host);
     addParameter("port", this.port);
     addOutputParameter("protocol", this.protocol);
+    addOutputParameter("byteOrder", this.byteOrder);
+    addOutputParameter("transport", this.transport);
     addOutputParameter("artNetUniverse", this.artNetUniverse);
     addOutputParameter("opcChannel", this.opcChannel);
     addOutputParameter("ddpDataOffset", this.ddpDataOffset);
@@ -428,25 +430,25 @@ public class GridFixture extends LXProtocolFixture {
     try {
       switch (this.protocol.getEnum()) {
       case ARTNET:
-        output = new ArtNetDatagram(this.lx, indexBuffer, channel);
+        output = new ArtNetDatagram(this.lx, indexBuffer, this.byteOrder.getEnum(), channel);
         break;
       case SACN:
-        output = new StreamingACNDatagram(this.lx, indexBuffer, channel);
+        output = new StreamingACNDatagram(this.lx, indexBuffer, this.byteOrder.getEnum(), channel);
         break;
       case DDP:
-        output = new DDPDatagram(this.lx, indexBuffer, channel);
+        output = new DDPDatagram(this.lx, indexBuffer, this.byteOrder.getEnum(), channel);
         break;
       case KINET:
-        output = new KinetDatagram(this.lx, indexBuffer, channel);
+        output = new KinetDatagram(this.lx, indexBuffer, this.byteOrder.getEnum(), channel);
         break;
       case OPC:
         switch (this.transport.getEnum()) {
         case TCP:
-          output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) channel);
+          output = new OPCSocket(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), (byte) channel);
           break;
         default:
         case UDP:
-          output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) channel);
+          output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), (byte) channel);
           break;
         }
         ((OPCOutput) output).setPort(this.port.getValuei());

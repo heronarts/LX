@@ -64,7 +64,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     /**
      * E1.31 Streaming ACN - <a href="https://opendmx.net/index.php/E1.31">https://opendmx.net/index.php/E1.31/</a>
      */
-    SACN("E1.31 Streaming ACN"),
+    SACN("E1.31 sACN"),
 
     /**
      * Open Pixel Control - <a href="http://openpixelcontrol.org/">http://openpixelcontrol.org/</a>
