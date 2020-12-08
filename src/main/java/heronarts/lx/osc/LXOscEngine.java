@@ -36,6 +36,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
@@ -51,39 +52,62 @@ public class LXOscEngine extends LXComponent {
 
   private final static int DEFAULT_MAX_PACKET_SIZE = 8192;
 
-  public final StringParameter receiveHost = new StringParameter("RX Host",
-    DEFAULT_RECEIVE_HOST)
-      .setDescription("Hostname to which OSC input socket is bound");
+  public enum IOState {
+    STOPPED,
+    BINDING,
+    BOUND,
+    UNKNOWN_HOST,
+    SOCKET_ERROR
+  };
 
-  public final BooleanParameter unknownReceiveHost = (BooleanParameter) new BooleanParameter(
-    "Unknown RX Host", false).setMappable(false)
-      .setDescription("Set to true if the receive host is unknown");
+  public final BooleanParameter receiveActive = (BooleanParameter)
+    new BooleanParameter("RX Active", false)
+    .setMappable(false)
+    .setDescription("Enables or disables OSC engine input");
 
-  public final DiscreteParameter receivePort = (DiscreteParameter) new DiscreteParameter(
-    "RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
-      .setDescription("UDP port on which the engine listens for OSC message")
-      .setMappable(false).setUnits(LXParameter.Units.INTEGER);
+  public final StringParameter receiveHost =
+    new StringParameter("RX Host", DEFAULT_RECEIVE_HOST)
+    .setDescription("Hostname to which OSC input socket is bound");
 
-  public final StringParameter transmitHost = (StringParameter) new StringParameter(
-    "TX Host", DEFAULT_TRANSMIT_HOST).setMappable(false)
-      .setDescription("Hostname to which OSC messages are sent");
+  public final BooleanParameter unknownReceiveHost = (BooleanParameter)
+    new BooleanParameter(
+    "Unknown RX Host", false)
+    .setMappable(false)
+    .setDescription("Set to true if the receive host is unknown");
 
-  public final BooleanParameter unknownTransmitHost = (BooleanParameter) new BooleanParameter(
-    "Unknown TX Host", false).setMappable(false)
-      .setDescription("Set to true if the transmit host is unknown");
+  public final EnumParameter<IOState> receiveState =
+    new EnumParameter<IOState>("RX State", IOState.STOPPED)
+    .setMappable(false)
+    .setDescription("The state of the OSC receiver");
 
-  public final DiscreteParameter transmitPort = (DiscreteParameter) new DiscreteParameter(
-    "TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
-      .setDescription("UDP port on which the engine transmits OSC messages")
-      .setMappable(false).setUnits(LXParameter.Units.INTEGER);
+  public final DiscreteParameter receivePort = (DiscreteParameter)
+    new DiscreteParameter("RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
+    .setDescription("UDP port on which the engine listens for OSC message")
+    .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
-  public final BooleanParameter receiveActive = (BooleanParameter) new BooleanParameter(
-    "RX Active", false).setMappable(false)
-      .setDescription("Enables or disables OSC engine input");
+  public final BooleanParameter transmitActive = (BooleanParameter)
+    new BooleanParameter("TX Active", false)
+    .setMappable(false)
+    .setDescription("Enables or disables OSC engine output");
 
-  public final BooleanParameter transmitActive = (BooleanParameter) new BooleanParameter(
-    "TX Active", false).setMappable(false)
-      .setDescription("Enables or disables OSC engine output");
+  public final StringParameter transmitHost = (StringParameter)
+    new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST).setMappable(false)
+    .setDescription("Hostname to which OSC messages are sent");
+
+  public final BooleanParameter unknownTransmitHost = (BooleanParameter)
+    new BooleanParameter("Unknown TX Host", false)
+    .setMappable(false)
+    .setDescription("Set to true if the transmit host is unknown");
+
+  public final EnumParameter<IOState> transmitState =
+    new EnumParameter<IOState>("TX State", IOState.STOPPED)
+    .setMappable(false)
+    .setDescription("The state of the OSC transmitter");
+
+  public final DiscreteParameter transmitPort = (DiscreteParameter)
+    new DiscreteParameter("TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
+    .setDescription("UDP port on which the engine transmits OSC messages")
+    .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
   private final List<Receiver> receivers = new ArrayList<Receiver>();
 
@@ -94,6 +118,9 @@ public class LXOscEngine extends LXComponent {
 
   public LXOscEngine(LX lx) {
     super(lx, "OSC");
+
+    // Note order of ioActive parameter coming after host / port, this saves some
+    // churn on a reload, update the host and port before trying to bind
     addParameter("receiveHost", this.receiveHost);
     addParameter("receivePort", this.receivePort);
     addParameter("receiveActive", this.receiveActive);
@@ -164,12 +191,10 @@ public class LXOscEngine extends LXComponent {
     private final DatagramSocket socket;
     protected final DatagramPacket packet;
 
-    private Transmitter(InetAddress address, int port, int bufferSize)
-      throws SocketException {
+    private Transmitter(InetAddress address, int port, int bufferSize) throws SocketException {
       this.bytes = new byte[bufferSize];
       this.buffer = ByteBuffer.wrap(this.bytes);
-      this.packet = new DatagramPacket(this.bytes, this.bytes.length, address,
-        port);
+      this.packet = new DatagramPacket(this.bytes, this.bytes.length, address, port);
       this.socket = new DatagramSocket();
     }
 
@@ -189,10 +214,8 @@ public class LXOscEngine extends LXComponent {
     }
   }
 
-  private class EngineTransmitter extends Transmitter
-    implements LXParameterListener {
-    private EngineTransmitter(InetAddress address, int port, int bufferSize)
-      throws SocketException {
+  private class EngineTransmitter extends Transmitter implements LXParameterListener {
+    private EngineTransmitter(InetAddress address, int port, int bufferSize) throws SocketException {
       super(address, port, bufferSize);
     }
 
@@ -203,7 +226,7 @@ public class LXOscEngine extends LXComponent {
 
     @Override
     public void onParameterChanged(LXParameter parameter) {
-      if (transmitActive.isOn()) {
+      if (transmitActive.isOn() && (transmitState.getEnum() == IOState.BOUND)) {
         // TODO(mcslee): contemplate accumulating OscMessages into OscBundle
         // and sending once per engine loop?? Probably a bad tradeoff since
         // it would require dynamic memory allocations that we can skip here...
@@ -248,8 +271,7 @@ public class LXOscEngine extends LXComponent {
       try {
         send(oscMessage);
       } catch (IOException iox) {
-        error(iox, "Failed to transmit message: "
-          + message.getAddressPattern().toString());
+        error(iox, "Failed to transmit message: " + message.getAddressPattern().toString());
       }
     }
   }
@@ -387,13 +409,13 @@ public class LXOscEngine extends LXComponent {
       } catch (UnknownHostException uhx) {
         error("Invalid OSC receive host: " + uhx.getLocalizedMessage());
         this.unknownReceiveHost.setValue(true);
-        this.receiveActive.setValue(false);
+        stopReceiver(IOState.UNKNOWN_HOST);
       }
     } else if (p == this.receiveActive) {
       if (this.receiveActive.isOn()) {
         startReceiver();
       } else {
-        stopReceiver();
+        stopReceiver(IOState.STOPPED);
       }
     } else if (p == this.transmitPort) {
       if (this.engineTransmitter != null) {
@@ -401,56 +423,61 @@ public class LXOscEngine extends LXComponent {
       }
     } else if (p == this.transmitHost) {
       try {
-        InetAddress address = InetAddress
-          .getByName(this.transmitHost.getString());
+        InetAddress address = InetAddress.getByName(this.transmitHost.getString());
         this.unknownTransmitHost.setValue(false);
         if (this.engineTransmitter != null) {
           this.engineTransmitter.setAddress(address);
+          this.transmitState.setValue(IOState.BOUND);
         }
       } catch (UnknownHostException uhx) {
         error("Invalid OSC output host: " + uhx.getLocalizedMessage());
         this.unknownTransmitHost.setValue(true);
-        this.transmitActive.setValue(false);
+        this.transmitState.setValue(IOState.UNKNOWN_HOST);
       }
     } else if (p == this.transmitActive) {
       if (this.transmitActive.isOn()) {
         if (this.unknownTransmitHost.isOn()) {
-          this.transmitActive.setValue(false);
+          this.transmitState.setValue(IOState.UNKNOWN_HOST);
         } else {
           startTransmitter();
         }
+      } else {
+        this.transmitState.setValue(IOState.STOPPED);
       }
     }
   }
 
   private void startReceiver() {
     if (this.engineReceiver != null) {
-      stopReceiver();
+      stopReceiver(IOState.STOPPED);
     }
     String host = this.receiveHost.getString();
     int port = this.receivePort.getValuei();
     try {
+      this.receiveState.setValue(IOState.BINDING);
       this.engineReceiver = receiver(port, host);
       this.engineReceiver.addListener(this.engineListener);
       this.unknownReceiveHost.setValue(false);
+      this.receiveState.setValue(IOState.BOUND);
       log("Started OSC listener " + this.engineReceiver.address);
     } catch (UnknownHostException uhx) {
       error("Bad OSC receive host: " + uhx.getLocalizedMessage());
       this.unknownReceiveHost.setValue(true);
-      this.receiveActive.setValue(false);
+      stopReceiver(IOState.UNKNOWN_HOST);
     } catch (SocketException sx) {
       error("Failed to start OSC receiver: " + sx.getLocalizedMessage());
       this.lx.pushError(sx, "Failed to start OSC receiver at " + host + ":"
         + port + "\n" + sx.getLocalizedMessage());
-      this.receiveActive.setValue(false);
+      stopReceiver(IOState.SOCKET_ERROR);
     }
   }
 
-  private void stopReceiver() {
+  private void stopReceiver(IOState state) {
     if (this.engineReceiver != null) {
       this.engineReceiver.stop();
       this.engineReceiver = null;
     }
+    this.receiveState.setValue(state);
   }
 
   private void startTransmitter() {
@@ -458,20 +485,23 @@ public class LXOscEngine extends LXComponent {
       String host = this.transmitHost.getString();
       int port = this.transmitPort.getValuei();
       try {
+        this.transmitState.setValue(IOState.BINDING);
         InetAddress address = InetAddress.getByName(host);
         this.unknownTransmitHost.setValue(false);
-        this.engineTransmitter = new EngineTransmitter(address, port,
-          DEFAULT_MAX_PACKET_SIZE);
+        this.engineTransmitter = new EngineTransmitter(address, port, DEFAULT_MAX_PACKET_SIZE);
+        this.transmitState.setValue(IOState.BOUND);
       } catch (UnknownHostException uhx) {
         error("Invalid host: " + uhx.getLocalizedMessage());
         this.unknownTransmitHost.setValue(true);
-        this.transmitActive.setValue(false);
+        this.transmitState.setValue(IOState.UNKNOWN_HOST);
       } catch (SocketException sx) {
         error("Could not start transmitter: " + sx.getLocalizedMessage());
         this.lx.pushError(sx, "Failed to start OSC transmitter at " + host + ":"
           + port + "\n" + sx.getLocalizedMessage());
-        this.transmitActive.setValue(false);
+        this.transmitState.setValue(IOState.SOCKET_ERROR);
       }
+    } else {
+      this.transmitState.setValue(IOState.BOUND);
     }
   }
 
@@ -529,7 +559,7 @@ public class LXOscEngine extends LXComponent {
   @Override
   public void dispose() {
     super.dispose();
-    stopReceiver();
+    stopReceiver(IOState.STOPPED);
     for (Receiver receiver : this.receivers) {
       receiver.stop();
     }
