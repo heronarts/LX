@@ -90,8 +90,8 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       return null;
     }
 
+    LXOutput output = null;
     try {
-      LXOutput output;
       switch (protocol) {
       case ARTNET:
         output = new ArtNetDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), this.artNetUniverse.getValuei());
