@@ -48,7 +48,7 @@ public class BlurEffect extends LXEffect {
   }
 
   public final CompoundParameter level =
-    new CompoundParameter("Level", .5f)
+    new CompoundParameter("Level", 0, 0, 1)
     .setDescription("Sets the level of the blur relative to original signal");
 
   public final CompoundParameter decay = (CompoundParameter)
