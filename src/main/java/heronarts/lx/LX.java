@@ -1219,7 +1219,7 @@ public class LX {
   static File EXPLICIT_LOG_FILE = null;
   private static PrintStream EXPLICIT_LOG_STREAM = null;
 
-  protected static void setLogFile(File file) {
+  public static void setLogFile(File file) {
     try {
       EXPLICIT_LOG_FILE = file;
       EXPLICIT_LOG_STREAM = new PrintStream(new FileOutputStream(file, true));
