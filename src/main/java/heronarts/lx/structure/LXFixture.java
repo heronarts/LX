@@ -516,7 +516,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private final List<DynamicIndexBuffer> dynamicIndexBuffers = new ArrayList<DynamicIndexBuffer>();
 
-  private void regenerateOutputs() {
+  protected void regenerateOutputs() {
     // Dispose of all these outputs
     for (LXOutput output : this.outputs) {
       output.dispose();

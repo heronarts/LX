@@ -444,11 +444,11 @@ public class GridFixture extends LXProtocolFixture {
       case OPC:
         switch (this.transport.getEnum()) {
         case TCP:
-          output = new OPCSocket(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), (byte) channel);
+          output = new OPCSocket(this.lx, indexBuffer, this.byteOrder.getEnum(), (byte) channel);
           break;
         default:
         case UDP:
-          output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), this.byteOrder.getEnum(), (byte) channel);
+          output = new OPCDatagram(this.lx, indexBuffer, this.byteOrder.getEnum(), (byte) channel);
           break;
         }
         ((OPCOutput) output).setPort(this.port.getValuei());
@@ -473,7 +473,7 @@ public class GridFixture extends LXProtocolFixture {
 
   @Override
   protected void reindexOutputs() {
-
+    regenerateOutputs();
   }
 
 }
