@@ -83,7 +83,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final Output output;
 
   public final BoundedParameter framesPerSecond = (BoundedParameter)
-    new BoundedParameter("FPS", 60, 0, 300)
+    new BoundedParameter("FPS", 60, 1, 300)
     .setMappable(false)
     .setDescription("Number of frames per second the engine runs at");
 
