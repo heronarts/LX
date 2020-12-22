@@ -1725,6 +1725,7 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXSwatch> swatch;
       private JsonObject originalSwatch;
+      private boolean set = false;
 
       public SetSwatch(LXSwatch swatch) {
         this.swatch = new ComponentReference<LXSwatch>(swatch);
@@ -1740,12 +1741,17 @@ public abstract class LXCommand {
         this.originalSwatch =
           LXSerializable.Utils.stripIds(
             LXSerializable.Utils.toObject(lx.engine.palette.swatch));
-        lx.engine.palette.setSwatch(this.swatch.get());
+        this.set = lx.engine.palette.setSwatch(this.swatch.get());
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         lx.engine.palette.swatch.load(lx, this.originalSwatch);
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return !this.set;
       }
 
     }

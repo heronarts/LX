@@ -127,6 +127,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     new EnumParameter<TransitionMode>("Transition Mode", TransitionMode.RGB)
     .setDescription("Which color blending mode transitions should use.");
 
+  private LXSwatch inTransition = null;
   private LXSwatch transitionFrom = null;
   private LXSwatch transitionTo = null;
   private JsonObject transitionTarget = null;
@@ -174,6 +175,10 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     super.onParameterChanged(p);
     if (p == this.autoCycleEnabled) {
       this.autoCycleProgress = 0;
+    } else if (p == this.transitionEnabled) {
+      if (!this.transitionEnabled.isOn()) {
+        finishTransition();
+      }
     } else if (p == this.triggerSwatchCycle) {
       if (this.triggerSwatchCycle.isOn()) {
         this.triggerSwatchCycle.setValue(false);
@@ -336,11 +341,23 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     return this;
   }
 
-  public LXPalette setSwatch(LXSwatch swatch) {
+  /**
+   * Set the palette to a saved swatch
+   *
+   * @param swatch Swatch to transition to
+   * @return Whether swatch was set, or false if already in transition
+   */
+  public boolean setSwatch(LXSwatch swatch) {
+    if (this.inTransition == swatch) {
+      finishTransition();
+      return false;
+    }
+
     JsonObject swatchObj = LXSerializable.Utils.stripIds(LXSerializable.Utils.toObject(swatch));
     this.autoCycleCursor.setValue(swatch.getIndex());
     this.autoCycleProgress = 0;
     if (this.transitionEnabled.isOn()) {
+      this.inTransition = swatch;
       this.transitionFrom = LXSwatch.staticCopy(this.swatch);
       this.transitionTo = LXSwatch.staticCopy(swatch);
       this.transitionTarget = swatchObj;
@@ -365,7 +382,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     } else {
       this.swatch.load(this.lx, swatchObj);
     }
-    return this;
+    return true;
   }
 
   public double getTransitionProgress() {
@@ -377,10 +394,13 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   }
 
   private void finishTransition() {
-    this.swatch.load(this.lx, this.transitionTarget);
-    this.transitionFrom = null;
-    this.transitionTo = null;
-    this.transitionTarget = null;
+    if (this.transitionTarget != null) {
+      this.swatch.load(this.lx, this.transitionTarget);
+      this.inTransition = null;
+      this.transitionFrom = null;
+      this.transitionTo = null;
+      this.transitionTarget = null;
+    }
   }
 
   public void loop(double deltaMs) {
