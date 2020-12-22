@@ -379,7 +379,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     private boolean wasEnabled;
 
     private ChannelFaderView(LXAbstractChannel channel) {
-      this(channel, channel.enabled.isOn(), channel.fader.getValue());
+      this(channel, channel.enabled.isOn(), channel.fader.getBaseValue());
     }
 
     protected ChannelFaderView(LXAbstractChannel channel, boolean enabled, double fader) {
@@ -421,12 +421,12 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
           this.toFader = this.fader;
           this.channel.enabled.setValue(true);
         } else {
-          this.fromFader = this.channel.fader.getValue();
+          this.fromFader = this.channel.fader.getBaseValue();
           this.toFader = 0;
         }
       } else {
         this.channel.enabled.setValue(this.enabled);
-        this.fromFader = this.channel.fader.getValue();
+        this.fromFader = this.channel.fader.getBaseValue();
         this.toFader = this.fader;
       }
     }
