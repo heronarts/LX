@@ -178,6 +178,15 @@ public abstract class LXCommand {
    */
   public abstract void undo(LX lx) throws InvalidCommandException;
 
+  /**
+   * May return true if a command should be ignore for the purposes of undo
+   *
+   * @return Whether to ignore command for purposes of undo
+   */
+  public boolean isIgnored() {
+    return false;
+  }
+
 
   public static abstract class RemoveComponent extends LXCommand {
 
@@ -1883,6 +1892,7 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXSnapshot> snapshot;
       private final List<LXCommand> commands = new ArrayList<LXCommand>();
+      private boolean recalled = false;
 
       public Recall(LXSnapshot snapshot) {
         this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
@@ -1891,7 +1901,7 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         this.commands.clear();
-        lx.engine.snapshots.recall(this.snapshot.get(), this.commands);
+        this.recalled = lx.engine.snapshots.recall(this.snapshot.get(), this.commands);
       }
 
       @Override
@@ -1899,6 +1909,11 @@ public abstract class LXCommand {
         for (LXCommand command : this.commands) {
           command.undo(lx);
         }
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return !this.recalled;
       }
 
       @Override

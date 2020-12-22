@@ -243,6 +243,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     super.onParameterChanged(parameter);
     if (parameter == this.autoCycleEnabled) {
       this.autoCycleProgress = 0;
+    } else if (parameter == this.transitionEnabled) {
+      if (!this.transitionEnabled.isOn()) {
+        finishTransition();
+      }
     } else if (parameter == this.triggerSnapshotCycle) {
       if (this.triggerSnapshotCycle.isOn()) {
         this.triggerSnapshotCycle.setValue(false);
@@ -381,17 +385,18 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return this;
   }
 
+  private final List<LXSnapshot.View> recallViews =
+    new ArrayList<LXSnapshot.View>();
+
   /**
    * Recall this snapshot, apply all of its values
    *
    * @param snapshot The snapshot to recall
+   * @return True the snapshot was recalled, false if it was already mid-transition
    */
-  public void recall(LXSnapshot snapshot) {
-    recall(snapshot, null);
+  public boolean recall(LXSnapshot snapshot) {
+    return recall(snapshot, null);
   }
-
-  private final List<LXSnapshot.View> recallViews =
-    new ArrayList<LXSnapshot.View>();
 
   /**
    * Recall this snapshot, and populate an array of commands which
@@ -399,8 +404,14 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    *
    * @param snapshot Snapshot to recall
    * @param commands Array to populate with all the commands processed
+   * @return True the snapshot was recalled, false if it was already mid-transition
    */
-  public void recall(LXSnapshot snapshot, List<LXCommand> commands) {
+  public boolean recall(LXSnapshot snapshot, List<LXCommand> commands) {
+    if (this.inTransition == snapshot) {
+      finishTransition();
+      return false;
+    }
+
     boolean mixer = this.recallMixer.isOn();
     boolean pattern = this.recallPattern.isOn();
     boolean effect = this.recallEffect.isOn();
@@ -444,6 +455,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (transition) {
       this.transition.trigger();
     }
+
+    return true;
   }
 
   private boolean isValidView(View view, boolean mixer, boolean pattern, boolean effect, boolean modulation, boolean output) {
@@ -489,12 +502,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (this.inTransition != null) {
       this.transition.loop(deltaMs);
       if (this.transition.finished()) {
-        for (View view : this.recallViews) {
-          if (view.activeFlag) {
-            view.finishTransition();
-          }
-        }
-        this.inTransition = null;
+        finishTransition();
       } else {
         for (View view : this.recallViews) {
           if (view.activeFlag) {
@@ -509,6 +517,17 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
         this.autoCycleProgress = 1;
         doSnapshotCycle();
       }
+    }
+  }
+
+  private void finishTransition() {
+    if (this.inTransition != null) {
+      for (View view : this.recallViews) {
+        if (view.activeFlag) {
+          view.finishTransition();
+        }
+      }
+      this.inTransition = null;
     }
   }
 
