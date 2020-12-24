@@ -42,6 +42,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -510,12 +511,23 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     new BooleanParameter("Cycle", true)
     .setDescription("Whether the snapshot is eligible for auto-cycle");
 
+  public final BoundedParameter durationSecs = (BoundedParameter)
+    new BoundedParameter("Duration", 60, .1, 60*60*24)
+    .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter hasCustomDuration =
+    new BooleanParameter("Custom Duration", false)
+    .setDescription("When enabled, this snapshot uses its own custom duration rather than the default cycle time");
+
 
   public LXSnapshot(LX lx) {
     super(lx, "Snapshot");
     setParent(lx.engine.snapshots);
     addParameter("recall", this.recall);
     addParameter("autoCycleEligible", this.autoCycleEligible);
+    addParameter("hasCustomDuration", this.hasCustomDuration);
+    addParameter("durationSecs", this.durationSecs);
   }
 
   @Override

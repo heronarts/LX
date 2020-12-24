@@ -385,6 +385,19 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return this;
   }
 
+  /**
+   * Returns the snapshot that the cursor currently points to, if any.
+   *
+   * @return Snapshot or null
+   */
+  public LXSnapshot getCursorSnapshot() {
+    int cursorIndex = this.autoCycleCursor.getValuei();
+    if (cursorIndex >= 0 && cursorIndex < this.snapshots.size()) {
+      return this.snapshots.get(cursorIndex);
+    }
+    return null;
+  }
+
   private final List<LXSnapshot.View> recallViews =
     new ArrayList<LXSnapshot.View>();
 
@@ -512,7 +525,12 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       }
       this.autoCycleProgress = 0;
     } else if (this.autoCycleEnabled.isOn()) {
-      this.autoCycleProgress += deltaMs / (1000 * this.autoCycleTimeSecs.getValue());
+      LXSnapshot cursorSnapshot = getCursorSnapshot();
+      double cycleSecs =
+        (cursorSnapshot != null && cursorSnapshot.hasCustomDuration.isOn()) ?
+          cursorSnapshot.durationSecs.getValue() :
+          this.autoCycleTimeSecs.getValue();
+      this.autoCycleProgress += deltaMs / (1000 * cycleSecs);
       if (this.autoCycleProgress >= 1) {
         this.autoCycleProgress = 1;
         doSnapshotCycle();
