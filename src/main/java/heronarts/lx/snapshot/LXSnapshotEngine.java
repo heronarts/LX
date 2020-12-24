@@ -527,8 +527,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     } else if (this.autoCycleEnabled.isOn()) {
       LXSnapshot cursorSnapshot = getCursorSnapshot();
       double cycleSecs =
-        (cursorSnapshot != null && cursorSnapshot.hasCustomDuration.isOn()) ?
-          cursorSnapshot.durationSecs.getValue() :
+        (cursorSnapshot != null && cursorSnapshot.hasCustomCycleTime.isOn()) ?
+          cursorSnapshot.cycleTimeSecs.getValue() :
           this.autoCycleTimeSecs.getValue();
       this.autoCycleProgress += deltaMs / (1000 * cycleSecs);
       if (this.autoCycleProgress >= 1) {

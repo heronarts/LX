@@ -511,13 +511,13 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     new BooleanParameter("Cycle", true)
     .setDescription("Whether the snapshot is eligible for auto-cycle");
 
-  public final BoundedParameter durationSecs = (BoundedParameter)
-    new BoundedParameter("Duration", 60, .1, 60*60*24)
+  public final BoundedParameter cycleTimeSecs = (BoundedParameter)
+    new BoundedParameter("Cycle Time", 60, .1, 60*60*24)
     .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
     .setUnits(LXParameter.Units.SECONDS);
 
-  public final BooleanParameter hasCustomDuration =
-    new BooleanParameter("Custom Duration", false)
+  public final BooleanParameter hasCustomCycleTime =
+    new BooleanParameter("Custom Cycle", false)
     .setDescription("When enabled, this snapshot uses its own custom duration rather than the default cycle time");
 
 
@@ -526,8 +526,8 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     setParent(lx.engine.snapshots);
     addParameter("recall", this.recall);
     addParameter("autoCycleEligible", this.autoCycleEligible);
-    addParameter("hasCustomDuration", this.hasCustomDuration);
-    addParameter("durationSecs", this.durationSecs);
+    addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
+    addParameter("cycleTimeSecs", this.cycleTimeSecs);
   }
 
   @Override
