@@ -54,7 +54,12 @@ public abstract class LXOutput extends LXComponent {
     /**
      * Use gamma correction setting in this specific output
      */
-    DIRECT;
+    DIRECT,
+
+    /**
+     * Use a custom gamma table
+     */
+    CUSTOM;
   }
 
   /**
@@ -104,6 +109,8 @@ public abstract class LXOutput extends LXComponent {
    */
   private byte[][] gammaLut = null;
 
+  private byte[][] customGammaLut = null;
+
   private LXOutput gammaDelegate = null;
 
   private void buildGammaTable() {
@@ -144,6 +151,11 @@ public abstract class LXOutput extends LXComponent {
     addParameter("fps", this.framesPerSecond);
     addParameter("gamma", this.gamma);
     addParameter("gammaMode", this.gammaMode);
+  }
+
+  public void setGammaTable(byte[][] gammaLut) {
+    this.customGammaLut = gammaLut;
+    this.gammaMode.setValue(GammaMode.CUSTOM);
   }
 
   public void setGammaDelegate(LXOutput gammaDelegate) {
@@ -198,12 +210,14 @@ public abstract class LXOutput extends LXComponent {
 
   protected byte[] getGammaLut(double brightness) {
     switch (this.gammaMode.getEnum()) {
+    case CUSTOM:
+      return this.customGammaLut[(int) Math.round(brightness * 255.f)];
     case DIRECT:
       return this.gammaLut[(int) Math.round(brightness * 255.f)];
     default:
     case INHERIT:
-      LXOutput gammaOutout = (this.gammaDelegate != null) ? this.gammaDelegate : (LXOutput) getParent();
-      return gammaOutout.getGammaLut(brightness);
+      LXOutput gammaOutput = (this.gammaDelegate != null) ? this.gammaDelegate : (LXOutput) getParent();
+      return gammaOutput.getGammaLut(brightness);
     }
   }
 
