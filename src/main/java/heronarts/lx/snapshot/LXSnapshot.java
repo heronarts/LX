@@ -520,6 +520,15 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     new BooleanParameter("Custom Cycle", false)
     .setDescription("When enabled, this snapshot uses its own custom duration rather than the default cycle time");
 
+  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
+    new BoundedParameter("Transition Time", 5, .1, 180)
+    .setDescription("Sets the duration of interpolated transitions between snapshots")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter hasCustomTransitionTime =
+    new BooleanParameter("Custom Transition", false)
+    .setDescription("When enabled, this snapshot uses its own custom transition rather than the default transition time");
+
 
   public LXSnapshot(LX lx) {
     super(lx, "Snapshot");
@@ -528,6 +537,8 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     addParameter("autoCycleEligible", this.autoCycleEligible);
     addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
     addParameter("cycleTimeSecs", this.cycleTimeSecs);
+    addParameter("hasCustomTransitionTime", this.hasCustomTransitionTime);
+    addParameter("transitionTimeSecs", this.transitionTimeSecs);
   }
 
   @Override

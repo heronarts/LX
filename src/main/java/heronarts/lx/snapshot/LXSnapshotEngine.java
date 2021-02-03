@@ -193,6 +193,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   private LinearEnvelope transition = new LinearEnvelope(0, 1, new FunctionalParameter() {
     @Override
     public double getValue() {
+      if (inTransition.hasCustomTransitionTime.isOn()) {
+        return 1000 * inTransition.transitionTimeSecs.getValue();
+      }
       return 1000 * transitionTimeSecs.getValue();
     }
   });
