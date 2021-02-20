@@ -18,7 +18,9 @@
 
 package heronarts.lx.structure;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
@@ -106,6 +108,16 @@ public class ArcFixture extends LXBasicFixture {
   @Override
   protected String[] getModelKeys() {
     return new String[] { LXModel.Key.STRIP, LXModel.Key.ARC};
+  }
+
+  @Override
+  public Map<String, String> getMetaData() {
+    Map<String, String> metaData = new HashMap<String, String>();
+    metaData.put("numPoints", String.valueOf(this.numPoints.getValuei()));
+    metaData.put("radius", String.valueOf(this.radius.getValue()));
+    metaData.put("degrees", String.valueOf(this.degrees.getValue()));
+    metaData.put("positionMode", this.positionMode.getEnum().toString());
+    return metaData;
   }
 
 }

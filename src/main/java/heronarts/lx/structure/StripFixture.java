@@ -18,7 +18,9 @@
 
 package heronarts.lx.structure;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
@@ -62,5 +64,13 @@ public class StripFixture extends LXBasicFixture {
   @Override
   public String getModelKey() {
     return LXModel.Key.STRIP;
+  }
+
+  @Override
+  public Map<String, String> getMetaData() {
+    Map<String, String> metaData = new HashMap<String, String>();
+    metaData.put("numPoints", String.valueOf(this.numPoints.getValuei()));
+    metaData.put("spacing", String.valueOf(this.spacing.getValue()));
+    return metaData;
   }
 }

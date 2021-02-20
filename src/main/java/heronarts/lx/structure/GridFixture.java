@@ -19,7 +19,9 @@
 package heronarts.lx.structure;
 
 import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
@@ -474,6 +476,17 @@ public class GridFixture extends LXProtocolFixture {
   @Override
   protected void reindexOutputs() {
     regenerateOutputs();
+  }
+
+  @Override
+  public Map<String, String> getMetaData() {
+    Map<String, String> metaData = new HashMap<String, String>();
+    metaData.put("numRows", String.valueOf(this.numRows.getValuei()));
+    metaData.put("numColumns", String.valueOf(this.numColumns.getValuei()));
+    metaData.put("rowSpacing", String.valueOf(this.rowSpacing.getValue()));
+    metaData.put("columnSpacing", String.valueOf(this.columnSpacing.getValue()));
+    metaData.put("positionMode", this.positionMode.getEnum().toString());
+    return metaData;
   }
 
 }
