@@ -54,12 +54,7 @@ public abstract class LXOutput extends LXComponent {
     /**
      * Use gamma correction setting in this specific output
      */
-    DIRECT,
-
-    /**
-     * Use a custom gamma table
-     */
-    CUSTOM;
+    DIRECT
   }
 
   /**
@@ -109,6 +104,8 @@ public abstract class LXOutput extends LXComponent {
    */
   private byte[][] gammaLut = null;
 
+  private boolean hasCustomGamma = false;
+
   private byte[][] customGammaLut = null;
 
   private LXOutput gammaDelegate = null;
@@ -155,7 +152,7 @@ public abstract class LXOutput extends LXComponent {
 
   public void setGammaTable(byte[][] gammaLut) {
     this.customGammaLut = gammaLut;
-    this.gammaMode.setValue(GammaMode.CUSTOM);
+    this.hasCustomGamma = true;
   }
 
   public void setGammaDelegate(LXOutput gammaDelegate) {
@@ -209,9 +206,11 @@ public abstract class LXOutput extends LXComponent {
   }
 
   protected byte[] getGammaLut(double brightness) {
-    switch (this.gammaMode.getEnum()) {
-    case CUSTOM:
+    if (this.hasCustomGamma) {
       return this.customGammaLut[(int) Math.round(brightness * 255.f)];
+    }
+
+    switch (this.gammaMode.getEnum()) {
     case DIRECT:
       return this.gammaLut[(int) Math.round(brightness * 255.f)];
     default:
