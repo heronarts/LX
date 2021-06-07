@@ -383,6 +383,9 @@ public class LX {
     this.engine.midi.initialize();
 
     // Initialize plugins!
+    if ((this instanceof LXPlugin) && (flags.initialize != this)) {
+      ((LXPlugin)this).initialize(this);
+    }
     if (this.flags.initialize != null) {
       this.flags.initialize.initialize(this);
     }
