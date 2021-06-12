@@ -321,7 +321,7 @@ public class JsonFixture extends LXFixture {
     }
 
     private ParameterDefinition(String name, String label, String description, float defaultFloat) {
-      this(name, label, description, ParameterType.FLOAT, new BoundedParameter(name, defaultFloat, Float.MIN_VALUE, Float.MAX_VALUE));
+      this(name, label, description, ParameterType.FLOAT, new BoundedParameter(name, defaultFloat, -Float.MAX_VALUE, Float.MAX_VALUE));
     }
 
     private ParameterDefinition(String name, String label, String description, boolean defaultBoolean) {
