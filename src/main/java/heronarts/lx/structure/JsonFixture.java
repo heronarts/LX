@@ -737,6 +737,33 @@ public class JsonFixture extends LXFixture {
 
   // Super-trivial implementation of *very* basic math expressions
   private float _evaluateSimpleExpression(JsonObject obj, String key, String expression) {
+    // Parentheses pass
+    char[] chars = expression.toCharArray();
+    int openParen = -1;
+    for (int i = 0; i < chars.length; ++i) {
+      if (chars[i] == '(') {
+        openParen = i;
+      } else if (chars[i] == ')') {
+        if (openParen < 0) {
+          throw new IllegalArgumentException("Mismatched parentheses in expression: " + expression);
+        }
+
+        // Whenever we find a closed paren, evaluate just this one parenthetical.
+        // This will naturally work from in->out on nesting, since every closed-paren
+        // catches the open-paren that was closest to it.
+        String substitutedExpression =
+          // Expression to the left of parens (maybe empty)
+          expression.substring(0, openParen) +
+          // Evaluation of what's inside the parens
+          _evaluateSimpleExpression(obj, key, expression.substring(openParen+1, i)) +
+          // Expression to right of parens (maybe empty)
+          expression.substring(i + 1);
+
+        return _evaluateSimpleExpression(obj, key, substitutedExpression);
+      }
+    }
+
+    // Operator pass - these are prioritized so that * and / take precedence over + and -
     for (char operator : SIMPLE_EXPRESSION_OPERATORS) {
       int index = expression.indexOf(operator);
       if ((index > 0) && (index < expression.length() - 1)) {
