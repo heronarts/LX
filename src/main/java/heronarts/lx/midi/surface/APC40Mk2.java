@@ -647,6 +647,23 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendNoteOn(0, MASTER_FOCUS, masterFocused ? LED_ON : LED_OFF);
   }
 
+  private final LXParameterListener focusedChannelListener = (p) -> {
+    sendChannelFocus();
+    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+  };
+
+  private final LXParameterListener cueAListener = (p) -> {
+    sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
+  };
+
+  private final LXParameterListener cueBListener = (p) -> {
+    sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
+  };
+
+  private final LXParameterListener tempoListener = (p) -> {
+    sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
+  };
+
   private void register() {
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       registerChannel(channel);
@@ -671,28 +688,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     });
 
-    this.lx.engine.mixer.focusedChannel.addListener((p) -> {
-      sendChannelFocus();
-      this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
-    });
+    this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
 
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
 
-    this.lx.engine.mixer.cueA.addListener((p) -> {
-      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
-    });
-    sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
-
-    this.lx.engine.mixer.cueB.addListener((p) -> {
-      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
-    });
-    sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
-
-    this.lx.engine.tempo.enabled.addListener((p) -> {
-      sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
-    });
-    sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
-
+    this.lx.engine.mixer.cueA.addListener(this.cueAListener, true);
+    this.lx.engine.mixer.cueB.addListener(this.cueBListener, true);
+    this.lx.engine.tempo.enabled.addListener(this.tempoListener, true);
   }
 
   private void registerChannel(LXAbstractChannel channel) {
@@ -948,6 +950,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     // LXMidiEngine.error("APC40mk2 UNMAPPED: " + cc);
+  }
+
+  @Override
+  public void dispose() {
+    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
+    this.lx.engine.mixer.cueA.addListener(this.cueAListener, true);
+    this.lx.engine.mixer.cueB.addListener(this.cueBListener, true);
+    this.lx.engine.tempo.enabled.addListener(this.tempoListener, true);
   }
 
 }

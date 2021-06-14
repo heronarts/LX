@@ -256,6 +256,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       this.deviceUpdateThread.interrupt();
       // TODO(mcslee): join that thread before disposing inputs/outputs?
     }
+    for (LXMidiSurface surface : this.surfaces) {
+      surface.dispose();
+    }
     for (LXMidiInput input : this.inputs) {
       input.dispose();
     }

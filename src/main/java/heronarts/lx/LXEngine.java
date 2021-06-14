@@ -1069,6 +1069,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.audio.dispose();
     this.midi.dispose();
     this.osc.dispose();
+    this.tempo.dispose();
     synchronized (this.networkThread) {
       this.networkThread.interrupt();
     }
