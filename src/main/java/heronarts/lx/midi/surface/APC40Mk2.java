@@ -355,12 +355,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     public void dispose() {
-      if (channel instanceof LXChannel) {
-        ((LXChannel) channel).removeListener(this);
+      if (this.channel instanceof LXChannel) {
+        ((LXChannel) this.channel).removeListener(this);
       } else {
-        channel.removeListener(this);
+        this.channel.removeListener(this);
       }
-      this.channel.removeListener(this);
       this.channel.removeClipListener(this);
       this.channel.cueActive.removeListener(this);
       this.channel.enabled.removeListener(this);
