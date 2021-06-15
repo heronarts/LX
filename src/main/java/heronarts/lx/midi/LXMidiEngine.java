@@ -254,7 +254,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     for (LXMidiSurface surface : this.surfaces) {
       surface.dispose();
     }
-    this.surfaces.clear();
+    this.mutableSurfaces.clear();
   }
 
   @Override
@@ -266,11 +266,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     for (LXMidiInput input : this.inputs) {
       input.dispose();
     }
-    this.inputs.clear();
+    this.mutableInputs.clear();
     for (LXMidiOutput output : this.outputs) {
       output.dispose();
     }
-    this.outputs.clear();
+    this.mutableOutputs.clear();
     super.dispose();
   }
 
