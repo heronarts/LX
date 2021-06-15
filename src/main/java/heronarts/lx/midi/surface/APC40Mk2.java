@@ -955,9 +955,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   @Override
   public void dispose() {
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
-    this.lx.engine.mixer.cueA.addListener(this.cueAListener, true);
-    this.lx.engine.mixer.cueB.addListener(this.cueBListener, true);
-    this.lx.engine.tempo.enabled.addListener(this.tempoListener, true);
+    this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
+    this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
+    this.lx.engine.tempo.enabled.removeListener(this.tempoListener);
   }
 
 }

@@ -250,21 +250,27 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }.start();
   }
 
+  public void disposeSurfaces() {
+    for (LXMidiSurface surface : this.surfaces) {
+      surface.dispose();
+    }
+    this.surfaces.clear();
+  }
+
   @Override
   public void dispose() {
     synchronized (this.deviceUpdateThread) {
       this.deviceUpdateThread.interrupt();
       // TODO(mcslee): join that thread before disposing inputs/outputs?
     }
-    for (LXMidiSurface surface : this.surfaces) {
-      surface.dispose();
-    }
     for (LXMidiInput input : this.inputs) {
       input.dispose();
     }
+    this.inputs.clear();
     for (LXMidiOutput output : this.outputs) {
       output.dispose();
     }
+    this.outputs.clear();
     super.dispose();
   }
 

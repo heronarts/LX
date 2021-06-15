@@ -1065,6 +1065,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   @Override
   public void dispose() {
+    this.midi.disposeSurfaces();
     this.mixer.dispose();
     this.audio.dispose();
     this.midi.dispose();
