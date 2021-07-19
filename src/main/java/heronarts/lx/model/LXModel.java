@@ -416,7 +416,7 @@ public class LXModel implements LXSerializable {
       }
       tag = tag.trim();
       if (tag.isEmpty()) {
-        throw new IllegalArgumentException("May not pass empty string ag to LXModel");
+        throw new IllegalArgumentException("May not pass empty string tag to LXModel");
       }
       // Filter out any duplicates that got in somehow
       if (!_tags.contains(tag)) {
