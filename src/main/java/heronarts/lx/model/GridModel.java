@@ -167,7 +167,7 @@ public class GridModel extends LXModel {
    * @param metrics Metrics
    */
   public GridModel(Metrics metrics) {
-    super(metrics.toPoints(), LXModel.Key.GRID);
+    super(metrics.toPoints(), LXModel.Tag.GRID);
     this.metrics = metrics;
     this.width = metrics.width;
     this.height = metrics.height;

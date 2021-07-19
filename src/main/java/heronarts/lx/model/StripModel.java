@@ -65,7 +65,7 @@ public class StripModel extends LXModel {
   public final int length;
 
   public StripModel(Metrics metrics) {
-    super(makePoints(metrics), LXModel.Key.STRIP);
+    super(makePoints(metrics), LXModel.Tag.STRIP);
     this.metrics = metrics;
     this.length = metrics.length;
   }

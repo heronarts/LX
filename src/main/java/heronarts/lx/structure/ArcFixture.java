@@ -106,8 +106,8 @@ public class ArcFixture extends LXBasicFixture {
   }
 
   @Override
-  protected String[] getModelKeys() {
-    return new String[] { LXModel.Key.STRIP, LXModel.Key.ARC};
+  protected String[] getTags() {
+    return new String[] { LXModel.Tag.STRIP, LXModel.Tag.ARC};
   }
 
   @Override

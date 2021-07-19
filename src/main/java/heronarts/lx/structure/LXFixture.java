@@ -235,7 +235,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   @Override
   public String getPath() {
-    return getModelKeys()[0] + "/" + (this.index + 1);
+    return getTags()[0] + "/" + (this.index + 1);
   }
 
   void setIndex(int index) {
@@ -768,7 +768,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     // Okay, good to go, construct the model
-    LXModel model = constructModel(this.modelPoints, childModels, getModelKeys());
+    LXModel model = constructModel(this.modelPoints, childModels, getTags());
     model.transform.set(this.geometryMatrix);
     return this.model = model;
   }
@@ -778,11 +778,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    *
    * @param modelPoints Points in the model
    * @param childModels Child models
-   * @param modelKeys Model keys
+   * @param tags Model tags
    * @return LXModel instance, or concrete subclass
    */
-  protected LXModel constructModel(List<LXPoint> modelPoints, List<? extends LXModel> childModels, String[] modelKeys) {
-    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), modelKeys);
+  protected LXModel constructModel(List<LXPoint> modelPoints, List<? extends LXModel> childModels, String[] tags) {
+    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), tags);
   }
 
   /**
@@ -864,7 +864,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      * @param stride Stride size for selecting submodel points
      */
     public Submodel(int start, int n, int stride) {
-      this(start, n, stride, LXModel.Key.MODEL);
+      this(start, n, stride, LXModel.Tag.MODEL);
     }
 
     /**
@@ -910,22 +910,22 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   }
 
   /**
-   * Subclasses should implement, specifying the type key of this fixture in the model
+   * Subclasses should implement, specifying the type tag of this fixture in the model
    * hierarchy.
    *
-   * @return String key for the model type
+   * @return String tag for the model type
    */
-  protected String getModelKey() {
+  protected String getTag() {
     return "model";
   }
 
   /**
-   * Subclasses may override to return an array of multiple key types.
+   * Subclasses may override to return an array of multiple tag types.
    *
-   * @return List of model key types for this fixture
+   * @return List of model tag types for this fixture
    */
-  protected String[] getModelKeys() {
-    return new String[] { getModelKey() };
+  protected String[] getTags() {
+    return new String[] { getTag() };
   }
 
   protected final static Submodel[] NO_SUBMODELS = new Submodel[0];

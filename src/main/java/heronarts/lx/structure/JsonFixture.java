@@ -71,9 +71,11 @@ public class JsonFixture extends LXFixture {
   // Label
   private static final String KEY_LABEL = "label";
 
-  // Model keys
-  private static final String KEY_MODEL_KEY = "modelKey";
-  private static final String KEY_MODEL_KEYS = "modelKeys";
+  // Model tags
+  private static final String KEY_TAG = "tag";
+  private static final String KEY_TAGS = "tags";
+  private static final String KEY_MODEL_KEY = "modelKey";   // deprecated, backwards-compatible
+  private static final String KEY_MODEL_KEYS = "modelKeys"; // deprecated, backwards-compatible
 
   // Geometry
   private static final String KEY_X = "x";
@@ -173,7 +175,6 @@ public class JsonFixture extends LXFixture {
       return null;
     }
   }
-
 
   private enum TransportDefinition {
     UDP("udp"),
@@ -393,16 +394,16 @@ public class JsonFixture extends LXFixture {
     private final LXMatrix transform;
     private final List<OutputDefinition> outputs;
     private final Map<String, String> metaData;
-    private final String[] modelKeys;
+    private final String[] tags;
 
-    private StripDefinition(int numPoints, float pointSpacing, LXVector origin, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] modelKeys) {
+    private StripDefinition(int numPoints, float pointSpacing, LXVector origin, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] tags) {
       this.index = size;
       this.numPoints = numPoints;
       this.pointSpacing = pointSpacing;
       this.transform = transform;
       this.outputs = outputs;
       this.metaData = metaData;
-      this.modelKeys = modelKeys;
+      this.tags = tags;
       size += numPoints;
     }
   }
@@ -419,9 +420,9 @@ public class JsonFixture extends LXFixture {
     private final LXMatrix transform;
     private final List<OutputDefinition> outputs;
     private final Map<String, String> metaData;
-    private final String[] modelKeys;
+    private final String[] tags;
 
-    private ArcDefinition(int numPoints, float radius, float degrees, boolean isCenter, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] modelKeys) {
+    private ArcDefinition(int numPoints, float radius, float degrees, boolean isCenter, LXMatrix transform, List<OutputDefinition> outputs, Map<String, String> metaData, String[] tags) {
       this.index = size;
       this.numPoints = numPoints;
       this.radius = radius;
@@ -430,7 +431,7 @@ public class JsonFixture extends LXFixture {
       this.transform = transform;
       this.outputs = outputs;
       this.metaData = metaData;
-      this.modelKeys = modelKeys;
+      this.tags = tags;
       size += numPoints;
     }
   }
@@ -461,7 +462,7 @@ public class JsonFixture extends LXFixture {
 
   public final List<String> warnings = new CopyOnWriteArrayList<String>();
 
-  private String[] modelKeys = { LXModel.Key.MODEL };
+  private String[] tags = { LXModel.Tag.MODEL };
 
   private final List<LXVector> definedPoints = new ArrayList<LXVector>();
   private final List<StripDefinition> definedStrips = new ArrayList<StripDefinition>();
@@ -504,8 +505,8 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
-  protected String[] getModelKeys() {
-    return this.modelKeys;
+  protected String[] getTags() {
+    return this.tags;
   }
 
   @Override
@@ -608,7 +609,7 @@ public class JsonFixture extends LXFixture {
 
       if (loadParameters) {
         loadLabel(obj);
-        this.modelKeys = loadModelKeys(obj, true, true, LXModel.Key.MODEL);
+        this.tags = loadTags(obj, true, true, LXModel.Tag.MODEL);
         loadParameters(obj);
         this.parametersReloaded.bang();
       }
@@ -655,9 +656,15 @@ public class JsonFixture extends LXFixture {
     LX.error("Fixture " + this.fixtureType.getString() + ".lxf: " + warning);
   }
 
-  private void warnDuplicateKeys(JsonObject obj, String key1, String key2) {
-    if (obj.has(key1) && obj.has(key2)) {
-      addWarning("Should use only one of " + key1 + " or " + key2 + " - " + key1 + " will be ignored.");
+  private void warnDuplicateKeys(JsonObject obj, String ... keys) {
+    String found = null;
+    for (String key : keys) {
+      if (obj.has(key)) {
+        if (found != null) {
+          addWarning("Should use only one of " + found + " or " + key + " - " + found + " will be ignored.");
+        }
+        found = key;
+      }
     }
   }
 
@@ -924,52 +931,58 @@ public class JsonFixture extends LXFixture {
     this.label.setValue(validLabel);
   }
 
-  private String[] loadModelKeys(JsonObject obj, boolean required, boolean includeParent, String ... defaultKeys) {
-    warnDuplicateKeys(obj, KEY_MODEL_KEY, KEY_MODEL_KEYS);
-    List<String> validModelKeys = new ArrayList<String>();
+  private String[] loadTags(JsonObject obj, boolean required, boolean includeParent, String ... defaultTags) {
+    warnDuplicateKeys(obj, KEY_MODEL_KEY, KEY_MODEL_KEYS, KEY_TAG, KEY_TAGS);
+    String keyTags = obj.has(KEY_TAGS) ? KEY_TAGS : KEY_MODEL_KEYS;
+    String keyTag = obj.has(KEY_TAG) ? KEY_TAG : KEY_MODEL_KEY;
+    List<String> validTags = new ArrayList<String>();
 
-    if (obj.has(KEY_MODEL_KEYS)) {
-      JsonArray modelKeyArr = loadArray(obj, KEY_MODEL_KEYS);
-      for (JsonElement modelKeyElem : modelKeyArr) {
-        if (!modelKeyElem.isJsonPrimitive() || !modelKeyElem.getAsJsonPrimitive().isString()) {
-          addWarning(KEY_MODEL_KEYS + " may only contain strings");
+    if (obj.has(KEY_MODEL_KEY) || obj.has(KEY_MODEL_KEYS)) {
+      addWarning(KEY_MODEL_KEY + "/" + KEY_MODEL_KEYS + " are deprecated, please update to " + KEY_TAG + "/" + KEY_TAGS);
+    }
+
+    if (obj.has(keyTags)) {
+      JsonArray tagsArr = loadArray(obj, keyTags);
+      for (JsonElement tagElem : tagsArr) {
+        if (!tagElem.isJsonPrimitive() || !tagElem.getAsJsonPrimitive().isString()) {
+          addWarning(keyTags + " may only contain strings");
         } else {
-          String key = modelKeyElem.getAsString().trim();
-          if (key.isEmpty()) {
-            addWarning(KEY_MODEL_KEYS + " should not contain empty string values");
+          String tag = tagElem.getAsString().trim();
+          if (tag.isEmpty()) {
+            addWarning(keyTags + " should not contain empty string values");
           } else {
-            validModelKeys.add(key);
+            validTags.add(tag);
           }
         }
       }
-    } else if (obj.has(KEY_MODEL_KEY)) {
-      String key = loadString(obj, KEY_MODEL_KEY, false, KEY_MODEL_KEY + " should contain a single string value");
-      if (key != null) {
-        key = key.trim();
-        if (key.isEmpty()) {
-          addWarning(KEY_MODEL_KEY + " must contain a non-empty string value");
+    } else if (obj.has(keyTag)) {
+      String tag = loadString(obj, keyTag, false, keyTag + " should contain a single string value");
+      if (tag != null) {
+        tag = tag.trim();
+        if (tag.isEmpty()) {
+          addWarning(keyTag + " must contain a non-empty string value");
         } else {
-          validModelKeys.add(key);
+          validTags.add(tag);
         }
       }
     } else if (required) {
-      LX.warning("Fixture definition should specify one of " + KEY_MODEL_KEY + " or " + KEY_MODEL_KEYS);
+      LX.warning("Fixture definition must specify one of " + KEY_TAG + "/" + KEY_TAGS);
     }
 
     if (includeParent) {
-      for (String key : loadModelKeys(this.jsonParameterValues, false, false)) {
-        if (validModelKeys.contains(key)) {
-          LX.warning("Parent JSON fixture redundantly specifies model key: " + key);
+      for (String tag : loadTags(this.jsonParameterValues, false, false)) {
+        if (validTags.contains(tag)) {
+          LX.warning("Parent JSON fixture redundantly specifies tag: " + tag);
         } else {
-          validModelKeys.add(key);
+          validTags.add(tag);
         }
       }
     }
 
-    if (validModelKeys.isEmpty()) {
-      return defaultKeys;
+    if (validTags.isEmpty()) {
+      return defaultTags;
     }
-    return validModelKeys.toArray(new String[0]);
+    return validTags.toArray(new String[0]);
   }
 
   private void loadParameters(JsonObject obj) {
@@ -1123,7 +1136,7 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
-    String[] modelKeys = loadModelKeys(stripObj, false, false, LXModel.Key.STRIP);
+    String[] tags = loadTags(stripObj, false, false, LXModel.Tag.STRIP);
 
     float spacing = 1f;
     LXMatrix transform = new LXMatrix();
@@ -1169,7 +1182,7 @@ public class JsonFixture extends LXFixture {
     Map<String, String> stripMetaData = new HashMap<String, String>();
     loadMetaData(stripObj, stripMetaData);
 
-    this.definedStrips.add(new StripDefinition(numPoints, spacing, origin, transform, outputs, stripMetaData, modelKeys));
+    this.definedStrips.add(new StripDefinition(numPoints, spacing, origin, transform, outputs, stripMetaData, tags));
   }
 
   private void loadArcs(JsonObject obj) {
@@ -1201,7 +1214,7 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
-    String[] modelKeys = loadModelKeys(arcObj, false, false, LXModel.Key.STRIP, LXModel.Key.ARC);
+    String[] tags = loadTags(arcObj, false, false, LXModel.Tag.STRIP, LXModel.Tag.ARC);
 
     LXMatrix transform = new LXMatrix();
 
@@ -1272,7 +1285,7 @@ public class JsonFixture extends LXFixture {
     Map<String, String> arcMetaData = new HashMap<String, String>();
     loadMetaData(arcObj, arcMetaData);
 
-    this.definedArcs.add(new ArcDefinition(numPoints, radius, degrees, isCenter, transform, outputs, arcMetaData, modelKeys));
+    this.definedArcs.add(new ArcDefinition(numPoints, radius, degrees, isCenter, transform, outputs, arcMetaData, tags));
   }
 
   private void loadChildren(JsonObject obj) {
@@ -1697,10 +1710,10 @@ public class JsonFixture extends LXFixture {
   protected Submodel[] toSubmodels() {
     List<Submodel> submodels = new ArrayList<Submodel>();
     for (StripDefinition strip : this.definedStrips) {
-      submodels.add(new Submodel(strip.index, strip.numPoints, strip.metaData, strip.modelKeys));
+      submodels.add(new Submodel(strip.index, strip.numPoints, strip.metaData, strip.tags));
     }
     for (ArcDefinition arc : this.definedArcs) {
-      submodels.add(new Submodel(arc.index, arc.numPoints, arc.metaData, arc.modelKeys));
+      submodels.add(new Submodel(arc.index, arc.numPoints, arc.metaData, arc.tags));
     }
     return submodels.toArray(new Submodel[0]);
   }

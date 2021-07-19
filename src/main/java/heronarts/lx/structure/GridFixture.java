@@ -180,10 +180,10 @@ public class GridFixture extends LXProtocolFixture {
     int i = 0;
     Submodel[] submodels = new Submodel[numRows + numColumns];
     for (int r = 0; r < numRows; ++r) {
-      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, LXModel.Key.STRIP, LXModel.Key.ROW);
+      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, LXModel.Tag.STRIP, LXModel.Tag.ROW);
     }
     for (int c = 0; c < numColumns; ++c) {
-      submodels[i++] = new Submodel(c, numRows, numColumns, LXModel.Key.STRIP, LXModel.Key.COLUMN);
+      submodels[i++] = new Submodel(c, numRows, numColumns, LXModel.Tag.STRIP, LXModel.Tag.COLUMN);
     }
     return submodels;
   }
@@ -222,8 +222,8 @@ public class GridFixture extends LXProtocolFixture {
   }
 
   @Override
-  protected String getModelKey() {
-    return LXModel.Key.GRID;
+  protected String getTag() {
+    return LXModel.Tag.GRID;
   }
 
   private int[] getWiringIndexBuffer() {

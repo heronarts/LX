@@ -44,7 +44,7 @@ public class PointFixture extends LXBasicFixture {
   }
 
   @Override
-  public String getModelKey() {
-    return LXModel.Key.POINT;
+  public String getTag() {
+    return LXModel.Tag.POINT;
   }
 }

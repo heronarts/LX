@@ -52,9 +52,9 @@ public class LXModel implements LXSerializable {
 
   /**
    * A collection of helpful pre-defined constants for the most common model
-   * key types.
+   * tag types.
    */
-  public static class Key {
+  public static class Tag {
     public final static String MODEL = "model";
     public final static String GRID = "grid";
     public final static String ROW = "row";
@@ -114,11 +114,11 @@ public class LXModel implements LXSerializable {
   public final List<LXOutput> outputs;
 
   /**
-   * A list of String keys by which this model type can be identified. Keys are non-empty strings.
-   * These keys can be used with the {@link LXModel#children(String)} and {@link LXModel#sub(String)}
+   * A list of String tags by which this model type can be identified. Tags are non-empty strings.
+   * These tags can be used with the {@link LXModel#children(String)} and {@link LXModel#sub(String)}
    * methods to dynamically navigate this model's hierarchy.
    */
-  public final List<String> keys;
+  public final List<String> tags;
 
   private LXModel parent;
 
@@ -267,10 +267,10 @@ public class LXModel implements LXSerializable {
    * Constructs a model from a list of points
    *
    * @param points Points in the model
-   * @param keys Key identifiers for the model type
+   * @param tags Tag identifiers for the model type
    */
-  public LXModel(List<LXPoint> points, String ... keys) {
-    this(points, new LXModel[0], null, keys);
+  public LXModel(List<LXPoint> points, String ... tags) {
+    this(points, new LXModel[0], null, tags);
   }
 
   /**
@@ -278,10 +278,10 @@ public class LXModel implements LXSerializable {
    *
    * @param points Points in the model
    * @param metaData Metadata for the model
-   * @param keys Key identifiers for the model type
+   * @param tags Tag identifiers for the model type
    */
-  public LXModel(List<LXPoint> points, Map<String, String> metaData, String ... keys) {
-    this(points, new LXModel[0], metaData, keys);
+  public LXModel(List<LXPoint> points, Map<String, String> metaData, String ... tags) {
+    this(points, new LXModel[0], metaData, tags);
   }
 
   /**
@@ -293,7 +293,7 @@ public class LXModel implements LXSerializable {
    * @param children Pre-built direct child model array
    */
   public LXModel(List<LXPoint> points, LXModel[] children) {
-    this(points, children, LXModel.Key.MODEL);
+    this(points, children, LXModel.Tag.MODEL);
   }
 
   /**
@@ -303,10 +303,10 @@ public class LXModel implements LXSerializable {
    *
    * @param points Points in this model
    * @param children Pre-built direct submodel child array
-   * @param keys Key identifier for this model
+   * @param tags Tag identifier for this model
    */
-  public LXModel(List<LXPoint> points, LXModel[] children, String ... keys) {
-    this(points, children, null, keys);
+  public LXModel(List<LXPoint> points, LXModel[] children, String ... tags) {
+    this(points, children, null, tags);
   }
 
   /**
@@ -317,10 +317,10 @@ public class LXModel implements LXSerializable {
    * @param points Points in this model
    * @param children Pre-built direct submodel child array
    * @param metaData Metadata map
-   * @param keys Key identifier for this model
+   * @param tags Tag identifier for this model
    */
-  public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, String ... keys) {
-    this.keys = validateKeys(keys);
+  public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, String ... tags) {
+    this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
     addChildren(children);
     this.children = children.clone();
@@ -345,7 +345,7 @@ public class LXModel implements LXSerializable {
    * @param children Sub-models
    */
   public LXModel(LXModel[] children) {
-    this(children, LXModel.Key.MODEL);
+    this(children, LXModel.Tag.MODEL);
   }
 
   /**
@@ -355,10 +355,10 @@ public class LXModel implements LXSerializable {
    * added.
    *
    * @param children Pre-built sub-models
-   * @param keys Key identifier for this model
+   * @param tags Key identifier for this model
    */
-  private LXModel(LXModel[] children, String ... keys) {
-    this.keys = validateKeys(keys);
+  private LXModel(LXModel[] children, String ... tags) {
+    this.tags = validateTags(tags);
     List<LXPoint> _points = new ArrayList<LXPoint>();
     addChildren(children);
     for (LXModel child : children) {
@@ -383,7 +383,7 @@ public class LXModel implements LXSerializable {
     if (builder.model != null) {
       throw new IllegalStateException("LXModelBuilder may only be used once: " + builder);
     }
-    this.keys = validateKeys(builder.keys.toArray(new String[0]));
+    this.tags = validateTags(builder.tags.toArray(new String[0]));
     this.children = new LXModel[builder.children.size()];
     List<LXPoint> _points = new ArrayList<LXPoint>(builder.points);
     int ci = 0;
@@ -407,23 +407,23 @@ public class LXModel implements LXSerializable {
     builder.model = this;
   }
 
-  private static List<String> validateKeys(String[] keys) {
-    Objects.requireNonNull(keys, "May not construct LXModel with null keys");
-    List<String> _keys = new ArrayList<String>(keys.length);
-    for (String key : keys) {
-      if (key == null) {
-        throw new IllegalArgumentException("May not pass null key to LXModel");
+  private static List<String> validateTags(String[] tags) {
+    Objects.requireNonNull(tags, "May not construct LXModel with null tags");
+    List<String> _tags = new ArrayList<String>(tags.length);
+    for (String tag : tags) {
+      if (tag == null) {
+        throw new IllegalArgumentException("May not pass null tag to LXModel");
       }
-      key = key.trim();
-      if (key.isEmpty()) {
-        throw new IllegalArgumentException("May not pass empty string key to LXModel");
+      tag = tag.trim();
+      if (tag.isEmpty()) {
+        throw new IllegalArgumentException("May not pass empty string ag to LXModel");
       }
       // Filter out any duplicates that got in somehow
-      if (!_keys.contains(key)) {
-        _keys.add(key);
+      if (!_tags.contains(tag)) {
+        _tags.add(tag);
       }
     }
-    return Collections.unmodifiableList(_keys);
+    return Collections.unmodifiableList(_tags);
   }
 
   public LXModel getParent() {
@@ -433,16 +433,16 @@ public class LXModel implements LXSerializable {
   public String getPath() {
     LXModel parent = this.parent;
     if (parent == null) {
-      return "/" + this.keys.get(0);
+      return "/" + this.tags.get(0);
     }
     int index = 0;
-    for (LXModel child : parent.childDict.get(this.keys.get(0))) {
+    for (LXModel child : parent.childDict.get(this.tags.get(0))) {
       if (child == this) {
         break;
       }
       ++index;
     }
-    return parent.getPath() + "/" + this.keys.get(0) + "[" + index + "]";
+    return parent.getPath() + "/" + this.tags.get(0) + "[" + index + "]";
   }
 
   /**
@@ -468,10 +468,10 @@ public class LXModel implements LXSerializable {
 
   private void addSubmodels(LXModel[] submodels, Map<String, List<LXModel>> dict, boolean recurse) {
     for (LXModel submodel : submodels) {
-      for (String key : submodel.keys) {
-        List<LXModel> sub = dict.get(key);
+      for (String tag : submodel.tags) {
+        List<LXModel> sub = dict.get(tag);
         if (sub == null) {
-          dict.put(key, sub = new ArrayList<LXModel>());
+          dict.put(tag, sub = new ArrayList<LXModel>());
         }
         sub.add(submodel);
       }
@@ -484,26 +484,26 @@ public class LXModel implements LXSerializable {
   private static final List<LXModel> EMPTY_LIST = Collections.unmodifiableList(new ArrayList<LXModel>());
 
   /**
-   * Returns a list of all the direct child components by particular key. Children are only one-level
+   * Returns a list of all the direct child components by particular tag. Children are only one-level
    * deep.
    *
-   * @param key Child key type
+   * @param tag Child tag type
    * @return List of direct children by type
    */
-  public List<LXModel> children(String key) {
-    List<LXModel> children = this.childDict.get(key);
+  public List<LXModel> children(String tag) {
+    List<LXModel> children = this.childDict.get(tag);
     return (children == null) ? EMPTY_LIST : children;
   }
 
   /**
-   * Returns a list of all the submodel components by particular key, at any level of depth, may be
+   * Returns a list of all the submodel components by particular tag, at any level of depth, may be
    * many levels of descendants contained here
    *
-   * @param key Submodel key
+   * @param tag Submodel tag
    * @return List of all descendant submodels
    */
-  public List<LXModel> sub(String key) {
-    List<LXModel> sub = this.subDict.get(key);
+  public List<LXModel> sub(String tag) {
+    List<LXModel> sub = this.subDict.get(tag);
     return (sub == null) ? EMPTY_LIST : sub;
   }
 

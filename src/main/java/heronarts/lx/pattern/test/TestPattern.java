@@ -69,7 +69,7 @@ public class TestPattern extends LXPattern {
   .setDescription("Fixed LED point to turn on");
 
   public final StringParameter subkey =
-    new StringParameter("Subkey", LXModel.Key.STRIP)
+    new StringParameter("Subkey", LXModel.Tag.STRIP)
     .setDescription("Sets the type of model object to query for");
 
   private final Click increment = new Click(rate);

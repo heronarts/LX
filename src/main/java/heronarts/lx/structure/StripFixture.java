@@ -62,8 +62,8 @@ public class StripFixture extends LXBasicFixture {
   }
 
   @Override
-  public String getModelKey() {
-    return LXModel.Key.STRIP;
+  public String getTag() {
+    return LXModel.Tag.STRIP;
   }
 
   @Override
