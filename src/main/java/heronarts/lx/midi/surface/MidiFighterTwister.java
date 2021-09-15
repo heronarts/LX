@@ -221,11 +221,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     void registerChannel(LXBus channel) {
-      if (this.channel != null) {
-        if (this.channel instanceof LXChannel) {
-          ((LXChannel) this.channel).focusedPattern.removeListener(this);
-        }
-      }
+      unregisterChannel();
       this.channel = channel;
       if (channel instanceof LXChannel) {
         ((LXChannel) channel).focusedPattern.addListener(this);
@@ -263,20 +259,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
     void register(LXDeviceComponent device) {
       if (this.device != device) {
-        if (this.effect != null) {
-          this.effect.enabled.removeListener(this);
-        }
-        if (this.device != null) {
-          for (int i = 0; i < this.knobs.length; ++i) {
-            if (this.knobs[i] != null) {
-              this.knobs[i].removeListener(this);
-              this.knobs[i] = null;
-            }
-          }
-          this.device.controlSurfaceSemaphore.decrement();
-        }
-        this.pattern = null;
-        this.effect = null;
+        unRegister();
         this.device = device;
         if (this.device instanceof LXEffect) {
           this.effect = (LXEffect) this.device;
@@ -383,6 +366,38 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           p.reset();
         }
       }
+    }
+
+    void unRegister() {
+      if (this.effect != null) {
+        this.effect.enabled.removeListener(this);
+      }
+      if (this.device != null) {
+        for (int i = 0; i < this.knobs.length; ++i) {
+          if (this.knobs[i] != null) {
+            this.knobs[i].removeListener(this);
+            this.knobs[i] = null;
+          }
+        }
+        this.device.controlSurfaceSemaphore.decrement();
+      }
+      this.pattern = null;
+      this.effect = null;
+      this.device = null;
+    }
+
+    void unregisterChannel() {
+      if (this.channel != null) {
+        if (this.channel instanceof LXChannel) {
+          ((LXChannel) this.channel).focusedPattern.removeListener(this);
+        }
+      }
+      this.channel = null;
+    }
+
+    void dispose() {
+      unRegister();
+      unregisterChannel();
     }
   }
 
@@ -492,6 +507,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
         }
       }
+      if (this.isRegistered) {
+        unRegister();
+      }
     }
   }
 
@@ -551,6 +569,16 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
 
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+  }
+
+  private void unRegister() {
+    isRegistered = false;
+
+    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+      unregisterChannel(channel);
+    }
+
+    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
   }
 
   private void registerChannel(LXAbstractChannel channel) {
@@ -650,8 +678,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   @Override
   public void dispose() {
     if (this.isRegistered) {
-      this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
+      unRegister();
     }
+    this.deviceListener.dispose();
     super.dispose();
   }
 
