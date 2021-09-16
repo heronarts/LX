@@ -193,11 +193,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     void registerChannel(LXBus channel) {
-      if (this.channel != null) {
-        if (this.channel instanceof LXChannel) {
-          ((LXChannel) this.channel).focusedPattern.removeListener(this);
-        }
-      }
+      unregisterChannel();
       this.channel = channel;
       if (channel instanceof LXChannel) {
         ((LXChannel) channel).focusedPattern.addListener(this);
@@ -235,20 +231,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     void register(LXDeviceComponent device) {
       if (this.device != device) {
-        if (this.effect != null) {
-          this.effect.enabled.removeListener(this);
-        }
-        if (this.device != null) {
-          for (int i = 0; i < this.knobs.length; ++i) {
-            if (this.knobs[i] != null) {
-              this.knobs[i].removeListener(this);
-              this.knobs[i] = null;
-            }
-          }
-          this.device.controlSurfaceSemaphore.decrement();
-        }
-        this.pattern = null;
-        this.effect = null;
+        unregister();
         this.device = device;
         if (this.device instanceof LXEffect) {
           this.effect = (LXEffect) this.device;
@@ -326,6 +309,37 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
+    private void unregister() {
+      if (this.effect != null) {
+        this.effect.enabled.removeListener(this);
+      }
+      if (this.device != null) {
+        for (int i = 0; i < this.knobs.length; ++i) {
+          if (this.knobs[i] != null) {
+            this.knobs[i].removeListener(this);
+            this.knobs[i] = null;
+          }
+        }
+        this.device.controlSurfaceSemaphore.decrement();
+      }
+      this.pattern = null;
+      this.effect = null;
+      this.device = null;
+    }
+
+    private void unregisterChannel() {
+           if (this.channel != null) {
+             if (this.channel instanceof LXChannel) {
+               ((LXChannel) this.channel).focusedPattern.removeListener(this);
+             }
+           }
+           this.channel = null;
+         }
+
+    private void dispose() {
+      unregister();
+      unregisterChannel();
+    }
 
   }
 
@@ -490,6 +504,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         if (channel instanceof LXChannel) {
           ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
         }
+      }
+      if (this.isRegistered) {
+        unregister();
       }
     }
   }
@@ -664,7 +681,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
   };
 
+  private boolean isRegistered = false;
+
   private void register() {
+    isRegistered = true;
+
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       registerChannel(channel);
     }
@@ -695,6 +716,19 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     this.lx.engine.mixer.cueA.addListener(this.cueAListener, true);
     this.lx.engine.mixer.cueB.addListener(this.cueBListener, true);
     this.lx.engine.tempo.enabled.addListener(this.tempoListener, true);
+  }
+
+  private void unregister() {
+    isRegistered = false;
+
+    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+      unregisterChannel(channel);
+    }
+
+    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
+    this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
+    this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
+    this.lx.engine.tempo.enabled.removeListener(this.tempoListener);
   }
 
   private void registerChannel(LXAbstractChannel channel) {
@@ -954,10 +988,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   @Override
   public void dispose() {
-    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
-    this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
-    this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
-    this.lx.engine.tempo.enabled.removeListener(this.tempoListener);
+    if (this.isRegistered) {
+      unregister();
+    }
+    this.deviceListener.dispose();
+    super.dispose();
   }
 
 }
