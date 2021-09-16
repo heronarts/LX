@@ -18,12 +18,8 @@
 
 package heronarts.lx.midi.surface;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
-import heronarts.lx.clip.LXClip;
 import heronarts.lx.color.DiscreteColorParameter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
@@ -36,8 +32,6 @@ import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
-import heronarts.lx.mixer.LXGroup;
-import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.modulation.LXCompoundModulation;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -177,8 +171,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   public final DiscreteParameter currentBank = new DiscreteParameter("Bank", BANK1, BANK1, BANK4 + 1);
 
-  private final Map<LXAbstractChannel, ChannelListener> channelListeners = new HashMap<LXAbstractChannel, ChannelListener>();
-
   private final DeviceListener deviceListener = new DeviceListener();
 
   private class DeviceListener implements LXParameterListener {
@@ -197,7 +189,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    void resend() {
+    private void resend() {
       for (int i = 0; i < this.knobs.length; ++i) {
         LXListenableNormalizedParameter parameter = this.knobs[i];
         if (parameter != null) {
@@ -220,12 +212,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    void registerChannel(LXBus channel) {
-      if (this.channel != null) {
-        if (this.channel instanceof LXChannel) {
-          ((LXChannel) this.channel).focusedPattern.removeListener(this);
-        }
-      }
+    private void registerChannel(LXBus channel) {
+      unregisterChannel();
       this.channel = channel;
       if (channel instanceof LXChannel) {
         ((LXChannel) channel).focusedPattern.addListener(this);
@@ -237,7 +225,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    void registerPrevious() {
+    private void registerPrevious() {
       if (this.effect != null) {
         int effectIndex = this.effect.getIndex();
         if (effectIndex > 0) {
@@ -248,7 +236,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    void registerNext() {
+    private void registerNext() {
       if (this.effect != null) {
         int effectIndex = this.effect.getIndex();
         if (effectIndex < this.effect.getBus().effects.size() - 1) {
@@ -261,22 +249,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    void register(LXDeviceComponent device) {
+    private void register(LXDeviceComponent device) {
       if (this.device != device) {
-        if (this.effect != null) {
-          this.effect.enabled.removeListener(this);
-        }
-        if (this.device != null) {
-          for (int i = 0; i < this.knobs.length; ++i) {
-            if (this.knobs[i] != null) {
-              this.knobs[i].removeListener(this);
-              this.knobs[i] = null;
-            }
-          }
-          this.device.controlSurfaceSemaphore.decrement();
-        }
-        this.pattern = null;
-        this.effect = null;
+        unregister();
         this.device = device;
         if (this.device instanceof LXEffect) {
           this.effect = (LXEffect) this.device;
@@ -354,13 +329,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    void onKnob(int index, double normalized) {
+    private void onKnob(int index, double normalized) {
       if (this.knobs[index] != null) {
         this.knobs[index].setNormalized(normalized);
       }
     }
 
-    void onSwitch(int index, boolean isPressed) {
+    private void onSwitch(int index, boolean isPressed) {
       if (this.knobs[index] != null) {
         LXListenableNormalizedParameter p = this.knobs[index];
         if (p instanceof BooleanParameter) {
@@ -384,96 +359,42 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         }
       }
     }
+
+    private void unregister() {
+      if (this.effect != null) {
+        this.effect.enabled.removeListener(this);
+      }
+      if (this.device != null) {
+        for (int i = 0; i < this.knobs.length; ++i) {
+          if (this.knobs[i] != null) {
+            this.knobs[i].removeListener(this);
+            this.knobs[i] = null;
+          }
+        }
+        this.device.controlSurfaceSemaphore.decrement();
+      }
+      this.pattern = null;
+      this.effect = null;
+      this.device = null;
+    }
+
+    private void unregisterChannel() {
+      if (this.channel != null) {
+        if (this.channel instanceof LXChannel) {
+          ((LXChannel) this.channel).focusedPattern.removeListener(this);
+        }
+      }
+      this.channel = null;
+    }
+
+    private void dispose() {
+      unregister();
+      unregisterChannel();
+    }
   }
 
-  void updateBank(int bank) {
+  private void updateBank(int bank) {
     this.currentBank.setValue(bank);
-  }
-
-  private class ChannelListener implements LXChannel.Listener, LXBus.ClipListener, LXParameterListener {
-
-    private final LXAbstractChannel channel;
-
-    ChannelListener(LXAbstractChannel channel) {
-      this.channel = channel;
-      if (channel instanceof LXChannel) {
-        ((LXChannel) channel).addListener(this);
-      } else {
-        channel.addListener(this);
-      }
-      if (channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) channel;
-        c.focusedPattern.addListener(this);
-      }
-    }
-
-    public void dispose() {
-      if (channel instanceof LXChannel) {
-        ((LXChannel) channel).removeListener(this);
-      } else {
-        channel.removeListener(this);
-      }
-      if (this.channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) this.channel;
-        c.focusedPattern.removeListener(this);
-        c.controlSurfaceFocusLength.setValue(0);
-        c.controlSurfaceFocusIndex.setValue(0);
-      }
-    }
-
-    public void onParameterChanged(LXParameter p) {
-    }
-
-    @Override
-    public void effectAdded(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectRemoved(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectMoved(LXBus channel, LXEffect effect) {
-      // TODO(mcslee): update device focus??
-    }
-
-    @Override
-    public void indexChanged(LXAbstractChannel channel) {
-      // Handled by the engine channelMoved listener.
-    }
-
-    @Override
-    public void groupChanged(LXChannel channel, LXGroup group) {
-
-    }
-
-    @Override
-    public void patternAdded(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternRemoved(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternMoved(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
-    }
-
-    @Override
-    public void patternDidChange(LXChannel channel, LXPattern pattern) {
-    }
-
-    @Override
-    public void clipAdded(LXBus bus, LXClip clip) {
-    }
-
-    @Override
-    public void clipRemoved(LXBus bus, LXClip clip) {
-    }
   }
 
   public MidiFighterTwister(LX lx, LXMidiInput input, LXMidiOutput output) {
@@ -491,6 +412,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         if (channel instanceof LXChannel) {
           ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
         }
+      }
+      if (this.isRegistered) {
+        unregister();
       }
     }
   }
@@ -528,41 +452,15 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   private void register() {
     isRegistered = true;
 
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      registerChannel(channel);
-    }
-    this.lx.engine.mixer.addListener(new LXMixerEngine.Listener() {
-
-      @Override
-      public void channelRemoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-        unregisterChannel(channel);
-      }
-
-      @Override
-      public void channelMoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-      }
-
-      @Override
-      public void channelAdded(LXMixerEngine mixer, LXAbstractChannel channel) {
-        registerChannel(channel);
-      }
-    });
-
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
 
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
   }
 
-  private void registerChannel(LXAbstractChannel channel) {
-    ChannelListener channelListener = new ChannelListener(channel);
-    this.channelListeners.put(channel, channelListener);
-  }
+  private void unregister() {
+    isRegistered = false;
 
-  private void unregisterChannel(LXAbstractChannel channel) {
-    ChannelListener channelListener = this.channelListeners.remove(channel);
-    if (channelListener != null) {
-      channelListener.dispose();
-    }
+    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
   }
 
   @Override
@@ -650,8 +548,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   @Override
   public void dispose() {
     if (this.isRegistered) {
-      this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
+      unregister();
     }
+    this.deviceListener.dispose();
     super.dispose();
   }
 
