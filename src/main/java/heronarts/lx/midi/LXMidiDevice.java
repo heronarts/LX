@@ -106,6 +106,15 @@ public abstract class LXMidiDevice {
   }
 
   /**
+   * Get the unique name of the device.
+   *
+   * @return Unique device name
+   */
+  public String getNameUnique() {
+    return LXMidiEngine.getDeviceNameUnique(this.device.getDeviceInfo());
+  }
+
+  /**
    * Get a description of this device
    *
    * @return Device description
