@@ -275,14 +275,27 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   }
 
   /**
+   * Makes a JSON copy of the given swatch, but with the recall flag cleared
+   * and all IDs stripped, suitable for copying into a new swatch.
+   *
+   * @param swatch Swatch to serialize
+   * @return Serialized swatch
+   */
+  private JsonObject toJsonSwatch(LXSwatch swatch) {
+    JsonObject obj = LXSerializable.Utils.toObject(this.lx, swatch);
+    LXSerializable.Utils.stripIds(obj);
+    LXSerializable.Utils.stripParameter(obj, "recall");
+    return obj;
+  }
+
+  /**
    * Saves the current swatch to the list of saved swatches
    *
    * @return Saved swatch, added to swatch list
    */
   public LXSwatch saveSwatch() {
     LXSwatch saved = new LXSwatch(this, true);
-    JsonObject savedObj = LXSerializable.Utils.toObject(this.lx, this.swatch);
-    saved.load(this.lx, LXSerializable.Utils.stripIds(savedObj));
+    saved.load(this.lx, toJsonSwatch(this.swatch));
     saved.label.setValue("Swatch-" + (this.swatches.size() + 1));
     return addSwatch(saved, -1);
   }
@@ -353,7 +366,8 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       return false;
     }
 
-    JsonObject swatchObj = LXSerializable.Utils.stripIds(LXSerializable.Utils.toObject(swatch));
+    JsonObject swatchObj = toJsonSwatch(swatch);
+
     this.autoCycleCursor.setValue(swatch.getIndex());
     this.autoCycleProgress = 0;
     if (this.transitionEnabled.isOn()) {

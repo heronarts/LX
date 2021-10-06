@@ -1002,7 +1002,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final static String KEY_ID = "id";
   public final static String KEY_CLASS = "class";
 
-  private final static String KEY_PARAMETERS = "parameters";
+  public final static String KEY_PARAMETERS = "parameters";
   private final static String KEY_INTERNAL = "internal";
   private final static String KEY_CHILDREN = "children";
   public static final String KEY_COMPONENT_ID = "componentId";
