@@ -109,6 +109,14 @@ public class LXOscEngine extends LXComponent {
     .setDescription("UDP port on which the engine transmits OSC messages")
     .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
+  public final BooleanParameter logInput =
+    new BooleanParameter("Log OSC Input", false)
+    .setDescription("Whether to log all OSC input messages");
+
+  public final BooleanParameter logOutput =
+    new BooleanParameter("Log OSC Output", false)
+    .setDescription("Whether to log all OSC output messages");
+
   private final List<Receiver> receivers = new ArrayList<Receiver>();
 
   private Receiver engineReceiver;
@@ -127,6 +135,8 @@ public class LXOscEngine extends LXComponent {
     addParameter("transmitHost", this.transmitHost);
     addParameter("transmitPort", this.transmitPort);
     addParameter("transmitActive", this.transmitActive);
+    addParameter("logInput", this.logInput);
+    addParameter("logOutput", this.logOutput);
   }
 
   public LXOscEngine sendMessage(String path, int value) {
@@ -172,6 +182,10 @@ public class LXOscEngine extends LXComponent {
     @Override
     public void oscMessage(OscMessage message) {
       try {
+        if (logInput.isOn()) {
+          log("[RX] " + message.toString());
+        }
+
         String raw = message.getAddressPattern().getValue();
         String trim = raw.trim();
         if (trim != raw) {
@@ -284,6 +298,9 @@ public class LXOscEngine extends LXComponent {
 
     private void sendMessage(OscMessage message) {
       try {
+        if (logOutput.isOn()) {
+          log("[TX] " + message.toString());
+        }
         send(oscMessage);
       } catch (IOException iox) {
         error(iox, "Failed to transmit message: " + message.getAddressPattern().toString());
