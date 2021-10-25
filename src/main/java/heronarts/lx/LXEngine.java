@@ -32,6 +32,7 @@ import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutputGroup;
 import heronarts.lx.parameter.BooleanParameter;
@@ -1047,6 +1048,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    */
   public void getFrameNonThreadSafe(Frame frame) {
     frame.copyFrom(this.buffer.render);
+  }
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals("framerate")) {
+      this.osc.sendMessage("/lx/framerate", this.actualFrameRate);
+      return true;
+    }
+    return super.handleOscMessage(message, parts, index);
   }
 
   @Override

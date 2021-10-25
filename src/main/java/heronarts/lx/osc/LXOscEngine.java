@@ -136,6 +136,13 @@ public class LXOscEngine extends LXComponent {
     return this;
   }
 
+  public LXOscEngine sendMessage(String path, float value) {
+    if (this.engineTransmitter != null) {
+      this.engineTransmitter.sendMessage(path, value);
+    }
+    return this;
+  }
+
   public LXOscEngine sendParameter(LXParameter parameter) {
     if (this.engineTransmitter != null) {
       this.engineTransmitter.onParameterChanged(parameter);
@@ -264,6 +271,14 @@ public class LXOscEngine extends LXComponent {
       oscMessage.setAddressPattern(address);
       oscInt.setValue(value);
       oscMessage.add(oscInt);
+      sendMessage(oscMessage);
+    }
+
+    private void sendMessage(String address, float value) {
+      oscMessage.clearArguments();
+      oscMessage.setAddressPattern(address);
+      oscFloat.setValue(value);
+      oscMessage.add(oscFloat);
       sendMessage(oscMessage);
     }
 
