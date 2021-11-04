@@ -33,6 +33,7 @@ import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -579,6 +580,20 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     }
     this.listeners.add(listener);
     return this;
+  }
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals("swatches") && (parts.length > index + 1)) {
+      path = parts[index+1];
+      for (LXSwatch swatch : this.swatches) {
+        if (path.equals(swatch.getOscLabel())) {
+          return swatch.handleOscMessage(message, parts, index+2);
+        }
+      }
+    }
+    return super.handleOscMessage(message, parts, index);
   }
 
   @Override
