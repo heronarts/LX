@@ -50,10 +50,11 @@ Install Maven for your platform. Google is your friend.
 
 To compile, package, and make available via local Maven repository:
 ```
-mvn install -pl LX
+$ cd LX
+$ mvn install
 ```
 
-`mvn install -pl LX` creates the following artifacts:
+`mvn install` creates the following artifacts:
 
 in `LX/target`:
 1. fat jar with dependencies
@@ -61,3 +62,9 @@ in `LX/target`:
 1. source jar for distribution via maven repository publishing
 1. javadoc jar for distribution via maven repository publishing
 1. javadoc html files for publishing to web: `apidocs`
+
+To deploy the signed package to Sonatype Maven repository:
+```
+$ cd LX
+$ mvn deploy -Pdeploy
+```

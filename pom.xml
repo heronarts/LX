@@ -34,17 +34,6 @@
 		<url>http://github.com/heronarts/LX/tree/master</url>
 	</scm>
 
-	<distributionManagement>
-		<snapshotRepository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
-		</snapshotRepository>
-		<repository>
-			<id>ossrh</id>
-			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-		</repository>
-	</distributionManagement>
-
 	<properties>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
@@ -129,7 +118,7 @@
 				<version>${maven-javadoc-plugin.version}</version>
 				<configuration>
 					<source>8</source>
-					<bottom>LX library by Mark C. Slee. &copy; 2012-2020</bottom>
+					<bottom>LX library by Mark C. Slee. &copy; 2012-2021</bottom>
 					<stylesheetfile>build/stylesheet.css</stylesheetfile>
 					<doctitle>LX API Specification (${project.version})</doctitle>
 					<header>LX (${project.version})</header>
@@ -151,20 +140,39 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-gpg-plugin</artifactId>
-				<version>1.5</version>
-				<executions>
-					<execution>
-						<id>sign-artifacts</id>
-						<phase>verify</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
 		</plugins>
-	</build>
+    </build>
+    <profiles>
+        <profile>
+            <id>deploy</id>
+           	<distributionManagement>
+				<snapshotRepository>
+					<id>ossrh</id>
+					<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+				</snapshotRepository>
+				<repository>
+					<id>ossrh</id>
+					<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+				</repository>
+            </distributionManagement>
+            <build>
+	            <plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.5</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+	            </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
