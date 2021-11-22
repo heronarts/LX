@@ -18,33 +18,42 @@
 
 package heronarts.lx.structure;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.transform.LXMatrix;
+import heronarts.lx.transform.LXVector;
 
-public class PointFixture extends LXBasicFixture {
+public class PointListFixture extends LXBasicFixture {
 
-  public PointFixture(LX lx) {
-    super(lx, "Point");
+  private final List<LXVector> coordinates;
+
+  public PointListFixture(LX lx, List<LXVector> coordinates) {
+    super(lx, "Points");
+    this.coordinates = new ArrayList<LXVector>(coordinates);
   }
 
   @Override
   protected void computePointGeometry(LXMatrix transform, List<LXPoint> points) {
+    int i = 0;
     for (LXPoint p : points) {
+      LXVector c = this.coordinates.get(i++);
+      transform.translate(c.x, c.y, c.z);
       p.set(transform);
+      transform.translate(-c.x, -c.y, -c.z);
     }
   }
 
   @Override
   protected int size() {
-    return 1;
+    return this.coordinates.size();
   }
 
   @Override
   public String[] getDefaultTags() {
-    return new String[] { LXModel.Tag.POINT };
+    return new String[] { LXModel.Tag.POINTS };
   }
 }

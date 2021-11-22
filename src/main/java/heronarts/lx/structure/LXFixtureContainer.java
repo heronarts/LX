@@ -42,4 +42,13 @@ public interface LXFixtureContainer {
    */
   public void fixtureGeometryChanged(LXFixture fixture);
 
+  /**
+   * The output settings of this fixture has changed, the
+   * top level structure should re-consolidate all the
+   * outputs.
+   *
+   * @param fixture Fixture that has changed
+   */
+  public void fixtureOutputChanged(LXFixture fixture);
+
 }

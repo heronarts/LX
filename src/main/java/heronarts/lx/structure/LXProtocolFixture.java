@@ -22,6 +22,8 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 
 import heronarts.lx.LX;
+import heronarts.lx.output.ArtNetDatagram;
+import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCOutput;
@@ -39,11 +41,6 @@ import heronarts.lx.parameter.StringParameter;
  */
 public abstract class LXProtocolFixture extends LXFixture {
 
-  public enum Transport {
-    UDP,
-    TCP;
-  }
-
   public final EnumParameter<Protocol> protocol =
     new EnumParameter<Protocol>("Protocol", Protocol.NONE)
     .setDescription("Which lighting data protocol this fixture uses");
@@ -60,15 +57,20 @@ public abstract class LXProtocolFixture extends LXFixture {
     new StringParameter("Host", "127.0.0.1")
     .setDescription("Host/IP this fixture transmits to");
 
+  public final BooleanParameter unknownHost =
+    new BooleanParameter("Unknown Host", false);
+
   public final DiscreteParameter port =
     new DiscreteParameter("Port", OPCOutput.DEFAULT_PORT, 0, 65536)
     .setDescription("Port number this fixture transmits to");
 
-  public final BooleanParameter unknownHost =
-    new BooleanParameter("Unknown Host", false);
+  public final DiscreteParameter dmxChannel = (DiscreteParameter)
+    new DiscreteParameter("DMX Channel", 0, 512)
+    .setUnits(LXParameter.Units.INTEGER)
+    .setDescription("Starting DMX data channel offset for ArtNet/SACN/Kinet");
 
   public final DiscreteParameter artNetUniverse = (DiscreteParameter)
-    new DiscreteParameter("ArtNet Universe", 0, 0, 32768)
+    new DiscreteParameter("ArtNet Universe", 0, 0, ArtNetDatagram.MAX_UNIVERSE)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which ArtNet universe is used");
 
@@ -77,10 +79,15 @@ public abstract class LXProtocolFixture extends LXFixture {
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which OPC channel is used");
 
-  public final DiscreteParameter ddpDataOffset = (DiscreteParameter)
-    new DiscreteParameter("DDP Offset", 0, 0, 65536)
+  public final DiscreteParameter opcOffset = (DiscreteParameter)
+    new DiscreteParameter("OPC Offset", 0, 0, OPCOutput.MAX_DATA_LENGTH)
     .setUnits(LXParameter.Units.INTEGER)
-    .setDescription("The DDP data offset for this packet");
+    .setDescription("The OPC data offset for this fixture");
+
+  public final DiscreteParameter ddpDataOffset = (DiscreteParameter)
+    new DiscreteParameter("DDP Offset", 0, 0, DDPDatagram.MAX_DATA_LENGTH)
+    .setUnits(LXParameter.Units.INTEGER)
+    .setDescription("The DDP data offset for this fixture packet");
 
   public final DiscreteParameter kinetPort = (DiscreteParameter)
     new DiscreteParameter("KiNET Port", 1, 0, 256)
@@ -107,7 +114,31 @@ public abstract class LXProtocolFixture extends LXFixture {
     return null;
   }
 
-  protected int getProtocolChannel() {
+  protected Transport getProtocolTransport() {
+    switch (this.protocol.getEnum()) {
+    case OPC:
+      return this.transport.getEnum();
+    default:
+      return Transport.UDP;
+    }
+  }
+
+  protected int getProtocolPort() {
+    Protocol protocol = this.protocol.getEnum();
+    switch (protocol) {
+    case OPC:
+      return this.port.getValuei();
+    case ARTNET:
+    case SACN:
+    case DDP:
+    case KINET:
+    case NONE:
+    default:
+      return protocol.defaultPort;
+    }
+  }
+
+  protected int getProtocolUniverse() {
     switch (this.protocol.getEnum()) {
     case ARTNET:
     case SACN:
@@ -118,6 +149,23 @@ public abstract class LXProtocolFixture extends LXFixture {
       return this.kinetPort.getValuei();
     case OPC:
       return this.opcChannel.getValuei();
+    case NONE:
+    default:
+      return 0;
+    }
+  }
+
+  protected int getProtocolChannel() {
+    switch (this.protocol.getEnum()) {
+    case ARTNET:
+    case SACN:
+    case KINET:
+      return this.dmxChannel.getValuei();
+    case OPC:
+      return this.opcOffset.getValuei();
+    case DDP:
+      // DDP packets are always sent individually with data offset
+      return 0;
     case NONE:
     default:
       return 0;

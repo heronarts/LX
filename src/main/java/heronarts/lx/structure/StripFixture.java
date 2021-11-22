@@ -18,7 +18,6 @@
 
 package heronarts.lx.structure;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,8 +31,10 @@ import heronarts.lx.transform.LXMatrix;
 
 public class StripFixture extends LXBasicFixture {
 
+  public static final int MAX_POINTS = 4096;
+
   public final DiscreteParameter numPoints = (DiscreteParameter)
-    new DiscreteParameter("Num", 30, 1, 4097)
+    new DiscreteParameter("Num", 30, 1, MAX_POINTS + 1)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of points in the strip");
 
@@ -62,15 +63,13 @@ public class StripFixture extends LXBasicFixture {
   }
 
   @Override
-  public String getTag() {
-    return LXModel.Tag.STRIP;
+  public String[] getDefaultTags() {
+    return new String[] { LXModel.Tag.STRIP };
   }
 
   @Override
-  public Map<String, String> getMetaData() {
-    Map<String, String> metaData = new HashMap<String, String>();
+  public void addModelMetaData(Map<String, String> metaData) {
     metaData.put("numPoints", String.valueOf(this.numPoints.getValuei()));
     metaData.put("spacing", String.valueOf(this.spacing.getValue()));
-    return metaData;
   }
 }

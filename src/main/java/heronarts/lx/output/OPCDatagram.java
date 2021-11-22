@@ -32,27 +32,31 @@ public class OPCDatagram extends LXDatagram implements OPCOutput {
     this(lx, model, CHANNEL_BROADCAST);
   }
 
-  public OPCDatagram(LX lx, LXModel model, byte channel) {
-    this(lx, model.toIndexBuffer(), channel);
+  public OPCDatagram(LX lx, LXModel model, byte opcChannel) {
+    this(lx, model.toIndexBuffer(), opcChannel);
   }
 
   public OPCDatagram(LX lx, int[] indexBuffer) {
     this(lx, indexBuffer, CHANNEL_BROADCAST);
   }
 
-  public OPCDatagram(LX lx, int[] indexBuffer, byte channel) {
-    this(lx, indexBuffer, ByteOrder.RGB, channel);
+  public OPCDatagram(LX lx, int[] indexBuffer, byte opcChannel) {
+    this(lx, indexBuffer, ByteOrder.RGB, opcChannel);
   }
 
-  public OPCDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, byte channel) {
-    super(lx, indexBuffer, byteOrder, OPCSocket.HEADER_LEN + byteOrder.getNumBytes() * indexBuffer.length);
-    int dataLength = byteOrder.getNumBytes() * indexBuffer.length;
+  public OPCDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, byte opcChannel) {
+    this(lx, new IndexBuffer(indexBuffer, byteOrder), opcChannel);
+  }
+
+  public OPCDatagram(LX lx, IndexBuffer indexBuffer, byte opcChannel) {
+    super(lx, indexBuffer, OPCSocket.HEADER_LEN + indexBuffer.numChannels);
+    int dataLength = indexBuffer.numChannels;
     validateBufferSize();
 
-    this.buffer[OFFSET_CHANNEL] = channel;
+    this.buffer[OFFSET_CHANNEL] = opcChannel;
     this.buffer[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;
-    this.buffer[OFFSET_DATA_LEN_MSB] = (byte)(dataLength >>> 8);
-    this.buffer[OFFSET_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);
+    this.buffer[OFFSET_DATA_LEN_MSB] = (byte) (dataLength >>> 8);
+    this.buffer[OFFSET_DATA_LEN_LSB] = (byte) (dataLength & 0xFF);
   }
 
   @Override

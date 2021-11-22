@@ -428,6 +428,10 @@ public class LX {
     return pushError(new Error(exception, message));
   }
 
+  public LX pushError(String message) {
+    return pushError(new Error(message));
+  }
+
   public LX pushError(Error error) {
     this.errorStack.push(error);
     this.errorChanged.bang();

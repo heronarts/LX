@@ -44,20 +44,24 @@ public class OPCSocket extends LXSocket implements OPCOutput {
     this(lx, indexBuffer, ByteOrder.RGB, CHANNEL_BROADCAST);
   }
 
-  public OPCSocket(LX lx, int[] indexBuffer, byte channel) {
-    this(lx, indexBuffer, ByteOrder.RGB, channel);
+  public OPCSocket(LX lx, int[] indexBuffer, byte opcChannel) {
+    this(lx, indexBuffer, ByteOrder.RGB, opcChannel);
   }
 
   public OPCSocket(LX lx, int[] indexBuffer, ByteOrder byteOrder) {
     this(lx, indexBuffer, byteOrder, CHANNEL_BROADCAST);
   }
 
-  public OPCSocket(LX lx, int[] indexBuffer, ByteOrder byteOrder, byte channel) {
-    super(lx, indexBuffer, byteOrder);
+  public OPCSocket(LX lx, int[] indexBuffer, ByteOrder byteOrder, byte opcChannel) {
+    this(lx, new IndexBuffer(indexBuffer, byteOrder), opcChannel);
+  }
 
-    int dataLength = byteOrder.getNumBytes() * indexBuffer.length;
+  public OPCSocket(LX lx, IndexBuffer indexBuffer, byte opcChannel) {
+    super(lx, indexBuffer);
+
+    int dataLength = indexBuffer.numChannels;
     this.packetData = new byte[HEADER_LEN + dataLength];
-    this.packetData[OFFSET_CHANNEL] = channel;
+    this.packetData[OFFSET_CHANNEL] = opcChannel;
     this.packetData[OFFSET_COMMAND] = COMMAND_SET_PIXEL_COLORS;
     this.packetData[OFFSET_DATA_LEN_MSB] = (byte)(dataLength >>> 8);
     this.packetData[OFFSET_DATA_LEN_LSB] = (byte)(dataLength & 0xFF);

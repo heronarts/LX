@@ -91,12 +91,8 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
     new BooleanParameter("Error", false)
     .setDescription("Whether there have been errors sending to this datagram address");
 
-  protected LXDatagram(LX lx, int[] indexBuffer, int datagramSize) {
-    this(lx, indexBuffer, ByteOrder.RGB, datagramSize);
-  }
-
-  protected LXDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int datagramSize) {
-    super(lx, indexBuffer, byteOrder);
+  protected LXDatagram(LX lx, IndexBuffer indexBuffer, int datagramSize) {
+    super(lx, indexBuffer);
 
     this.buffer = new byte[datagramSize];
     for (int i = 0; i < datagramSize; ++i) {
@@ -108,9 +104,9 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
   protected void validateBufferSize() {
     // Validate that the data size on this thing is valid...
     int dataSize = this.buffer.length - getDataBufferOffset();
-    if (dataSize < this.indexBuffer.length * this.byteOrder.getNumBytes()) {
+    if (dataSize < this.indexBuffer.numChannels) {
       String cls = getClass().getSimpleName();
-      throw new BufferException(cls + " dataSize " + dataSize + " is insufficient for indexBuffer of length " + this.indexBuffer.length + " with ByteOrder " + this.byteOrder.toString());
+      throw new BufferException(cls + " dataSize " + dataSize + " is insufficient for indexBuffer with " + this.indexBuffer.numChannels + " channels");
     }
 
   }

@@ -18,6 +18,7 @@
 
 package heronarts.lx.model;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -61,6 +62,7 @@ public class LXModel implements LXSerializable {
     public final static String COLUMN = "column";
     public final static String STRIP = "strip";
     public final static String POINT = "point";
+    public final static String POINTS = "points";
     public final static String ARC = "arc";
   }
 
@@ -320,6 +322,10 @@ public class LXModel implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, String ... tags) {
+    this(points, children, metaData, java.util.Arrays.asList(tags));
+  }
+
+  public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String > tags) {
     this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
     addChildren(children);
@@ -355,9 +361,21 @@ public class LXModel implements LXSerializable {
    * added.
    *
    * @param children Pre-built sub-models
-   * @param tags Key identifier for this model
+   * @param tags Tag identifiers for this model
    */
   private LXModel(LXModel[] children, String ... tags) {
+    this(children, java.util.Arrays.asList(tags));
+  }
+
+  /**
+   * Constructs a model from the given submodels. The point list is generated from
+   * all points in the submodels, on the assumption that they have not yet been
+   * added.
+   *
+   * @param children Pre-built sub-models
+   * @param tags Tag identifiers for this model
+   */
+  private LXModel(LXModel[] children, List<String> tags) {
     this.tags = validateTags(tags);
     List<LXPoint> _points = new ArrayList<LXPoint>();
     addChildren(children);
@@ -383,7 +401,7 @@ public class LXModel implements LXSerializable {
     if (builder.model != null) {
       throw new IllegalStateException("LXModelBuilder may only be used once: " + builder);
     }
-    this.tags = validateTags(builder.tags.toArray(new String[0]));
+    this.tags = validateTags(builder.tags);
     this.children = new LXModel[builder.children.size()];
     List<LXPoint> _points = new ArrayList<LXPoint>(builder.points);
     int ci = 0;
@@ -407,9 +425,9 @@ public class LXModel implements LXSerializable {
     builder.model = this;
   }
 
-  private static List<String> validateTags(String[] tags) {
+  private static List<String> validateTags(List<String> tags) {
     Objects.requireNonNull(tags, "May not construct LXModel with null tags");
-    List<String> _tags = new ArrayList<String>(tags.length);
+    List<String> _tags = new ArrayList<String>(tags.size());
     for (String tag : tags) {
       if (tag == null) {
         throw new IllegalArgumentException("May not pass null tag to LXModel");
@@ -771,6 +789,39 @@ public class LXModel implements LXSerializable {
       child.dispose();
     }
     this.listeners.clear();
+  }
+
+  public void debugPrint(PrintStream out) {
+    _debugPrint(out, "+ ");
+  }
+
+  private void _debugPrint(PrintStream out, String indent) {
+    out.print(indent + "[");
+    boolean first = true;
+    for (String tag : this.tags) {
+      if (first) {
+        first = false;
+      } else {
+        out.print(", ");
+      }
+      out.print(tag);
+    }
+    out.print("] {");
+
+    first = true;
+    for (Map.Entry<String, String> pair : this.metaData.entrySet()) {
+      if (first) {
+        first = false;
+      } else {
+        out.print(", ");
+      }
+      out.print(pair.getKey() + ": " + pair.getValue());
+    }
+
+    out.println("}");
+    for (LXModel sub : this.children) {
+      sub._debugPrint(out, "  " + indent);
+    }
   }
 
 }

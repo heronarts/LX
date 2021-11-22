@@ -31,8 +31,9 @@ public class DDPDatagram extends LXDatagram {
 
   public final static int MAX_DATA_LENGTH = 65535;
 
+  public static final int DEFAULT_PORT = 4048;
+
   private static final int HEADER_LENGTH = 10;
-  private static final int DEFAULT_PORT = 4048;
 
   private static final int FLAGS_INDEX = 0;
   private static final int OFFSET_DATA_OFFSET = 4;
@@ -50,7 +51,11 @@ public class DDPDatagram extends LXDatagram {
   }
 
   public DDPDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int dataOffset) {
-    super(lx, indexBuffer, byteOrder, HEADER_LENGTH + indexBuffer.length * byteOrder.getNumBytes());
+    this(lx, new IndexBuffer(indexBuffer, byteOrder), dataOffset);
+  }
+
+  public DDPDatagram(LX lx, IndexBuffer indexBuffer, int dataOffset) {
+    super(lx, indexBuffer, HEADER_LENGTH + indexBuffer.numChannels);
     setPort(DEFAULT_PORT);
     validateBufferSize();
 
@@ -70,7 +75,7 @@ public class DDPDatagram extends LXDatagram {
     setDataOffset(dataOffset);
 
     // Data length
-    int dataLen = indexBuffer.length * byteOrder.getNumBytes();
+    int dataLen = indexBuffer.numChannels;
     this.buffer[8] = (byte) (0xff & (dataLen >> 8));
     this.buffer[9] = (byte) (0xff & dataLen);
   }

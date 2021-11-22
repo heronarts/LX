@@ -37,6 +37,7 @@ public interface OPCOutput extends InetOutput {
   public static final byte COMMAND_SET_PIXEL_COLORS = 0;
   public static final byte COMMAND_SYSTEM_EXCLUSIVE = (byte) 0xff;
 
+  public static final int MAX_DATA_LENGTH = 4096;
 
   public OPCOutput setChannel(byte opcChannel);
 }

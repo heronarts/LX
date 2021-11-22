@@ -43,7 +43,11 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   }
 
   protected LXSocket(LX lx, int[] indexBuffer, LXBufferOutput.ByteOrder byteOrder) {
-    super(lx, indexBuffer, byteOrder);
+    this(lx, new IndexBuffer(indexBuffer, byteOrder));
+  }
+
+  protected LXSocket(LX lx, IndexBuffer indexBuffer) {
+    super(lx, indexBuffer);
   }
 
   public LXSocket setConnectTimeout(int connectTimeoutMs) {
