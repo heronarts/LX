@@ -593,7 +593,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
 
     // The point ordering is changed, rebuild the model and outputs
-    regenerateModel();
+    regenerateModel(false);
     regenerateOutputs();
 
     return this;
@@ -828,7 +828,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.isLoading = true;
     reset(false);
     this.isLoading = false;
-    regenerateModel();
+    regenerateModel(true);
     return this;
   }
 
@@ -861,7 +861,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     return this;
   }
 
-  private void regenerateModel() {
+  private void regenerateModel(boolean fromLoad) {
     if (this.isImmutable) {
       throw new IllegalStateException( "Cannot regenerate LXStructure model when in immutable mode");
     }
@@ -895,7 +895,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.model = new LXModel(submodels).normalizePoints();
     this.modelListener.structureChanged(this.model);
 
-    if (this.modelFile != null) {
+    if ((this.modelFile != null) && !fromLoad) {
       this.modelName.setValue(this.modelFile.getName() + "*");
     }
   }
@@ -917,7 +917,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   @Override
   public void fixtureGenerationChanged(LXFixture fixture) {
-    regenerateModel();
+    regenerateModel(false);
     regenerateOutputs();
   }
 
@@ -1004,7 +1004,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
     // Unless a static model was set, we need to regenerate
     if (this.staticModel == null) {
-      regenerateModel();
+      regenerateModel(true);
     }
 
     // Regenerate any dynamic outputs
@@ -1063,6 +1063,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   private LXStructure importModel(File file, boolean fromSync) {
+    boolean wasLoading = this.isLoading;
+    this.isLoading = true;
     this.lx.setModelImportFlag(true);
     try (FileReader fr = new FileReader(file)) {
       reset(fromSync);
@@ -1076,6 +1078,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       LX.error(iox, "Exception loading model file: " + file);
     }
     this.lx.setModelImportFlag(false);
+    this.isLoading = wasLoading;
+    if (!wasLoading) {
+      regenerateModel(true);
+      regenerateOutputs();
+    }
     return this;
   }
 
