@@ -1219,13 +1219,13 @@ public class JsonFixture extends LXFixture {
     }
 
     float radius = loadFloat(arcObj, KEY_RADIUS, true, "Arc must specify radius");
-    if (radius < 0) {
+    if (radius <= 0) {
       addWarning("Arc must specify positive value for " + KEY_RADIUS);
       return null;
     }
 
     float degrees = loadFloat(arcObj, KEY_DEGREES, true, "Arc must specify number of degrees to cover");
-    if (degrees < 0) {
+    if (degrees <= 0) {
       addWarning("Arc must specify non-negative value for " + KEY_DEGREES);
       return null;
     }
