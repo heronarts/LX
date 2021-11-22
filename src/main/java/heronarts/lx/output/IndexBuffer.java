@@ -76,7 +76,7 @@ public class IndexBuffer {
     /**
      * Default RGB segment for a given set of indices at offset 0
      *
-     * @param indices
+     * @param indices Point indices for this segment
      */
     public Segment(int[] indices) {
       this(indices, LXBufferOutput.ByteOrder.RGB);
