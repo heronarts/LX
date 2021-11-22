@@ -1182,8 +1182,8 @@ public class JsonFixture extends LXFixture {
           addWarning("Strip direction vector should not be all 0");
         } else {
           spacing = direction.mag();
-          strip.yaw.setValue(Math.atan2(-direction.z, direction.x));
-          strip.roll.setValue(Math.asin(direction.y / spacing));
+          strip.yaw.setValue(Math.toDegrees(Math.atan2(-direction.z, direction.x)));
+          strip.roll.setValue(Math.toDegrees(Math.asin(direction.y / spacing)));
           strip.pitch.setValue(0);
         }
       }
@@ -1260,8 +1260,8 @@ public class JsonFixture extends LXFixture {
         if (normal.isZero()) {
           addWarning("Arc normal vector should not be all 0");
         } else {
-          arc.yaw.setValue(Math.atan2(normal.x, normal.z)); // yaw
-          arc.pitch.setValue(Math.asin(normal.y / normal.mag())); // pitch
+          arc.yaw.setValue(Math.toDegrees(Math.atan2(normal.x, normal.z))); // yaw
+          arc.pitch.setValue(Math.toDegrees(Math.asin(normal.y / normal.mag()))); // pitch
           arc.roll.setValue(Math.toRadians(loadFloat(arcObj, KEY_ROLL, true)));
         }
       }
@@ -1275,9 +1275,9 @@ public class JsonFixture extends LXFixture {
         if (direction.isZero()) {
           addWarning("Arc direction vector should not be all 0");
         } else {
-          arc.yaw.setValue(Math.atan2(-direction.z, direction.x)); // yaw
-          arc.pitch.setValue(Math.toRadians(loadFloat(arcObj, KEY_PITCH, true))); // pitch
-          arc.roll.setValue(Math.asin(direction.y / direction.mag())); // roll
+          arc.yaw.setValue(Math.toDegrees(Math.atan2(-direction.z, direction.x))); // yaw
+          arc.pitch.setValue(Math.toDegrees(Math.toRadians(loadFloat(arcObj, KEY_PITCH, true)))); // pitch
+          arc.roll.setValue(Math.toDegrees(Math.asin(direction.y / direction.mag()))); // roll
         }
       }
     }
