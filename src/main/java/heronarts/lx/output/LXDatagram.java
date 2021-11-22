@@ -191,10 +191,11 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
    * appropriate buffer.
    *
    * @param colors Color buffer
-   * @param glut Look-up table with gamma-adjusted brightness values
+   * @param glut Look-up table with gamma curves for 0-255 levels
+   * @param brightness Brightness level to send at
    */
   @Override
-  protected void onSend(int[] colors, byte[] glut) {
+  protected void onSend(int[] colors, byte[][] glut, double brightness) {
     // Check for error state on this datagram's output
     ErrorState datagramErrorState = getErrorState();
     if (datagramErrorState.sendAfter >= this.lx.engine.nowMillis) {
@@ -204,7 +205,7 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
     }
 
     // Update the data buffer and sequence number
-    updateDataBuffer(colors, glut);
+    updateDataBuffer(colors, glut, brightness);
     updateSequenceNumber();
 
     // Try sending the packet

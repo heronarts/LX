@@ -142,11 +142,11 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   }
 
   @Override
-  protected void onSend(int[] colors, byte[] glut) {
+  protected void onSend(int[] colors, byte[][] glut, double brightness) {
     connect();
     if (isConnected()) {
       try {
-        this.output.write(getPacketData(colors, glut));
+        this.output.write(getPacketData(colors, glut, brightness));
       } catch (IOException iox) {
         LXOutput.error(getClass().getSimpleName() + " exception writing to " + this.socket.getInetAddress() + ": " + iox.getLocalizedMessage());
         disconnect(iox);
@@ -154,8 +154,8 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
     }
   }
 
-  protected byte[] getPacketData(int[] colors, byte[] glut) {
-    updateDataBuffer(colors, glut);
+  protected byte[] getPacketData(int[] colors, byte[][] glut, double brightness) {
+    updateDataBuffer(colors, glut, brightness);
     return getDataBuffer();
   }
 

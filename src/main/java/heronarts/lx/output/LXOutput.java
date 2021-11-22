@@ -150,6 +150,11 @@ public abstract class LXOutput extends LXComponent {
     addParameter("gammaMode", this.gammaMode);
   }
 
+  /**
+   * Assigns a custom gamma table to the output
+   *
+   * @param gammaLut Two-dimensional array lookup of gamma curve for each precomputed brightness [0-255][0-255]
+   */
   public void setGammaTable(byte[][] gammaLut) {
     this.customGammaLut = gammaLut;
     this.hasCustomGamma = true;
@@ -157,6 +162,20 @@ public abstract class LXOutput extends LXComponent {
 
   public void setGammaDelegate(LXOutput gammaDelegate) {
     this.gammaDelegate = gammaDelegate;
+  }
+
+  private byte[][] getGammaLut() {
+    if (this.hasCustomGamma) {
+      return this.customGammaLut;
+    }
+    switch (this.gammaMode.getEnum()) {
+    case DIRECT:
+      return this.gammaLut;
+    default:
+    case INHERIT:
+      LXOutput gammaOutput = (this.gammaDelegate != null) ? this.gammaDelegate : (LXOutput) getParent();
+      return gammaOutput.getGammaLut();
+    }
   }
 
   public void setGroup(LXOutputGroup output) {
@@ -198,39 +217,21 @@ public abstract class LXOutput extends LXComponent {
       brightness *= this.brightness.getValue();
 
       // Send at the adjusted brightness level
-      onSend(colors, brightness);
+      onSend(colors, getGammaLut(), brightness);
 
       this.lastFrameMillis = now;
     }
     return this;
   }
 
-  protected byte[] getGammaLut(double brightness) {
-    if (this.hasCustomGamma) {
-      return this.customGammaLut[(int) Math.round(brightness * 255.f)];
-    }
-
-    switch (this.gammaMode.getEnum()) {
-    case DIRECT:
-      return this.gammaLut[(int) Math.round(brightness * 255.f)];
-    default:
-    case INHERIT:
-      LXOutput gammaOutput = (this.gammaDelegate != null) ? this.gammaDelegate : (LXOutput) getParent();
-      return gammaOutput.getGammaLut(brightness);
-    }
-  }
-
-  protected void onSend(int[] colors, double brightness) {
-    onSend(colors, getGammaLut(brightness));
-  }
-
   /**
    * Subclasses implement this to send the data.
    *
    * @param colors Color values
-   * @param glut Look-up table scaled to appropriate brightness and gamma
+   * @param glut Look-up table for 0-255 brightness curves
+   * @param brightness Master brightness value
    */
-  protected abstract void onSend(int[] colors, byte[] glut);
+  protected abstract void onSend(int[] colors, byte[][] glut, double brightness);
 
   private static final String OUTPUT_LOG_PREFIX = "[I/O] ";
 

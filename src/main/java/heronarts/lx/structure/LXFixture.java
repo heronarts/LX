@@ -130,7 +130,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     protected Segment(int start, int num, int stride, boolean reverse) {
-      this(start, num, stride, reverse, null);
+      this(start, num, stride, reverse, LXBufferOutput.ByteOrder.RGB);
     }
 
     protected Segment(int start, int num, int stride, boolean reverse, LXBufferOutput.ByteOrder byteOrder) {
@@ -148,10 +148,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     /**
-     * Constructs a segment with a fixed index buffer. Addresses in this index buffer are releative
+     * Constructs a segment with a fixed index buffer. Addresses in this index buffer are relative
      * to the fixture itself, not global.
      *
      * @param indexBuffer Relative-indexed buffer
+     * @param byteOrder Byte order for this segment
      */
     protected Segment(int[] indexBuffer, LXBufferOutput.ByteOrder byteOrder) {
       this.indexBuffer = indexBuffer;
@@ -178,6 +179,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     protected LXFixture getFixture() {
       return LXFixture.this;
     }
+
+    protected LXParameter getBrightness() {
+      return LXFixture.this.brightness;
+    }
+
   }
 
   /**

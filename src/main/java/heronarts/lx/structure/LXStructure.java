@@ -158,7 +158,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         }
 
         // Translate the fixture-scoped Segment into global address space
-        this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteOrder, startChannel));
+        this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteOrder, startChannel, segment.getBrightness()));
       }
 
       private IndexBuffer toIndexBuffer() {
@@ -336,7 +336,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
 
     @Override
-    protected void onSend(int[] colors, double brightness) {
+    protected void onSend(int[] colors, byte[][] glut, double brightness) {
       // Send all of the generated outputs
       for (LXOutput output : this.generatedOutputs) {
         output.setGammaDelegate(this);
@@ -349,14 +349,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
     }
 
-    @Override
-    protected void onSend(int[] colors, byte[] glut) {
-      throw new UnsupportedOperationException(
-        "LXStructure.Output does not use onSend(int[] colors, byte[] glut)");
-    }
-
-    private void onSendFixture(LXFixture fixture, int[] colors,
-      double brightness) {
+    private void onSendFixture(LXFixture fixture, int[] colors, double brightness) {
       // Check enabled state of fixture
       if (!fixture.deactivate.isOn() && fixture.enabled.isOn()) {
         // Adjust by fixture brightness

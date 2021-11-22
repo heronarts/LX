@@ -20,6 +20,9 @@ package heronarts.lx.output;
 
 import java.util.List;
 
+import heronarts.lx.parameter.FixedParameter;
+import heronarts.lx.parameter.LXParameter;
+
 /**
  * An IndexBuffer is a representation of all the pixels that an output packet will
  * send. It can be comprised of multiple segments at various offsets, each of which
@@ -66,6 +69,11 @@ public class IndexBuffer {
     public final int byteLength;
 
     /**
+     * Parameter to track the brightness level of this segment
+     */
+    public final LXParameter brightness;
+
+    /**
      * Default RGB segment for a given set of indices at offset 0
      *
      * @param indices
@@ -92,11 +100,24 @@ public class IndexBuffer {
      * @param channel Channel offset in the output packet
      */
     public Segment(int[] indices, LXBufferOutput.ByteOrder byteOrder, int channel) {
+      this(indices, byteOrder, channel, new FixedParameter(1));
+    }
+
+    /**
+     * Segment with specified indices, byte ordering and channel offset
+     *
+     * @param indices Array of indices into master color buffer
+     * @param byteOrder Byte ordering to send
+     * @param channel Channel offset in the output packet
+     * @param brightness Brightness of this segment
+     */
+    public Segment(int[] indices, LXBufferOutput.ByteOrder byteOrder, int channel, LXParameter brightness) {
       this.indices = indices;
       this.byteOrder = byteOrder;
       this.startChannel = channel;
       this.byteLength = this.indices.length * this.byteOrder.getNumBytes();
       this.endChannel = this.startChannel + this.byteLength - 1;
+      this.brightness = brightness;
     }
   }
 
@@ -138,6 +159,18 @@ public class IndexBuffer {
    */
   public IndexBuffer(int[] indices, LXBufferOutput.ByteOrder byteOrder, int channel) {
     this(new Segment(indices, byteOrder, channel));
+  }
+
+  /**
+   * Makes a single-semgent IndexBuffer with specified indices, byte ordering and channel offset
+   *
+   * @param indices Array of indices into master color buffer
+   * @param byteOrder Byte ordering to send
+   * @param channel Channel offset in the output packet
+   * @param brightness Brightness for the output packet
+   */
+  public IndexBuffer(int[] indices, LXBufferOutput.ByteOrder byteOrder, int channel, LXParameter brightness) {
+    this(new Segment(indices, byteOrder, channel, brightness));
   }
 
   /**

@@ -103,13 +103,18 @@ public abstract class LXBufferOutput extends LXOutput {
    * be a simple call to this method with the right parameters.
    *
    * @param colors Array of color values
-   * @param glut Look-up table of gamma-corrected brightness values
+   * @param glut Look-up tables for gamma-corrected brightness values by brightness
+   * @param brightness Master brightness
    * @return this
    */
-  protected LXBufferOutput updateDataBuffer(int[] colors, byte[] glut) {
+  protected LXBufferOutput updateDataBuffer(int[] colors, byte[][] glut, double brightness) {
     byte[] buffer = getDataBuffer();
 
     for (IndexBuffer.Segment segment : this.indexBuffer.segments) {
+      // Determine the appropriate gamma curve for segment brightness
+      byte[] gamma = glut[(int) Math.round(255. * brightness * segment.brightness.getValue())];
+
+      // Determine data offsets and byte size
       int offset = getDataBufferOffset() + segment.startChannel;
       ByteOrder byteOrder = segment.byteOrder;
       int[] byteOffset = byteOrder.getByteOffset();
@@ -123,7 +128,7 @@ public abstract class LXBufferOutput extends LXOutput {
             int g = ((color >> 8) & 0xff);
             int b = (color & 0xff);
             int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
-            buffer[offset] = glut[w];
+            buffer[offset] = gamma[w];
             offset += numBytes;
           }
         } else {
@@ -137,10 +142,10 @@ public abstract class LXBufferOutput extends LXOutput {
             r -= w;
             g -= w;
             b -= w;
-            buffer[offset + byteOffset[0]] = glut[r];
-            buffer[offset + byteOffset[1]] = glut[g];
-            buffer[offset + byteOffset[2]] = glut[b];
-            buffer[offset + byteOffset[3]] = glut[w];
+            buffer[offset + byteOffset[0]] = gamma[r];
+            buffer[offset + byteOffset[1]] = gamma[g];
+            buffer[offset + byteOffset[2]] = gamma[b];
+            buffer[offset + byteOffset[3]] = gamma[w];
             offset += numBytes;
           }
         }
@@ -148,9 +153,9 @@ public abstract class LXBufferOutput extends LXOutput {
         for (int i = 0; i < segment.indices.length; ++i) {
           int index = segment.indices[i];
           int color = (index >= 0) ? colors[index] : 0;
-          buffer[offset + byteOffset[0]] = glut[((color >> 16) & 0xff)]; // R
-          buffer[offset + byteOffset[1]] = glut[((color >> 8) & 0xff)]; // G
-          buffer[offset + byteOffset[2]] = glut[(color & 0xff)]; // B
+          buffer[offset + byteOffset[0]] = gamma[((color >> 16) & 0xff)]; // R
+          buffer[offset + byteOffset[1]] = gamma[((color >> 8) & 0xff)]; // G
+          buffer[offset + byteOffset[2]] = gamma[(color & 0xff)]; // B
           offset += numBytes;
         }
       }
