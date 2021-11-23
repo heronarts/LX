@@ -118,7 +118,7 @@
 				<version>${maven-javadoc-plugin.version}</version>
 				<configuration>
 					<source>8</source>
-					<bottom>LX library by Mark C. Slee. &copy; 2012-2021</bottom>
+					<bottom>LX library by Mark C. Slee. &#169; 2012-2021</bottom>
 					<stylesheetfile>build/stylesheet.css</stylesheetfile>
 					<doctitle>LX API Specification (${project.version})</doctitle>
 					<header>LX (${project.version})</header>

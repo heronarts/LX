@@ -63,7 +63,7 @@ in `LX/target`:
 1. javadoc jar for distribution via maven repository publishing
 1. javadoc html files for publishing to web: `apidocs`
 
-To deploy the signed package to Sonatype Maven repository:
+To deploy the signed package to Sonatype Maven repository (requires admin GPG keys and access):
 ```
 $ cd LX
 $ mvn deploy -Pdeploy
