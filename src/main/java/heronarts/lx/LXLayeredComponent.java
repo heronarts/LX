@@ -80,6 +80,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       this.buffer = buffer;
       this.colors = buffer.getArray();
     }
+    addArray("layer", this.layers);
   }
 
   protected LXBuffer getBuffer() {
@@ -147,6 +148,13 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     }
   }
 
+  private void _reindexLayers() {
+    int i = 0;
+    for (LXLayer layer : this.layers) {
+      layer.setIndex(i++);
+    }
+  }
+
   protected final LXLayer addLayer(LXLayer layer) {
     if (layer == null) {
       throw new IllegalArgumentException("Cannot add null layer");
@@ -157,12 +165,14 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     }
     layer.setParent(this);
     this.mutableLayers.add(layer);
+    _reindexLayers();
     return layer;
   }
 
   protected final LXLayer removeLayer(LXLayer layer) {
     checkForReentrancy(layer, "remove");
     this.mutableLayers.remove(layer);
+    _reindexLayers();
     layer.dispose();
     return layer;
   }

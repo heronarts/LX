@@ -33,6 +33,7 @@ import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -127,6 +128,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     new EnumParameter<TransitionMode>("Transition Mode", TransitionMode.RGB)
     .setDescription("Which color blending mode transitions should use.");
 
+  private LXSwatch inTransition = null;
   private LXSwatch transitionFrom = null;
   private LXSwatch transitionTo = null;
   private JsonObject transitionTarget = null;
@@ -174,6 +176,10 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     super.onParameterChanged(p);
     if (p == this.autoCycleEnabled) {
       this.autoCycleProgress = 0;
+    } else if (p == this.transitionEnabled) {
+      if (!this.transitionEnabled.isOn()) {
+        finishTransition();
+      }
     } else if (p == this.triggerSwatchCycle) {
       if (this.triggerSwatchCycle.isOn()) {
         this.triggerSwatchCycle.setValue(false);
@@ -270,14 +276,27 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   }
 
   /**
+   * Makes a JSON copy of the given swatch, but with the recall flag cleared
+   * and all IDs stripped, suitable for copying into a new swatch.
+   *
+   * @param swatch Swatch to serialize
+   * @return Serialized swatch
+   */
+  private JsonObject toJsonSwatch(LXSwatch swatch) {
+    JsonObject obj = LXSerializable.Utils.toObject(this.lx, swatch);
+    LXSerializable.Utils.stripIds(obj);
+    LXSerializable.Utils.stripParameter(obj, "recall");
+    return obj;
+  }
+
+  /**
    * Saves the current swatch to the list of saved swatches
    *
    * @return Saved swatch, added to swatch list
    */
   public LXSwatch saveSwatch() {
     LXSwatch saved = new LXSwatch(this, true);
-    JsonObject savedObj = LXSerializable.Utils.toObject(this.lx, this.swatch);
-    saved.load(this.lx, LXSerializable.Utils.stripIds(savedObj));
+    saved.load(this.lx, toJsonSwatch(this.swatch));
     saved.label.setValue("Swatch-" + (this.swatches.size() + 1));
     return addSwatch(saved, -1);
   }
@@ -336,11 +355,24 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     return this;
   }
 
-  public LXPalette setSwatch(LXSwatch swatch) {
-    JsonObject swatchObj = LXSerializable.Utils.stripIds(LXSerializable.Utils.toObject(swatch));
+  /**
+   * Set the palette to a saved swatch
+   *
+   * @param swatch Swatch to transition to
+   * @return Whether swatch was set, or false if already in transition
+   */
+  public boolean setSwatch(LXSwatch swatch) {
+    if (this.inTransition == swatch) {
+      finishTransition();
+      return false;
+    }
+
+    JsonObject swatchObj = toJsonSwatch(swatch);
+
     this.autoCycleCursor.setValue(swatch.getIndex());
     this.autoCycleProgress = 0;
     if (this.transitionEnabled.isOn()) {
+      this.inTransition = swatch;
       this.transitionFrom = LXSwatch.staticCopy(this.swatch);
       this.transitionTo = LXSwatch.staticCopy(swatch);
       this.transitionTarget = swatchObj;
@@ -365,7 +397,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     } else {
       this.swatch.load(this.lx, swatchObj);
     }
-    return this;
+    return true;
   }
 
   public double getTransitionProgress() {
@@ -377,10 +409,13 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   }
 
   private void finishTransition() {
-    this.swatch.load(this.lx, this.transitionTarget);
-    this.transitionFrom = null;
-    this.transitionTo = null;
-    this.transitionTarget = null;
+    if (this.transitionTarget != null) {
+      this.swatch.load(this.lx, this.transitionTarget);
+      this.inTransition = null;
+      this.transitionFrom = null;
+      this.transitionTo = null;
+      this.transitionTarget = null;
+    }
   }
 
   public void loop(double deltaMs) {
@@ -545,6 +580,20 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     }
     this.listeners.add(listener);
     return this;
+  }
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals("swatches") && (parts.length > index + 1)) {
+      path = parts[index+1];
+      for (LXSwatch swatch : this.swatches) {
+        if (path.equals(swatch.getOscLabel())) {
+          return swatch.handleOscMessage(message, parts, index+2);
+        }
+      }
+    }
+    return super.handleOscMessage(message, parts, index);
   }
 
   @Override

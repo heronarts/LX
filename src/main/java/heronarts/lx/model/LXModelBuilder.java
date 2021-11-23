@@ -39,26 +39,26 @@ public class LXModelBuilder {
 
   final List<LXModelBuilder> children = new ArrayList<LXModelBuilder>();
 
-  List<String> keys = new ArrayList<String>();
+  List<String> tags = new ArrayList<String>();
 
   LXModel model = null;
 
   final List<LXOutput> outputs = new ArrayList<LXOutput>();
 
   /**
-   * Construct a model-builder with the default model key
+   * Construct a model-builder with the default model tag
    */
   public LXModelBuilder() {
-    this(LXModel.Key.MODEL);
+    this(LXModel.Tag.MODEL);
   }
 
   /**
-   * Construct a model-builder with the given set of model keys
+   * Construct a model-builder with the given set of model tags
    *
-   * @param keys Model type keys
+   * @param tags Model type tags
    */
-  public LXModelBuilder(String ... keys) {
-    setKeys(keys);
+  public LXModelBuilder(String ... tags) {
+    setTags(tags);
   }
 
   private void checkEditState() {
@@ -68,28 +68,28 @@ public class LXModelBuilder {
   }
 
   /**
-   * Add a key to the list of this model's key types
+   * Add a tag to the list of this model's tag types
    *
-   * @param key Model key type
+   * @param tag Model tag type
    * @return this
    */
-  public LXModelBuilder addKey(String key) {
+  public LXModelBuilder addTag(String tag) {
     checkEditState();
-    this.keys.add(key);
+    this.tags.add(tag);
     return this;
   }
 
   /**
-   * Set the model type keys array
+   * Set the model type tags array
    *
-   * @param keys Key types
+   * @param tags Tag types
    * @return this
    */
-  public LXModelBuilder setKeys(String ... keys) {
+  public LXModelBuilder setTags(String ... tags) {
     checkEditState();
-    this.keys.clear();
-    for (String key : keys) {
-      this.keys.add(key);
+    this.tags.clear();
+    for (String tag : tags) {
+      this.tags.add(tag);
     }
     return this;
   }

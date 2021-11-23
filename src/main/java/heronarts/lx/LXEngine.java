@@ -32,6 +32,7 @@ import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutputGroup;
 import heronarts.lx.parameter.BooleanParameter;
@@ -83,7 +84,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final Output output;
 
   public final BoundedParameter framesPerSecond = (BoundedParameter)
-    new BoundedParameter("FPS", 60, 0, 300)
+    new BoundedParameter("FPS", 60, 1, 300)
     .setMappable(false)
     .setDescription("Number of frames per second the engine runs at");
 
@@ -490,6 +491,21 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   /**
+   * Utility method to shut down and join the engine thread, only when specifically in P3 mode.
+   *
+   * @return this
+   */
+  public LXEngine onP3DidDispose() {
+    if (!this.lx.flags.isP3LX) {
+      throw new IllegalStateException("LXEngine.onP3DidDispose() should only be called from Processing dispose() method");
+    }
+    if (isThreaded()) {
+      _setThreaded(false);
+    }
+    return this;
+  }
+
+  /**
    * Utility method for P3LX mode, invoked from the Processing draw thread to give
    * a chance to change the threading state before the draw loop.
    */
@@ -856,6 +872,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Add fixture identification very last
     int identifyColor = LXColor.hsb(0, 100, Math.abs(-100 + (runStart / 8000000) % 200));
     for (LXFixture fixture : this.lx.structure.fixtures) {
+      if (fixture.deactivate.isOn()) {
+        // Does not apply to deactivated fixtures
+        continue;
+      }
       if (fixture.mute.isOn()) {
         int start = fixture.getIndexBufferOffset();
         int end = start + fixture.totalSize();
@@ -1031,6 +1051,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals("framerate")) {
+      this.osc.sendMessage("/lx/framerate", this.actualFrameRate);
+      return true;
+    }
+    return super.handleOscMessage(message, parts, index);
+  }
+
+  @Override
   public void load(LX lx, JsonObject obj) {
     // TODO(mcslee): remove loop tasks that other things might have added? maybe
     // need to separate application-owned loop tasks from project-specific ones...
@@ -1046,10 +1076,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   @Override
   public void dispose() {
+    this.midi.disposeSurfaces();
     this.mixer.dispose();
     this.audio.dispose();
     this.midi.dispose();
     this.osc.dispose();
+    this.tempo.dispose();
     synchronized (this.networkThread) {
       this.networkThread.interrupt();
     }

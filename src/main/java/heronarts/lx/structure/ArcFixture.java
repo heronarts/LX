@@ -19,6 +19,7 @@
 package heronarts.lx.structure;
 
 import java.util.List;
+import java.util.Map;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
@@ -30,6 +31,8 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 
 public class ArcFixture extends LXBasicFixture {
+
+  public static final int MAX_POINTS = 4096;
 
   public enum PositionMode {
     ORIGIN("Origin"),
@@ -48,7 +51,7 @@ public class ArcFixture extends LXBasicFixture {
   }
 
   public final DiscreteParameter numPoints = (DiscreteParameter)
-    new DiscreteParameter("Num", 10, 1, 4097)
+    new DiscreteParameter("Num", 10, 1, MAX_POINTS + 1)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of points in the arc");
 
@@ -104,8 +107,16 @@ public class ArcFixture extends LXBasicFixture {
   }
 
   @Override
-  protected String[] getModelKeys() {
-    return new String[] { LXModel.Key.STRIP, LXModel.Key.ARC};
+  protected String[] getDefaultTags() {
+    return new String[] { LXModel.Tag.STRIP, LXModel.Tag.ARC};
+  }
+
+  @Override
+  public void addModelMetaData(Map<String, String> metaData) {
+    metaData.put("numPoints", String.valueOf(this.numPoints.getValuei()));
+    metaData.put("radius", String.valueOf(this.radius.getValue()));
+    metaData.put("degrees", String.valueOf(this.degrees.getValue()));
+    metaData.put("positionMode", this.positionMode.getEnum().toString());
   }
 
 }

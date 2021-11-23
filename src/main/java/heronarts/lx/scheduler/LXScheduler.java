@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -295,6 +296,10 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
   }
 
   public void openSchedule(File file) {
+    openSchedule(file, false);
+  }
+
+  public void openSchedule(File file, boolean openInitialProject) {
     for (Listener listener : this.listeners) {
       listener.scheduleChanged(file, Listener.Change.TRY);
     }
@@ -313,6 +318,48 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
       this.lx.pushError(x, "Exception in openSchedule: " + x.getLocalizedMessage());
     }
     this.lx.setScheduleLoadingFlag(false);
+
+    if (openInitialProject) {
+      openInitialProject();
+    }
+  }
+
+  private void openInitialProject() {
+    List<LXScheduledProject> validEntries = new ArrayList<LXScheduledProject>();
+    for (LXScheduledProject entry : this.entries) {
+      if (entry.enabled.isOn() && (entry.projectFile.getString() != null)) {
+        validEntries.add(entry);
+      }
+    }
+
+    if (validEntries.isEmpty()) {
+      LX.error("Schedule file has no enabled entries, no project to load: " + file);
+      return;
+    }
+
+    Collections.sort(validEntries, new Comparator<LXScheduledProject>() {
+      @Override
+      public int compare(LXScheduledProject p1, LXScheduledProject p2) {
+        int t1 = 60*60*p1.hours.getValuei() + 60*p1.minutes.getValuei() + p1.seconds.getValuei();
+        int t2 = 60*60*p2.hours.getValuei() + 60*p2.minutes.getValuei() + p2.seconds.getValuei();
+        return (t1 < t2) ? -1 : ((t1 > t2) ? 1 : 0);
+      }
+    });
+
+    LXScheduledProject candidate = validEntries.get(validEntries.size() - 1);
+    long nowSecsOfDay = getTimeSecsOfDay(System.currentTimeMillis());
+    for (LXScheduledProject project : validEntries) {
+      int projectSecsOfDay =
+        60 * 60 * project.hours.getValuei() +
+        60 * project.minutes.getValuei() +
+        project.seconds.getValuei();
+      if (nowSecsOfDay < projectSecsOfDay) {
+        break;
+      }
+      candidate = project;
+    }
+    this.lx.openProject(this.lx.getMediaFile(LX.Media.PROJECTS, candidate.projectFile.getString(), false));
+
   }
 
   private void closeSchedule() {
@@ -336,7 +383,7 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
-      LX.log("Setlist saved successfully to " + file.toString());
+      LX.log("Schedule saved successfully to " + file.toString());
       setSchedule(file, Listener.Change.SAVE);
     } catch (IOException iox) {
       LX.error(iox, "Could not write schedule to output file: " + file.toString());

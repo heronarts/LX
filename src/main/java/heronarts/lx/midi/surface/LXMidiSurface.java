@@ -166,4 +166,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
   public void aftertouchReceived(MidiAftertouch aftertouch) {
   }
 
+  public void dispose() {
+  }
+
 }

@@ -237,11 +237,6 @@ public class PlanesPattern extends LXPattern {
     }
 
     @Override
-    public String getPath() {
-      return "plane/" + (this.index + 1);
-    }
-
-    @Override
     public void run(double deltaMs) {
       if (!this.active.isOn()) {
         return;
@@ -305,7 +300,6 @@ public class PlanesPattern extends LXPattern {
       mutablePlanes.add(plane);
     }
     this.planes = Collections.unmodifiableList(mutablePlanes);
-    addArray("plane", this.planes);
   }
 
   private static final String KEY_PLANES = "planes";

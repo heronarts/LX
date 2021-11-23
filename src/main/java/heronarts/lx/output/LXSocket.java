@@ -43,7 +43,11 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   }
 
   protected LXSocket(LX lx, int[] indexBuffer, LXBufferOutput.ByteOrder byteOrder) {
-    super(lx, indexBuffer, byteOrder);
+    this(lx, new IndexBuffer(indexBuffer, byteOrder));
+  }
+
+  protected LXSocket(LX lx, IndexBuffer indexBuffer) {
+    super(lx, indexBuffer);
   }
 
   public LXSocket setConnectTimeout(int connectTimeoutMs) {
@@ -55,6 +59,8 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   public LXSocket setAddress(InetAddress address) {
     if (this.address != address) {
       disconnect(null);
+      this.failureCount = 0;
+      this.sendAfter = 0;
       this.address = address;
     }
     return this;
@@ -70,6 +76,8 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
     if (this.port != port) {
       disconnect(null);
       this.port = port;
+      this.failureCount = 0;
+      this.sendAfter = 0;
     }
     return this;
   }
@@ -79,6 +87,12 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
     return this.port;
   }
 
+  // Number of failures sending to this datagram address
+  private int failureCount = 0;
+
+  // Timestamp to re-try sending to this address again after
+  private long sendAfter = 0;
+
   public boolean isConnected() {
     return (this.socket != null);
   }
@@ -86,15 +100,35 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   private void connect() {
     if (this.socket == null) {
       if (this.address != null && this.port != NO_PORT) {
+        if (this.sendAfter >= this.lx.engine.nowMillis) {
+          return;
+        }
+
         InetSocketAddress inetAddress = new InetSocketAddress(this.address, this.port);
         try {
           this.socket = new Socket();
           this.socket.connect(inetAddress, this.connectTimeoutMs);
           this.socket.setTcpNoDelay(true);
           this.output = this.socket.getOutputStream();
+          if (this.failureCount > 0) {
+            LXOutput.log(getClass().getSimpleName() + " recovered connectivity to " + inetAddress);
+          }
+          this.failureCount = 0;
+          this.sendAfter = 0;
           didConnect();
         } catch (IOException iox) {
-          LXOutput.error(getClass().getSimpleName() + " failed connecting to " + inetAddress + ": " + iox.getLocalizedMessage());
+          if (this.failureCount == 0) {
+            LXOutput.error(getClass().getSimpleName() + " failed connecting to " + inetAddress + ", will initiate backoff after 3 consecutive failures: " + iox.getLocalizedMessage());
+          }
+          ++this.failureCount;
+          if (this.failureCount >= 3) {
+            int pow = Math.min(5, this.failureCount - 3);
+            long waitFor = (long) (50 * Math.pow(2, pow));
+            LXOutput.error(getClass().getSimpleName() + " retrying " + inetAddress
+                + " in " + waitFor + "ms" + " (" + this.failureCount
+                + " consecutive failures)");
+            this.sendAfter = this.lx.engine.nowMillis + waitFor;
+          }
           disconnect(iox);
         }
       }
@@ -138,11 +172,11 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   }
 
   @Override
-  protected void onSend(int[] colors, byte[] glut) {
+  protected void onSend(int[] colors, byte[][] glut, double brightness) {
     connect();
     if (isConnected()) {
       try {
-        this.output.write(getPacketData(colors, glut));
+        this.output.write(getPacketData(colors, glut, brightness));
       } catch (IOException iox) {
         LXOutput.error(getClass().getSimpleName() + " exception writing to " + this.socket.getInetAddress() + ": " + iox.getLocalizedMessage());
         disconnect(iox);
@@ -150,8 +184,8 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
     }
   }
 
-  protected byte[] getPacketData(int[] colors, byte[] glut) {
-    updateDataBuffer(colors, glut);
+  protected byte[] getPacketData(int[] colors, byte[][] glut, double brightness) {
+    updateDataBuffer(colors, glut, brightness);
     return getDataBuffer();
   }
 

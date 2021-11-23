@@ -31,6 +31,15 @@ import java.util.Map;
 
 public abstract class LXDatagram extends LXBufferOutput implements LXOutput.InetOutput {
 
+  public static class BufferException extends IllegalStateException {
+
+    private static final long serialVersionUID = 1L;
+
+    public BufferException(String message) {
+      super(message);
+    }
+  }
+
   private static DatagramSocket defaultSocket = null;
 
   private static DatagramSocket getDefaultSocket() throws SocketException {
@@ -82,12 +91,8 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
     new BooleanParameter("Error", false)
     .setDescription("Whether there have been errors sending to this datagram address");
 
-  protected LXDatagram(LX lx, int[] indexBuffer, int datagramSize) {
-    this(lx, indexBuffer, ByteOrder.RGB, datagramSize);
-  }
-
-  protected LXDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int datagramSize) {
-    super(lx, indexBuffer, byteOrder);
+  protected LXDatagram(LX lx, IndexBuffer indexBuffer, int datagramSize) {
+    super(lx, indexBuffer);
 
     this.buffer = new byte[datagramSize];
     for (int i = 0; i < datagramSize; ++i) {
@@ -99,9 +104,9 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
   protected void validateBufferSize() {
     // Validate that the data size on this thing is valid...
     int dataSize = this.buffer.length - getDataBufferOffset();
-    if (dataSize < this.indexBuffer.length * this.byteOrder.getNumBytes()) {
+    if (dataSize < this.indexBuffer.numChannels) {
       String cls = getClass().getSimpleName();
-      throw new IllegalArgumentException(cls + " dataSize " + dataSize + " is insufficient for indexBuffer of length " + this.indexBuffer.length + " with ByteOrder " + this.byteOrder.toString());
+      throw new BufferException(cls + " dataSize " + dataSize + " is insufficient for indexBuffer with " + this.indexBuffer.numChannels + " channels");
     }
 
   }
@@ -178,16 +183,19 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
    */
   protected void updateSequenceNumber() {}
 
+  private static int slowPacketCount = 0;
+
   /**
    * Invoked by engine to send this packet when new color data is available. The
    * LXDatagram should update the packet object accordingly to contain the
    * appropriate buffer.
    *
    * @param colors Color buffer
-   * @param glut Look-up table with gamma-adjusted brightness values
+   * @param glut Look-up table with gamma curves for 0-255 levels
+   * @param brightness Brightness level to send at
    */
   @Override
-  protected void onSend(int[] colors, byte[] glut) {
+  protected void onSend(int[] colors, byte[][] glut, double brightness) {
     // Check for error state on this datagram's output
     ErrorState datagramErrorState = getErrorState();
     if (datagramErrorState.sendAfter >= this.lx.engine.nowMillis) {
@@ -197,13 +205,25 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
     }
 
     // Update the data buffer and sequence number
-    updateDataBuffer(colors, glut);
+    updateDataBuffer(colors, glut, brightness);
     updateSequenceNumber();
 
     // Try sending the packet
     try {
       DatagramSocket socket = (this.socket != null) ? this.socket : LXDatagram.getDefaultSocket();
+      long latencyCheck = System.currentTimeMillis();
       socket.send(this.packet);
+      if (System.currentTimeMillis() - latencyCheck > 0) {
+        // Check that this call is not blocking, this issue has been noticed by multiple users on
+        // Raspberry Pi systems, when any address being sent is unresolvable, the output queues fill causing
+        // major framerate degradation to all addresses. A solution for this (thanks to Brian Bulkowski)
+        // is documented on the wiki. On Mac/Windows this never seems to be an issue, streaming as many
+        // UDP packets as you like to an unresolvable address will not choke the system.
+        if (++slowPacketCount == 10) {
+          LX.error("Calls to DatagramSocket.send() appear to be unexpectedly blocking, you may be sending to an unresolvable address or network queues may be saturated. If you are on Linux/Raspberry-Pi, consult the following URL for guidance on relevant kernel parameters: https://github.com/heronarts/LXStudio/wiki/Raspberry-Pi");
+        }
+      }
+
       if (datagramErrorState.failureCount > 0) {
         LXOutput.log("Recovered connectivity to " + datagramErrorState.destination);
       }

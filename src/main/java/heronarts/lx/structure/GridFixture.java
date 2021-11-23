@@ -18,21 +18,13 @@
 
 package heronarts.lx.structure;
 
-import java.net.InetAddress;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
-import heronarts.lx.output.ArtNetDatagram;
-import heronarts.lx.output.DDPDatagram;
-import heronarts.lx.output.KinetDatagram;
-import heronarts.lx.output.LXOutput;
-import heronarts.lx.output.OPCDatagram;
-import heronarts.lx.output.OPCOutput;
-import heronarts.lx.output.OPCSocket;
-import heronarts.lx.output.StreamingACNDatagram;
-import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -40,7 +32,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
-public class GridFixture extends LXProtocolFixture {
+public class GridFixture extends LXBasicFixture {
 
   public enum PositionMode {
     CORNER("Corner"),
@@ -117,54 +109,14 @@ public class GridFixture extends LXProtocolFixture {
     new EnumParameter<Wiring>("Wiring", Wiring.ROWS_L2R_B2T)
     .setDescription("How the strips in the grid are sequentially wired");
 
-  public final BooleanParameter splitPacket =
-    new BooleanParameter("Split Packet", false)
-    .setDescription("Whether to break a large grid into multiple datagrams on separate channels");
-
-  public final DiscreteParameter pointsPerPacket =
-    new DiscreteParameter("Points Per Packet", 170, 1, 21845)
-    .setDescription("Number of LED points per packet");
-
   public GridFixture(LX lx) {
     super(lx, "Grid");
-    addParameter("host", this.host);
-    addParameter("port", this.port);
-    addOutputParameter("protocol", this.protocol);
-    addOutputParameter("artNetUniverse", this.artNetUniverse);
-    addOutputParameter("opcChannel", this.opcChannel);
-    addOutputParameter("ddpDataOffset", this.ddpDataOffset);
-    addOutputParameter("kinetPort", this.kinetPort);
-
     addMetricsParameter("numRows", this.numRows);
     addMetricsParameter("numColumns", this.numColumns);
     addGeometryParameter("rowSpacing", this.rowSpacing);
     addGeometryParameter("columnSpacing", this.columnSpacing);
     addGeometryParameter("positionMode", this.positionMode);
     addOutputParameter("wiring", this.wiring);
-    addOutputParameter("splitPacket", this.splitPacket);
-    addOutputParameter("pointsPerPacket", this.pointsPerPacket);
-  }
-
-  @Override
-  public void onParameterChanged(LXParameter p) {
-    super.onParameterChanged(p);
-    if (p == this.host) {
-      InetAddress address = resolveHostAddress();
-      for (LXOutput output : this.outputs) {
-        if (output instanceof LXOutput.InetOutput) {
-          output.enabled.setValue(address != null);
-          if (address != null) {
-            ((LXOutput.InetOutput) output).setAddress(address);
-          }
-        }
-      }
-    } else if (p == this.port) {
-      for (LXOutput output : this.outputs) {
-        if (output instanceof OPCOutput) {
-          ((OPCOutput) output).setPort(this.port.getValuei());
-        }
-      }
-    }
   }
 
   @Override
@@ -174,12 +126,23 @@ public class GridFixture extends LXProtocolFixture {
 
     int i = 0;
     Submodel[] submodels = new Submodel[numRows + numColumns];
+
+    Map<String, String> metaData = new HashMap<String, String>();
+    metaData.put("numPoints", String.valueOf(numColumns));
+    metaData.put("spacing", String.valueOf(this.columnSpacing.getValue()));
     for (int r = 0; r < numRows; ++r) {
-      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, LXModel.Key.STRIP, LXModel.Key.ROW);
+      metaData.put("rowIndex", String.valueOf(r));
+      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, metaData, LXModel.Tag.STRIP, LXModel.Tag.ROW);
     }
+
+    metaData.clear();
+    metaData.put("numPoints", String.valueOf(numRows));
+    metaData.put("spacing", String.valueOf(this.rowSpacing.getValue()));
     for (int c = 0; c < numColumns; ++c) {
-      submodels[i++] = new Submodel(c, numRows, numColumns, LXModel.Key.STRIP, LXModel.Key.COLUMN);
+      metaData.put("columnIndex", String.valueOf(c));
+      submodels[i++] = new Submodel(c, numRows, numColumns, metaData, LXModel.Tag.STRIP, LXModel.Tag.COLUMN);
     }
+
     return submodels;
   }
 
@@ -217,8 +180,8 @@ public class GridFixture extends LXProtocolFixture {
   }
 
   @Override
-  protected String getModelKey() {
-    return LXModel.Key.GRID;
+  protected String[] getDefaultTags() {
+    return new String[] { LXModel.Tag.GRID };
   }
 
   private int[] getWiringIndexBuffer() {
@@ -235,56 +198,56 @@ public class GridFixture extends LXProtocolFixture {
     case COLUMNS_B2T_L2R:
       for (int x = 0; x < numColumns; ++x) {
         for (int y = 0; y < numRows; ++y) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
     case COLUMNS_B2T_R2L:
       for (int x = 0; x < numColumns; ++x) {
         for (int y = numRows - 1; y >= 0; --y) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
     case COLUMNS_T2B_L2R:
       for (int x = numColumns - 1; x >= 0; --x) {
         for (int y = 0; y < numRows; ++y) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
     case COLUMNS_T2B_R2L:
       for (int x = numColumns - 1; x >= 0; --x) {
         for (int y = numRows - 1; y >= 0; --y) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
     case ROWS_L2R_B2T:
       for (int y = 0; y < numRows; ++y) {
         for (int x = 0; x < numColumns; ++x) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
     case ROWS_L2R_T2B:
       for (int y = numRows - 1; y >= 0; --y) {
         for (int x = 0; x < numColumns; ++x) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
     case ROWS_R2L_B2T:
       for (int y = 0; y < numRows; ++y) {
         for (int x = numColumns - 1; x >= 0; --x) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
     case ROWS_R2L_T2B:
       for (int y = numRows - 1; y >= 0; --y) {
         for (int x = numColumns - 1; x >= 0; --x) {
-          indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+          indexBuffer[i++] = x + y * numColumns;
         }
       }
       break;
@@ -292,11 +255,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int y = 0; y < numRows; ++y) {
         if (y % 2 == 0) {
           for (int x = 0; x < numColumns; ++x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int x = numColumns - 1; x >= 0; --x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -305,11 +268,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int y = 0; y < numRows; ++y) {
         if (y % 2 != 0) {
           for (int x = 0; x < numColumns; ++x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int x = numColumns - 1; x >= 0; --x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -318,11 +281,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int y = numRows - 1; y >= 0; --y) {
         if ((y % 2) != (numRows % 2)) {
           for (int x = 0; x < numColumns; ++x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int x = numColumns - 1; x >= 0; --x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -331,11 +294,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int y = numRows - 1; y >= 0; --y) {
         if ((y % 2) == (numRows % 2)) {
           for (int x = 0; x < numColumns; ++x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int x = numColumns - 1; x >= 0; --x) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -344,11 +307,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int x = 0; x < numColumns; ++x) {
         if (x % 2 == 0) {
           for (int y = 0; y < numRows; ++y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int y = numRows - 1; y >= 0; --y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -357,11 +320,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int x = numColumns - 1; x >= 0; --x) {
         if ((x % 2) != (numColumns % 2)) {
           for (int y = 0; y < numRows; ++y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int y = numRows - 1; y >= 0; --y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -370,11 +333,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int x = 0; x < numColumns; ++x) {
         if (x % 2 == 0) {
           for (int y = numRows - 1; y >= 0; --y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int y = 0; y < numRows; ++y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -383,11 +346,11 @@ public class GridFixture extends LXProtocolFixture {
       for (int x = numColumns - 1; x >= 0; --x) {
         if ((x % 2) == (numColumns % 2)) {
           for (int y = 0; y < numRows; ++y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         } else {
           for (int y = numRows - 1; y >= 0; --y) {
-            indexBuffer[i++] = this.points.get(x + y * numColumns).index;
+            indexBuffer[i++] = x + y * numColumns;
           }
         }
       }
@@ -399,71 +362,17 @@ public class GridFixture extends LXProtocolFixture {
   }
 
   @Override
-  protected void buildOutputs() {
-    Protocol protocol = this.protocol.getEnum();
-    if (protocol == Protocol.NONE) {
-      return;
-    }
-    InetAddress address = resolveHostAddress();
-    int[] wiringIndexBuffer = getWiringIndexBuffer();
-    int pointsPerPacket = this.pointsPerPacket.getValuei();
-    if (this.splitPacket.isOn() && (wiringIndexBuffer.length > pointsPerPacket)) {
-      int i = 0;
-      int channel = getProtocolChannel();
-      while (i < wiringIndexBuffer.length) {
-        int chunkSize = Math.min(pointsPerPacket, wiringIndexBuffer.length - i);
-        int chunkIndexBuffer[] = new int[chunkSize];
-        System.arraycopy(wiringIndexBuffer, i, chunkIndexBuffer, 0, chunkSize);
-        addOutput(address, chunkIndexBuffer, channel++);
-        i += chunkSize;
-      }
-    } else {
-      addOutput(address, wiringIndexBuffer, getProtocolChannel());
-    }
-  }
-
-  private void addOutput(InetAddress address, int[] indexBuffer, int channel) {
-    LXOutput output = null;
-    switch (this.protocol.getEnum()) {
-    case ARTNET:
-      output = new ArtNetDatagram(this.lx, indexBuffer, channel);
-      break;
-    case SACN:
-      output = new StreamingACNDatagram(this.lx, indexBuffer, channel);
-      break;
-    case DDP:
-      output = new DDPDatagram(this.lx, indexBuffer, channel);
-      break;
-    case KINET:
-      output = new KinetDatagram(this.lx, indexBuffer, channel);
-      break;
-    case OPC:
-      switch (this.transport.getEnum()) {
-      case TCP:
-        output = new OPCSocket(this.lx, toDynamicIndexBuffer(), (byte) channel);
-        break;
-      default:
-      case UDP:
-        output = new OPCDatagram(this.lx, toDynamicIndexBuffer(), (byte) channel);
-        break;
-      }
-      ((OPCOutput) output).setPort(this.port.getValuei());
-      break;
-    default:
-      LX.error("Undefined output protocol in GridFixture: " + this.protocol.getEnum());
-      break;
-    }
-    if (output != null) {
-      output.enabled.setValue(address != null);
-      if (address != null && (output instanceof LXOutput.InetOutput)) {
-        ((LXOutput.InetOutput) output).setAddress(address);
-      }
-      addOutput(output);
-    }
+  protected Segment buildSegment() {
+    return new Segment(getWiringIndexBuffer(), this.byteOrder.getEnum());
   }
 
   @Override
-  protected void reindexOutputs() {
+  public void addModelMetaData(Map<String, String> metaData) {
+    metaData.put("numRows", String.valueOf(this.numRows.getValuei()));
+    metaData.put("numColumns", String.valueOf(this.numColumns.getValuei()));
+    metaData.put("rowSpacing", String.valueOf(this.rowSpacing.getValue()));
+    metaData.put("columnSpacing", String.valueOf(this.columnSpacing.getValue()));
+    metaData.put("positionMode", this.positionMode.getEnum().toString());
 
   }
 

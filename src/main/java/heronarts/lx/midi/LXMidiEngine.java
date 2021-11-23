@@ -24,9 +24,11 @@ import heronarts.lx.LXMappingEngine;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.command.LXCommand;
+import heronarts.lx.midi.surface.APC40;
 import heronarts.lx.midi.surface.APC40Mk2;
 import heronarts.lx.midi.surface.DJM900nxs2;
 import heronarts.lx.midi.surface.LXMidiSurface;
+import heronarts.lx.midi.surface.MidiFighterTwister;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -143,8 +145,10 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   public LXMidiEngine(LX lx) {
     super(lx);
+    this.registeredSurfaces.put(APC40.DEVICE_NAME, APC40.class);
     this.registeredSurfaces.put(APC40Mk2.DEVICE_NAME, APC40Mk2.class);
     this.registeredSurfaces.put(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
+    this.registeredSurfaces.put(MidiFighterTwister.DEVICE_NAME, MidiFighterTwister.class);
     addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
   }
 
@@ -248,6 +252,13 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }.start();
   }
 
+  public void disposeSurfaces() {
+    for (LXMidiSurface surface : this.surfaces) {
+      surface.dispose();
+    }
+    this.mutableSurfaces.clear();
+  }
+
   @Override
   public void dispose() {
     synchronized (this.deviceUpdateThread) {
@@ -257,9 +268,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     for (LXMidiInput input : this.inputs) {
       input.dispose();
     }
+    this.mutableInputs.clear();
     for (LXMidiOutput output : this.outputs) {
       output.dispose();
     }
+    this.mutableOutputs.clear();
     super.dispose();
   }
 

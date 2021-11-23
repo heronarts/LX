@@ -77,18 +77,11 @@ public class LXOutputGroup extends LXOutput {
   }
 
   @Override
-  protected void onSend(int[] colors, double brightness) {
-    super.onSend(colors, brightness);
-
+  protected void onSend(int[] colors, byte[][] glut, double brightness) {
     //  Send to all children, with cascading brightness
     for (LXOutput child : this.children) {
       child.send(colors, brightness);
     }
-  }
-
-  @Override
-  protected void onSend(int[] colors, byte[] glut) {
-    // Nothing, child dispatch is handled by the onSend(int[], double) method
   }
 
 }

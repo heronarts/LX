@@ -26,6 +26,8 @@ package heronarts.lx;
  */
 public abstract class LXLayer extends LXLayeredComponent {
 
+  private int index = -1;
+
   protected LXLayer(LX lx) {
     super(lx);
   }
@@ -34,9 +36,22 @@ public abstract class LXLayer extends LXLayeredComponent {
     super(lx, buffer);
   }
 
+  void setIndex(int index) {
+    this.index = index;
+  }
+
+  public int getIndex() {
+    return this.index;
+  }
+
+  @Override
+  public String getPath() {
+    return "layer/" + (this.index + 1);
+  }
+
   @Override
   public String getLabel() {
-    return "Layer";
+    return "Layer " + (this.index + 1);
   }
 
   @Override

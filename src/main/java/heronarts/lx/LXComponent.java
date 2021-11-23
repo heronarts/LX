@@ -816,10 +816,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   // Map of String key to parameter
-  private final Map<String, LXParameter> parameters = new LinkedHashMap<String, LXParameter>();
+  protected final Map<String, LXParameter> parameters = new LinkedHashMap<String, LXParameter>();
 
   // Map of String key to internal-only parameters
-  private final Map<String, LXParameter> internalParameters = new LinkedHashMap<String, LXParameter>();
+  protected final Map<String, LXParameter> internalParameters = new LinkedHashMap<String, LXParameter>();
 
   /**
    * Adds a parameter to this component, using its label as the path by default. This method
@@ -1002,7 +1002,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final static String KEY_ID = "id";
   public final static String KEY_CLASS = "class";
 
-  private final static String KEY_PARAMETERS = "parameters";
+  public final static String KEY_PARAMETERS = "parameters";
   private final static String KEY_INTERNAL = "internal";
   private final static String KEY_CHILDREN = "children";
   public static final String KEY_COMPONENT_ID = "componentId";

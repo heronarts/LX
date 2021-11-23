@@ -30,13 +30,13 @@ import heronarts.lx.model.LXModel;
  */
 public class StreamingACNDatagram extends LXDatagram {
 
-  protected final static int OFFSET_DMX_DATA = 126;
-  protected final static int OFFSET_SEQUENCE_NUMBER = 111;
-  protected final static int OFFSET_UNIVERSE_NUMBER = 113;
+  public final static int OFFSET_DMX_DATA = 126;
+  public final static int OFFSET_SEQUENCE_NUMBER = 111;
+  public final static int OFFSET_UNIVERSE_NUMBER = 113;
 
   public final static int MAX_DATA_LENGTH = 512;
 
-  private final static int DEFAULT_PORT = 5568;
+  public final static int DEFAULT_PORT = 5568;
 
   private final static int DEFAULT_UNIVERSE_NUMBER = 1;
 
@@ -133,7 +133,30 @@ public class StreamingACNDatagram extends LXDatagram {
    * @param universeNumber Universe number
    */
   public StreamingACNDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int dataSize, int universeNumber) {
-    super(lx, indexBuffer, byteOrder, OFFSET_DMX_DATA + dataSize);
+    this(lx, new IndexBuffer(indexBuffer, byteOrder), dataSize, universeNumber);
+  }
+
+  /**
+   * Creates a StreamingACNDatagram for a given index buffer with fixed data size and universe number
+   *
+   * @param lx LX instance
+   * @param indexBuffer Index buffer
+   * @param universeNumber Universe number
+   */
+  public StreamingACNDatagram(LX lx, IndexBuffer indexBuffer, int universeNumber) {
+    this(lx, indexBuffer, indexBuffer.numChannels, universeNumber);
+  }
+
+  /**
+   * Creates a StreamingACNDatagram for a given index buffer with fixed data size and universe number
+   *
+   * @param lx LX instance
+   * @param indexBuffer Index buffer
+   * @param dataSize Fixed DMX data size
+   * @param universeNumber Universe number
+   */
+  public StreamingACNDatagram(LX lx, IndexBuffer indexBuffer, int dataSize, int universeNumber) {
+    super(lx, indexBuffer, OFFSET_DMX_DATA + dataSize);
     setPort(DEFAULT_PORT);
     setUniverseNumber(universeNumber);
 
@@ -146,8 +169,8 @@ public class StreamingACNDatagram extends LXDatagram {
     this.buffer[1] = (byte) 0x10;
 
     // Post-amble size
-    this.buffer[0] = (byte) 0x00;
-    this.buffer[1] = (byte) 0x10;
+    this.buffer[2] = (byte) 0x00;
+    this.buffer[3] = (byte) 0x00;
 
     // ACN Packet Identifier
     this.buffer[4] = (byte) 0x41;
@@ -181,7 +204,7 @@ public class StreamingACNDatagram extends LXDatagram {
     }
 
     // Flags and length
-    flagLength = 0x00007000 | ((this.buffer.length - 38) & 0x0fffffff);
+    flagLength = 0x7000 | ((this.buffer.length - 38) & 0x0fff);
     this.buffer[38] = (byte) ((flagLength >> 8) & 0xff);
     this.buffer[39] = (byte) (flagLength & 0xff);
 
@@ -219,7 +242,7 @@ public class StreamingACNDatagram extends LXDatagram {
     // 113-114 are done in setUniverseNumber()
 
     // Flags and length
-    flagLength = 0x00007000 | ((this.buffer.length - 115) & 0x0fffffff);
+    flagLength = 0x7000 | ((this.buffer.length - 115) & 0x0fff);
     this.buffer[115] = (byte) ((flagLength >> 8) & 0xff);
     this.buffer[116] = (byte) (flagLength & 0xff);
 

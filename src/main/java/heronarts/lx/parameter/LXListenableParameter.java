@@ -97,11 +97,18 @@ public abstract class LXListenableParameter implements LXParameter {
   }
 
   public LXListenableParameter addListener(LXParameterListener listener) {
+    return addListener(listener, false);
+  }
+
+  public LXListenableParameter addListener(LXParameterListener listener, boolean fireImmediately) {
     Objects.requireNonNull(listener, "May add null LXParameterListener: " + this);
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannot add duplicate LXParameterListener " + getCanonicalPath() + " " + listener.getClass().getName());
     }
     this.listeners.add(listener);
+    if (fireImmediately) {
+      listener.onParameterChanged(this);
+    }
     return this;
   }
 
@@ -151,9 +158,9 @@ public abstract class LXListenableParameter implements LXParameter {
     for (LXParameterListener listener : this.listeners) {
       String className = listener.getClass().getName();
       if (className.contains(".ui.")) {
-        LX.warning("Stranded UI listener on parameter: " + getCanonicalPath() + " - " + className);
+        LX.warning("WARNING: Stranded UI listener on parameter: " + getCanonicalPath() + " - " + className);
       } else {
-        LX.error(new Exception(), "Stranded listener on parameter: " + getCanonicalPath() + " - " + className);
+        LX.error(new Exception(), "WARNING / SHOULDFIX: Stranded listener on parameter: " + getCanonicalPath() + " - " + className);
       }
     }
     this.listeners.clear();

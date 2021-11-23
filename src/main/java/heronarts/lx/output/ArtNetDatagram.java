@@ -25,10 +25,12 @@ public class ArtNetDatagram extends LXDatagram {
 
   public final static int ARTNET_PORT = 6454;
   public final static int MAX_DATA_LENGTH = 512;
+  public final static int MAX_UNIVERSE = 32768; // 0x01 << 15
+
+  public final static int ARTNET_HEADER_LENGTH = 18;
+  public final static int SEQUENCE_INDEX = 12;
 
   private final static int DEFAULT_UNIVERSE = 0;
-  private final static int ARTNET_HEADER_LENGTH = 18;
-  private final static int SEQUENCE_INDEX = 12;
 
   private boolean sequenceEnabled = false;
 
@@ -37,6 +39,11 @@ public class ArtNetDatagram extends LXDatagram {
   private final int dataLength;
 
   private int universeNumber;
+
+  // ArtNet DMX data length must be even
+  private static int dmxDataLength(int length) {
+    return length + (length % 2);
+  }
 
   /**
    * Creates an ArtNetDatagram for the given model
@@ -162,10 +169,33 @@ public class ArtNetDatagram extends LXDatagram {
    * @param universeNumber Universe number
    */
   public ArtNetDatagram(LX lx, int[] indexBuffer, ByteOrder byteOrder, int dataLength, int universeNumber) {
-    super(lx, indexBuffer, byteOrder, ARTNET_HEADER_LENGTH + dataLength + (dataLength % 2));
+    this(lx, new IndexBuffer(indexBuffer, byteOrder), dataLength, universeNumber);
+  }
+
+  /**
+   * Creates an ArtNetDatagram with fixed data length for given index buffer, universe, and byte order
+   *
+   * @param lx LX instance
+   * @param indexBuffer Index buffer
+   * @param universeNumber Universe number
+   */
+  public ArtNetDatagram(LX lx, IndexBuffer indexBuffer, int universeNumber) {
+    this(lx, indexBuffer, indexBuffer.numChannels, universeNumber);
+  }
+
+  /**
+   * Creates an ArtNetDatagram with fixed data length for given index buffer, universe, and byte order
+   *
+   * @param lx LX instance
+   * @param indexBuffer Index buffer
+   * @param dataLength Fixed data payload length
+   * @param universeNumber Universe number
+   */
+  public ArtNetDatagram(LX lx, IndexBuffer indexBuffer, int dataLength, int universeNumber) {
+    super(lx, indexBuffer, ARTNET_HEADER_LENGTH + dmxDataLength(dataLength));
 
     // DMX alignment requirement, ensure data length is even number of bytes
-    this.dataLength = dataLength + (dataLength % 2);
+    this.dataLength = dmxDataLength(dataLength);
     setPort(ARTNET_PORT);
 
     validateBufferSize();
@@ -190,10 +220,6 @@ public class ArtNetDatagram extends LXDatagram {
     this.buffer[16] = (byte) ((this.dataLength >>> 8) & 0xff);
     this.buffer[17] = (byte) (this.dataLength & 0xff);
 
-    // Ensure zero rest of buffer
-    for (int i = ARTNET_HEADER_LENGTH; i < this.buffer.length; ++i) {
-     this.buffer[i] = 0;
-    }
   }
 
   public ArtNetDatagram setUniverseNumber(int universeNumber) {

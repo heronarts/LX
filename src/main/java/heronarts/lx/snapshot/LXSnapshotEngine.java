@@ -137,6 +137,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     new BooleanParameter("Modulation", true)
     .setDescription("Whether global modulation settings are recalled");
 
+  public final BooleanParameter recallOutput =
+    new BooleanParameter("Output", true)
+    .setDescription("Whether output settings are recalled");
+
   public final EnumParameter<MissingChannelMode> missingChannelMode =
     new EnumParameter<MissingChannelMode>("Missing Channel", MissingChannelMode.IGNORE)
     .setDescription("How to handle channels that are not present in the snapshot");
@@ -189,6 +193,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   private LinearEnvelope transition = new LinearEnvelope(0, 1, new FunctionalParameter() {
     @Override
     public double getValue() {
+      if (inTransition.hasCustomTransitionTime.isOn()) {
+        return 1000 * inTransition.transitionTimeSecs.getValue();
+      }
       return 1000 * transitionTimeSecs.getValue();
     }
   });
@@ -222,6 +229,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addParameter("recallModulation", this.recallModulation);
     addParameter("recallPattern", this.recallPattern);
     addParameter("recallEffect", this.recallEffect);
+    addParameter("recallOutput", this.recallOutput);
     addParameter("channelMode", this.channelMode);
     addParameter("missingChannelMode", this.missingChannelMode);
     addParameter("transitionEnabled", this.transitionEnabled);
@@ -238,6 +246,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     super.onParameterChanged(parameter);
     if (parameter == this.autoCycleEnabled) {
       this.autoCycleProgress = 0;
+    } else if (parameter == this.transitionEnabled) {
+      if (!this.transitionEnabled.isOn()) {
+        finishTransition();
+      }
     } else if (parameter == this.triggerSnapshotCycle) {
       if (this.triggerSnapshotCycle.isOn()) {
         this.triggerSnapshotCycle.setValue(false);
@@ -377,16 +389,30 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   }
 
   /**
-   * Recall this snapshot, apply all of its values
+   * Returns the snapshot that the cursor currently points to, if any.
    *
-   * @param snapshot The snapshot to recall
+   * @return Snapshot or null
    */
-  public void recall(LXSnapshot snapshot) {
-    recall(snapshot, null);
+  public LXSnapshot getCursorSnapshot() {
+    int cursorIndex = this.autoCycleCursor.getValuei();
+    if (cursorIndex >= 0 && cursorIndex < this.snapshots.size()) {
+      return this.snapshots.get(cursorIndex);
+    }
+    return null;
   }
 
   private final List<LXSnapshot.View> recallViews =
     new ArrayList<LXSnapshot.View>();
+
+  /**
+   * Recall this snapshot, apply all of its values
+   *
+   * @param snapshot The snapshot to recall
+   * @return True the snapshot was recalled, false if it was already mid-transition
+   */
+  public boolean recall(LXSnapshot snapshot) {
+    return recall(snapshot, null);
+  }
 
   /**
    * Recall this snapshot, and populate an array of commands which
@@ -394,12 +420,19 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    *
    * @param snapshot Snapshot to recall
    * @param commands Array to populate with all the commands processed
+   * @return True the snapshot was recalled, false if it was already mid-transition
    */
-  public void recall(LXSnapshot snapshot, List<LXCommand> commands) {
+  public boolean recall(LXSnapshot snapshot, List<LXCommand> commands) {
+    if (this.inTransition == snapshot) {
+      finishTransition();
+      return false;
+    }
+
     boolean mixer = this.recallMixer.isOn();
     boolean pattern = this.recallPattern.isOn();
     boolean effect = this.recallEffect.isOn();
     boolean modulation = this.recallModulation.isOn();
+    boolean output = this.recallOutput.isOn();
 
     boolean transition = false;
     this.autoCycleProgress = 0;
@@ -424,7 +457,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
 
     for (View view : this.recallViews) {
-      if (view.activeFlag = isValidView(view, mixer, pattern, effect, modulation)) {
+      if (view.activeFlag = isValidView(view, mixer, pattern, effect, modulation, output)) {
         if (transition) {
           view.startTransition();
         } else {
@@ -438,9 +471,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (transition) {
       this.transition.trigger();
     }
+
+    return true;
   }
 
-  private boolean isValidView(View view, boolean mixer, boolean pattern, boolean effect, boolean modulation) {
+  private boolean isValidView(View view, boolean mixer, boolean pattern, boolean effect, boolean modulation, boolean output) {
     if (!view.enabled.isOn()) {
       return false;
     }
@@ -451,8 +486,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       return modulation;
     case PATTERNS:
       return pattern;
-    default:
     case OUTPUT:
+      return output;
+    default:
     case MIXER:
       return mixer;
     }
@@ -482,12 +518,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (this.inTransition != null) {
       this.transition.loop(deltaMs);
       if (this.transition.finished()) {
-        for (View view : this.recallViews) {
-          if (view.activeFlag) {
-            view.finishTransition();
-          }
-        }
-        this.inTransition = null;
+        finishTransition();
       } else {
         for (View view : this.recallViews) {
           if (view.activeFlag) {
@@ -497,11 +528,27 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       }
       this.autoCycleProgress = 0;
     } else if (this.autoCycleEnabled.isOn()) {
-      this.autoCycleProgress += deltaMs / (1000 * this.autoCycleTimeSecs.getValue());
+      LXSnapshot cursorSnapshot = getCursorSnapshot();
+      double cycleSecs =
+        (cursorSnapshot != null && cursorSnapshot.hasCustomCycleTime.isOn()) ?
+          cursorSnapshot.cycleTimeSecs.getValue() :
+          this.autoCycleTimeSecs.getValue();
+      this.autoCycleProgress += deltaMs / (1000 * cycleSecs);
       if (this.autoCycleProgress >= 1) {
         this.autoCycleProgress = 1;
         doSnapshotCycle();
       }
+    }
+  }
+
+  private void finishTransition() {
+    if (this.inTransition != null) {
+      for (View view : this.recallViews) {
+        if (view.activeFlag) {
+          view.finishTransition();
+        }
+      }
+      this.inTransition = null;
     }
   }
 

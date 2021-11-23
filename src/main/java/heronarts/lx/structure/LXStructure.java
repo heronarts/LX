@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -40,9 +41,17 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.output.ArtNetDatagram;
+import heronarts.lx.output.DDPDatagram;
+import heronarts.lx.output.IndexBuffer;
+import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXOutput;
+import heronarts.lx.output.OPCDatagram;
+import heronarts.lx.output.OPCSocket;
+import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.utils.LXUtils;
 
 public class LXStructure extends LXComponent implements LXFixtureContainer {
 
@@ -50,26 +59,299 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   public class Output extends LXOutput {
 
+    private final List<LXOutput> generatedOutputs = new ArrayList<LXOutput>();
+    private final List<String> outputErrors = new ArrayList<String>();
+    private final List<Packet> packets = new ArrayList<Packet>();
+
+    /**
+     * A packet definition contains the metadata for what will become one output packet or socket.
+     * This is specified by a protocol, transport, network address, and protocol packet signifier,
+     * for instance a universe number in ArtNet / KiNET, or an OPC channel.
+     *
+     * Multiple segments of output may be added to these packets, which requires error-checking
+     * for collisions in which multiple outputs are attempting to send different data to the
+     * same address.
+     */
+    private class Packet {
+
+      private final LXFixture.Protocol protocol;
+      private final LXFixture.Transport transport;
+      private final InetAddress address;
+      private final int port;
+      private final int universe;
+
+      private final List<IndexBuffer.Segment> segments = new ArrayList<IndexBuffer.Segment>();
+
+      private Packet(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe) {
+        this.protocol = protocol;
+        this.transport = transport;
+        this.address = address;
+        this.port = port;
+        this.universe = universe;
+      }
+
+      private boolean checkOverflow() {
+        switch (this.protocol) {
+        case ARTNET:
+        case SACN:
+          if (this.universe >= ArtNetDatagram.MAX_UNIVERSE) {
+            outputErrors.add(this.protocol.toString() + this.address.toString() + " - overflow univ " + this.universe);
+            return false;
+          }
+          return true;
+        case KINET:
+          if (this.universe >= KinetDatagram.MAX_KINET_PORT) {
+            outputErrors.add(this.protocol.toString() + this.address.toString() + " - overflow port" + this.universe);
+            return false;
+          }
+          return true;
+        case DDP:
+        case OPC:
+        default:
+          outputErrors.add(this.protocol.toString() + this.address.toString() + " - data length overflow");
+          return false;
+        }
+      }
+
+      private void segmentCollision(int collisionStart, int collisionEnd) {
+        String err = this.protocol.toString() + this.address.toString() + " - ";
+        switch (this.protocol) {
+        case ARTNET:
+        case SACN:
+          err +=
+            "univ " + this.universe +
+            ((collisionStart == collisionEnd) ? (" channel " + collisionStart) : (" channels " + collisionStart + "-" + collisionEnd));
+          break;
+        case KINET:
+          err +=
+            "port " + this.universe +
+            ((collisionStart == collisionEnd) ? (" channel " + collisionStart) : (" channels " + collisionStart + "-" + collisionEnd));
+          break;
+        case DDP:
+          err += "data offset " + this.universe;
+          break;
+        case OPC:
+          err +=
+            "channel " + this.universe +
+            ((collisionStart == collisionEnd) ? (" offset " + collisionStart) : (" offsets " + collisionStart + "-" + collisionEnd));
+          break;
+        case NONE:
+          break;
+        }
+
+        outputErrors.add(err);
+      }
+
+      private void addSegment(LXFixture.Segment segment, int startChannel, int chunkStart, int chunkLength) {
+        int endChannel = startChannel + segment.numChannels - 1;
+        for (IndexBuffer.Segment existing : this.segments) {
+          // If this one starts before an existing...
+          if (startChannel < existing.startChannel) {
+            // Then check if its end goes over the start, bad news
+            if (endChannel >= existing.startChannel) {
+              segmentCollision(existing.startChannel, LXUtils.min(endChannel, existing.endChannel));
+            }
+          } else if (startChannel <= existing.endChannel) {
+            // If it's start point is before the end of an exiting one, also bad news
+            segmentCollision(startChannel, LXUtils.min(endChannel, existing.endChannel));
+          }
+        }
+
+        // Translate the fixture-scoped Segment into global address space
+        this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteOrder, startChannel, segment.getBrightness()));
+      }
+
+      private IndexBuffer toIndexBuffer() {
+        return new IndexBuffer(this.segments);
+      }
+
+      private LXOutput toOutput() {
+        LXOutput output = null;
+        switch (this.protocol) {
+        case ARTNET:
+          output = new ArtNetDatagram(lx, toIndexBuffer(), this.universe);
+          break;
+        case SACN:
+          output = new StreamingACNDatagram(lx, toIndexBuffer(), this.universe);
+          break;
+        case KINET:
+          output = new KinetDatagram(lx, toIndexBuffer(), this.universe);
+          break;
+        case OPC:
+          if (this.transport == LXFixture.Transport.TCP) {
+            output = new OPCSocket(lx, toIndexBuffer(), (byte) this.universe);
+          } else {
+            output = new OPCDatagram(lx, toIndexBuffer(), (byte) this.universe);
+          }
+          break;
+        case DDP:
+          output = new DDPDatagram(lx, toIndexBuffer(), this.universe);
+          break;
+        case NONE:
+          break;
+        }
+        if (output instanceof InetOutput) {
+          ((InetOutput) output).setAddress(this.address).setPort(port);;
+        }
+        return output;
+      }
+    }
+
+    private Packet findPacket(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe) {
+      // Check if there's an existing packet for this address space
+      for (Packet packet : this.packets) {
+        if ((packet.protocol == protocol)
+          && (packet.transport == transport)
+          && (packet.address.equals(address))
+          && (packet.port == port)
+          && (packet.universe == universe)) {
+          return packet;
+        }
+      }
+
+      // Create a new packet for this address space
+      Packet packet = new Packet(protocol, transport, address, port, universe);
+      this.packets.add(packet);
+      return packet;
+    }
+
     public Output(LX lx) throws SocketException {
       super(lx);
       this.gammaMode.setValue(GammaMode.DIRECT);
     }
 
+    private void clear() {
+      this.packets.clear();
+      for (LXOutput output : this.generatedOutputs) {
+        output.dispose();
+      }
+      this.generatedOutputs.clear();
+      this.outputErrors.clear();
+      outputError.setValue(null);
+    }
+
+    private void rebuildOutputs() {
+      clear();
+
+      // Iterate over all fixtures and build outputs
+      for (LXFixture fixture : fixtures) {
+        rebuildFixtureOutputs(fixture);
+      }
+
+      // Generate an output for all those packets!
+      for (Packet packet : this.packets) {
+        this.generatedOutputs.add(packet.toOutput());
+      }
+
+      // Did errors occur? Oh no!
+      if (!this.outputErrors.isEmpty()) {
+        String str = "Output errors detected.";
+        for (String err : this.outputErrors) {
+          str += "\n" + err;
+        }
+        outputError.setValue(str);
+      }
+    }
+
+    private void rebuildFixtureOutputs(LXFixture fixture) {
+      if (fixture.deactivate.isOn() || !fixture.enabled.isOn()) {
+        return;
+      }
+
+      // First iterate recursively over child outputs
+      for (LXFixture child : fixture.children) {
+        rebuildFixtureOutputs(child);
+      }
+
+      // And every output definition for this fixtures
+      for (LXFixture.OutputDefinition output : fixture.outputDefinitions) {
+        rebuildFixtureOutput(fixture, output);
+      }
+    }
+
+    private void rebuildFixtureOutput(LXFixture fixture, LXFixture.OutputDefinition output) {
+      LXFixture.Protocol protocol = output.protocol;
+      LXFixture.Transport transport = output.transport;
+      InetAddress address = output.address;
+      int port = output.port;
+      int universe = output.universe;
+      int channel = output.channel;
+      boolean overflow = false;
+
+      // Find the starting packet for this output definition
+      Packet packet = findPacket(protocol, transport, address, port, universe);
+      for (LXFixture.Segment segment : output.segments) {
+        if (overflow) {
+          // Is it okay for this type to overlow?
+          if (!packet.checkOverflow()) {
+            return;
+          }
+          // Roll over to next universe and packet
+          overflow = false;
+          ++universe;
+          channel = 0;
+          packet = findPacket(protocol, transport, address, port, universe);
+        }
+
+        int chunkStart = 0;
+        int chunkLength = segment.length;
+        int availableBytes = protocol.maxChannels - channel;
+        if (availableBytes <= 0) {
+          outputErrors.add(protocol.toString() + address.toString() + " - invalid channel " + channel + " > " + protocol.maxChannels);
+          return;
+        }
+
+        // Is there not enough available space? If so, chunk the packet
+        while (availableBytes < chunkLength * segment.byteOrder.getNumBytes()) {
+          // How many indices can fit into the remaining available bytes?
+          int chunkLimit = availableBytes / segment.byteOrder.getNumBytes();
+
+          // It could be 0, e.g. channel = 510 byteOrder RGB, can't fit an RGB pixel so
+          // we must overflow...
+          if (chunkLimit > 0) {
+            packet.addSegment(segment, channel, chunkStart, chunkLimit);
+            chunkStart += chunkLimit;
+            chunkLength -= chunkLimit;
+          }
+
+          // Is it okay for this type to overlow?
+          if (!packet.checkOverflow()) {
+            return;
+          }
+
+          // Roll over to the next universe and packet
+          ++universe;
+          channel = 0;
+          availableBytes = protocol.maxChannels;
+          packet = findPacket(protocol, transport, address, port, universe);
+        }
+
+        // Add the final chunk (the whole segment in the common case)
+        packet.addSegment(segment, channel, chunkStart, chunkLength);
+        channel += chunkLength * segment.byteOrder.getNumBytes();
+
+        // Set flag for whether we need to overflow on the next segment
+        overflow = channel >= protocol.maxChannels;
+      }
+    }
+
     @Override
-    protected void onSend(int[] colors, double brightness) {
+    protected void onSend(int[] colors, byte[][] glut, double brightness) {
+      // Send all of the generated outputs
+      for (LXOutput output : this.generatedOutputs) {
+        output.setGammaDelegate(this);
+        output.send(colors, brightness);
+      }
+
+      // Send any direct fixture outputs
       for (LXFixture fixture : fixtures) {
         onSendFixture(fixture, colors, brightness);
       }
     }
 
-    @Override
-    protected void onSend(int[] colors, byte[] glut) {
-      throw new UnsupportedOperationException("LXStructure.Output does not use onSend(int[] colors, byte[] glut)");
-    }
-
     private void onSendFixture(LXFixture fixture, int[] colors, double brightness) {
       // Check enabled state of fixture
-      if (fixture.enabled.isOn()) {
+      if (!fixture.deactivate.isOn() && fixture.enabled.isOn()) {
         // Adjust by fixture brightness
         brightness *= fixture.brightness.getValue();
 
@@ -79,7 +361,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         }
 
         // Then send the fixture's own direct packets
-        for (LXOutput output : fixture.outputs) {
+        for (LXOutput output : fixture.outputsDirect) {
           output.setGammaDelegate(this);
           output.send(colors, brightness);
         }
@@ -89,11 +371,12 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   /**
-   * Implementation-only interface to relay model changes back to the core LX instance. This
-   * is not a user-facing API.
+   * Implementation-only interface to relay model changes back to the core LX
+   * instance. This is not a user-facing API.
    */
   public interface ModelListener {
     public void structureChanged(LXModel model);
+
     public void structureGenerationChanged(LXModel model);
   }
 
@@ -141,11 +424,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     new BooleanParameter("Sync Model File", false)
     .setDescription("Keep the project model in sync with the model file. Saving the project automatically writes to the model file.");
 
+  public final StringParameter outputError =
+    new StringParameter("Output Error", null);
+
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
 
-  public final List<LXFixture> fixtures = Collections.unmodifiableList(this.mutableFixtures);
+  public final List<LXFixture> fixtures = Collections
+    .unmodifiableList(this.mutableFixtures);
 
   private LXModel model;
 
@@ -176,15 +463,20 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     try {
       output = new Output(lx);
     } catch (SocketException sx) {
-      lx.pushError(sx, "Serious network error, could not create output socket. Program will continue with no network output.\n" + sx.getLocalizedMessage());
-      LX.error(sx, "Failed to create datagram socket for structure datagram output, will continue with no network output: " + sx.getLocalizedMessage());
+      lx.pushError(sx,
+        "Serious network error, could not create output socket. Program will continue with no network output.\n"
+          + sx.getLocalizedMessage());
+      LX.error(sx,
+        "Failed to create datagram socket for structure datagram output, will continue with no network output: "
+          + sx.getLocalizedMessage());
     }
     this.output = output;
   }
 
   /**
-   * Internal implementation-only helper to set a listener for notification on changes to the structure's model.
-   * This is used by the LX class to relay model-changes from the structure back to the top-level LX object while
+   * Internal implementation-only helper to set a listener for notification on
+   * changes to the structure's model. This is used by the LX class to relay
+   * model-changes from the structure back to the top-level LX object while
    * keeping that functionality private on the core LX API.
    *
    * @param listener Listener
@@ -192,7 +484,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public void setModelListener(ModelListener listener) {
     Objects.requireNonNull("LXStructure.setModelListener() cannot be null");
     if (this.modelListener != null) {
-      throw new IllegalStateException("Cannot overwrite setModelListener() - should only called once by LX parent object");
+      throw new IllegalStateException(
+        "Cannot overwrite setModelListener() - should only called once by LX parent object");
     }
     this.modelListener = listener;
   }
@@ -213,7 +506,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public LXStructure addListener(Listener listener) {
     Objects.requireNonNull(listener);
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot add duplicate LXStructure.Listener: " + listener);
+      throw new IllegalStateException(
+        "Cannot add duplicate LXStructure.Listener: " + listener);
     }
     this.listeners.add(listener);
     return this;
@@ -221,7 +515,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   public LXStructure removeListener(Listener listener) {
     if (!this.listeners.contains(listener)) {
-      throw new IllegalStateException("Cannot remove non-registered LXStructure.Listener: " + listener);
+      throw new IllegalStateException(
+        "Cannot remove non-registered LXStructure.Listener: " + listener);
     }
     this.listeners.remove(listener);
     return this;
@@ -238,12 +533,16 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure addFixture(LXFixture fixture, int index) {
-    checkStaticModel(false, "Cannot invoke addFixture when static model is in use");
+    checkStaticModel(false,
+      "Cannot invoke addFixture when static model is in use");
     if (this.mutableFixtures.contains(fixture)) {
-      throw new IllegalStateException("LXStructure may not contain two copies of same fixture");
+      throw new IllegalStateException(
+        "LXStructure may not contain two copies of same fixture");
     }
     if (index > this.fixtures.size()) {
-      throw new IllegalArgumentException("Illegal LXStructure.addFixture() index: " + index + " > " + this.fixtures.size());
+      throw new IllegalArgumentException(
+        "Illegal LXStructure.addFixture() index: " + index + " > "
+          + this.fixtures.size());
     }
     if (index < 0) {
       index = this.fixtures.size();
@@ -273,9 +572,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure moveFixture(LXFixture fixture, int index) {
-    checkStaticModel(false, "Cannot invoke setFixtureIndex when static model is in use");
+    checkStaticModel(false,
+      "Cannot invoke setFixtureIndex when static model is in use");
     if (!this.mutableFixtures.contains(fixture)) {
-      throw new IllegalStateException("Cannot set index on fixture not in structure: " + fixture);
+      throw new IllegalStateException(
+        "Cannot set index on fixture not in structure: " + fixture);
     }
     this.mutableFixtures.remove(fixture);
     this.mutableFixtures.add(index, fixture);
@@ -284,8 +585,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       l.fixtureMoved(fixture, index);
     }
 
-    // The point ordering is changed, rebuild the model
-    regenerateModel();
+    // The point ordering is changed, rebuild the model and outputs
+    regenerateModel(false);
+    regenerateOutputs();
 
     return this;
   }
@@ -322,7 +624,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     return selectFixture(fixture, false);
   }
 
-  public LXStructure selectFixture(LXFixture fixture, boolean isMultipleSelection) {
+  public LXStructure selectFixture(LXFixture fixture,
+    boolean isMultipleSelection) {
     if (isMultipleSelection) {
       fixture.selected.setValue(true);
     } else {
@@ -351,11 +654,13 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure removeFixtures(List<LXFixture> fixtures) {
-    checkStaticModel(false, "Cannot invoke removeFixtures when static model is in use");
+    checkStaticModel(false,
+      "Cannot invoke removeFixtures when static model is in use");
     List<LXFixture> removed = new ArrayList<LXFixture>();
     for (LXFixture fixture : fixtures) {
       if (!this.mutableFixtures.remove(fixture)) {
-        throw new IllegalStateException("Cannot remove fixture not present in structure");
+        throw new IllegalStateException(
+          "Cannot remove fixture not present in structure");
       }
       removed.add(fixture);
     }
@@ -366,7 +671,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
       fixture.dispose();
     }
-    regenerateModel();
+    fixtureRemoved();
     return this;
   }
 
@@ -387,14 +692,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
       fixture.dispose();
     }
-    regenerateModel();
+    fixtureRemoved();
     return this;
   }
 
   public LXStructure removeFixture(LXFixture fixture) {
     checkStaticModel(false, "Cannot invoke removeFixture when static model is in use");
     if (!this.mutableFixtures.contains(fixture)) {
-      throw new IllegalStateException("LXStructure does not contain fixture: " + fixture);
+      throw new IllegalStateException(
+        "LXStructure does not contain fixture: " + fixture);
     }
     this.mutableFixtures.remove(fixture);
     _reindexFixtures();
@@ -402,14 +708,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       l.fixtureRemoved(fixture);
     }
     fixture.dispose();
-    regenerateModel();
+    fixtureRemoved();
     return this;
   }
 
   private void removeAllFixtures() {
     checkStaticModel(false, "Cannot invoke removeAllFixtures when static model is in use");
 
-    // Do this loop ourselves, rather than calling removeFixture(), so we only regenerate model once...
+    // Do this loop ourselves, rather than calling removeFixture(), so we only
+    // regenerate model once...
     for (int i = this.mutableFixtures.size() - 1; i >= 0; --i) {
       LXFixture fixture = this.mutableFixtures.remove(i);
       for (Listener l : this.listeners) {
@@ -418,14 +725,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       fixture.dispose();
     }
 
-    regenerateModel();
+    fixtureRemoved();
   }
 
   public LXStructure translateSelectedFixtures(float tx, float ty, float tz) {
     return translateSelectedFixtures(tx, ty, tz, null);
   }
 
-  public LXStructure translateSelectedFixtures(float tx, float ty, float tz, LXCommand.Structure.ModifyFixturePositions action) {
+  public LXStructure translateSelectedFixtures(float tx, float ty, float tz,
+    LXCommand.Structure.ModifyFixturePositions action) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
         if (tx != 0) {
@@ -458,7 +766,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     return rotateSelectedFixtures(theta, phi, null);
   }
 
-  public LXStructure rotateSelectedFixtures(float theta, float phi, LXCommand.Structure.ModifyFixturePositions action) {
+  public LXStructure rotateSelectedFixtures(float theta, float phi,
+    LXCommand.Structure.ModifyFixturePositions action) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
         if (theta != 0) {
@@ -483,7 +792,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public LXStructure adjustSelectedFixtureBrightness(float delta) {
     for (LXFixture fixture : this.fixtures) {
       if (fixture.selected.isOn()) {
-        fixture.brightness.setNormalized(fixture.brightness.getNormalized() + delta);
+        fixture.brightness
+          .setNormalized(fixture.brightness.getNormalized() + delta);
       }
     }
     return this;
@@ -511,12 +821,13 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.isLoading = true;
     reset(false);
     this.isLoading = false;
-    regenerateModel();
+    regenerateModel(true);
     return this;
   }
 
   public LXStructure setStaticModel(LXModel model) {
-    // Ensure that all the points in this model are properly indexed and normalized
+    // Ensure that all the points in this model are properly indexed and
+    // normalized
     // to the top level...
     model.reindexPoints();
     model.normalizePoints();
@@ -537,12 +848,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       this.modelName.setValue(PROJECT_MODEL);
     }
     this.isStatic.setValue(false);
+    if (this.output != null) {
+      this.output.clear();
+    }
     return this;
   }
 
-  private void regenerateModel() {
+  private void regenerateModel(boolean fromLoad) {
     if (this.isImmutable) {
-      throw new IllegalStateException("Cannot regenerate LXStructure model when in immutable mode");
+      throw new IllegalStateException( "Cannot regenerate LXStructure model when in immutable mode");
     }
     if (this.staticModel != null) {
       throw new IllegalStateException("Cannot regenerate LXStructure model when static model is set: " + this.staticModel);
@@ -552,27 +866,55 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       return;
     }
 
-    LXModel[] submodels = new LXModel[this.fixtures.size()];
+    // Count active fixtures
+    int activeFixtures = 0;
+    for (LXFixture fixture : this.fixtures) {
+      if (!fixture.deactivate.isOn()) {
+        ++activeFixtures;
+      }
+    }
+
+    LXModel[] submodels = new LXModel[activeFixtures];
     int pointIndex = 0;
     int fixtureIndex = 0;
     for (LXFixture fixture : this.fixtures) {
-      fixture.reindex(pointIndex);
-      LXModel fixtureModel = fixture.toModel();
-      pointIndex += fixtureModel.size;
-      submodels[fixtureIndex++] = fixtureModel;
+      if (!fixture.deactivate.isOn()) {
+        fixture.reindex(pointIndex);
+        LXModel fixtureModel = fixture.toModel();
+        pointIndex += fixtureModel.size;
+        submodels[fixtureIndex++] = fixtureModel;
+      }
     }
     this.model = new LXModel(submodels).normalizePoints();
     this.modelListener.structureChanged(this.model);
 
-    if (this.modelFile != null) {
+    if ((this.modelFile != null) && !fromLoad) {
       this.modelName.setValue(this.modelFile.getName() + "*");
     }
   }
 
-  public void fixtureGenerationChanged(LXFixture fixture) {
-    regenerateModel();
+  private void regenerateOutputs() {
+    if (this.isLoading) {
+      return;
+    }
+    if (this.output != null) {
+      this.output.rebuildOutputs();
+    }
   }
 
+  private void fixtureRemoved() {
+    // When a fixture is removed we need to rebuild just as if any generational
+    // change occurred
+    fixtureGenerationChanged(null);
+  }
+
+  @Override
+  public void fixtureGenerationChanged(LXFixture fixture) {
+    regenerateModel(false);
+    regenerateOutputs();
+  }
+
+  @Override
   public void fixtureGeometryChanged(LXFixture fixture) {
     // We need to re-normalize our model, things have changed
     this.model.update(true, true);
@@ -582,6 +924,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");
     }
+  }
+
+  @Override
+  public void fixtureOutputChanged(LXFixture fixture) {
+    regenerateOutputs();
   }
 
   private boolean isLoading = false;
@@ -650,8 +997,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
     // Unless a static model was set, we need to regenerate
     if (this.staticModel == null) {
-      regenerateModel();
+      regenerateModel(true);
     }
+
+    // Regenerate any dynamic outputs
+    regenerateOutputs();
 
     if (this.output != null) {
       LXSerializable.Utils.loadObject(lx, this.output, obj, KEY_OUTPUT);
@@ -664,13 +1014,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       for (JsonElement fixtureElement : obj.getAsJsonArray(KEY_FIXTURES)) {
         JsonObject fixtureObj = fixtureElement.getAsJsonObject();
         try {
-          LXFixture fixture = this.lx.instantiateFixture(fixtureObj.get(KEY_CLASS).getAsString());
+          LXFixture fixture = this.lx
+            .instantiateFixture(fixtureObj.get(KEY_CLASS).getAsString());
           fixture.load(lx, fixtureObj);
           addFixture(fixture);
         } catch (LX.InstantiationException x) {
           LX.error(x, "Could not instantiate fixture " + fixtureObj.toString());
         }
       }
+      regenerateOutputs();
     }
   }
 
@@ -704,6 +1056,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   private LXStructure importModel(File file, boolean fromSync) {
+    boolean wasLoading = this.isLoading;
+    this.isLoading = true;
     this.lx.setModelImportFlag(true);
     try (FileReader fr = new FileReader(file)) {
       reset(fromSync);
@@ -717,6 +1071,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       LX.error(iox, "Exception loading model file: " + file);
     }
     this.lx.setModelImportFlag(false);
+    this.isLoading = wasLoading;
+    if (!wasLoading) {
+      regenerateModel(true);
+      regenerateOutputs();
+    }
     return this;
   }
 

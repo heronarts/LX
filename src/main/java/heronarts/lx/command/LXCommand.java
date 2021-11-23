@@ -178,6 +178,15 @@ public abstract class LXCommand {
    */
   public abstract void undo(LX lx) throws InvalidCommandException;
 
+  /**
+   * May return true if a command should be ignore for the purposes of undo
+   *
+   * @return Whether to ignore command for purposes of undo
+   */
+  public boolean isIgnored() {
+    return false;
+  }
+
 
   public static abstract class RemoveComponent extends LXCommand {
 
@@ -267,12 +276,14 @@ public abstract class LXCommand {
     public static class Reset extends LXCommand {
       private final ParameterReference<LXParameter> parameter;
       private final double originalValue;
+      private final String originalString;
 
       public Reset(LXParameter parameter) {
         this.parameter = new ParameterReference<LXParameter>(parameter);
         this.originalValue = (parameter instanceof CompoundParameter)
           ? ((CompoundParameter) parameter).getBaseValue()
           : parameter.getValue();
+        this.originalString = (parameter instanceof StringParameter) ? ((StringParameter) parameter).getString() : null;
       }
 
       @Override
@@ -287,7 +298,11 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) {
-        this.parameter.get().setValue(this.originalValue);
+        LXParameter parameter = this.parameter.get();
+        if (parameter instanceof StringParameter) {
+          ((StringParameter) parameter).setValue(this.originalString);
+        }
+        parameter.setValue(this.originalValue);
       }
     }
 
@@ -1404,8 +1419,7 @@ public abstract class LXCommand {
       private ComponentReference<LXCompoundModulation> modulation;
       private final JsonObject modulationObj;
 
-      public RemoveModulation(LXModulationEngine engine,
-        LXCompoundModulation modulation) {
+      public RemoveModulation(LXModulationEngine engine, LXCompoundModulation modulation) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.modulation = new ComponentReference<LXCompoundModulation>(
           modulation);
@@ -1435,6 +1449,36 @@ public abstract class LXCommand {
       }
     }
 
+    public static class RemoveModulations extends LXCommand {
+
+      private final List<RemoveModulation> removeModulations = new ArrayList<RemoveModulation>();
+
+      public RemoveModulations(CompoundParameter parameter) {
+        for (LXCompoundModulation modulation : parameter.modulations) {
+          this.removeModulations.add(new RemoveModulation(modulation.scope, modulation));
+        }
+      }
+
+      @Override
+      public void perform(LX lx) {
+        for (RemoveModulation remove : this.removeModulations) {
+          remove.perform(lx);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (RemoveModulation remove : this.removeModulations) {
+          remove.undo(lx);
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Modulations";
+      }
+    }
+
     public static class AddTrigger extends LXCommand {
 
       private final ComponentReference<LXModulationEngine> engine;
@@ -1442,8 +1486,7 @@ public abstract class LXCommand {
       private final ParameterReference<BooleanParameter> target;
       private ComponentReference<LXTriggerModulation> trigger;
 
-      public AddTrigger(LXModulationEngine engine, BooleanParameter source,
-        BooleanParameter target) {
+      public AddTrigger(LXModulationEngine engine, BooleanParameter source, BooleanParameter target) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.source = new ParameterReference<BooleanParameter>(source);
         this.target = new ParameterReference<BooleanParameter>(target);
@@ -1479,8 +1522,7 @@ public abstract class LXCommand {
       private ComponentReference<LXTriggerModulation> trigger;
       private final JsonObject triggerObj;
 
-      public RemoveTrigger(LXModulationEngine engine,
-        LXTriggerModulation trigger) {
+      public RemoveTrigger(LXModulationEngine engine, LXTriggerModulation trigger) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
         this.triggerObj = LXSerializable.Utils.toObject(trigger);
@@ -1578,6 +1620,14 @@ public abstract class LXCommand {
       private ComponentReference<LXSwatch> swatch;
       private JsonObject swatchObj;
       private int index = -1;
+      private JsonObject initialObj;
+
+      public SaveSwatch() {}
+
+      public SaveSwatch(JsonObject initialObj, int index) {
+        this.index = index;
+        this.initialObj = initialObj;
+      }
 
       @Override
       public String getDescription() {
@@ -1589,7 +1639,12 @@ public abstract class LXCommand {
         if (this.swatch != null) {
           lx.engine.palette.addSwatch(this.swatchObj, this.index);
         } else {
-          LXSwatch swatch = lx.engine.palette.saveSwatch();
+          LXSwatch swatch;
+          if (this.initialObj != null) {
+            swatch = lx.engine.palette.addSwatch(this.initialObj, this.index);
+          } else {
+            swatch = lx.engine.palette.saveSwatch();
+          }
           this.index = swatch.getIndex();
           this.swatchObj = LXSerializable.Utils.toObject(swatch);
           this.swatch = new ComponentReference<LXSwatch>(swatch);
@@ -1670,6 +1725,7 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXSwatch> swatch;
       private JsonObject originalSwatch;
+      private boolean set = false;
 
       public SetSwatch(LXSwatch swatch) {
         this.swatch = new ComponentReference<LXSwatch>(swatch);
@@ -1685,12 +1741,17 @@ public abstract class LXCommand {
         this.originalSwatch =
           LXSerializable.Utils.stripIds(
             LXSerializable.Utils.toObject(lx.engine.palette.swatch));
-        lx.engine.palette.setSwatch(this.swatch.get());
+        this.set = lx.engine.palette.setSwatch(this.swatch.get());
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         lx.engine.palette.swatch.load(lx, this.originalSwatch);
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return !this.set;
       }
 
     }
@@ -1701,9 +1762,18 @@ public abstract class LXCommand {
     public static class AddSnapshot extends LXCommand {
 
       private ComponentReference<LXSnapshot> snapshot;
+      private JsonObject initialObj = null;
       private JsonObject snapshotObj = null;
+      private final int index;
 
-      public AddSnapshot() {}
+      public AddSnapshot() {
+        this.index = -1;
+      }
+
+      public AddSnapshot(JsonObject snapshotObj, int index) {
+        this.initialObj = snapshotObj;
+        this.index = index;
+      }
 
       @Override
       public String getDescription() {
@@ -1713,13 +1783,20 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         if (this.snapshotObj == null) {
-          LXSnapshot instance = lx.engine.snapshots.addSnapshot();
+          LXSnapshot instance;
+          if (this.initialObj != null) {
+            instance = new LXSnapshot(lx);
+            instance.load(lx, this.initialObj);
+            lx.engine.snapshots.addSnapshot(instance, this.index);
+          } else {
+            instance = lx.engine.snapshots.addSnapshot();
+          }
           this.snapshot = new ComponentReference<LXSnapshot>(instance);
           this.snapshotObj = LXSerializable.Utils.toObject(lx, instance);
         } else {
           LXSnapshot instance = new LXSnapshot(lx);
-          this.snapshot = new ComponentReference<LXSnapshot>(instance);
           instance.load(lx, this.snapshotObj);
+          this.snapshot = new ComponentReference<LXSnapshot>(instance);
           lx.engine.snapshots.addSnapshot(instance);
         }
       }
@@ -1790,10 +1867,38 @@ public abstract class LXCommand {
       }
     }
 
+    public static class Update extends LXCommand {
+
+      private final ComponentReference<LXSnapshot> snapshot;
+      private JsonObject previousState;
+
+      public Update(LXSnapshot snapshot) {
+        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Update Snapshot";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.previousState = LXSerializable.Utils.toObject(lx, this.snapshot.get());
+        this.snapshot.get().update();
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.snapshot.get().load(lx, this.previousState);
+      }
+
+    }
+
     public static class Recall extends LXCommand {
 
-      private ComponentReference<LXSnapshot> snapshot;
+      private final ComponentReference<LXSnapshot> snapshot;
       private final List<LXCommand> commands = new ArrayList<LXCommand>();
+      private boolean recalled = false;
 
       public Recall(LXSnapshot snapshot) {
         this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
@@ -1802,7 +1907,7 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         this.commands.clear();
-        lx.engine.snapshots.recall(this.snapshot.get(), this.commands);
+        this.recalled = lx.engine.snapshots.recall(this.snapshot.get(), this.commands);
       }
 
       @Override
@@ -1813,12 +1918,17 @@ public abstract class LXCommand {
       }
 
       @Override
+      public boolean isIgnored() {
+        return !this.recalled;
+      }
+
+      @Override
       public String getDescription() {
         return "Recall Snapshot";
       }
     }
 
-    public static class RemoveView extends LXCommand {
+    private static class RemoveView extends LXCommand {
 
       private ComponentReference<LXSnapshot> snapshot;
       private LXSnapshot.View view;

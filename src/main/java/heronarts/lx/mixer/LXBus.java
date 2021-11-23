@@ -324,6 +324,9 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   public LXClip addClip(int index) {
+    if (getClip(index) != null) {
+      throw new IllegalStateException("Cannot add clip at index " + index + " which already holds a clip: " + this);
+    }
     while (this.mutableClips.size() <= index) {
       this.mutableClips.add(null);
     }

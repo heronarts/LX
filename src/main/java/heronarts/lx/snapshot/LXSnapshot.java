@@ -30,6 +30,8 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXLayer;
+import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.color.ColorParameter;
@@ -40,6 +42,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -238,7 +241,11 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
 
     private ParameterView(LX lx, JsonObject obj) {
       super(lx, obj);
-      this.parameter = (LXParameter) LXPath.get(lx, obj.get(KEY_PARAMETER_PATH).getAsString());
+      String path = obj.get(KEY_PARAMETER_PATH).getAsString();
+      this.parameter = (LXParameter) LXPath.get(lx, path);
+      if (this.parameter == null) {
+        throw new IllegalStateException("Cannot create snapshot view of non-existent parameter: " + path);
+      }
       this.component = this.parameter.getParent();
       if (this.component == null) {
         throw new IllegalStateException("Cannot store a snapshot view of a parameter with no parent");
@@ -373,7 +380,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     private boolean wasEnabled;
 
     private ChannelFaderView(LXAbstractChannel channel) {
-      this(channel, channel.enabled.isOn(), channel.fader.getValue());
+      this(channel, channel.enabled.isOn(), channel.fader.getBaseValue());
     }
 
     protected ChannelFaderView(LXAbstractChannel channel, boolean enabled, double fader) {
@@ -415,12 +422,12 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
           this.toFader = this.fader;
           this.channel.enabled.setValue(true);
         } else {
-          this.fromFader = this.channel.fader.getValue();
+          this.fromFader = this.channel.fader.getBaseValue();
           this.toFader = 0;
         }
       } else {
         this.channel.enabled.setValue(this.enabled);
-        this.fromFader = this.channel.fader.getValue();
+        this.fromFader = this.channel.fader.getBaseValue();
         this.toFader = this.fader;
       }
     }
@@ -504,12 +511,34 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     new BooleanParameter("Cycle", true)
     .setDescription("Whether the snapshot is eligible for auto-cycle");
 
+  public final BoundedParameter cycleTimeSecs = (BoundedParameter)
+    new BoundedParameter("Cycle Time", 60, .1, 60*60*24)
+    .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter hasCustomCycleTime =
+    new BooleanParameter("Custom Cycle", false)
+    .setDescription("When enabled, this snapshot uses its own custom duration rather than the default cycle time");
+
+  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
+    new BoundedParameter("Transition Time", 5, .1, 180)
+    .setDescription("Sets the duration of interpolated transitions between snapshots")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter hasCustomTransitionTime =
+    new BooleanParameter("Custom Transition", false)
+    .setDescription("When enabled, this snapshot uses its own custom transition rather than the default transition time");
+
 
   public LXSnapshot(LX lx) {
     super(lx, "Snapshot");
     setParent(lx.engine.snapshots);
     addParameter("recall", this.recall);
     addParameter("autoCycleEligible", this.autoCycleEligible);
+    addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
+    addParameter("cycleTimeSecs", this.cycleTimeSecs);
+    addParameter("hasCustomTransitionTime", this.hasCustomTransitionTime);
+    addParameter("transitionTimeSecs", this.transitionTimeSecs);
   }
 
   @Override
@@ -541,6 +570,14 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     return this.index;
   }
 
+  /**
+   * Update this snapshot to reflect the current program state
+   */
+  public void update() {
+    clearViews();
+    initialize();
+  }
+
   // Internal engine-only call, initializes a new snapshot with views of everything
   // relevant in the project scope. It's a bit of an arbitrary selection at the moment
   void initialize() {
@@ -563,6 +600,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
               addParameterView(ViewScope.PATTERNS, p);
             }
           }
+          addLayeredView(ViewScope.PATTERNS, pattern);
         }
       }
 
@@ -575,6 +613,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
               addParameterView(ViewScope.EFFECTS, p);
             }
           }
+          addLayeredView(ViewScope.EFFECTS, effect);
         } else {
           // If the effect is off, then we only recall that it is off
           addParameterView(ViewScope.EFFECTS, effect.enabled);
@@ -587,6 +626,17 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       for (LXParameter p : modulator.getParameters()) {
         addParameterView(ViewScope.MODULATION, p);
       }
+    }
+  }
+
+  private void addLayeredView(ViewScope scope, LXLayeredComponent component) {
+    for (LXParameter p : component.getParameters()) {
+      if (p != component.label) {
+        addParameterView(scope, p);
+      }
+    }
+    for (LXLayer layer : component.getLayers()) {
+      addLayeredView(scope, layer);
     }
   }
 
@@ -652,6 +702,13 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     view.dispose();
   }
 
+  private void clearViews() {
+    // Remove all the existing views
+    for (int i = this.views.size() - 1; i >= 0; --i) {
+      removeView(this.views.get(i));
+    }
+  }
+
   boolean hasChannelFaderView(LXAbstractChannel channel) {
     for (View view : this.views) {
       if (view instanceof ChannelFaderView) {
@@ -705,10 +762,17 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
   @Override
   public void load(LX lx, JsonObject obj) {
     super.load(lx, obj);
+
+    clearViews();
+
     if (obj.has(KEY_VIEWS)) {
       JsonArray viewsArray = obj.getAsJsonArray(KEY_VIEWS);
       for (JsonElement viewElement : viewsArray) {
-        addView(viewElement.getAsJsonObject());
+        try {
+          addView(viewElement.getAsJsonObject());
+        } catch (Exception x) {
+          LX.error(x, "Invalid view in snapshot: " + viewElement.toString());
+        }
       }
     }
   }

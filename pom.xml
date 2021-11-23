@@ -1,118 +1,178 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-    <groupId>heronarts</groupId>
-    <artifactId>lx</artifactId>
-    <version>0.2.1</version>
-    <packaging>jar</packaging>
+	<groupId>com.heronarts</groupId>
+	<artifactId>lx</artifactId>
+	<version>0.2.2</version>
+	<packaging>jar</packaging>
 
-    <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        
-        <gson.version>2.8.6</gson.version>
-        <coremidi4j.version>1.4</coremidi4j.version>
-                
-        <maven-assembly-plugin.version>3.1.0</maven-assembly-plugin.version>
-        <exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
-        <maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
-        <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
-        <maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
-    </properties>
-    
-    <dependencies>
+	<name>LX</name>
+	<description>Libraries for real-time procedural 3-D lighting animation and control.</description>
+	<url>http://lx.studio</url>
+
+	<licenses>
+		<license>
+			<name>LX Studio Software License and Distribution Agreement</name>
+			<url>http://lx.studio/license</url>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<name>Mark Slee</name>
+			<email>mark@heronarts.com</email>
+			<organization>Heron Arts</organization>
+			<organizationUrl>http://github.com/heronarts/</organizationUrl>
+		</developer>
+	</developers>
+
+	<scm>
+		<connection>scm:git:git://github.com/heronarts/LX.git</connection>
+		<developerConnection>scm:git:git://github.com/heronarts/LX.git</developerConnection>
+		<url>http://github.com/heronarts/LX/tree/master</url>
+	</scm>
+
+	<properties>
+		<maven.compiler.source>1.8</maven.compiler.source>
+		<maven.compiler.target>1.8</maven.compiler.target>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+		<gson.version>2.8.9</gson.version>
+		<coremidi4j.version>1.6</coremidi4j.version>
+
+		<maven-assembly-plugin.version>3.1.0</maven-assembly-plugin.version>
+		<exec-maven-plugin.version>1.6.0</exec-maven-plugin.version>
+		<maven-javadoc-plugin.version>3.2.0</maven-javadoc-plugin.version>
+		<maven-source-plugin.version>3.0.1</maven-source-plugin.version>
+		<maven-compiler-plugin.version>3.8.0</maven-compiler-plugin.version>
+	</properties>
+
+	<dependencies>
 		<dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${gson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>uk.co.xfactory-librarians</groupId>
-            <artifactId>coremidi4j</artifactId>
-            <version>${coremidi4j.version}</version>
-        </dependency>
-  	</dependencies>
-  	
-  	 <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven-compiler-plugin.version}</version>
-                <configuration>
-                    <compilerArgs>
-                        <arg>-Xlint</arg>
-                        <arg>-Xpkginfo:always</arg>
-                    </compilerArgs>
-                </configuration>
-            </plugin>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>${gson.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>uk.co.xfactory-librarians</groupId>
+			<artifactId>coremidi4j</artifactId>
+			<version>${coremidi4j.version}</version>
+		</dependency>
+	</dependencies>
 
-        	<plugin>
-	            <groupId>org.apache.maven.plugins</groupId>
-	            <artifactId>maven-assembly-plugin</artifactId>
-	            <version>${maven-assembly-plugin.version}</version>
-	
-	            <configuration>
-	                <descriptorRefs>
-	                    <descriptorRef>jar-with-dependencies</descriptorRef>
-	                </descriptorRefs>
-	            </configuration>
-	            
-	            <executions>
-	                <execution>
-	                    <id>make-assembly</id>
-	                    <phase>package</phase>
-	                    <goals>
-	                        <goal>single</goal>
-	                    </goals>
-	                </execution>
-	            </executions>
-        	</plugin>
-        	
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-source-plugin</artifactId>
-                <version>${maven-source-plugin.version}</version>
-                <executions>
-                    <execution>
-                        <id>attach-sources</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${maven-compiler-plugin.version}</version>
+				<configuration>
+					<compilerArgs>
+						<arg>-Xlint</arg>
+						<arg>-Xpkginfo:always</arg>
+					</compilerArgs>
+				</configuration>
+			</plugin>
 
 			<plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>${maven-javadoc-plugin.version}</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<version>${maven-assembly-plugin.version}</version>
+
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+
+				<executions>
+					<execution>
+						<id>make-assembly</id>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>${maven-source-plugin.version}</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${maven-javadoc-plugin.version}</version>
 				<configuration>
 					<source>8</source>
-					<bottom>LX library by Mark C. Slee. &copy; 2012-2020</bottom>
-	                <stylesheetfile>build/stylesheet.css</stylesheetfile>
-	                <doctitle>LX API Specification (${project.version})</doctitle>
-	                <header>LX (${project.version})</header>
-	                <overview>${basedir}/src/main/java/overview.html</overview>
-	                <windowtitle>LX API</windowtitle>
-	                <offlineLinks>
-            			<offlineLink>
-                			<url>https://javadoc.io/doc/com.google.code.gson/gson/2.8.6/com.google.gson/</url>
-                			<location>../../build/gson</location>
-            			</offlineLink>
-        			</offlineLinks>
+					<bottom>LX library by Mark C. Slee. &#169; 2012-2021</bottom>
+					<stylesheetfile>build/stylesheet.css</stylesheetfile>
+					<doctitle>LX API Specification (${project.version})</doctitle>
+					<header>LX (${project.version})</header>
+					<overview>${basedir}/src/main/java/overview.html</overview>
+					<windowtitle>LX API</windowtitle>
+					<offlineLinks>
+						<offlineLink>
+							<url>https://javadoc.io/doc/com.google.code.gson/gson/2.8.9/com.google.gson/</url>
+							<location>../../build/gson</location>
+						</offlineLink>
+					</offlineLinks>
 				</configuration>
-                <executions>
-                    <execution>
-                        <id>attach-javadocs</id>
-                        <goals>
-                            <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 		</plugins>
-	</build>
+    </build>
+    <profiles>
+        <profile>
+            <id>deploy</id>
+           	<distributionManagement>
+				<snapshotRepository>
+					<id>ossrh</id>
+					<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+				</snapshotRepository>
+				<repository>
+					<id>ossrh</id>
+					<url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+				</repository>
+            </distributionManagement>
+            <build>
+	            <plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-gpg-plugin</artifactId>
+						<version>1.5</version>
+						<executions>
+							<execution>
+								<id>sign-artifacts</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>sign</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+	            </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

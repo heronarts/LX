@@ -27,6 +27,7 @@ import java.util.List;
 
 import com.google.gson.JsonObject;
 
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
@@ -119,7 +120,13 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
       List<LXListenableNormalizedParameter> remoteControls = new ArrayList<LXListenableNormalizedParameter>();
       for (LXParameter parameter : getParameters()) {
         if (parameter instanceof LXListenableNormalizedParameter) {
-          remoteControls.add((LXListenableNormalizedParameter) parameter);
+          boolean valid = true;
+          if (this instanceof LXEffect) {
+            valid = parameter != ((LXEffect) this).enabled;
+          }
+          if (valid) {
+            remoteControls.add((LXListenableNormalizedParameter) parameter);
+          }
         }
       }
       this.remoteControls = remoteControls.toArray(new LXListenableNormalizedParameter[0]);

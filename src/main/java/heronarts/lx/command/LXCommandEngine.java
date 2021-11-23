@@ -59,16 +59,18 @@ public class LXCommandEngine {
       // Perform the command
       command.perform(this.lx);
 
-      // If the event it already at the top of the pack, it has been updated
-      // and is not re-pushed after it is performed again
-      if (this.undoStack.isEmpty() || (this.undoStack.peek() != command)) {
-        this.undoStack.push(command);
-        this.undoChanged.bang();
-      }
+      if (!command.isIgnored()) {
+        // If the event it already at the top of the pack, it has been updated
+        // and is not re-pushed after it is performed again
+        if (this.undoStack.isEmpty() || (this.undoStack.peek() != command)) {
+          this.undoStack.push(command);
+          this.undoChanged.bang();
+        }
 
-      // A new action has occurred, we've branched and redo is done
-      this.redoStack.clear();
-      this.redoChanged.bang();
+        // A new action has occurred, we've branched and redo is done
+        this.redoStack.clear();
+        this.redoChanged.bang();
+      }
 
     } catch (InvalidCommandException icx) {
       this.lx.pushError(icx, "Unexpected error performing action " + command.getName() + "\n" + getErrorMessage(icx));

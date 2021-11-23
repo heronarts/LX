@@ -1,3 +1,9 @@
+0.2.2
+November 22, 2021
+- Refactor to LXFixture output layer
+- Enable merging of multiple protocol packets across fixtures
+- Various bugfixes
+
 0.2.1
 October 22, 2020
 - COVID lockdown

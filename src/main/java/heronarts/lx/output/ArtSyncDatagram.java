@@ -25,7 +25,7 @@ public class ArtSyncDatagram extends LXDatagram {
   private final static int ARTSYNC_HEADER_LENGTH = 14;
 
   public ArtSyncDatagram(LX lx) {
-    super(lx, new int[0], ARTSYNC_HEADER_LENGTH);
+    super(lx, new IndexBuffer(), ARTSYNC_HEADER_LENGTH);
     setPort(ArtNetDatagram.ARTNET_PORT);
 
     this.buffer[0] = 'A';

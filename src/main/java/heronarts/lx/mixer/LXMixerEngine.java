@@ -1006,8 +1006,6 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       for (JsonElement channelElement : channelsArray) {
         loadChannel(channelElement.getAsJsonObject());
       }
-    } else {
-      addChannel().fader.setValue(1);
     }
 
     // Load the parameters after restoring the channels!
