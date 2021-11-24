@@ -51,4 +51,12 @@ public interface LXFixtureContainer {
    */
   public void fixtureOutputChanged(LXFixture fixture);
 
+  /**
+   * The tags of this fixture has changed, the container will
+   * need to take this into account.
+   *
+   * @param fixture Fixture that has changed
+   */
+  public void fixtureTagsChanged(LXFixture fixture);
+
 }

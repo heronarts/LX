@@ -903,9 +903,7 @@ public class JsonFixture extends LXFixture {
         }
       }
     }
-    if (!validTags.isEmpty()) {
-      fixture.setTags(validTags.toArray(new String[0]));
-    }
+    fixture.setTags(validTags);
   }
 
   private List<String> _loadTags(JsonObject obj, boolean required, boolean replaceVariables, JsonFixture variableContext) {

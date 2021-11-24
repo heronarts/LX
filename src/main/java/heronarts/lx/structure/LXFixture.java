@@ -44,6 +44,7 @@ import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 
 /**
@@ -271,6 +272,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     new BooleanParameter("Solo", false)
     .setDescription("Solos this fixture, no other fixtures illuminated");
 
+  public final StringParameter tags =
+    new StringParameter("Tags", "")
+    .setDescription("Tags to be applied to the fixture in model");
+
   final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
 
   protected final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
@@ -284,7 +289,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   protected final List<OutputDefinition> outputDefinitions = new ArrayList<OutputDefinition>();
 
-  private final List<String> tags = new ArrayList<String>();
+  private final List<String> tagList = new ArrayList<String>();
 
   protected final Map<String, String> metaData = new HashMap<String, String>();
 
@@ -329,9 +334,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   protected LXFixture(LX lx, String label) {
     super(lx, label);
 
-    for (String tag : getDefaultTags()) {
-      this.tags.add(tag);
-    }
+    this.tags.setValue(String.join(" ", getDefaultTags()));
 
     // Geometry parameters
     addGeometryParameter("x", this.x);
@@ -351,6 +354,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     addParameter("mute", this.mute);
     addParameter("solo", this.solo);
 
+    // Tags
+    addParameter("tags", this.tags);
+
     this.brightness.setMappable(true);
     this.enabled.setMappable(true);
     this.identify.setMappable(true);
@@ -367,7 +373,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   @Override
   public String getPath() {
-    return this.tags.get(0) + "/" + (this.index + 1);
+    return "fixture/" + (this.index + 1);
   }
 
   void setIndex(int index) {
@@ -467,6 +473,15 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
   }
 
+  // Invoked when a child fixture has had its output settings altered
+  @Override
+  public final void fixtureTagsChanged(LXFixture fixture) {
+    if (this.container != null) {
+      this.container.fixtureTagsChanged(fixture);
+    }
+  }
+
+
   /**
    * Adds a parameter which impacts the number of LEDs that are in the fixture.
    * Changes to these parameters require re-generating the whole points array.
@@ -534,6 +549,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         }
       } else if (this.deactivate == p) {
         this.container.fixtureGenerationChanged(this);
+      } else if (p == this.tags) {
+        this.container.fixtureTagsChanged(this);
       }
     }
     if (p == this.solo) {
@@ -818,7 +835,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     // Okay, good to go, construct the model
-    LXModel model = constructModel(this.modelPoints, childModels, getTags());
+    LXModel model = constructModel(this.modelPoints, childModels, getModelTags());
     model.transform.set(this.geometryMatrix);
     return this.model = model;
   }
@@ -919,18 +936,6 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      * @param start Start index
      * @param n Number of points in the submodel
      * @param stride Stride size for selecting submodel points
-     */
-    public Submodel(int start, int n, int stride) {
-      this(start, n, stride, LXModel.Tag.MODEL);
-    }
-
-    /**
-     * Subclasses may use this helper to construct a submodel object from a set of
-     * points in this model.
-     *
-     * @param start Start index
-     * @param n Number of points in the submodel
-     * @param stride Stride size for selecting submodel points
      * @param tags Model tags for submodel
      */
     public Submodel(int start, int n, int stride, String ... tags) {
@@ -972,7 +977,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @return List of model tag types for this fixture
    */
   protected String[] getDefaultTags() {
-    return new String[] { LXModel.Tag.MODEL };
+    return new String[0];
   }
 
   /**
@@ -981,11 +986,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @param tags Tag values
    * @return this
    */
-  protected LXFixture setTags(String ... tags) {
-    this.tags.clear();
-    for (String tag : tags) {
-      this.tags.add(tag);
-    }
+  protected LXFixture setTags(List<String> tags) {
+    this.tagList.clear();
+    this.tagList.addAll(tags);
     return this;
   }
 
@@ -994,8 +997,31 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    *
    * @return Tags
    */
-  protected List<String> getTags() {
-    return this.tags;
+  private List<String> getModelTags() {
+    // Copy the tag list that we own (specified by JSON)
+    List<String> modelTags = new ArrayList<String>(this.tagList);
+
+    // Add any extra tags specified by string field
+    boolean hasExtra = false;
+    String extraTags = this.tags.getString();
+    if ((extraTags != null) && !extraTags.isEmpty()) {
+      String[] tags = extraTags.trim().split(" ");
+      for (String tag : tags) {
+        tag = tag.trim();
+        if (!tag.isEmpty()) {
+          hasExtra = true;
+          modelTags.add(tag);
+        }
+      }
+    }
+
+    // Was no custom tag list specified, and no parameter? Use defaults...
+    if (this.tagList.isEmpty() && !hasExtra) {
+      for (String tag : getDefaultTags()) {
+        modelTags.add(tag);
+      }
+    }
+    return modelTags;
   }
 
   protected final static Submodel[] NO_SUBMODELS = new Submodel[0];
