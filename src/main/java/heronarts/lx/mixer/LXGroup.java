@@ -118,6 +118,12 @@ public class LXGroup extends LXAbstractChannel {
     long compositeStart = System.nanoTime();
     int[] blendDestination = this.lx.engine.mixer.backgroundTransparent.getArray();
     int[] blendOutput = this.blendBuffer.getArray();
+
+    // Because of channel views, channel blends may not touch all pixels, so start
+    // by splatting transparent to the group buffer
+    System.arraycopy(blendDestination, 0, blendOutput, 0, blendDestination.length);
+    blendDestination = blendOutput;
+
     for (LXChannel channel : this.channels) {
       if (channel.enabled.isOn()) {
         LXBlend blend = channel.blendMode.getObject();

@@ -789,15 +789,16 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
     private int[] destination;
     private int[] output;
-    private boolean hasOutput;
 
     void initialize(int[] destination, int[] output) {
       this.destination = destination;
       this.output = output;
-      this.hasOutput = false;
 
-      // TODO(mcslee): is this the way to do it??
-      flatten();
+      // We need to splat the output array right away. Channels may have views applied
+      // which mean blend calls might not touch all the pixels. So we've got to get them
+      // all re-initted upfront.
+      System.arraycopy(this.destination, 0, this.output, 0, this.destination.length);
+      this.destination = this.output;
     }
 
     void blend(LXBlend blend, BlendStack that, double alpha, LXModel model) {
@@ -807,27 +808,16 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     void blend(LXBlend blend, int[] src, double alpha, LXModel model) {
       blend.blend(this.destination, src, alpha, this.output, model);
       this.destination = this.output;
-      this.hasOutput = true;
     }
 
     void transition(LXBlend blend, int[] src, double lerp, LXModel model) {
       blend.lerp(this.destination, src, lerp, this.output, model);
       this.destination = this.output;
-      this.hasOutput = true;
     }
 
     void copyFrom(BlendStack that) {
       System.arraycopy(that.destination, 0, this.output, 0, that.destination.length);
       this.destination = this.output;
-      this.hasOutput = true;
-    }
-
-    void flatten() {
-      if (!this.hasOutput) {
-        System.arraycopy(this.destination, 0, this.output, 0, this.destination.length);
-        this.destination = this.output;
-        this.hasOutput = true;
-      }
     }
 
   }
@@ -978,9 +968,6 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       // Add the right group to the main buffer
       this.blendStackMain.blend(this.addBlend, this.blendStackRight, Math.min(1, 2. * crossfadeValue), model);
     }
-
-    // Check for edge case of all channels being off, don't leave stale data in blend buffer!
-    this.blendStackMain.flatten();
 
     // Time to apply master FX to the main blended output
     long effectStart = System.nanoTime();
