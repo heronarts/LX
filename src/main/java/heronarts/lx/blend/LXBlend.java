@@ -22,6 +22,8 @@ import heronarts.lx.LX;
 import heronarts.lx.LXBuffer;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXPoint;
 
 /**
  * An LXBlend is a loop-based implementation of a compositing algorithm.
@@ -56,10 +58,10 @@ public abstract class LXBlend extends LXModulatorComponent {
     }
 
     @Override
-    public void blend(int[] dst, int[] src, double alpha, int[] output) {
+    public void blend(int[] dst, int[] src, double alpha, int[] output, LXModel model) {
       int alphaMask = (int) (alpha * 0x100);
-      for (int i = 0; i < dst.length; ++i) {
-        output[i] = this.function.apply(dst[i], src[i], alphaMask);
+      for (LXPoint p : model.points) {
+        output[p.index] = this.function.apply(dst[p.index], src[p.index], alphaMask);
       }
     }
   }
@@ -108,8 +110,8 @@ public abstract class LXBlend extends LXModulatorComponent {
     return getName();
   }
 
-  public void blend(int[] dst, int[] src, double alpha, LXBuffer buffer) {
-    blend(dst, src, alpha, buffer.getArray());
+  public void blend(int[] dst, int[] src, double alpha, LXBuffer buffer, LXModel model) {
+    blend(dst, src, alpha, buffer.getArray(), model);
   }
 
   /**
@@ -119,8 +121,9 @@ public abstract class LXBlend extends LXModulatorComponent {
    * @param src Source buffer (top layer)
    * @param alpha Alpha blend, from 0-1
    * @param output Output buffer, which may be the same as src or dst
+   * @param model A model which indicates the set of points to blend
    */
-  public abstract void blend(int[] dst, int[] src, double alpha, int[] output);
+  public abstract void blend(int[] dst, int[] src, double alpha, int[] output, LXModel model);
 
   /**
    * Transitions from one buffer to another. By default, this is used by first
@@ -133,8 +136,9 @@ public abstract class LXBlend extends LXModulatorComponent {
    * @param to Second buffer
    * @param amt Interpolation from-to (0-1)
    * @param output Output buffer, which may be the same as from or to
+   * @param model The model with points that should be blended
    */
-  public void lerp(int[] from, int[] to, double amt, int[] output) {
+  public void lerp(int[] from, int[] to, double amt, int[] output, LXModel model) {
     int[] dst, src;
     double alpha;
     if (amt <= 0.5) {
@@ -146,7 +150,7 @@ public abstract class LXBlend extends LXModulatorComponent {
       src = from;
       alpha = (1-amt) * 2.;
     }
-    blend(dst, src, alpha, output);
+    blend(dst, src, alpha, output, model);
   }
 
   /**

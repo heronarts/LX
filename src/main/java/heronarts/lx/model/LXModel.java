@@ -57,6 +57,7 @@ public class LXModel implements LXSerializable {
    */
   public static class Tag {
     public final static String MODEL = "model";
+    public final static String VIEW = "view";
     public final static String GRID = "grid";
     public final static String ROW = "row";
     public final static String COLUMN = "column";
@@ -109,6 +110,8 @@ public class LXModel implements LXSerializable {
 
   private final Map<String, List<LXModel>> subDict =
     new HashMap<String, List<LXModel>>();
+
+  final List<LXView> derivedViews = new ArrayList<LXView>();
 
   /**
    * An ordered list of outputs that should be sent for this model.
@@ -325,6 +328,16 @@ public class LXModel implements LXSerializable {
     this(points, children, metaData, java.util.Arrays.asList(tags));
   }
 
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   */
   public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String > tags) {
     this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
@@ -594,7 +607,28 @@ public class LXModel implements LXSerializable {
     if (normalize) {
       normalizePoints();
     }
+
+    // Update any views that were derived from this model
+    for (LXView view : this.derivedViews) {
+      for (LXPoint p : this.points) {
+        LXPoint clone = view.clonedPoints.get(p.index);
+        if (clone != null) {
+          clone.set(p);
+        }
+      }
+
+      // The view now needs overall re-normalization
+      boolean normalizeView = normalize && (view.normalization == LXView.Normalization.RELATIVE);
+      view.update(normalizeView, recurse);
+    }
+
     bang();
+
+    // Update any views that were derived from this model
+    for (LXView view : this.derivedViews) {
+      view.bang();
+    }
+
     return this;
   }
 
@@ -787,6 +821,11 @@ public class LXModel implements LXSerializable {
   public void dispose() {
     for (LXModel child : this.children) {
       child.dispose();
+    }
+    // NOTE: reverse iterate because the dispose call will mutate
+    // the list.
+    for (int i = this.derivedViews.size() - 1; i >= 0; --i) {
+      this.derivedViews.get(i).dispose();
     }
     this.listeners.clear();
   }

@@ -29,7 +29,6 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -110,11 +109,8 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     setParent(mixer);
   }
 
-  @Override
-  protected void onModelChanged(LXModel model) {
-    for (LXEffect effect : this.mutableEffects) {
-      effect.setModel(model);
-    }
+  public LXModel getModelView() {
+    return this.model;
   }
 
   public final void addListener(Listener listener) {
@@ -229,6 +225,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     }
     this.mutableEffects.add(index, effect);
     effect.setBus(this);
+    effect.setModel(getModelView());
     _reindexEffects();
     for (Listener listener : this.listeners) {
       listener.effectAdded(this, effect);

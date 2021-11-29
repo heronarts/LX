@@ -795,20 +795,23 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       this.destination = destination;
       this.output = output;
       this.hasOutput = false;
+
+      // TODO(mcslee): is this the way to do it??
+      flatten();
     }
 
-    void blend(LXBlend blend, BlendStack that, double alpha) {
-      blend(blend, that.destination, alpha);
+    void blend(LXBlend blend, BlendStack that, double alpha, LXModel model) {
+      blend(blend, that.destination, alpha, model);
     }
 
-    void blend(LXBlend blend, int[] src, double alpha) {
-      blend.blend(this.destination, src, alpha, this.output);
+    void blend(LXBlend blend, int[] src, double alpha, LXModel model) {
+      blend.blend(this.destination, src, alpha, this.output, model);
       this.destination = this.output;
       this.hasOutput = true;
     }
 
-    void transition(LXBlend blend, int[] src, double lerp) {
-      blend.lerp(this.destination, src, lerp, this.output);
+    void transition(LXBlend blend, int[] src, double lerp, LXModel model) {
+      blend.lerp(this.destination, src, lerp, this.output, model);
       this.destination = this.output;
       this.hasOutput = true;
     }
@@ -932,7 +935,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         if (blendStack != null && channel.enabled.isOn()) {
           double alpha = channel.fader.getValue();
           if (alpha > 0) {
-            blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha);
+            blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha, channel.getModelView());
           }
         }
       }
@@ -940,7 +943,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       // Blend into the cue buffer, always a direct add blend for any type of channel
       if (channel.cueActive.isOn()) {
         cueBusActive = true;
-        this.blendStackCue.blend(this.addBlend, channel.getColors(), 1);
+        this.blendStackCue.blend(this.addBlend, channel.getColors(), 1, channel.getModelView());
       }
 
       ((LXAbstractChannel.Profiler) channel.profiler).blendNanos = System.nanoTime() - blendStart;
@@ -958,21 +961,22 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Step 4: now we have three output buses that need mixing... the left/right crossfade
     // groups plus the main buffer. We figure out which of them are active and blend appropriately
     // Note that the A+B crossfade groups are additively mixed AFTER the main buffer
-    boolean leftContent = leftBusActive && leftExists;
-    boolean rightContent = rightBusActive && rightExists;
+    final boolean leftContent = leftBusActive && leftExists;
+    final boolean rightContent = rightBusActive && rightExists;
+    final LXModel model = this.lx.getModel();
 
     if (leftContent && rightContent) {
       // There are left and right channels assigned!
       LXBlend blend = this.crossfaderBlendMode.getObject();
-      blendStackLeft.transition(blend, blendStackRight.destination, crossfadeValue);
+      blendStackLeft.transition(blend, blendStackRight.destination, crossfadeValue, model);
       // Add the crossfaded groups to the main buffer
-      this.blendStackMain.blend(this.addBlend, blendStackLeft, 1.);
+      this.blendStackMain.blend(this.addBlend, blendStackLeft, 1., model);
     } else if (leftContent) {
       // Add the left group to the main buffer
-      this.blendStackMain.blend(this.addBlend, this.blendStackLeft, Math.min(1, 2. * (1-crossfadeValue)));
+      this.blendStackMain.blend(this.addBlend, this.blendStackLeft, Math.min(1, 2. * (1-crossfadeValue)), model);
     } else if (rightContent) {
       // Add the right group to the main buffer
-      this.blendStackMain.blend(this.addBlend, this.blendStackRight, Math.min(1, 2. * crossfadeValue));
+      this.blendStackMain.blend(this.addBlend, this.blendStackRight, Math.min(1, 2. * crossfadeValue), model);
     }
 
     // Check for edge case of all channels being off, don't leave stale data in blend buffer!

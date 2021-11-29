@@ -50,18 +50,17 @@ public abstract class LXModelComponent extends LXModulatorComponent {
     if (this.model != model) {
       this.model = model;
       this.modelChanged = true;
-
     }
     return this;
   }
 
   @Override
   public void loop(double deltaMs) {
-    super.loop(deltaMs);
     if (this.modelChanged) {
       onModelChanged(this.model);
       this.modelChanged = false;
     }
+    super.loop(deltaMs);
   }
 
   /**
