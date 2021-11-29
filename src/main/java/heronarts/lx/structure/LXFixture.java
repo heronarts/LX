@@ -1005,10 +1005,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     boolean hasExtra = false;
     String extraTags = this.tags.getString();
     if ((extraTags != null) && !extraTags.isEmpty()) {
-      String[] tags = extraTags.trim().split(" ");
+      String[] tags = extraTags.trim().split("\\s+");
       for (String tag : tags) {
         tag = tag.trim();
-        if (!tag.isEmpty()) {
+        if (!tag.isEmpty() && LXModel.Tag.isValid(tag)) {
           hasExtra = true;
           modelTags.add(tag);
         }

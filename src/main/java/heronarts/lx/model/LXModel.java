@@ -65,6 +65,15 @@ public class LXModel implements LXSerializable {
     public final static String POINT = "point";
     public final static String POINTS = "points";
     public final static String ARC = "arc";
+
+    public final static String VALID_TAG_REGEX = "[A-Za-z0-9_\\.\\-/]+";
+
+    public final static String VALID_TEXT_FIELD_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.- ";
+
+    public static boolean isValid(String tag) {
+      return tag.matches(VALID_TAG_REGEX);
+    }
+
   }
 
   /**
@@ -448,6 +457,9 @@ public class LXModel implements LXSerializable {
       tag = tag.trim();
       if (tag.isEmpty()) {
         throw new IllegalArgumentException("May not pass empty string tag to LXModel");
+      }
+      if (!Tag.isValid(tag)) {
+        throw new IllegalArgumentException("May not pass invalid tag to LXModel: " + tag);
       }
       // Filter out any duplicates that got in somehow
       if (!_tags.contains(tag)) {

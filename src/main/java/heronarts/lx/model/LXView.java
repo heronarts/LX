@@ -49,7 +49,7 @@ public class LXView extends LXModel {
    * @return A view of the model that selects the elements in the selector string
    */
   public static LXView create(LXModel model, String selector, Normalization normalization) {
-    String[] tags = selector.split(" ");
+    String[] tags = selector.split("\\s+");
     List<LXModel> submodels = new ArrayList<LXModel>();
     for (String tag : tags) {
       for (LXModel sub : model.sub(tag)) {
