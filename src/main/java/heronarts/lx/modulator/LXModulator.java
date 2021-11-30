@@ -18,6 +18,12 @@
 
 package heronarts.lx.modulator;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXRunnableComponent;
 import heronarts.lx.osc.LXOscComponent;
@@ -29,6 +35,26 @@ import heronarts.lx.parameter.LXParameter;
  * continuously, others may halt after they reach a certain value.
  */
 public abstract class LXModulator extends LXRunnableComponent implements LXComponent.Renamable, LXParameter {
+
+  /**
+   * A market annotation which enables a registered modulator to appear in the global section
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Global {
+    String value();
+  }
+
+  /**
+   * A market annotation which enables a registered modulator to appear in the device section
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Device {
+    String value();
+  }
 
   private Formatter formatter = null;
 

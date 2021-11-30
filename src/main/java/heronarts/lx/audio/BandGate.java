@@ -35,6 +35,8 @@ import heronarts.lx.utils.LXUtils;
  * does *not* respect the attack and release settings of the underlying meter, it
  * merely shares the raw values. The BeatDetect applies its own time-band filtering.
  */
+@LXModulator.Global("Beat Detect")
+@LXModulator.Device("Beat Detect")
 public class BandGate extends LXModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
 
   /**
