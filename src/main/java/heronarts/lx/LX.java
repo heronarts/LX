@@ -67,7 +67,7 @@ import com.google.gson.stream.JsonWriter;
  */
 public class LX {
 
-  public static final String VERSION = "0.2.3";
+  public static final String VERSION = "0.4.0-SNAPSHOT";
 
   public static class InstantiationException extends Exception {
 
@@ -87,10 +87,10 @@ public class LX {
 
   public static class Flags {
     /**
-     * Sometimes we need to know if we are P3LX, but we don't want LX library to have
-     * any dependency upon P3LX.
+     * Sometimes we need to know if we are P4LX, but we don't want LX library to have
+     * any dependency upon P4LX.
      */
-    public boolean isP3LX = false;
+    public boolean isP4LX = false;
     public boolean immutableModel = false;
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
@@ -1261,6 +1261,7 @@ public class LX {
   }
 
   public static void headless(Flags flags, File projectFile) {
+    LX.log("Starting LX headless engine " + VERSION + "...");
     LX lx = new LX(flags);
     if (projectFile != null) {
       boolean isSchedule = projectFile.getName().endsWith(".lxs");
@@ -1277,7 +1278,6 @@ public class LX {
         }
       }
     }
-    LX.log("Starting headless engine...");
     lx.engine.start();
   }
 }
