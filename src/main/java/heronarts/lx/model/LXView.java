@@ -52,31 +52,35 @@ public class LXView extends LXModel {
    * @return A view of the model that selects the elements in the selector string
    */
   public static LXView create(LXModel model, String viewSelector, Normalization normalization) {
-    String[] selectors = viewSelector.split("\\s+");
     List<LXModel> submodels = new ArrayList<LXModel>();
-    for (String selector : selectors) {
+    for (String selector : viewSelector.split("\\s+")) {
       String tag = selector;
 
       // If this syntax gets more complex, should clean it up to use regex matching
       int rangeStart = tag.indexOf('[');
-      int rangeEnd = tag.indexOf(']');
       int startIndex = 0, endIndex = -1;
-      if ((rangeStart >= 0) && (rangeEnd >= 0) && (rangeEnd > rangeStart)) {
+      if (rangeStart >= 0) {
         tag = selector.substring(0, rangeStart);
-        String range = selector.substring(rangeStart+1, rangeEnd);
-        int dash = range.indexOf('-');
-        if (dash < 0) {
-          try {
-            startIndex = endIndex = Integer.parseInt(range);
-          } catch (NumberFormatException nfx) {
-            LX.error("Bad number in view selection range: " + selector);
-          }
+        int rangeEnd = tag.indexOf(']');
+        if ((rangeEnd < 0) || (rangeEnd <= rangeStart)) {
+          LX.error("Poorly formatted view selection range: " + selector);
         } else {
-          try {
-            startIndex = Integer.parseInt(range.substring(0, dash));
-            endIndex = Integer.parseInt(range.substring(dash+1));
-          } catch (NumberFormatException nfx) {
-            LX.error("Bad value in view selection range: " + selector);
+          // Range can be specified either as [n] or [n-m] (inclusive)
+          String range = selector.substring(rangeStart+1, rangeEnd);
+          int dash = range.indexOf('-');
+          if (dash < 0) {
+            try {
+              startIndex = endIndex = Integer.parseInt(range);
+            } catch (NumberFormatException nfx) {
+              LX.error("Bad number in view selection range: " + selector);
+            }
+          } else {
+            try {
+              startIndex = Integer.parseInt(range.substring(0, dash));
+              endIndex = Integer.parseInt(range.substring(dash+1));
+            } catch (NumberFormatException nfx) {
+              LX.error("Bad value in view selection range: " + selector);
+            }
           }
         }
       }
