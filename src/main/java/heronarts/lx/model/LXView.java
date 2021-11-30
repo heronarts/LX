@@ -20,6 +20,7 @@ package heronarts.lx.model;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -52,9 +53,29 @@ public class LXView extends LXModel {
     String[] tags = selector.split("\\s+");
     List<LXModel> submodels = new ArrayList<LXModel>();
     for (String tag : tags) {
-      for (LXModel sub : model.sub(tag)) {
-        if (!submodels.contains(sub)) {
-          submodels.add(sub);
+      for (LXModel candidate : model.sub(tag)) {
+        // If the submodel is already directly contained, skip it
+        if (!submodels.contains(candidate)) {
+
+          // Now we need to check for two scenarios... one is that the candidate
+          // is an ancestor of one or more submodes. In which case all of those need
+          // to be removed, the candidate will be added, implicitly containing them
+          // all.  Alternately, if the candidate is a descendant of one of the existing
+          // submodels, then we don't want to redundantly add it again.
+          boolean isDescendant = false;
+          Iterator<LXModel> iter = submodels.iterator();
+          while (!isDescendant && iter.hasNext()) {
+            LXModel submodel = iter.next();
+            if (submodel.contains(candidate)) {
+              isDescendant = true;
+            } else if (candidate.contains(submodel)) {
+              // We're subsuming this thing, remove it!
+              iter.remove();
+            }
+          }
+          if (!isDescendant) {
+            submodels.add(candidate);
+          }
         }
       }
     }

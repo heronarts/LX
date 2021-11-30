@@ -473,6 +473,31 @@ public class LXModel implements LXSerializable {
     return this.parent;
   }
 
+  /**
+   * Determine whether the given descendant is contained by this model, at any
+   * level of hierarchy.
+   *
+   * @param descendant Descendant submodel
+   * @return true if the descendant is contained by this model tree
+   */
+  public boolean contains(LXModel descendant) {
+    // Do a quick child-list pass first
+    for (LXModel child : this.children) {
+      if (child == descendant) {
+        return true;
+      }
+    }
+
+    // Not found? Okay, recursion time... got a weird mix of
+    // breadth-first and depth-first on our hands here.
+    for (LXModel child : this.children) {
+      if (child.contains(descendant)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   public String getPath() {
     LXModel parent = this.parent;
     if (parent == null) {
