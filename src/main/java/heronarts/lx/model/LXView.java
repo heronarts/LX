@@ -24,6 +24,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import heronarts.lx.LX;
+
 public class LXView extends LXModel {
 
   public enum Normalization {
@@ -46,14 +48,51 @@ public class LXView extends LXModel {
    * Constructs a view of the given model object
    *
    * @param model Model
-   * @param selector View selection string
+   * @param viewSelector View selection string
    * @return A view of the model that selects the elements in the selector string
    */
-  public static LXView create(LXModel model, String selector, Normalization normalization) {
-    String[] tags = selector.split("\\s+");
+  public static LXView create(LXModel model, String viewSelector, Normalization normalization) {
+    String[] selectors = viewSelector.split("\\s+");
     List<LXModel> submodels = new ArrayList<LXModel>();
-    for (String tag : tags) {
-      for (LXModel candidate : model.sub(tag)) {
+    for (String selector : selectors) {
+      String tag = selector;
+
+      // If this syntax gets more complex, should clean it up to use regex matching
+      int rangeStart = tag.indexOf('[');
+      int rangeEnd = tag.indexOf(']');
+      int startIndex = 0, endIndex = -1;
+      if ((rangeStart >= 0) && (rangeEnd >= 0) && (rangeEnd > rangeStart)) {
+        tag = selector.substring(0, rangeStart);
+        String range = selector.substring(rangeStart+1, rangeEnd);
+        int dash = range.indexOf('-');
+        if (dash < 0) {
+          try {
+            startIndex = endIndex = Integer.parseInt(range);
+          } catch (NumberFormatException nfx) {
+            LX.error("Bad number in view selection range: " + selector);
+          }
+        } else {
+          try {
+            startIndex = Integer.parseInt(range.substring(0, dash));
+            endIndex = Integer.parseInt(range.substring(dash+1));
+          } catch (NumberFormatException nfx) {
+            LX.error("Bad value in view selection range: " + selector);
+          }
+        }
+      }
+
+      List<LXModel> candidates = model.sub(tag);
+      if (startIndex < 0) {
+        startIndex = 0;
+      }
+      if (endIndex < 0) {
+        endIndex = candidates.size();
+      }
+
+      // Check on all the candidate tags
+      for (int i = startIndex; i <= endIndex && i < candidates.size(); ++i) {
+        LXModel candidate = candidates.get(i);
+
         // If the submodel is already directly contained, skip it
         if (!submodels.contains(candidate)) {
 
