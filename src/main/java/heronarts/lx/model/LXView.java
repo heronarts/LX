@@ -62,7 +62,7 @@ public class LXView extends LXModel {
       int startIndex = 0, endIndex = -1;
       if (rangeStart >= 0) {
         tag = selector.substring(0, rangeStart);
-        int rangeEnd = tag.indexOf(']');
+        int rangeEnd = selector.indexOf(']');
         if ((rangeEnd < 0) || (rangeEnd <= rangeStart)) {
           LX.error("Poorly formatted view selection range: " + selector);
         } else {
