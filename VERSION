@@ -1,3 +1,8 @@
+0.2.3
+November 30, 2021
+- Add support for custom model view layer, per-channel view settings
+- Add generic support for dynamic modulator classes, both global and per-device
+
 0.2.2
 November 22, 2021
 - Refactor to LXFixture output layer

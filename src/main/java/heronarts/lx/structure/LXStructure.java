@@ -931,6 +931,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     regenerateOutputs();
   }
 
+  @Override
+  public void fixtureTagsChanged(LXFixture fixture) {
+    regenerateModel(false);
+  }
+
   private boolean isLoading = false;
 
   private static final String KEY_FIXTURES = "fixtures";

@@ -42,6 +42,7 @@ import heronarts.lx.blend.MultiplyBlend;
 import heronarts.lx.blend.NormalBlend;
 import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
 
@@ -131,6 +132,16 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_EFFECTS.add(heronarts.lx.effect.midi.GateEffect.class);
   };
 
+  private static final List<Class<? extends LXModulator>> DEFAULT_MODULATORS;
+  static {
+    DEFAULT_MODULATORS = new ArrayList<Class<? extends LXModulator>>();
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.VariableLFO.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiStageEnvelope.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Randomizer.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
+  };
+
   private static final List<Class<? extends LXBlend>> DEFAULT_CHANNEL_BLENDS;
   static {
     DEFAULT_CHANNEL_BLENDS = new ArrayList<Class<? extends LXBlend>>();
@@ -177,6 +188,7 @@ public class LXRegistry implements LXSerializable {
    */
   private final List<Class<? extends LXPattern>> mutablePatterns =
     new ArrayList<Class<? extends LXPattern>>(DEFAULT_PATTERNS);
+
   public final List<Class<? extends LXPattern>> patterns =
     Collections.unmodifiableList(this.mutablePatterns);
 
@@ -188,6 +200,15 @@ public class LXRegistry implements LXSerializable {
    */
   public final List<Class<? extends LXEffect>> effects =
     Collections.unmodifiableList(this.mutableEffects);
+
+  private final List<Class<? extends LXModulator>> mutableModulators=
+    new ArrayList<Class<? extends LXModulator>>(DEFAULT_MODULATORS);
+
+  /**
+   * The list of globally registered effects
+   */
+  public final List<Class<? extends LXModulator>> modulators =
+    Collections.unmodifiableList(this.mutableModulators);
 
   private final List<Class<? extends LXBlend>> mutableChannelBlends =
     new ArrayList<Class<? extends LXBlend>>(DEFAULT_CHANNEL_BLENDS);
@@ -450,6 +471,9 @@ public class LXRegistry implements LXSerializable {
     if (LXEffect.class.isAssignableFrom(clz)) {
       addEffect(clz.asSubclass(LXEffect.class));
     }
+    if (LXModulator.class.isAssignableFrom(clz)) {
+      addModulator(clz.asSubclass(LXModulator.class));
+    }
     if (LXFixture.class.isAssignableFrom(clz)) {
       addFixture(clz.asSubclass(LXFixture.class));
     }
@@ -464,6 +488,9 @@ public class LXRegistry implements LXSerializable {
     }
     if (LXEffect.class.isAssignableFrom(clz)) {
       removeEffect(clz.asSubclass(LXEffect.class));
+    }
+    if (LXModulator.class.isAssignableFrom(clz)) {
+      removeModulator(clz.asSubclass(LXModulator.class));
     }
     if (LXFixture.class.isAssignableFrom(clz)) {
       removeFixture(clz.asSubclass(LXFixture.class));
@@ -589,6 +616,66 @@ public class LXRegistry implements LXSerializable {
         throw new IllegalStateException("Attemping to unregister effect that does not exist: " + effect);
       }
       this.mutableEffects.remove(effect);
+    }
+    return this;
+  }
+
+  /**
+   * Register a modulator class with the engine
+   *
+   * @param modulator Modulator class
+   * @return this
+   */
+  public LXRegistry addModulator(Class<? extends LXModulator> modulator) {
+    Objects.requireNonNull(modulator, "May not add null LXRegistry.addModulator");
+    checkRegistration();
+    if (this.mutableModulators.contains(modulator)) {
+      throw new IllegalStateException("Attemping to register modulator twice: " + modulator);
+    }
+    this.mutableModulators.add(modulator);
+    return this;
+  }
+
+  /**
+   * Register an modulator class with the engine
+   *
+   * @param modulators List of modulator classes
+   * @return this
+   */
+  public LXRegistry addModulataors(Class<? extends LXModulator>[] modulators) {
+    checkRegistration();
+    for (Class<? extends LXModulator> modulator : modulators) {
+      addModulator(modulator);
+    }
+    return this;
+  }
+
+  /**
+   * Unregister modulator class with the engine
+   *
+   * @param modulator Modulator class
+   * @return this
+   */
+  public LXRegistry removeModulator(Class<? extends LXModulator> modulator) {
+    if (!this.mutableModulators.contains(modulator)) {
+      throw new IllegalStateException("Attemping to unregister modulator that does not exist: " + modulator);
+    }
+    this.mutableModulators.remove(modulator);
+    return this;
+  }
+
+  /**
+   * Unregister modulators classes with the engine
+   *
+   * @param modulators Modulators classes
+   * @return this
+   */
+  public LXRegistry removeModulators(List<Class<? extends LXModulator>> modulators) {
+    for (Class<? extends LXModulator> modulator : modulators) {
+      if (!this.mutableModulators.contains(modulator)) {
+        throw new IllegalStateException("Attemping to unregister modulator that does not exist: " + modulator);
+      }
+      this.mutableModulators.remove(modulator);
     }
     return this;
   }

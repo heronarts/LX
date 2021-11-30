@@ -21,6 +21,7 @@ package heronarts.lx.modulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.CompoundParameter;
 
+@LXModulator.Global("Macro Knobs")
 public class MacroKnobs extends LXModulator implements LXOscComponent {
 
   public final CompoundParameter macro1 = new CompoundParameter("M1")

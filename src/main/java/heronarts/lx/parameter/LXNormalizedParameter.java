@@ -46,7 +46,9 @@ public interface LXNormalizedParameter extends LXParameter {
    *
    * @return Normalized value of parameter, in range from 0 to 1
    */
-  public float getNormalizedf();
+  default public float getNormalizedf() {
+    return (float) getNormalized();
+  }
 
   /**
    * Gets the exponent used for scaling this parameter across its normalized range.
@@ -54,6 +56,8 @@ public interface LXNormalizedParameter extends LXParameter {
    *
    * @return scaling exponent
    */
-  public double getExponent();
+  default public double getExponent() {
+    return 1;
+  }
 
 }

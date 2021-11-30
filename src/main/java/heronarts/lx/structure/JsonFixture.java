@@ -41,6 +41,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.MalformedJsonException;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtSyncDatagram;
 import heronarts.lx.output.LXBufferOutput;
@@ -903,9 +904,7 @@ public class JsonFixture extends LXFixture {
         }
       }
     }
-    if (!validTags.isEmpty()) {
-      fixture.setTags(validTags.toArray(new String[0]));
-    }
+    fixture.setTags(validTags);
   }
 
   private List<String> _loadTags(JsonObject obj, boolean required, boolean replaceVariables, JsonFixture variableContext) {
@@ -930,6 +929,8 @@ public class JsonFixture extends LXFixture {
           }
           if (tag == null || tag.isEmpty()) {
             addWarning(keyTags + " should not contain empty string values");
+          } else if (!LXModel.Tag.isValid(tag)) {
+            addWarning("Ignoring invalid tag, should only contain [A-Za-z0-9_.-]: " + tag);
           } else {
             validTags.add(tag);
           }
@@ -944,6 +945,8 @@ public class JsonFixture extends LXFixture {
         }
         if (tag == null || tag.isEmpty()) {
           addWarning(keyTag + " must contain a non-empty string value");
+        } else if (!LXModel.Tag.isValid(tag)) {
+          addWarning("Ignoring invalid tag, should only contain [A-Za-z0-9_.-]: " + tag);
         } else {
           validTags.add(tag);
         }

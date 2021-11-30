@@ -57,6 +57,7 @@ public class LXModel implements LXSerializable {
    */
   public static class Tag {
     public final static String MODEL = "model";
+    public final static String VIEW = "view";
     public final static String GRID = "grid";
     public final static String ROW = "row";
     public final static String COLUMN = "column";
@@ -64,6 +65,15 @@ public class LXModel implements LXSerializable {
     public final static String POINT = "point";
     public final static String POINTS = "points";
     public final static String ARC = "arc";
+
+    public final static String VALID_TAG_REGEX = "[A-Za-z0-9_\\.\\-/]+";
+
+    public final static String VALID_TEXT_FIELD_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.- ";
+
+    public static boolean isValid(String tag) {
+      return tag.matches(VALID_TAG_REGEX);
+    }
+
   }
 
   /**
@@ -109,6 +119,8 @@ public class LXModel implements LXSerializable {
 
   private final Map<String, List<LXModel>> subDict =
     new HashMap<String, List<LXModel>>();
+
+  final List<LXView> derivedViews = new ArrayList<LXView>();
 
   /**
    * An ordered list of outputs that should be sent for this model.
@@ -325,6 +337,16 @@ public class LXModel implements LXSerializable {
     this(points, children, metaData, java.util.Arrays.asList(tags));
   }
 
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   */
   public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String > tags) {
     this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
@@ -436,6 +458,9 @@ public class LXModel implements LXSerializable {
       if (tag.isEmpty()) {
         throw new IllegalArgumentException("May not pass empty string tag to LXModel");
       }
+      if (!Tag.isValid(tag)) {
+        throw new IllegalArgumentException("May not pass invalid tag to LXModel: " + tag);
+      }
       // Filter out any duplicates that got in somehow
       if (!_tags.contains(tag)) {
         _tags.add(tag);
@@ -446,6 +471,31 @@ public class LXModel implements LXSerializable {
 
   public LXModel getParent() {
     return this.parent;
+  }
+
+  /**
+   * Determine whether the given descendant is contained by this model, at any
+   * level of hierarchy.
+   *
+   * @param descendant Descendant submodel
+   * @return true if the descendant is contained by this model tree
+   */
+  public boolean contains(LXModel descendant) {
+    // Do a quick child-list pass first
+    for (LXModel child : this.children) {
+      if (child == descendant) {
+        return true;
+      }
+    }
+
+    // Not found? Okay, recursion time... got a weird mix of
+    // breadth-first and depth-first on our hands here.
+    for (LXModel child : this.children) {
+      if (child.contains(descendant)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public String getPath() {
@@ -594,7 +644,28 @@ public class LXModel implements LXSerializable {
     if (normalize) {
       normalizePoints();
     }
+
+    // Update any views that were derived from this model
+    for (LXView view : this.derivedViews) {
+      for (LXPoint p : this.points) {
+        LXPoint clone = view.clonedPoints.get(p.index);
+        if (clone != null) {
+          clone.set(p);
+        }
+      }
+
+      // The view now needs overall re-normalization
+      boolean normalizeView = normalize && (view.normalization == LXView.Normalization.RELATIVE);
+      view.update(normalizeView, recurse);
+    }
+
     bang();
+
+    // Update any views that were derived from this model
+    for (LXView view : this.derivedViews) {
+      view.bang();
+    }
+
     return this;
   }
 
@@ -787,6 +858,11 @@ public class LXModel implements LXSerializable {
   public void dispose() {
     for (LXModel child : this.children) {
       child.dispose();
+    }
+    // NOTE: reverse iterate because the dispose call will mutate
+    // the list.
+    for (int i = this.derivedViews.size() - 1; i >= 0; --i) {
+      this.derivedViews.get(i).dispose();
     }
     this.listeners.clear();
   }

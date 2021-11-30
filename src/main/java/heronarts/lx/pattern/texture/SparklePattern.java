@@ -21,6 +21,7 @@ package heronarts.lx.pattern.texture;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulator.LXWaveshape;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.ObjectParameter;
@@ -237,8 +238,9 @@ public class SparklePattern extends LXPattern {
   @Override
   public void run(double deltaMs) {
     engine.run(deltaMs, model);
-    for (int i = 0; i < colors.length; ++i) {
-      colors[i] = LXColor.gray(LXUtils.clamp(engine.sparkleLevels[i], 0, 100));
+    int i = 0;
+    for (LXPoint p : model.points) {
+      colors[p.index] = LXColor.gray(LXUtils.clamp(engine.sparkleLevels[i++], 0, 100));
     }
   }
 }

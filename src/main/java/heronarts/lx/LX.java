@@ -67,7 +67,7 @@ import com.google.gson.stream.JsonWriter;
  */
 public class LX {
 
-  public static final String VERSION = "0.2.2";
+  public static final String VERSION = "0.2.3";
 
   public static class InstantiationException extends Exception {
 

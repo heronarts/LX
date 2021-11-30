@@ -226,10 +226,21 @@ public class LXChannel extends LXAbstractChannel {
   }
 
   @Override
-  protected void onModelChanged(LXModel model) {
-    super.onModelChanged(model);
+  public LXModel getModelView() {
+    if (this.view != null) {
+      return this.view;
+    }
+    if (this.group != null) {
+      return this.group.getModelView();
+    }
+    return super.getModelView();
+  }
+
+  @Override
+  protected void onModelViewChanged(LXModel view) {
+    super.onModelViewChanged(view);
     for (LXPattern pattern : this.mutablePatterns) {
-      pattern.setModel(model);
+      pattern.setModel(view);
     }
   }
 
@@ -301,6 +312,7 @@ public class LXChannel extends LXAbstractChannel {
   LXChannel setGroup(LXGroup group) {
     if (this.group != group) {
       this.group = group;
+      onModelViewChanged(getModelView());
       for (Listener listener : this.listeners) {
         listener.groupChanged(this, group);
       }
@@ -377,7 +389,7 @@ public class LXChannel extends LXAbstractChannel {
       throw new IllegalArgumentException("Invalid pattern index: " + index);
     }
     pattern.setChannel(this);
-    pattern.setModel(this.model);
+    pattern.setModel(getModelView());
 
     // Make sure focused pattern doesn't change
     LXPattern focusedPattern = getFocusedPattern();
@@ -866,7 +878,8 @@ public class LXChannel extends LXAbstractChannel {
         getActivePattern().getColors(),
         getNextPattern().getColors(),
         this.transitionProgress,
-        colors
+        colors,
+        getModelView()
       );
     } else {
       this.transitionProgress = 0;

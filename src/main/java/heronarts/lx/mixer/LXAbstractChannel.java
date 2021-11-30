@@ -30,11 +30,14 @@ import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXView;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.StringParameter;
 
 /**
  * Abstract subclass for both groups and channels
@@ -127,6 +130,24 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   private LXBlend activeBlend;
 
+  public final BooleanParameter viewEnabled =
+    new BooleanParameter("View Enabled")
+    .setDescription("Whether a custom view of the model is enabled for this channel");
+
+  public final StringParameter viewSelector =
+    new StringParameter("View Selector", "")
+    .setDescription("View selection string for this channel");
+
+  public final EnumParameter<LXView.Normalization> viewNormalization =
+    new EnumParameter<LXView.Normalization>("View Normalization", LXView.Normalization.RELATIVE)
+    .setDescription("Whether view coordinates are noramlized relative to the view, or absolute model");
+
+
+  /**
+   * Model view used on this bus
+   */
+  protected LXView view = null;
+
   final ChannelThread thread = new ChannelThread();
 
   private static int channelThreadCount = 1;
@@ -190,6 +211,42 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("blendMode", this.blendMode);
     addParameter("midiMonitor", this.midiMonitor);
     addParameter("midiChannel", this.midiChannel);
+    addParameter("viewEnabled", this.viewEnabled);
+    addParameter("viewSelector", this.viewSelector);
+    addParameter("viewNormalization", this.viewNormalization);
+  }
+
+  @Override
+  protected final void onModelChanged(LXModel model) {
+    super.onModelChanged(model);
+    updateModelView();
+  }
+
+  @Override
+  public LXModel getModelView() {
+    return (this.view != null) ? this.view : this.model;
+  }
+
+  private void updateModelView() {
+    LXView oldView = this.view;
+    if (this.view != null) {
+      this.view.dispose();
+      this.view = null;
+    }
+    String viewSelector = this.viewSelector.getString();
+    if (this.viewEnabled.isOn() && (viewSelector != null) && !viewSelector.isEmpty()) {
+      this.view = LXView.create(this.model, viewSelector, this.viewNormalization.getEnum());
+    }
+    // Notify if changed
+    if (oldView != this.view) {
+      onModelViewChanged(getModelView());
+    }
+  }
+
+  protected void onModelViewChanged(LXModel view) {
+    for (LXEffect effect : this.mutableEffects) {
+      effect.setModel(view);
+    }
   }
 
   public LXAbstractChannel addMidiListener(MidiListener listener) {
@@ -241,6 +298,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
       this.activeBlend.onInactive();
       this.activeBlend = this.blendMode.getObject();
       this.activeBlend.onActive();
+    } else if (p == this.viewEnabled || p == this.viewSelector || p == this.viewNormalization) {
+      updateModelView();
     }
   }
 

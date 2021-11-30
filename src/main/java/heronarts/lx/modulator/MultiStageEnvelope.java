@@ -35,6 +35,8 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
+@LXModulator.Global("Envelope")
+@LXModulator.Device("Envelope")
 public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape, LXOscComponent {
 
   public class Stage implements LXSerializable {
