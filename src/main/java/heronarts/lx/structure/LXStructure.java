@@ -886,9 +886,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
     }
     this.model = new LXModel(submodels).normalizePoints();
-
-    this.model.debugPrint(System.out);
-
     this.modelListener.structureChanged(this.model);
 
     if ((this.modelFile != null) && !fromLoad) {
