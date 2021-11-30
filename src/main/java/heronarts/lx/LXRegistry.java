@@ -137,6 +137,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_MODULATORS = new ArrayList<Class<? extends LXModulator>>();
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.VariableLFO.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiStageEnvelope.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Randomizer.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);
     DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
   };
