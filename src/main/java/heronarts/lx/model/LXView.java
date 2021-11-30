@@ -49,6 +49,7 @@ public class LXView extends LXModel {
    *
    * @param model Model
    * @param viewSelector View selection string
+   * @param normalization What normalization mode to use for this view
    * @return A view of the model that selects the elements in the selector string
    */
   public static LXView create(LXModel model, String viewSelector, Normalization normalization) {
