@@ -31,6 +31,7 @@ import heronarts.lx.LXTime;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXParameterListener;
 
 /**
  * A pattern is the core object that the animation engine uses to generate
@@ -95,6 +96,18 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     new BooleanParameter("Cycle", true)
     .setDescription("Whether the pattern is eligible for auto-cycle");
 
+  public final BooleanParameter recall =
+    new BooleanParameter("Recall", false)
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Recalls this pattern to become active on the channel");
+
+  private final LXParameterListener onRecall = (p) -> {
+    if (this.recall.isOn()) {
+      this.recall.setValue(false);
+      getChannel().goPattern(this);
+    }
+  };
+
   protected double runMs = 0;
 
   public final Profiler profiler = new Profiler();
@@ -107,6 +120,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     super(lx);
     this.label.setDescription("The name of this pattern");
     addInternalParameter("autoCycleEligible", this.autoCycleEligible);
+    addParameter("recall", this.recall);
+    this.recall.addListener(this.onRecall);
   }
 
   @Override
@@ -274,6 +289,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * into this pattern is complete.
    */
   public/* abstract */void onTransitionEnd() {
+  }
+
+  @Override
+  public void dispose() {
+    this.recall.removeListener(this.onRecall);
+    super.dispose();
   }
 
 }
