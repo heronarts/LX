@@ -448,8 +448,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * Starts the engine thread.
    */
   public void start() {
-    if (this.lx.flags.isP3LX) {
-      throw new IllegalStateException("LXEngine start() may not be used from P3LX, call setThreaded() instead");
+    if (this.lx.flags.isP4LX) {
+      throw new IllegalStateException("LXEngine start() may not be used from P4LX, call setThreaded() instead");
     }
     this.isMultithreaded.setValue(true);
     _setThreaded(true);
@@ -459,8 +459,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * Stops the engine thread.
    */
   public void stop() {
-    if (this.lx.flags.isP3LX) {
-      throw new IllegalStateException("LXEngine stop() may not be used from P3LX, call setThreaded() instead");
+    if (this.lx.flags.isP4LX) {
+      throw new IllegalStateException("LXEngine stop() may not be used from P4LX, call setThreaded() instead");
     }
     this.isMultithreaded.setValue(false);
     _setThreaded(false);
@@ -483,21 +483,21 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * @return this
    */
   public LXEngine setThreaded(boolean threaded) {
-    if (!this.lx.flags.isP3LX) {
-      throw new IllegalStateException("LXEngine.setThreaded() should not be used outside P3LX, call start() / stop() instead");
+    if (!this.lx.flags.isP4LX) {
+      throw new IllegalStateException("LXEngine.setThreaded() should not be used outside P4LX, call start() / stop() instead");
     }
     this.isMultithreaded.setValue(threaded);
     return this;
   }
 
   /**
-   * Utility method to shut down and join the engine thread, only when specifically in P3 mode.
+   * Utility method to shut down and join the engine thread, only when specifically in P4 mode.
    *
    * @return this
    */
-  public LXEngine onP3DidDispose() {
-    if (!this.lx.flags.isP3LX) {
-      throw new IllegalStateException("LXEngine.onP3DidDispose() should only be called from Processing dispose() method");
+  public LXEngine onP4DidDispose() {
+    if (!this.lx.flags.isP4LX) {
+      throw new IllegalStateException("LXEngine.onP4DidDispose() should only be called from Processing dispose() method");
     }
     if (isThreaded()) {
       _setThreaded(false);
@@ -506,10 +506,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   /**
-   * Utility method for P3LX mode, invoked from the Processing draw thread to give
+   * Utility method for P4LX mode, invoked from the Processing draw thread to give
    * a chance to change the threading state before the draw loop.
    */
-  public void beforeP3LXDraw() {
+  public void beforeP4LXDraw() {
     if (isThreaded() != this.isMultithreaded.isOn()) {
       _setThreaded(this.isMultithreaded.isOn());
 
@@ -750,7 +750,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * This is the core run loop of the LXEngine. It can be invoked from various places, such
    * as the EngineThread when running in multi-threaded mode, or from a Processing sketch
-   * when in P3LX, or from another application framework. Unless you are writing your own
+   * when in P4LX, or from another application framework. Unless you are writing your own
    * new application framework using LX (this is not recommended), you should never call
    * this method directly. It is only public to make it accessible to these other frameworks.
    */
