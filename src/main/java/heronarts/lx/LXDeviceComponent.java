@@ -35,6 +35,7 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.pattern.LXPattern;
 
 /**
  * A component which may have its own scoped user-level modulators. The concrete subclasses
@@ -121,7 +122,9 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
       for (LXParameter parameter : getParameters()) {
         if (parameter instanceof LXListenableNormalizedParameter) {
           boolean valid = true;
-          if (this instanceof LXEffect) {
+          if (this instanceof LXPattern) {
+            valid = parameter != ((LXPattern) this).recall;
+          } else if (this instanceof LXEffect) {
             valid = parameter != ((LXEffect) this).enabled;
           }
           if (valid) {
