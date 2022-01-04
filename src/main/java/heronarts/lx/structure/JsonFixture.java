@@ -1071,7 +1071,7 @@ public class JsonFixture extends LXFixture {
     if (pointsArr == null) {
       return;
     }
-    addWarning(KEY_POINTS + " is deprecated. Define an element of type " + TYPE_POINTS + " in the " + KEY_CHILDREN + " array");
+    addWarning(KEY_POINTS + " is deprecated. Define an element of type " + TYPE_POINTS + " in the " + KEY_COMPONENTS + " array");
     for (JsonElement pointElem : pointsArr) {
       if (pointElem.isJsonObject()) {
         loadChild(pointElem.getAsJsonObject(), ChildType.POINT, null);
@@ -1087,7 +1087,7 @@ public class JsonFixture extends LXFixture {
     if (stripsArr == null) {
       return;
     }
-    addWarning(KEY_STRIPS + " is deprecated. Define elements of type " + TYPE_STRIP +" in the " + KEY_CHILDREN + " array");
+    addWarning(KEY_STRIPS + " is deprecated. Define elements of type " + TYPE_STRIP +" in the " + KEY_COMPONENTS + " array");
     for (JsonElement stripElem : stripsArr) {
       if (stripElem.isJsonObject()) {
         loadChild(stripElem.getAsJsonObject(), ChildType.STRIP, null);
@@ -1103,7 +1103,7 @@ public class JsonFixture extends LXFixture {
     if (arcsArr == null) {
       return;
     }
-    addWarning(KEY_ARCS + " is deprecated. Define elements of type " + TYPE_ARC + " in the " + KEY_CHILDREN + " array");
+    addWarning(KEY_ARCS + " is deprecated. Define elements of type " + TYPE_ARC + " in the " + KEY_COMPONENTS + " array");
     for (JsonElement arcElem : arcsArr) {
       if (arcElem.isJsonObject()) {
         loadChild(arcElem.getAsJsonObject(), ChildType.ARC, null);
