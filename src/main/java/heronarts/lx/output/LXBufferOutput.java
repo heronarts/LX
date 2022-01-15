@@ -19,6 +19,7 @@
 package heronarts.lx.output;
 
 import heronarts.lx.LX;
+import heronarts.lx.utils.LXUtils;
 
 public abstract class LXBufferOutput extends LXOutput {
 
@@ -127,7 +128,7 @@ public abstract class LXBufferOutput extends LXOutput {
             int r = ((color >> 16) & 0xff);
             int g = ((color >> 8) & 0xff);
             int b = (color & 0xff);
-            int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+            int w = (r + b + g) / 3;
             buffer[offset] = gamma[w];
             offset += numBytes;
           }
