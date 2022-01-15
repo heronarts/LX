@@ -128,7 +128,7 @@ public abstract class LXBufferOutput extends LXOutput {
             int r = ((color >> 16) & 0xff);
             int g = ((color >> 8) & 0xff);
             int b = (color & 0xff);
-            int w = LXUtils.constrain((r + b + g) / 3, 0, 255);
+            int w = (r + b + g) / 3;
             buffer[offset] = gamma[w];
             offset += numBytes;
           }
