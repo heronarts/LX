@@ -67,7 +67,7 @@ public class ObjectParameter<T> extends DiscreteParameter {
       throw new UnsupportedOperationException("Cannot setValue with an object unless setObjects() was called");
     }
     for (int i = 0; i < this.objects.length; ++i) {
-      if (this.objects[i] == object) {
+      if (this.objects[i].equals(object)) {
         return setValue(i);
       }
     }

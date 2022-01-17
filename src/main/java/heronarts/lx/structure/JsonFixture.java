@@ -53,6 +53,7 @@ import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
@@ -114,6 +115,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_PARAMETER_DEFAULT = "default";
   private static final String KEY_PARAMETER_MIN = "min";
   private static final String KEY_PARAMETER_MAX = "max";
+  private static final String KEY_PARAMETER_OPTIONS = "options";
 
   // Outputs
   private static final String KEY_OUTPUT = "output";
@@ -252,14 +254,21 @@ public class JsonFixture extends LXFixture {
   };
 
   public enum ParameterType {
-    STRING,
-    INT,
-    FLOAT,
-    BOOLEAN;
+    STRING("string"),
+    INT("int"),
+    FLOAT("float"),
+    BOOLEAN("boolean"),
+    STRING_SELECT(null);
+
+    private final String key;
+
+    private ParameterType(String key) {
+      this.key = key;
+    }
 
     private static ParameterType get(String str) {
       for (ParameterType type : values()) {
-        if (type.name().toLowerCase().equals(str.toLowerCase())) {
+        if (str.toLowerCase().equals(type.key)) {
           return type;
         }
       }
@@ -278,9 +287,11 @@ public class JsonFixture extends LXFixture {
     public final BoundedParameter floatParameter;
     public final StringParameter stringParameter;
     public final BooleanParameter booleanParameter;
+    public final ObjectParameter<String> stringSelectParameter;
 
     private boolean isReferenced = false;
 
+    @SuppressWarnings("unchecked")
     private ParameterDefinition(String name, String label, String description, ParameterType type, LXListenableParameter parameter) {
       this.name = name;
       this.label = label;
@@ -296,24 +307,35 @@ public class JsonFixture extends LXFixture {
         this.intParameter = null;
         this.floatParameter = null;
         this.booleanParameter = null;
+        this.stringSelectParameter = null;
         break;
       case INT:
         this.stringParameter = null;
         this.intParameter = (DiscreteParameter) parameter;
         this.floatParameter = null;
         this.booleanParameter = null;
+        this.stringSelectParameter = null;
         break;
       case FLOAT:
         this.stringParameter = null;
         this.intParameter = null;
         this.floatParameter = (BoundedParameter) parameter;
         this.booleanParameter = null;
+        this.stringSelectParameter = null;
         break;
       case BOOLEAN:
         this.stringParameter = null;
         this.intParameter = null;
         this.floatParameter = null;
-        this.booleanParameter = (BooleanParameter) parameter;;
+        this.booleanParameter = (BooleanParameter) parameter;
+        this.stringSelectParameter = null;
+        break;
+      case STRING_SELECT:
+        this.stringSelectParameter = (ObjectParameter<String>) parameter;
+        this.stringParameter = null;
+        this.intParameter = null;
+        this.floatParameter = null;
+        this.booleanParameter = null;
         break;
       default:
         throw new IllegalStateException("Unknown ParameterType: " + type);
@@ -335,6 +357,10 @@ public class JsonFixture extends LXFixture {
 
     private ParameterDefinition(String name, String label, String description, boolean defaultBoolean) {
       this(name, label, description, ParameterType.BOOLEAN, new BooleanParameter(name, defaultBoolean));
+    }
+
+    private ParameterDefinition(String name, String label, String description, String defaultStr, List<String> stringOptions) {
+      this(name, label, description, ParameterType.STRING_SELECT, new ObjectParameter<String>(name, stringOptions.toArray(new String[0]), defaultStr));
     }
 
     private void dispose() {
@@ -359,6 +385,8 @@ public class JsonFixture extends LXFixture {
         return String.valueOf(this.intParameter.getValuei());
       case STRING:
         return this.stringParameter.getString();
+      case STRING_SELECT:
+        return this.stringSelectParameter.getObject();
       default:
         return "";
       }
@@ -654,7 +682,7 @@ public class JsonFixture extends LXFixture {
         if (parameter.type == ParameterType.FLOAT || parameter.type == ParameterType.INT) {
           parameterValue = String.valueOf(parameter.parameter.getValue());
         } else {
-          addWarning("Cannot load non-numeric parameter " + parameterName + " into a float type: " + key);
+          addWarning("Cannot load non-numeric parameter ${" + parameterName + "} into a float type: " + key);
           return null;
         }
         break;
@@ -662,18 +690,19 @@ public class JsonFixture extends LXFixture {
         if (parameter.type == ParameterType.INT) {
           parameterValue = String.valueOf(parameter.intParameter.getValuei());
         } else {
-          addWarning("Cannot load non-integer variable ${" + parameterName + "} into an integer type: " + key);
+          addWarning("Cannot load non-integer parameter ${" + parameterName + "} into an integer type: " + key);
           return null;
         }
         break;
       case STRING:
+      case STRING_SELECT:
         parameterValue = parameter.getValueAsString();
         break;
       case BOOLEAN:
         if (parameter.type == ParameterType.BOOLEAN) {
           parameterValue = String.valueOf(parameter.booleanParameter.isOn());
         } else {
-          addWarning("Cannot load non-boolean variable ${" + parameterName + "} into a boolean type: " + key);
+          addWarning("Cannot load non-boolean parameter ${" + parameterName + "} into a boolean type: " + key);
           return null;
         }
         break;
@@ -990,12 +1019,7 @@ public class JsonFixture extends LXFixture {
 
       String parameterDescription = loadString(parameterObj, KEY_PARAMETER_DESCRIPTION, false, "Parameter " + KEY_PARAMETER_DESCRIPTION + " must be strign value.");
 
-      String typeStr = loadString(parameterObj, KEY_PARAMETER_TYPE, false, "Parameter " + parameterName + " must specify valid type string");;
-      ParameterType type = ParameterType.get(typeStr);
-      if (type == null) {
-        addWarning("Parameter " + parameterName + " must specify valid type string");
-        continue;
-      }
+      // Ensure default value is present
       if (!parameterObj.has(KEY_PARAMETER_DEFAULT)) {
         addWarning("Parameter " + parameterName + " must specify " + KEY_PARAMETER_DEFAULT);
         continue;
@@ -1006,8 +1030,21 @@ public class JsonFixture extends LXFixture {
         continue;
       }
 
+      String typeStr = loadString(parameterObj, KEY_PARAMETER_TYPE, false, "Parameter " + parameterName + " must specify valid type string");;
+      ParameterType type = ParameterType.get(typeStr);
+      if (type == null) {
+        addWarning("Parameter " + parameterName + " must specify valid type string");
+        continue;
+      }
+      if (type == ParameterType.STRING) {
+        // Check for the string select type when options are present
+        if (parameterObj.has(KEY_PARAMETER_OPTIONS)) {
+          type = ParameterType.STRING_SELECT;
+        }
+      }
+
       ParameterDefinition reloadDefinition = this.reloadParameterValues.get(parameterName);
-      if (reloadDefinition != null && reloadDefinition.type != type) {
+      if ((reloadDefinition != null) && (reloadDefinition.type != type)) {
         reloadDefinition = null;
       }
 
@@ -1050,6 +1087,31 @@ public class JsonFixture extends LXFixture {
           stringValue = reloadDefinition.stringParameter.getString();
         }
         addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringValue));
+        break;
+      case STRING_SELECT:
+        String stringSelectValue = defaultElem.getAsString();
+        if (this.jsonParameterValues.has(parameterName)) {
+          stringSelectValue = this.jsonParameterContext.loadString(this.jsonParameterValues, parameterName, true, "Child parameter should be an string: " + parameterName);
+        } else if (reloadDefinition != null) {
+          stringSelectValue = reloadDefinition.stringSelectParameter.getObject();
+        }
+        List<String> stringOptions = new ArrayList<String>();
+        JsonArray optionsArray = loadArray(parameterObj, KEY_PARAMETER_OPTIONS);
+        for (JsonElement optionElem : optionsArray) {
+          if (optionElem.isJsonPrimitive()) {
+            stringOptions.add(optionElem.getAsString());
+          } else {
+            addWarning(KEY_PARAMETER_OPTIONS + " should only string options");
+          }
+        }
+        if (stringOptions.isEmpty()) {
+          addWarning(KEY_PARAMETER_OPTIONS + " must not be empty");
+          break;
+        } else if (!stringOptions.contains(stringSelectValue)) {
+          addWarning(KEY_PARAMETER_OPTIONS + " must contain default value " + stringSelectValue);
+          stringValue = stringOptions.get(0);
+        }
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringSelectValue, stringOptions));
         break;
       case BOOLEAN:
         boolean booleanValue = defaultElem.getAsBoolean();
@@ -1700,6 +1762,9 @@ public class JsonFixture extends LXFixture {
         break;
       case STRING:
         jsonParameters.addProperty(parameter.name, parameter.stringParameter.getString());
+        break;
+      case STRING_SELECT:
+        jsonParameters.addProperty(parameter.name, parameter.stringSelectParameter.getObject());
         break;
       case BOOLEAN:
         jsonParameters.addProperty(parameter.name, parameter.booleanParameter.isOn());
