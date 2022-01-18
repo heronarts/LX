@@ -592,13 +592,13 @@ public class APCmini extends LXMidiSurface implements LXMidiSurface.Bidirectiona
           case SELECT_UP:
             bus = this.lx.engine.mixer.getFocusedChannel();
             if (bus instanceof LXChannel) {
-              ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1 , false);
+              ((LXChannel) bus).focusedPattern.decrement(1 , false);
             }
             return;
           case SELECT_DOWN:
             bus = this.lx.engine.mixer.getFocusedChannel();
             if (bus instanceof LXChannel) {
-              ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1 , false);
+              ((LXChannel) bus).focusedPattern.increment(1 , false);
             }
             return;
           case CHANNEL_BUTTON_FOCUS:
