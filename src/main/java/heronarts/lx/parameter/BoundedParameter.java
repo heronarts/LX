@@ -57,13 +57,25 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     }
 
     public double getNormalized(double value, double exponent) {
+      return getNormalized(value, exponent, Polarity.UNIPOLAR);
+    }
+
+    public double getNormalized(double value, double exponent, LXParameter.Polarity polarity) {
       if (this.v0 == this.v1) {
         return 0;
       }
       value = constrain(value);
       double normalized = (value - this.v0) / this.vRange;
       if (exponent != 1) {
-        normalized = Math.pow(normalized, 1 / exponent);
+        if (polarity == Polarity.UNIPOLAR) {
+          normalized = Math.pow(normalized, 1 / exponent);
+        } else {
+          if (normalized < .5) {
+            normalized = (1 - Math.pow(1 - (normalized * 2), 1/exponent)) / 2;
+          } else {
+            normalized = .5 + (Math.pow((normalized - .5) * 2, 1/exponent) / 2);
+          }
+        }
       }
       return normalized;
     }
@@ -73,13 +85,25 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     }
 
     public double normalizedToValue(double normalized, double exponent) {
+      return normalizedToValue(normalized, exponent, Polarity.UNIPOLAR);
+    }
+
+    public double normalizedToValue(double normalized, double exponent, LXParameter.Polarity polarity) {
       if (normalized < 0) {
         normalized = 0;
       } else if (normalized > 1) {
         normalized = 1;
       }
       if (exponent != 1) {
-        normalized = Math.pow(normalized, exponent);
+        if (polarity == Polarity.UNIPOLAR) {
+          normalized = Math.pow(normalized, exponent);
+        } else {
+          if (normalized < .5) {
+            normalized = (1 - Math.pow(1 - (normalized * 2), exponent)) / 2;
+          } else {
+            normalized = .5 + (Math.pow((normalized - .5) * 2, exponent) / 2);
+          }
+        }
       }
       return this.v0 + (this.vRange * normalized);
     }
@@ -210,7 +234,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    * @return this, for method chaining
    */
   public BoundedParameter setNormalized(double normalized) {
-    setValue(this.range.normalizedToValue(normalized, getExponent()));
+    setValue(this.range.normalizedToValue(normalized, getExponent(), super.getPolarity()));
     return this;
   }
 
@@ -229,7 +253,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    * @return Normalized value, from 0 to 1
    */
   public double getNormalized() {
-    return this.range.getNormalized(getValue(), getExponent());
+    return this.range.getNormalized(getValue(), getExponent(), super.getPolarity());
   }
 
   /**
