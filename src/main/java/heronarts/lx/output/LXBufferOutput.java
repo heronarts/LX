@@ -19,7 +19,6 @@
 package heronarts.lx.output;
 
 import heronarts.lx.LX;
-import heronarts.lx.utils.LXUtils;
 
 public abstract class LXBufferOutput extends LXOutput {
 

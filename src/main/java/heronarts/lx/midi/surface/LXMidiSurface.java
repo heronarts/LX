@@ -61,6 +61,9 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     .setMappable(false)
     .setDescription("Whether the control surface is enabled");
 
+  // Internal flag for enabled state, pre/post-teardown
+  private boolean _enabled = false;
+
   protected LXMidiSurface(LX lx, final LXMidiInput input, final LXMidiOutput output) {
     this.lx = lx;
     this.input = input;
@@ -69,7 +72,8 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
       throw new IllegalArgumentException("Surface " + getClass().getSimpleName() + " requires MIDI output");
     }
     this.enabled.addListener((p) -> {
-      if (this.enabled.isOn()) {
+      boolean on = this.enabled.isOn();
+      if (on) {
         // Make sure I/O channels are enabled
         this.input.open();
         if (this.output != null) {
@@ -77,11 +81,20 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
         }
         // Listen to the input
         this.input.addListener(this);
+
+        // Enable sending and turn on the surface
+        this._enabled = on;
+        onEnable(on);
       } else {
+        // Fire the onEnable() *before* deactivating _enabled, in case the surface
+        // wants to turn off LED lights, etc.
+        onEnable(on);
+        this._enabled = on;
+
         // Stop listening to the input
         this.input.removeListener(this);
       }
-      onEnable(this.enabled.isOn());
+
     });
 
     this.output.connected.addListener((p) -> {
@@ -119,13 +132,13 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
   protected void onReconnect() {}
 
   protected void sendNoteOn(int channel, int note, int velocity) {
-    if (this.enabled.isOn()) {
+    if (this._enabled) {
       this.output.sendNoteOn(channel, note, velocity);
     }
   }
 
   protected void sendControlChange(int channel, int cc, int value) {
-    if (this.enabled.isOn()) {
+    if (this._enabled) {
       this.output.sendControlChange(channel, cc, value);
     }
   }
