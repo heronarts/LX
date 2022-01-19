@@ -120,6 +120,7 @@ public class JsonFixture extends LXFixture {
   // Outputs
   private static final String KEY_OUTPUT = "output";
   private static final String KEY_OUTPUTS = "outputs";
+  private static final String KEY_ENABLED = "enabled";
   private static final String KEY_PROTOCOL = "protocol";
   private static final String KEY_TRANSPORT = "transport";
   private static final String KEY_HOST = "host";
@@ -724,8 +725,8 @@ public class JsonFixture extends LXFixture {
     }
     try {
       return _evaluateSimpleExpression(obj, key, substitutedExpression);
-    } catch (NumberFormatException nfx) {
-      addWarning("Bad formating in expression: " + expression);
+    } catch (Exception nfx) {
+      addWarning("Bad formatting in variable expression: " + expression);
       nfx.printStackTrace();
       return 0;
     }
@@ -778,6 +779,73 @@ public class JsonFixture extends LXFixture {
     return Float.parseFloat(expression);
   }
 
+  private final static char[] SIMPLE_BOOLEAN_OPERATORS = { '|', '&' };
+
+  private boolean evaluateBooleanExpression(JsonObject obj, String key, String expression) {
+    String substitutedExpression = replaceVariables(key, expression, ParameterType.BOOLEAN);
+    if (substitutedExpression == null) {
+      return false;
+    }
+    try {
+      return _evaluateBooleanExpression(obj, key, substitutedExpression);
+    } catch (Exception x) {
+      addWarning("Bad formatting in boolean expression: " + expression);
+      x.printStackTrace();
+      return false;
+    }
+  }
+
+  // Super-trivial implementation of *very* basic boolean expressions
+  private boolean _evaluateBooleanExpression(JsonObject obj, String key, String expression) {
+    // Parentheses pass
+    char[] chars = expression.toCharArray();
+    int openParen = -1;
+    for (int i = 0; i < chars.length; ++i) {
+      if (chars[i] == '(') {
+        openParen = i;
+      } else if (chars[i] == ')') {
+        if (openParen < 0) {
+          throw new IllegalArgumentException("Mismatched parentheses in expression: " + expression);
+        }
+
+        // Whenever we find a closed paren, evaluate just this one parenthetical.
+        // This will naturally work from in->out on nesting, since every closed-paren
+        // catches the open-paren that was closest to it.
+        String substitutedExpression =
+          // Expression to the left of parens (maybe empty)
+          expression.substring(0, openParen) +
+          // Evaluation of what's inside the parens
+          _evaluateSimpleExpression(obj, key, expression.substring(openParen+1, i)) +
+          // Expression to right of parens (maybe empty)
+          expression.substring(i + 1);
+
+        return _evaluateBooleanExpression(obj, key, substitutedExpression);
+      }
+    }
+
+    // Operator pass - these are prioritized so that & takes precedence over |
+    for (char operator : SIMPLE_BOOLEAN_OPERATORS) {
+      int index = expression.indexOf(operator);
+      if ((index > 0) && (index < expression.length() - 1)) {
+        boolean left = _evaluateBooleanExpression(obj, key, expression.substring(0, index));
+        boolean right = _evaluateBooleanExpression(obj, key, expression.substring(index + 1));
+        switch (operator) {
+        case '&': return left && right;
+        case '|': return left || right;
+        }
+      }
+    }
+
+    // Check for any '!' operators!
+    String trimmed = expression.trim();
+    if (!trimmed.isEmpty() && (trimmed.charAt(0) == '!')) {
+      return !_evaluateBooleanExpression(obj, key, trimmed.substring(1));
+    }
+
+    // Okay just parse it!
+    return Boolean.parseBoolean(trimmed);
+  }
+
   private float loadFloat(JsonObject obj, String key, boolean variablesAllowed) {
     return loadFloat(obj, key, variablesAllowed, key + " should be primitive float value");
   }
@@ -803,8 +871,7 @@ public class JsonFixture extends LXFixture {
       if (boolElem.isJsonPrimitive()) {
         JsonPrimitive boolPrimitive = boolElem.getAsJsonPrimitive();
         if (variablesAllowed && boolPrimitive.isString()) {
-          // TODO: perhaps in the future we support boolean expressions? waiting for a use case to justify it first...
-          return Boolean.parseBoolean(replaceVariables(key, boolPrimitive.getAsString(), ParameterType.BOOLEAN));
+          return evaluateBooleanExpression(obj, key, boolPrimitive.getAsString());
         }
         return boolElem.getAsBoolean();
       }
@@ -1467,6 +1534,13 @@ public class JsonFixture extends LXFixture {
   }
 
   private void loadOutput(LXFixture fixture, JsonObject outputObj) {
+    if (outputObj.has(KEY_ENABLED)) {
+      boolean enabled = loadBoolean(outputObj, KEY_ENABLED, true, "Output field '" + KEY_ENABLED + "' must be a valid boolean expression");
+      if (!enabled) {
+        return;
+      }
+    }
+
     JsonProtocolDefinition protocol = JsonProtocolDefinition.get(loadString(outputObj, KEY_PROTOCOL, true, "Output must specify a valid " + KEY_PROTOCOL));
     if (protocol == null) {
       addWarning("Output definition must define a valid protocol");
