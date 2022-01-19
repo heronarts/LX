@@ -62,6 +62,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       getProtocolPort(),
       getProtocolUniverse(),
       getProtocolChannel(),
+      OutputDefinition.FPS_UNSPECIFIED,
       buildSegment()
     ));
   }

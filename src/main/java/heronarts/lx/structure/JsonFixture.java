@@ -46,6 +46,7 @@ import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtSyncDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXDatagram;
+import heronarts.lx.output.LXOutput;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -121,6 +122,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_OUTPUT = "output";
   private static final String KEY_OUTPUTS = "outputs";
   private static final String KEY_ENABLED = "enabled";
+  private static final String KEY_FPS = "fps";
   private static final String KEY_PROTOCOL = "protocol";
   private static final String KEY_TRANSPORT = "transport";
   private static final String KEY_HOST = "host";
@@ -408,9 +410,10 @@ public class JsonFixture extends LXFixture {
     private final int port;
     private final int universe;
     private final int channel;
+    private final float fps;
     private final List<JsonSegmentDefinition> segments;
 
-    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int channel, List<JsonSegmentDefinition> segments) {
+    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int channel, float fps, List<JsonSegmentDefinition> segments) {
       this.fixture = fixture;
       this.protocol = protocol;
       this.transport = transport;
@@ -419,6 +422,7 @@ public class JsonFixture extends LXFixture {
       this.port = port;
       this.universe = universe;
       this.channel = channel;
+      this.fps = fps;
       this.segments = segments;
     }
 
@@ -1541,6 +1545,15 @@ public class JsonFixture extends LXFixture {
       }
     }
 
+    float fps = OutputDefinition.FPS_UNSPECIFIED;
+    if (outputObj.has(KEY_FPS)) {
+      fps = loadFloat(outputObj, KEY_FPS, true, "Output should specify valid FPS limit");
+      if (fps < 0 || fps > LXOutput.MAX_FRAMES_PER_SECOND) {
+        addWarning("Output FPS must be between 0-" + LXOutput.MAX_FRAMES_PER_SECOND);
+        fps = OutputDefinition.FPS_UNSPECIFIED;
+      }
+    }
+
     JsonProtocolDefinition protocol = JsonProtocolDefinition.get(loadString(outputObj, KEY_PROTOCOL, true, "Output must specify a valid " + KEY_PROTOCOL));
     if (protocol == null) {
       addWarning("Output definition must define a valid protocol");
@@ -1609,7 +1622,7 @@ public class JsonFixture extends LXFixture {
     List<JsonSegmentDefinition> segments = new ArrayList<JsonSegmentDefinition>();
     loadSegments(segments, outputObj, byteOrder);
 
-    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, segments));
+    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, fps, segments));
   }
 
   private void loadMetaData(JsonObject obj, Map<String, String> metaData) {
@@ -1766,6 +1779,7 @@ public class JsonFixture extends LXFixture {
       (output.port == JsonOutputDefinition.DEFAULT_PORT) ? output.protocol.protocol.defaultPort : output.port,
       output.universe,
       output.channel,
+      output.fps,
       segments.toArray(new Segment[0])
     ));
 
@@ -1777,6 +1791,7 @@ public class JsonFixture extends LXFixture {
       artSync.setPort(output.port);
     }
     artSync.setAddress(output.address);
+    artSync.framesPerSecond.setValue(output.fps);
     addOutputDirect(artSync);
   }
 

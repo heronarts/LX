@@ -35,6 +35,8 @@ import heronarts.lx.parameter.BooleanParameter;
  */
 public abstract class LXOutput extends LXComponent {
 
+  public static final float MAX_FRAMES_PER_SECOND = 300;
+
   public interface InetOutput {
 
     public static final int NO_PORT = -1;
@@ -68,7 +70,7 @@ public abstract class LXOutput extends LXComponent {
    * Framerate throttle
    */
   public final BoundedParameter framesPerSecond = (BoundedParameter)
-    new BoundedParameter("FPS", 0, 300)
+    new BoundedParameter("FPS", 0, MAX_FRAMES_PER_SECOND)
     .setMappable(false)
     .setDescription("Maximum frames per second this output will send (0 for no limiting)");
 

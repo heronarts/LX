@@ -79,6 +79,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       private final InetAddress address;
       private final int port;
       private final int universe;
+      private float fps = 0f;
 
       private final List<IndexBuffer.Segment> segments = new ArrayList<IndexBuffer.Segment>();
 
@@ -142,7 +143,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         outputErrors.add(err);
       }
 
-      private void addSegment(LXFixture.Segment segment, int startChannel, int chunkStart, int chunkLength) {
+      private void addSegment(LXFixture.Segment segment, int startChannel, int chunkStart, int chunkLength, float fps) {
         int endChannel = startChannel + segment.numChannels - 1;
         for (IndexBuffer.Segment existing : this.segments) {
           // If this one starts before an existing...
@@ -159,6 +160,13 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
         // Translate the fixture-scoped Segment into global address space
         this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteOrder, startChannel, segment.getBrightness()));
+
+        // Reduce packet max FPS to the specified limit, if one exists and a lower limit is not already present
+        if (fps > 0) {
+          if ((this.fps == 0) || (fps < this.fps)) {
+            this.fps = fps;
+          }
+        }
       }
 
       private IndexBuffer toIndexBuffer() {
@@ -192,6 +200,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         }
         if (output instanceof InetOutput) {
           ((InetOutput) output).setAddress(this.address).setPort(port);;
+        }
+        if ((output != null) && (this.fps > 0)) {
+          output.framesPerSecond.setValue(this.fps);
         }
         return output;
       }
@@ -276,6 +287,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       int port = output.port;
       int universe = output.universe;
       int channel = output.channel;
+      float fps = output.fps;
       boolean overflow = false;
 
       // Find the starting packet for this output definition
@@ -309,7 +321,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
           // It could be 0, e.g. channel = 510 byteOrder RGB, can't fit an RGB pixel so
           // we must overflow...
           if (chunkLimit > 0) {
-            packet.addSegment(segment, channel, chunkStart, chunkLimit);
+            packet.addSegment(segment, channel, chunkStart, chunkLimit, fps);
             chunkStart += chunkLimit;
             chunkLength -= chunkLimit;
           }
@@ -327,7 +339,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         }
 
         // Add the final chunk (the whole segment in the common case)
-        packet.addSegment(segment, channel, chunkStart, chunkLength);
+        packet.addSegment(segment, channel, chunkStart, chunkLength, fps);
         channel += chunkLength * segment.byteOrder.getNumBytes();
 
         // Set flag for whether we need to overflow on the next segment

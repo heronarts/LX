@@ -192,21 +192,26 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * actual LXOutput object. These are constructed at the LXStructure layer, where separate packets may be merged.
    */
   public static class OutputDefinition {
+
+    protected final static float FPS_UNSPECIFIED = 0f;
+
     protected final Protocol protocol;
     protected final Transport transport;
     protected final InetAddress address;
     protected final int port;
     protected final int universe;
     protected final int channel;
+    protected final float fps;
     protected final Segment[] segments;
 
-    public OutputDefinition(Protocol protocol, Transport transport, InetAddress address, int port, int universe, int channel, Segment ... segments) {
+    public OutputDefinition(Protocol protocol, Transport transport, InetAddress address, int port, int universe, int channel, float fps, Segment ... segments) {
       this.protocol = protocol;
       this.transport = transport;
       this.address = address;
       this.port = port;
       this.universe = universe;
       this.channel = channel;
+      this.fps = fps;
       this.segments = segments;
     }
   }
