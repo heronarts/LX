@@ -228,7 +228,6 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   }
 
   private void updateModelView() {
-    LXView oldView = this.view;
     if (this.view != null) {
       this.view.dispose();
       this.view = null;
@@ -237,10 +236,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     if (this.viewEnabled.isOn() && (viewSelector != null) && !viewSelector.isEmpty()) {
       this.view = LXView.create(this.model, viewSelector, this.viewNormalization.getEnum());
     }
-    // Notify if changed
-    if (oldView != this.view) {
-      onModelViewChanged(getModelView());
-    }
+
+    // Notify of change
+    onModelViewChanged(getModelView());
   }
 
   protected void onModelViewChanged(LXModel view) {
