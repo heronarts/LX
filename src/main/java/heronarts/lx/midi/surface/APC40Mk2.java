@@ -318,6 +318,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           if (this.knobs[i] != null) {
             this.knobs[i].removeListener(this);
             this.knobs[i] = null;
+            sendControlChange(0, DEVICE_KNOB + i, 0);
+            sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
           }
         }
         this.device.controlSurfaceSemaphore.decrement();
@@ -568,6 +570,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
   }
 
+  private void clearChannelGrid() {
+    for (int i = 0; i < NUM_CHANNELS; ++i) {
+      sendChannelPatterns(i, null);
+      sendChannelClips(i, null);
+    }
+  }
+
   private void sendChannel(int index, LXAbstractChannel channel) {
     if (channel != null) {
       sendNoteOn(index, CHANNEL_ACTIVE, channel.enabled.isOn() ? LED_ON : LED_OFF);
@@ -638,8 +647,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     for (int i = 0; i < CLIP_LAUNCH_ROWS; ++i) {
       int color = LED_OFF;
       int mode = LED_MODE_PRIMARY;
+      int pitch = CLIP_LAUNCH + index + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - i);
       if (channel != null) {
-        int pitch = CLIP_LAUNCH + index + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - i);
         LXClip clip = channel.getClip(i);
         if (clip != null) {
           color = channel.arm.isOn() ? LED_RED_HALF : LED_GRAY;
@@ -650,8 +659,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             color = channel.arm.isOn() ? LED_RED_HALF : LED_GREEN_HALF;
           }
         }
-        sendNoteOn(mode, pitch, color);
       }
+      sendNoteOn(mode, pitch, color);
     }
   }
 
@@ -729,6 +738,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
     this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
     this.lx.engine.tempo.enabled.removeListener(this.tempoListener);
+
+    clearChannelGrid();
   }
 
   private void registerChannel(LXAbstractChannel channel) {
