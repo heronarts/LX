@@ -500,17 +500,30 @@ public class LXModel implements LXSerializable {
 
   public String getPath() {
     LXModel parent = this.parent;
+    boolean hasTag = !this.tags.isEmpty();
+    String firstTag = hasTag ? this.tags.get(0) : "";
+
     if (parent == null) {
-      return "/" + this.tags.get(0);
+      return "/" + firstTag;
     }
+
     int index = 0;
-    for (LXModel child : parent.childDict.get(this.tags.get(0))) {
-      if (child == this) {
-        break;
+    if (hasTag) {
+      for (LXModel child : parent.childDict.get(firstTag)) {
+        if (child == this) {
+          break;
+        }
+        ++index;
       }
-      ++index;
+    } else {
+      for (LXModel child : parent.children) {
+        if (child == this) {
+          break;
+        }
+        ++index;
+      }
     }
-    return parent.getPath() + "/" + this.tags.get(0) + "[" + index + "]";
+    return parent.getPath() + "/" + firstTag + "[" + index + "]";
   }
 
   /**
