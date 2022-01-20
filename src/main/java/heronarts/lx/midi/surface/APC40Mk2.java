@@ -718,7 +718,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       registerChannel(channel);
     }
 
-    this.lx.engine.mixer.addListener(mixerEngineListener);
+    this.lx.engine.mixer.addListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
 
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
@@ -735,7 +735,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       unregisterChannel(channel);
     }
 
-    this.lx.engine.mixer.removeListener(mixerEngineListener);
+    this.lx.engine.mixer.removeListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
     this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
     this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
