@@ -68,6 +68,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BooleanParameter("Project Scheduler Enabed", false)
     .setDescription("Whether the project scheduler is enabled");
 
+  public final BooleanParameter showCpuLoad =
+    new BooleanParameter("Show CPU Load %")
+    .setDescription("Whether CPU load percentage is shown in toolbar");
+
   private String projectFileName = null;
   private String scheduleFileName = null;
 
@@ -85,6 +89,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.uiZoom.addListener(this);
     this.showHelpBar.addListener(this);
     this.schedulerEnabled.addListener(this);
+    this.showCpuLoad.addListener(this);
 
     lx.registry.addListener(new LXRegistry.Listener() {
       @Override
@@ -146,6 +151,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
   private static final String KEY_SHOW_HELP_BAR = "showHelpBar";
   private static final String KEY_SCHEDULER_ENABLED = "schedulerEnabled";
+  private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
   private static final String KEY_REGISTRY = "registry";
 
   @Override
@@ -165,6 +171,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
     object.addProperty(KEY_SHOW_HELP_BAR, this.showHelpBar.isOn());
     object.addProperty(KEY_SCHEDULER_ENABLED, this.schedulerEnabled.isOn());
+    object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
 
     object.add(KEY_REGISTRY, LXSerializable.Utils.toObject(this.lx, this.lx.registry));
   }
@@ -176,6 +183,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.sendCueToOutput, object, KEY_SEND_CUE_TO_OUTPUT);
     LXSerializable.Utils.loadBoolean(this.showHelpBar, object, KEY_SHOW_HELP_BAR);
     LXSerializable.Utils.loadBoolean(this.schedulerEnabled, object, KEY_SCHEDULER_ENABLED);
+    LXSerializable.Utils.loadBoolean(this.showCpuLoad, object, KEY_SHOW_CPU_LOAD);
     LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
     if (object.has(KEY_WINDOW_WIDTH)) {
       this.windowWidth = object.get(KEY_WINDOW_WIDTH).getAsInt();
