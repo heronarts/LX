@@ -496,8 +496,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   @Override
   protected void onEnable(boolean on) {
-    setApcMode(on ? ABLETON_ALTERNATE_MODE : GENERIC_MODE);
     if (on) {
+      setApcMode(ABLETON_ALTERNATE_MODE);
       initialize(false);
       register();
     } else {
@@ -510,6 +510,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       if (this.isRegistered) {
         unregister();
       }
+      setApcMode(GENERIC_MODE);
     }
   }
 
@@ -572,8 +573,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private void clearChannelGrid() {
     for (int i = 0; i < NUM_CHANNELS; ++i) {
-      sendChannelPatterns(i, null);
-      sendChannelClips(i, null);
+      sendChannel(i, null);
     }
   }
 
@@ -673,6 +673,25 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendNoteOn(0, MASTER_FOCUS, masterFocused ? LED_ON : LED_OFF);
   }
 
+  private final LXMixerEngine.Listener mixerEngineListener = new LXMixerEngine.Listener() {
+    @Override
+    public void channelRemoved(LXMixerEngine mixer, LXAbstractChannel channel) {
+      unregisterChannel(channel);
+      sendChannels();
+    }
+
+    @Override
+    public void channelMoved(LXMixerEngine mixer, LXAbstractChannel channel) {
+      sendChannels();
+    }
+
+    @Override
+    public void channelAdded(LXMixerEngine mixer, LXAbstractChannel channel) {
+      sendChannels();
+      registerChannel(channel);
+    }
+  };
+
   private final LXParameterListener focusedChannelListener = (p) -> {
     sendChannelFocus();
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
@@ -698,26 +717,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       registerChannel(channel);
     }
-    this.lx.engine.mixer.addListener(new LXMixerEngine.Listener() {
 
-      @Override
-      public void channelRemoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-        unregisterChannel(channel);
-        sendChannels();
-      }
-
-      @Override
-      public void channelMoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-        sendChannels();
-      }
-
-      @Override
-      public void channelAdded(LXMixerEngine mixer, LXAbstractChannel channel) {
-        sendChannels();
-        registerChannel(channel);
-      }
-    });
-
+    this.lx.engine.mixer.addListener(mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
 
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
@@ -734,6 +735,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       unregisterChannel(channel);
     }
 
+    this.lx.engine.mixer.removeListener(mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
     this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
     this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
