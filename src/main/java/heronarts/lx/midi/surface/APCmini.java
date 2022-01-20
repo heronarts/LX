@@ -520,7 +520,7 @@ public class APCmini extends LXMidiSurface implements LXMidiSurface.Bidirectiona
       registerChannel(channel);
     }
 
-    this.lx.engine.mixer.addListener(mixerEngineListener);
+    this.lx.engine.mixer.addListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
   }
 
@@ -531,7 +531,7 @@ public class APCmini extends LXMidiSurface implements LXMidiSurface.Bidirectiona
       unregisterChannel(channel);
     }
 
-    this.lx.engine.mixer.removeListener(mixerEngineListener);
+    this.lx.engine.mixer.removeListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
 
     clearChannelGrid();
