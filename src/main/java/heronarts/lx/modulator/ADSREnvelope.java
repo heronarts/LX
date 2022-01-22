@@ -116,16 +116,6 @@ public class ADSREnvelope extends LXModulator implements LXNormalizedParameter {
   }
 
   @Override
-  public float getNormalizedf() {
-    return (float) getNormalized();
-  }
-
-  @Override
-  public double getExponent() {
-    return 1;
-  }
-
-  @Override
   protected double computeValue(double deltaMs) {
     double norm = this.normalized;
     switch (this.stage) {
