@@ -25,6 +25,30 @@ import heronarts.lx.utils.LXUtils;
  */
 public class BoundedParameter extends LXListenableNormalizedParameter {
 
+  public enum NormalizationCurve {
+    /**
+     * Normal exponential curve from v0 -> v1 (0 -> 1) -> x^2
+     */
+    NORMAL,
+
+    /**
+     * Normal exponential curve from v1 -> v0 (1 -> 0) -> 1 - x^2
+     */
+    REVERSE,
+
+    /**
+     * Exponential curve biased from center, slope is 0 at vCenter
+     */
+    BIAS_CENTER,
+
+    /**
+     * Exponential curve biased at center, slope is steepest at vCenter
+     */
+    BIAS_OUTER
+  };
+
+  private NormalizationCurve curve = NormalizationCurve.NORMAL;
+
   static public class Range {
 
     public final double v0;
@@ -57,13 +81,39 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     }
 
     public double getNormalized(double value, double exponent) {
+      return getNormalized(value, exponent, NormalizationCurve.NORMAL);
+    }
+
+    public double getNormalized(double value, double exponent, NormalizationCurve curve) {
       if (this.v0 == this.v1) {
         return 0;
       }
       value = constrain(value);
       double normalized = (value - this.v0) / this.vRange;
       if (exponent != 1) {
-        normalized = Math.pow(normalized, 1 / exponent);
+        final double expInv = 1./exponent;
+        switch (curve) {
+        case NORMAL:
+          normalized = Math.pow(normalized, expInv);
+          break;
+        case REVERSE:
+          normalized = 1 - Math.pow(1 - normalized, expInv);
+          break;
+        case BIAS_CENTER:
+          if (normalized < 0.5) {
+            normalized = 0.5 - 0.5 * Math.pow(2 * (0.5 - normalized), expInv);
+          } else {
+            normalized = 0.5 + 0.5 * Math.pow(2 * (normalized - 0.5), expInv);
+          }
+          break;
+        case BIAS_OUTER:
+          if (normalized < 0.5) {
+            normalized = 0.5 * Math.pow(2*normalized, expInv);
+          } else {
+            normalized = 1 - 0.5 * Math.pow(2*(1-normalized), expInv);
+          }
+          break;
+        }
       }
       return normalized;
     }
@@ -73,13 +123,38 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     }
 
     public double normalizedToValue(double normalized, double exponent) {
+      return normalizedToValue(normalized, exponent, NormalizationCurve.NORMAL);
+    }
+
+    public double normalizedToValue(double normalized, double exponent, NormalizationCurve curve) {
       if (normalized < 0) {
         normalized = 0;
       } else if (normalized > 1) {
         normalized = 1;
       }
       if (exponent != 1) {
-        normalized = Math.pow(normalized, exponent);
+        switch (curve) {
+        case NORMAL:
+          normalized = Math.pow(normalized, exponent);
+          break;
+        case REVERSE:
+          normalized = 1 - Math.pow(1 - normalized, exponent);
+          break;
+        case BIAS_CENTER:
+          if (normalized < 0.5) {
+            normalized = 0.5 - 0.5 * Math.pow(2*(0.5 - normalized), exponent);
+          } else {
+            normalized = 0.5 + 0.5 * Math.pow(2*(normalized - 0.5), exponent);
+          }
+          break;
+        case BIAS_OUTER:
+          if (normalized < 0.5) {
+            normalized = 0.5 * Math.pow(2 * normalized, exponent);
+          } else {
+            normalized = 1 - 0.5 * Math.pow(2 * (1 - normalized), exponent);
+          }
+          break;
+        }
       }
       return this.v0 + (this.vRange * normalized);
     }
@@ -189,6 +264,15 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     return this;
   }
 
+  public BoundedParameter setNormalizationCurve(NormalizationCurve curve) {
+    this.curve = curve;
+    return this;
+  }
+
+  public NormalizationCurve getNormalizationCurve() {
+    return this.curve;
+  }
+
   public BoundedParameter incrementValue(double amount, boolean wrap) {
     double newValue = getValue() + amount;
     if (wrap) {
@@ -210,7 +294,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    * @return this, for method chaining
    */
   public BoundedParameter setNormalized(double normalized) {
-    setValue(this.range.normalizedToValue(normalized, getExponent()));
+    setValue(this.range.normalizedToValue(normalized, getExponent(), getNormalizationCurve()));
     return this;
   }
 
@@ -229,7 +313,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    * @return Normalized value, from 0 to 1
    */
   public double getNormalized() {
-    return this.range.getNormalized(getValue(), getExponent());
+    return this.range.getNormalized(getValue(), getExponent(), getNormalizationCurve());
   }
 
   /**

@@ -18,6 +18,7 @@
 
 package heronarts.lx.parameter;
 
+import heronarts.lx.parameter.BoundedParameter.NormalizationCurve;
 import heronarts.lx.parameter.BoundedParameter.Range;
 
 /**
@@ -115,19 +116,11 @@ public abstract class BoundedFunctionalParameter extends FunctionalParameter imp
    * @return Normalized value, from 0 to 1
    */
   public double getNormalized() {
-    return this.range.getNormalized(getValue(), this.exponent);
-  }
-
-  /**
-   * Normalized value as a float
-   *
-   * @return Normalized value from 0-1 as a float
-   */
-  public float getNormalizedf() {
-    return (float) getNormalized();
+    return this.range.getNormalized(getValue(), this.exponent, NormalizationCurve.NORMAL);
   }
 
   private double exponent = 1;
+  private NormalizationCurve curve = NormalizationCurve.NORMAL;
 
   public LXNormalizedParameter setExponent(double exponent) {
     if (exponent <= 0) {
@@ -139,6 +132,15 @@ public abstract class BoundedFunctionalParameter extends FunctionalParameter imp
 
   public double getExponent() {
     return this.exponent;
+  }
+
+  public LXNormalizedParameter setNormalizationCurve(NormalizationCurve curve) {
+    this.curve = curve;
+    return this;
+  }
+
+  public NormalizationCurve getNormalizationCurve() {
+    return this.curve;
   }
 
 }
