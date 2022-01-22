@@ -279,8 +279,12 @@ public class LX {
    * only be set one time, and it should be assumed that the engine is no longer
    * running if this is the case.
    */
-  public StringParameter failure =
-    new StringParameter("Failure", null);
+  public StringParameter failure = new StringParameter("Failure", null);
+
+  /**
+   * Parameter that can be watched by the UI to push status messages
+   */
+  public final StringParameter statusMessage = new StringParameter("Status Message", "");
 
   /**
    * The lighting system structure
@@ -451,6 +455,11 @@ public class LX {
       return this.errorStack.peek();
     }
     return null;
+  }
+
+  public LX pushStatusMessage(String message) {
+    this.statusMessage.setValue(message);
+    return this;
   }
 
   /**
