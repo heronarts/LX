@@ -415,8 +415,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         sendNoteOn(index, CHANNEL_ARM, this.channel.arm.isOn() ? LED_ON : LED_OFF);
         sendChannelClips(this.channel.getIndex(), this.channel);
       } else if (p.getParent() instanceof LXClip) {
-        // TODO(mcslee): could be more efficient...
-        sendChannelClips(index, this.channel);
+        LXClip clip = (LXClip)p.getParent();
+        sendClip(index, this.channel, clip.getIndex(), clip);
       }
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
@@ -484,7 +484,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     @Override
     public void clipAdded(LXBus bus, LXClip clip) {
       clip.running.addListener(this);
-      sendChannelClips(this.channel.getIndex(), this.channel);
+      sendClip(this.channel.getIndex(), this.channel, clip.getIndex(), clip);
     }
 
     @Override
@@ -646,27 +646,32 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendChannelClips(int index, LXAbstractChannel channel) {
-    if (index >= CLIP_LAUNCH_COLUMNS || this.bankOn) {
+    for (int i = 0; i < CLIP_LAUNCH_ROWS; ++i) {
+      LXClip clip = null;
+      if (channel != null) {
+        clip = channel.getClip(i);
+      }
+      sendClip(index, channel, i, clip);
+    }
+  }
+
+  private void sendClip(int channelIndex, LXAbstractChannel channel, int clipIndex, LXClip clip) {
+    if (this.bankOn || channelIndex >= CLIP_LAUNCH_COLUMNS || clipIndex >= CLIP_LAUNCH_ROWS) {
       return;
     }
-    for (int i = 0; i < CLIP_LAUNCH_ROWS; ++i) {
-      int color = LED_OFF;
-      int mode = LED_MODE_PRIMARY;
-      int pitch = CLIP_LAUNCH + index + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - i);
-      if (channel != null) {
-        LXClip clip = channel.getClip(i);
-        if (clip != null) {
-          color = channel.arm.isOn() ? LED_RED_HALF : LED_GRAY;
-          if (clip.isRunning()) {
-            color = channel.arm.isOn() ? LED_RED : LED_GREEN;
-            sendNoteOn(LED_MODE_PRIMARY, pitch, color);
-            mode = LED_MODE_PULSE;
-            color = channel.arm.isOn() ? LED_RED_HALF : LED_GREEN_HALF;
-          }
-        }
+    int color = LED_OFF;
+    int mode = LED_MODE_PRIMARY;
+    int pitch = CLIP_LAUNCH + channelIndex + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - clipIndex);
+    if (channel != null && clip != null) {
+      color = channel.arm.isOn() ? LED_RED_HALF : LED_GRAY;
+      if (clip.isRunning()) {
+        color = channel.arm.isOn() ? LED_RED : LED_GREEN;
+        sendNoteOn(LED_MODE_PRIMARY, pitch, color);
+        mode = LED_MODE_PULSE;
+        color = channel.arm.isOn() ? LED_RED_HALF : LED_GREEN_HALF;
       }
-      sendNoteOn(mode, pitch, color);
     }
+    sendNoteOn(mode, pitch, color);
   }
 
   private void sendChannelFocus() {
