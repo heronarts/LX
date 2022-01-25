@@ -368,6 +368,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         int focusedPatternIndex = c.getFocusedPatternIndex();
         c.controlSurfaceFocusIndex.setValue(focusedPatternIndex < CLIP_LAUNCH_ROWS ? 0 : (focusedPatternIndex - CLIP_LAUNCH_ROWS + 1));
       }
+      for (LXClip clip : this.channel.clips) {
+        if (clip != null) {
+          clip.running.addListener(this);
+        }
+      }
     }
 
     public void dispose() {
