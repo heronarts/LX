@@ -35,11 +35,11 @@ public class LXCompoundModulation extends LXParameterModulation {
 
   public final EnumParameter<LXParameter.Polarity> polarity =
     new EnumParameter<LXParameter.Polarity>("Polarity", LXParameter.Polarity.UNIPOLAR)
-    .setDescription("Species whether this modulation is unipolar (one-directional) or bipolar (bi-directional)");
+    .setDescription("Specifies whether this modulation is unipolar (one-directional) or bipolar (bi-directional)");
 
   public final BoundedParameter range = (BoundedParameter)
     new BoundedParameter("Range", 0, -1, 1)
-    .setDescription("Species the depth of this modulation, may be positive or negative")
+    .setDescription("Specifies the depth of this modulation, may be positive or negative")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public LXCompoundModulation(LX lx, LXModulationEngine scope, JsonObject obj) throws ModulationException {
