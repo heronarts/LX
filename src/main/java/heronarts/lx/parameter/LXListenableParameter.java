@@ -222,6 +222,10 @@ public abstract class LXListenableParameter implements LXParameter {
     return (float) getValue();
   }
 
+  public final boolean isDefault() {
+    return this.getValue() == this.defaultValue;
+  }
+
   public String getLabel() {
     return this.label;
   }
