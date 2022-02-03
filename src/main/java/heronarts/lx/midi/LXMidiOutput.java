@@ -56,7 +56,14 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
     if (!this.enabled.isOn()) {
       throw new UnsupportedOperationException("Cannot send() to an LXMidiOutput that is not enabled");
     }
-    this.receiver.send(message, timeStamp);
+    if (this.connected.isOn()) {
+      try {
+        this.receiver.send(message, timeStamp);
+      } catch (Exception x) {
+        LXMidiEngine.error(x, "Failed to send message to MIDI output, marking as disconnected: " + getName());
+        this.connected.setValue(false);
+      }
+    }
   }
 
   public void sendSysex(byte[] sysex) {
@@ -65,7 +72,7 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
       message.setMessage(sysex, sysex.length);
       send(message);
     } catch (InvalidMidiDataException imdx) {
-      LXMidiEngine.error(imdx, "Invalid midi data sennding sysex message: " + imdx.getLocalizedMessage());
+      LXMidiEngine.error(imdx, "Invalid midi data sending sysex message: " + imdx.getLocalizedMessage());
     }
   }
 
@@ -75,7 +82,7 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
       message.setMessage(command, channel, data1, data2);
       send(message);
     } catch (InvalidMidiDataException imdx) {
-      LXMidiEngine.error(imdx, "Invalid midi data sennding short message: " + imdx.getLocalizedMessage());
+      LXMidiEngine.error(imdx, "Invalid midi data sending short message: " + imdx.getLocalizedMessage());
     }
   }
 
