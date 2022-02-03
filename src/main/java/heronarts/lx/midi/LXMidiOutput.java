@@ -56,10 +56,16 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
     if (!this.enabled.isOn()) {
       throw new UnsupportedOperationException("Cannot send() to an LXMidiOutput that is not enabled");
     }
+    if (!this.connected.isOn()) {
+      return;
+    }
     this.receiver.send(message, timeStamp);
   }
 
   public void sendSysex(byte[] sysex) {
+    if (!this.connected.isOn()) {
+      return;
+    }
     try {
       SysexMessage message = new SysexMessage();
       message.setMessage(sysex, sysex.length);
@@ -70,6 +76,9 @@ public class LXMidiOutput extends LXMidiDevice implements Receiver {
   }
 
   private void sendShortMessage(int command, int channel, int data1, int data2) {
+    if (!this.connected.isOn()) {
+      return;
+    }
     try {
       ShortMessage message = new ShortMessage();
       message.setMessage(command, channel, data1, data2);

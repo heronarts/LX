@@ -102,6 +102,8 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
         this.input.open();
         this.output.open();
         onReconnect();
+      } else {
+        onDisconnect();
       }
     });
   }
@@ -124,6 +126,11 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
    * @param isOn Whether surface is enabled
    */
   protected void onEnable(boolean isOn) {}
+
+  /**
+   * Subclasses may override, invoked when the control surface is disconnected.
+   */
+  protected void onDisconnect() {}
 
   /**
    * Subclasses may override, invoked when the control surface was disconnected but
