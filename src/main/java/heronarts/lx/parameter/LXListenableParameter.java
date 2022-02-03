@@ -223,7 +223,9 @@ public abstract class LXListenableParameter implements LXParameter {
   }
 
   public final boolean isDefault() {
-    return this.getValue() == this.defaultValue;
+    // NOTE: check this.value directly here, don't use getValue() because a
+    // CompoundParameter with modulation will return something different...
+    return this.value == this.defaultValue;
   }
 
   public String getLabel() {
