@@ -409,7 +409,7 @@ public class LXColor {
   }
 
   public static int lerp(int dst, int src) {
-    return add(dst, src, 0x100);
+    return lerp(dst, src, 0x100);
   }
 
   public static int lerp(int dst, int src, double alpha) {
