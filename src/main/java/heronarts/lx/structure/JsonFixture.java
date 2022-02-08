@@ -728,7 +728,7 @@ public class JsonFixture extends LXFixture {
       return 0;
     }
     try {
-      return _evaluateSimpleExpression(obj, key, substitutedExpression);
+      return _evaluateSimpleExpression(obj, key, substitutedExpression.replaceAll("\\s", ""));
     } catch (Exception nfx) {
       addWarning("Bad formatting in variable expression: " + expression);
       nfx.printStackTrace();
@@ -740,8 +740,9 @@ public class JsonFixture extends LXFixture {
 
   // Super-trivial implementation of *very* basic math expressions
   private float _evaluateSimpleExpression(JsonObject obj, String key, String expression) {
-    // Parentheses pass
     char[] chars = expression.toCharArray();
+
+    // Parentheses pass
     int openParen = -1;
     for (int i = 0; i < chars.length; ++i) {
       if (chars[i] == '(') {
@@ -766,20 +767,33 @@ public class JsonFixture extends LXFixture {
       }
     }
 
+    // All parentheses have now been cleared!
+
     // Operator pass - these are prioritized so that * and / take precedence over + and -
     for (char operator : SIMPLE_EXPRESSION_OPERATORS) {
-      int index = expression.indexOf(operator);
-      if ((index > 0) && (index < expression.length() - 1)) {
-        float left = _evaluateSimpleExpression(obj, key, expression.substring(0, index));
-        float right = _evaluateSimpleExpression(obj, key, expression.substring(index + 1));
-        switch (operator) {
-        case '+': return left + right;
-        case '-': return left - right;
-        case '*': return left * right;
-        case '/': return left / right;
+      for (int index = 1; index < chars.length - 1; ++index) {
+        if (chars[index] == operator) {
+
+          // Skip over the tricky unary minus operator! If preceded by another operator,
+          // then it's actually just a negative sign which can be handled by parseFloat()
+          if ((operator == '-') && (
+            (chars[index-1] == '*' || chars[index-1] == '/' || chars[index-1] == '+'))) {
+            continue;
+          }
+
+          float left = _evaluateSimpleExpression(obj, key, expression.substring(0, index));
+          float right = _evaluateSimpleExpression(obj, key, expression.substring(index + 1));
+
+          switch (operator) {
+          case '+': return left + right;
+          case '-': return left - right;
+          case '*': return left * right;
+          case '/': return left / right;
+          }
         }
       }
     }
+
     return Float.parseFloat(expression);
   }
 
@@ -819,7 +833,7 @@ public class JsonFixture extends LXFixture {
           // Expression to the left of parens (maybe empty)
           expression.substring(0, openParen) +
           // Evaluation of what's inside the parens
-          _evaluateSimpleExpression(obj, key, expression.substring(openParen+1, i)) +
+          _evaluateBooleanExpression(obj, key, expression.substring(openParen+1, i)) +
           // Expression to right of parens (maybe empty)
           expression.substring(i + 1);
 
