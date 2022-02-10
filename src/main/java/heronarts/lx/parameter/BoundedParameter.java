@@ -27,12 +27,12 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
 
   public enum NormalizationCurve {
     /**
-     * Normal exponential curve from v0 -> v1 (0 -> 1) -> x^2
+     * Normal exponential curve from v0 to v1 (0 to 1) maps to x^2
      */
     NORMAL,
 
     /**
-     * Normal exponential curve from v1 -> v0 (1 -> 0) -> 1 - x^2
+     * Normal exponential curve from v1 to v0 (1 to 0) maps to 1 - x^2
      */
     REVERSE,
 
