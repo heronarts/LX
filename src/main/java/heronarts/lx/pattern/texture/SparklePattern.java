@@ -41,22 +41,35 @@ public class SparklePattern extends LXPattern {
 
       private boolean isOn = false;
 
+      // Moves through 0-1 for sparkle lifecycle
       private double basis;
 
+      // Random 0-1 constant used to control how much time-scale variation is applied
       private double randomVar;
+
+      // Random 0-1 constant used to control brightness of sparkle
       private double randomLevel;
 
+      // How many pixels to output to
+      private int activePixels;
+
+      // Each individual sparkle maintains a list of output indices that it is applied to
       private int[] indexBuffer;
 
       private Sparkle() {
-        this.indexBuffer = new int[pixelsPerSparkle];
         this.isOn = false;
         this.basis = Math.random();
         this.randomVar = Math.random();
         this.randomLevel = Math.random();
       }
 
+      private void rebuffer(LXModel model) {
+        this.indexBuffer = new int[maxPixelsPerSparkle];
+        reindex(model);
+      }
+
       private void reindex(LXModel model) {
+        // Choose a set of LED indices at random for this sparkle to point to
         for (int i = 0; i < this.indexBuffer.length; ++i) {
           this.indexBuffer[i] = LXUtils.constrain((int) (Math.random() * model.size), 0, model.size - 1);
         }
@@ -73,20 +86,25 @@ public class SparklePattern extends LXPattern {
 
     private final Sparkle[] sparkles = new Sparkle[MAX_SPARKLES];
 
-    public double[] sparkleLevels;
+    /**
+     * Array of raw value output levels, matching the size of the model
+     */
+    public double[] outputLevels;
 
     private int numSparkles;
-    private int pixelsPerSparkle;
+    private int maxPixelsPerSparkle;
 
     public double amount = 1;
 
     public final CompoundParameter minInterval = (CompoundParameter)
       new CompoundParameter("Fast", 1, .1, 60)
+      .setExponent(2)
       .setUnits(CompoundParameter.Units.SECONDS)
       .setDescription("Minimum interval between sparkles");
 
     public final CompoundParameter maxInterval = (CompoundParameter)
       new CompoundParameter("Slow", 1, .1, 60)
+      .setExponent(2)
       .setUnits(CompoundParameter.Units.SECONDS)
       .setDescription("Maximum interval between sparkles");
 
@@ -131,44 +149,53 @@ public class SparklePattern extends LXPattern {
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Peak sparkle brightness level");
 
-    public void setModel(LXModel model) {
-      this.sparkleLevels = new double[model.size];
-      this.numSparkles = LXUtils.min(model.size, MAX_SPARKLES);
-      this.pixelsPerSparkle = (int) Math.ceil(MAX_DENSITY * model.size / this.numSparkles);
-
-      for (int i = 0; i < this.numSparkles; ++i) {
-        if (this.sparkles[i] == null) {
-          this.sparkles[i] = new Sparkle();
-        } else {
-          this.sparkles[i].indexBuffer = new int[this.pixelsPerSparkle];
-        }
-        this.sparkles[i].reindex(model);
-      }
-    }
-
     public Engine(LXModel model) {
       setModel(model);
     }
 
+    public void setModel(LXModel model) {
+      // An output level for every pixel in the model
+      this.outputLevels = new double[model.size];
+
+      // Set a cap on the maximum number of sparkle generators
+      this.numSparkles = LXUtils.min(model.size, MAX_SPARKLES);
+
+      // There can be up to MAX_DENSITY times the size of the model sparkle destinations,
+      // so each generator will address up to that many pixels
+      this.maxPixelsPerSparkle = (int) Math.ceil(MAX_DENSITY * model.size / this.numSparkles);
+
+      // Make sure we have enough sparkles allocated, and reindex them all against this model
+      for (int i = 0; i < this.numSparkles; ++i) {
+        if (this.sparkles[i] == null) {
+          this.sparkles[i] = new Sparkle();
+        }
+        this.sparkles[i].rebuffer(model);
+      }
+    }
+
     public void run(double deltaMs, LXModel model) {
-      double minInterval = 1000 * this.minInterval.getValue();
-      double maxInterval = 1000 * this.maxInterval.getValue();
-      double speed = this.speed.getValue();
-      double variation = .01 * this.variation.getValue();
-      double durationInv = 100 / this.duration.getValue();
-      double density = .01 * this.density.getValue();
-      double baseLevel = LXUtils.lerp(100, this.baseLevel.getValue(), this.amount);
+      final double minIntervalMs = 1000 * this.minInterval.getValue();
+      final double maxIntervalMs = 1000 * this.maxInterval.getValue();
+      final double speed = this.speed.getValue();
+      final double variation = .01 * this.variation.getValue();
+      final double durationInv = 100 / this.duration.getValue();
+      final double density = .01 * this.density.getValue();
+      final double baseLevel = LXUtils.lerp(100, this.baseLevel.getValue(), this.amount);
 
       LXWaveshape waveshape = this.waveshape.getObject();
 
       double maxLevel = this.maxLevel.getValue();
       double minLevel = maxLevel * .01 * this.minLevel.getValue();
 
+      // Amount is used when in effect mode, if amount is cranked down to 0, then
+      // the max and min levels with both lerp back to 100 resulting in a full-white
+      // output that doesn't mask anything
       maxLevel = LXUtils.lerp(100, maxLevel, this.amount);
       minLevel = LXUtils.lerp(100, minLevel, this.amount);
 
-      double maxDelta = maxLevel - baseLevel;
-      double minDelta = minLevel - baseLevel;
+      // Compute how much brightness sparkles can add to reach top level
+      final double maxDelta = maxLevel - baseLevel;
+      final double minDelta = minLevel - baseLevel;
 
       double shape = this.sharp.getValue();
       if (shape >= 0) {
@@ -177,35 +204,59 @@ public class SparklePattern extends LXPattern {
         shape = 1 / LXUtils.lerp(1, 3, -shape);
       }
 
-      // Initialize all points to base level
-      for (int i = 0; i < this.sparkleLevels.length; ++i) {
-        this.sparkleLevels[i] = baseLevel;
+      // Initialize all output levels to base level
+      for (int i = 0; i < this.outputLevels.length; ++i) {
+        this.outputLevels[i] = baseLevel;
       }
 
       // Run all the sparkles
       for (int i = 0; i < this.numSparkles; ++i) {
-        Sparkle sparkle = this.sparkles[i];
-        double sparkleInterval = LXUtils.lerp(maxInterval, minInterval, LXUtils.constrain(speed + variation * (sparkle.randomVar - .5), 0, 1));
+        final Sparkle sparkle = this.sparkles[i];
+        double sparkleInterval = LXUtils.lerp(maxIntervalMs, minIntervalMs, LXUtils.constrain(speed + variation * (sparkle.randomVar - .5), 0, 1));
         sparkle.basis += deltaMs / sparkleInterval;
+
+        // Check if the sparkle has looped
         if (sparkle.basis > 1) {
-          sparkle.basis = 0;
-          if (sparkle.isOn = (MAX_DENSITY * Math.random() <= density)) {
+          sparkle.basis = sparkle.basis % 1.;
+
+          int desiredPixels = (int) (model.size * density);
+          if (desiredPixels < this.numSparkles) {
+            sparkle.activePixels = 1;
+            sparkle.isOn = Math.random() < desiredPixels / this.numSparkles;
+          } else {
+            sparkle.isOn = true;
+            sparkle.activePixels = Math.round(desiredPixels / this.numSparkles);
+          }
+
+          // Re-randomize this sparkle
+          if (sparkle.isOn) {
             sparkle.randomVar = Math.random();
             sparkle.randomLevel = Math.random();
             sparkle.reindex(model);
           }
-        } else if (sparkle.isOn && (this.amount > 0)) {
+        }
+
+        // Process active sparkles
+        if (sparkle.isOn && (this.amount > 0)) {
+          // The duration is a percentage 0-100% of the total period time for which the
+          // sparkle is active. Here we scale the sparkle's raw 0-1 basis onto this portion
+          // of duration, and only process the sparkle if it's still in the 0-1 range, e.g.
+          // if duration is 50% then durationInv = 2 and we'll be done after 0-0.5
           double sBasis = sparkle.basis * durationInv;
           if (sBasis < 1) {
+            // Compute and scale the sparkle's waveshape
             double g = waveshape.compute(sBasis);
             if (shape != 1) {
               g = Math.pow(g, shape);
             }
 
+            // Determine how much brightness to add for this sparkle
             double maxSparkleDelta = LXUtils.lerp(minDelta, maxDelta, sparkle.randomLevel);
             double sparkleAdd = maxSparkleDelta * g;
-            for (int c : sparkle.indexBuffer) {
-              this.sparkleLevels[c] += sparkleAdd;
+
+            // Add the sparkle's brightness level to all output pixels
+            for (int c = 0; c < sparkle.activePixels; ++c) {
+              this.outputLevels[sparkle.indexBuffer[c]] += sparkleAdd;
             }
           }
         }
@@ -240,7 +291,7 @@ public class SparklePattern extends LXPattern {
     engine.run(deltaMs, model);
     int i = 0;
     for (LXPoint p : model.points) {
-      colors[p.index] = LXColor.gray(LXUtils.clamp(engine.sparkleLevels[i++], 0, 100));
+      colors[p.index] = LXColor.gray(LXUtils.clamp(engine.outputLevels[i++], 0, 100));
     }
   }
 }
