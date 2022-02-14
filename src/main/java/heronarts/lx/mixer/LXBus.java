@@ -109,6 +109,22 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     setParent(mixer);
   }
 
+  @Override
+  protected final void onModelChanged(LXModel model) {
+    super.onModelChanged(model);
+    updateModelView();
+  }
+
+  protected void updateModelView() {
+    onModelViewChanged(getModelView());
+  }
+
+  protected void onModelViewChanged(LXModel view) {
+    for (LXEffect effect : this.mutableEffects) {
+      effect.setModel(view);
+    }
+  }
+
   public LXModel getModelView() {
     return this.model;
   }

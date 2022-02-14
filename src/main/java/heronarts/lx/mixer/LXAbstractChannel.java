@@ -217,17 +217,12 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   }
 
   @Override
-  protected final void onModelChanged(LXModel model) {
-    super.onModelChanged(model);
-    updateModelView();
-  }
-
-  @Override
   public LXModel getModelView() {
     return (this.view != null) ? this.view : this.model;
   }
 
-  private void updateModelView() {
+  @Override
+  protected void updateModelView() {
     if (this.view != null) {
       this.view.dispose();
       this.view = null;
@@ -237,14 +232,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
       this.view = LXView.create(this.model, viewSelector, this.viewNormalization.getEnum());
     }
 
-    // Notify of change
-    onModelViewChanged(getModelView());
-  }
-
-  protected void onModelViewChanged(LXModel view) {
-    for (LXEffect effect : this.mutableEffects) {
-      effect.setModel(view);
-    }
+    // Call parent, which will notify of change
+    super.updateModelView();
   }
 
   public LXAbstractChannel addMidiListener(MidiListener listener) {

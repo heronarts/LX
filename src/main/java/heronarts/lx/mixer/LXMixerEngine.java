@@ -155,6 +155,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         for (LXBus bus : channels) {
           bus.setModel(model);
         }
+        masterBus.setModel(model);
       }
     });
 
