@@ -263,12 +263,19 @@ public class APCmini extends LXMidiSurface implements LXMidiSurface.Bidirectiona
               break;
             }
             this.knobs[i] = parameter;
-            parameter.addListener(this);
-            if (gridMode == GridMode.PARAMETERS) {
-              int patternButton = getPatternButton(i);
-              sendNoteOn(MIDI_CHANNEL, patternButton, LED_PARAMETER_INCREMENT);
-              sendNoteOn(MIDI_CHANNEL, patternButton - CLIP_LAUNCH_COLUMNS, LED_PARAMETER_DECREMENT);
-              sendNoteOn(MIDI_CHANNEL, patternButton - (CLIP_LAUNCH_COLUMNS * 2), parameter.isDefault() ? LED_PARAMETER_ISDEFAULT : LED_PARAMETER_RESET);
+            int patternButton = getPatternButton(i);
+            if (parameter != null) {
+              parameter.addListener(this);
+              if (gridMode == GridMode.PARAMETERS) {
+                sendNoteOn(MIDI_CHANNEL, patternButton, LED_PARAMETER_INCREMENT);
+                sendNoteOn(MIDI_CHANNEL, patternButton - CLIP_LAUNCH_COLUMNS, LED_PARAMETER_DECREMENT);
+                sendNoteOn(MIDI_CHANNEL, patternButton - (CLIP_LAUNCH_COLUMNS * 2), parameter.isDefault() ? LED_PARAMETER_ISDEFAULT : LED_PARAMETER_RESET);
+                sendNoteOn(MIDI_CHANNEL, patternButton - (CLIP_LAUNCH_COLUMNS * 3), LED_OFF);
+              }
+            } else {
+              sendNoteOn(MIDI_CHANNEL, patternButton, LED_OFF);
+              sendNoteOn(MIDI_CHANNEL, patternButton - CLIP_LAUNCH_COLUMNS, LED_OFF);
+              sendNoteOn(MIDI_CHANNEL, patternButton - (CLIP_LAUNCH_COLUMNS * 2), LED_OFF);
               sendNoteOn(MIDI_CHANNEL, patternButton - (CLIP_LAUNCH_COLUMNS * 3), LED_OFF);
             }
             ++i;

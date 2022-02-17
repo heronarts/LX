@@ -267,28 +267,36 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               break;
             }
             this.knobs[i] = parameter;
-            parameter.addListener(this);
-            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
-            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
-            double normalized = (parameter instanceof CompoundParameter) ?
-              ((CompoundParameter) parameter).getBaseNormalized() :
-              parameter.getNormalized();
-            sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
-            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
-            if (parameter instanceof CompoundParameter && ((CompoundParameter)parameter).modulations.size()>0) {
-              LXCompoundModulation modulation = ((CompoundParameter)parameter).modulations.get(0);
-              // TODO: color conversion not working
-              DiscreteColorParameter modulationColor = modulation.color;
-              int modColor = modulationColor.getColor();
-              float h = LXColor.h(modColor);
-              h = h * 125.f / 360.f;
-              h += 1.f;
-              int hInt = (int)h;
-              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_PULSE_EVERY_2_BEATS);
-              sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, hInt);
+            if (parameter != null) {
+              parameter.addListener(this);
+              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
+              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
+              double normalized = (parameter instanceof CompoundParameter) ?
+                ((CompoundParameter) parameter).getBaseNormalized() :
+                parameter.getNormalized();
+              sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
+              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
+              if (parameter instanceof CompoundParameter && ((CompoundParameter)parameter).modulations.size()>0) {
+                LXCompoundModulation modulation = ((CompoundParameter)parameter).modulations.get(0);
+                // TODO: color conversion not working
+                DiscreteColorParameter modulationColor = modulation.color;
+                int modColor = modulationColor.getColor();
+                float h = LXColor.h(modColor);
+                h = h * 125.f / 360.f;
+                h += 1.f;
+                int hInt = (int)h;
+                sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_PULSE_EVERY_2_BEATS);
+                sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, hInt);
+              } else {
+                sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
+                sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, 50);
+              }
             } else {
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
-              sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, 50);
+              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
+              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_25);
+              sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 0);
+              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
             }
             ++i;
           }
