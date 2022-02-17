@@ -265,12 +265,16 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
               break;
             }
             this.knobs[i] = parameter;
-            parameter.addListener(this);
-            sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
-            double normalized = (parameter instanceof CompoundParameter) ?
-              ((CompoundParameter) parameter).getBaseNormalized() :
-              parameter.getNormalized();
-            sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+            if (parameter != null) {
+              parameter.addListener(this);
+              sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
+              double normalized = (parameter instanceof CompoundParameter) ?
+                ((CompoundParameter) parameter).getBaseNormalized() :
+                parameter.getNormalized();
+              sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+            } else {
+              sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
+            }
             ++i;
           }
           this.device.controlSurfaceSemaphore.increment();
