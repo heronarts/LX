@@ -53,6 +53,8 @@ public class LXColor {
   public static final int R_SHIFT = 16;
   public static final int G_SHIFT = 8;
 
+  public static final double MAX_HUE = 360;
+
   public static byte alpha(int argb) {
     return (byte) ((argb & ALPHA_MASK) >>> ALPHA_SHIFT);
   }
