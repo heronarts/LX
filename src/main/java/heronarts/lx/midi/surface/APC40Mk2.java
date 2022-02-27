@@ -165,7 +165,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private Integer colorClipboard;   // "Copies" a color for pasting into the main swatch
   private LXDynamicColor focusColor;// The entry in the main swatch that CUE LEVEL adjusts
-  private boolean rainbowMode;      // Displays all APC40 colors at once for easy copying
+  private boolean rainbowMode;      // Display full spectrum of colors for easy copying
   private int rainbowOffset = 0;    // Scroll offset for Rainbow Mode
 
   private final APC40Mk2Colors apc40Mk2Colors = new APC40Mk2Colors();
