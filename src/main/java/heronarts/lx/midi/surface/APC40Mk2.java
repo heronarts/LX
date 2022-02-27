@@ -64,6 +64,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   public static final int CLIP_LAUNCH_COLUMNS = NUM_CHANNELS;
   public static final int PALETTE_SWATCH_ROWS = 5;
   public static final int PALETTE_SWATCH_COLUMNS = NUM_CHANNELS;
+  public static final int RAINBOW_HUE_COLUMNS = 72;  // Should be a factor of MAX_HUE
+  public static final int RAINBOW_HUE_STEP = (int)LXColor.MAX_HUE / RAINBOW_HUE_COLUMNS;
 
   // CCs
   public static final int CHANNEL_FADER = 7;
@@ -158,7 +160,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   // We use three modifier keys:
   private boolean shiftOn = false;  // All-purpose, momentary, can't light up
-  private boolean bankOn = true;    // Lit toggle. When on, the grid controls clips instead of patterns.
+  private boolean bankOn = true;    // Lit toggle. When on, the grid controls patterns instead of clips.
   private boolean deviceLockOn;     // Lit toggle. When on, much of the hardware is repurposed for palette editing.
 
   private Integer colorClipboard;   // "Copies" a color for pasting into the main swatch
@@ -750,15 +752,25 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
   }
 
+  private int rainbowGridColor(int hue, int row) {
+    final int[] sats = { 100,  70,  50, 100, 100 };
+    final int[] bris = { 100, 100, 100,  50,  25 };
+    return LXColor.hsb(hue, sats[row], bris[row]);
+  }
+
   // Cover the grid with a rainbox of APC colors
   private void sendRainbows() {
-    int color = this.rainbowOffset;
-    for (int row = 0; row < PALETTE_SWATCH_ROWS; ++row) {
-      for (int channel = 0; channel < NUM_CHANNELS; ++channel) {
+    int hue = this.rainbowOffset;
+
+    for (int channel = 0; channel < NUM_CHANNELS; ++channel) {
+      for (int row = 0; row < PALETTE_SWATCH_ROWS; ++row) {
         int pitch = CLIP_LAUNCH + channel + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - row);
-        sendNoteOn(LED_MODE_PRIMARY, pitch, color);
-        if (++color >= APC40Mk2Colors.COLORCODE_COUNT) color = 0;
+        int color = rainbowGridColor(hue, row);
+        int colorId = apc40Mk2Colors.nearest(color);
+        sendNoteOn(LED_MODE_PRIMARY, pitch, colorId);
       }
+      hue += RAINBOW_HUE_STEP;
+      hue %= LXColor.MAX_HUE;
     }
   }
 
@@ -1019,10 +1031,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           int colNum = channelIndex;
           int rowNum = index;
 
-          int i = this.rainbowOffset + rowNum * NUM_CHANNELS + colNum;
-          i %= APC40Mk2Colors.COLORCODE_COUNT;
-          int[] rgb = APC40Mk2Colors.RGB_COLORS[i];
-          this.colorClipboard = LXColor.rgb(rgb[0], rgb[1], rgb[2]);
+          int hue = this.rainbowOffset + RAINBOW_HUE_STEP * colNum;
+          this.colorClipboard = rainbowGridColor(hue, rowNum);
           return;
         }
 
@@ -1159,9 +1169,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     case TEMPO:
       if (this.deviceLockOn) {
         if (this.rainbowMode) {
-          this.rainbowOffset += NUM_CHANNELS * cc.getRelative();
-          this.rainbowOffset += APC40Mk2Colors.COLORCODE_COUNT;
-          this.rainbowOffset %= APC40Mk2Colors.COLORCODE_COUNT;
+          this.rainbowOffset += RAINBOW_HUE_STEP * cc.getRelative();
+          this.rainbowOffset += LXColor.MAX_HUE;
+          this.rainbowOffset %= LXColor.MAX_HUE;
         } else {
           this.rainbowMode = true;
           sendChannelFocus();
