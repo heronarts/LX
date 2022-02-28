@@ -1108,7 +1108,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           } else {
             LXClip clip = channel.getClip(index);
             if (clip == null) {
-              channel.addClip(index);
+              channel.addClip(index, this.shiftOn);
             } else if (this.shiftOn) {
               clip.loop.toggle();
               sendClip(channelIndex, channel, index, clip);
