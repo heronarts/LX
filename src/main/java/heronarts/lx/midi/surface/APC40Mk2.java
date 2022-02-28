@@ -24,6 +24,9 @@ import java.util.Map;
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.color.LXColor;
+import heronarts.lx.color.LXDynamicColor;
+import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
@@ -59,6 +62,19 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   public static final int NUM_CHANNELS = 8;
   public static final int CLIP_LAUNCH_ROWS = 5;
   public static final int CLIP_LAUNCH_COLUMNS = NUM_CHANNELS;
+  public static final int PALETTE_SWATCH_ROWS = 5;
+  public static final int PALETTE_SWATCH_COLUMNS = NUM_CHANNELS;
+  public static final int MASTER_SWATCH = -1;
+  public static final int RAINBOW_GRID_COLUMNS = 72;  // Should be a factor of MAX_HUE
+  public static final int RAINBOW_GRID_ROWS = 5;
+
+  // How much hue should increase from column to column
+  public static final int RAINBOW_HUE_STEP = LXColor.MAX_HUE / RAINBOW_GRID_COLUMNS;
+
+  // Saturation and brightness values to use for each row of the grid when in Rainbow Mode.
+  // Each should have RAINBOW_HUE_ROWS elements.
+  private static final int[] RAINBOW_GRID_SAT = { 100,  70,  50, 100, 100 };
+  private static final int[] RAINBOW_GRID_BRI = { 100, 100, 100,  50,  25 };
 
   // CCs
   public static final int CHANNEL_FADER = 7;
@@ -136,23 +152,63 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   public static final int LED_OFF = 0;
   public static final int LED_ON = 1;
   public static final int LED_GRAY = 2;
+  public static final int LED_GRAY_DIM = 117;
   public static final int LED_RED = 120;
   public static final int LED_RED_HALF = 121;
+  public static final int LED_ORANGE_RED = 60;
   public static final int LED_GREEN = 122;
   public static final int LED_GREEN_HALF = 123;
   public static final int LED_YELLOW = 124;
   public static final int LED_AMBER = 126;
+  public static final int LED_AMBER_HALF = 9;
+  public static final int LED_AMBER_DIM = 10;
 
   public static final int LED_MODE_PRIMARY = 0;
   public static final int LED_MODE_PULSE = 10;
   public static final int LED_MODE_BLINK = 15;
 
+  // We use three modifier keys:
+  // SHIFT: Momentary, can't be lit. Used for all sorts of purposes.
   private boolean shiftOn = false;
+  // BANK: Toggle, lit when on. Makes the grid control patterns instead of clips.
   private boolean bankOn = true;
+  // DEV. LOCK: Toggle, lit when on. Repurposes much of the hardware for color control.
+  private boolean deviceLockOn = false;
+
+  // "Copies" a color for pasting into the main swatch
+  private Integer colorClipboard = null;
+  // The entry in the main swatch that CUE LEVEL adjusts
+  private LXDynamicColor focusColor = null;
+  // Display full spectrum of colors for use with copy/paste
+  private boolean rainbowMode = false;
+  // Scroll offset for Rainbow Mode
+  private int rainbowColumnOffset = 0;
+  // Grouped by column
+  private static int[] rainbowGrid = null;
+
+  private final APC40Mk2Colors apc40Mk2Colors = new APC40Mk2Colors();
 
   private final Map<LXAbstractChannel, ChannelListener> channelListeners = new HashMap<LXAbstractChannel, ChannelListener>();
 
   private final DeviceListener deviceListener = new DeviceListener();
+
+  private enum GridMode {
+    PATTERN,
+    CLIP,
+    PALETTE;
+  }
+
+  private GridMode gridMode = GridMode.PATTERN;
+
+  private void setGridMode() {
+    if (this.deviceLockOn) {
+      this.gridMode = GridMode.PALETTE;
+    } else if (this.bankOn) {
+      this.gridMode = GridMode.PATTERN;
+    } else {
+      this.gridMode = GridMode.CLIP;
+    }
+  }
 
   private class DeviceListener implements LXParameterListener {
 
@@ -551,6 +607,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private void initialize(boolean reconnect) {
     this.output.sendNoteOn(0, BANK, this.bankOn ? LED_ON : LED_OFF);
+    this.output.sendNoteOn(0, DEVICE_LOCK, this.deviceLockOn ? LED_ON : LED_OFF);
+
+    if (!reconnect) {
+      resetPaletteVars();
+      makeRainbowGrid();
+    }
+
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
       sendControlChange(0, DEVICE_KNOB_STYLE+i, LED_STYLE_OFF);
     }
@@ -565,6 +628,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendChannels();
   }
 
+  private void resetPaletteVars() {
+    this.colorClipboard = null;
+    this.focusColor = this.lx.engine.palette.color;
+    this.rainbowMode = false;
+
+    clearSceneLaunch();
+  }
+
   private void sendChannels() {
     for (int i = 0; i < NUM_CHANNELS; ++i) {
       sendChannel(i, getChannel(i));
@@ -573,11 +644,16 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendChannelGrid() {
-    for (int i = 0; i < NUM_CHANNELS; ++i) {
-      LXAbstractChannel channel = getChannel(i);
-      sendChannelPatterns(i, channel);
-      sendChannelClips(i, channel);
+    if (!this.rainbowMode) {
+      for (int i = 0; i < NUM_CHANNELS; ++i) {
+        LXAbstractChannel channel = getChannel(i);
+        sendChannelPatterns(i, channel);
+        sendChannelClips(i, channel);
+        sendSwatch(i);
+      }
     }
+
+    sendSwatch(MASTER_SWATCH);
   }
 
   private void clearChannelGrid() {
@@ -603,9 +679,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendChannelPatterns(int index, LXAbstractChannel channelBus) {
-    if (index >= CLIP_LAUNCH_COLUMNS || !this.bankOn) {
+    if (index >= CLIP_LAUNCH_COLUMNS || this.gridMode != GridMode.PATTERN) {
       return;
     }
+
     if (channelBus instanceof LXChannel) {
       LXChannel channel = (LXChannel) channelBus;
       int baseIndex = channel.controlSurfaceFocusIndex.getValuei();
@@ -622,18 +699,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         int color = LED_OFF;
         if (y == activeIndex) {
           // This pattern is active (may also be focused)
-          color = 60;
+          color = LED_ORANGE_RED;
         } else if (y == nextIndex) {
           // This pattern is being transitioned to
           sendNoteOn(LED_MODE_PRIMARY, note, 60);
           midiChannel = LED_MODE_PULSE;
-          color = 9;
+          color = LED_AMBER_HALF;
         } else if (y == focusedIndex) {
           // This pattern is not active, but it is focused
-          color = 10;
+          color = LED_AMBER_DIM;
         } else if (y < endIndex) {
           // There is a pattern present
-          color = 117;
+          color = LED_GRAY_DIM;
         }
 
         sendNoteOn(midiChannel, note, color);
@@ -660,7 +737,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendClip(int channelIndex, LXAbstractChannel channel, int clipIndex, LXClip clip) {
-    if (this.bankOn || channelIndex >= CLIP_LAUNCH_COLUMNS || clipIndex >= CLIP_LAUNCH_ROWS) {
+    if (this.gridMode != GridMode.CLIP ||
+            channelIndex >= CLIP_LAUNCH_COLUMNS || clipIndex >= CLIP_LAUNCH_ROWS) {
       return;
     }
     int color = LED_OFF;
@@ -678,11 +756,80 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendNoteOn(mode, pitch, color);
   }
 
+  private void clearSceneLaunch() {
+    for (int i = 0; i < SCENE_LAUNCH_NUM; i++) {
+      sendNoteOn(LED_MODE_PRIMARY, SCENE_LAUNCH + i, LED_OFF);
+    }
+  }
+
+  // Sends the specified swatch index to the channel grid, or
+  // if MASTER_SWATCH, sends the main palette swatch to the SCENE LAUNCH column
+  private void sendSwatch(int index) {
+    if (this.gridMode != GridMode.PALETTE || (index >= PALETTE_SWATCH_COLUMNS)) {
+      return;
+    }
+
+    LXSwatch swatch = getSwatch(index);
+
+    for (int i = 0; i < PALETTE_SWATCH_ROWS; ++i) {
+      int color = LED_OFF;
+      int mode = LED_MODE_PRIMARY;
+
+      int pitch;
+      if (index == MASTER_SWATCH) {
+        pitch = SCENE_LAUNCH + i;
+      } else {
+        pitch = CLIP_LAUNCH + index + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - i);
+      }
+      if (swatch != null && i < swatch.colors.size()) {
+        int palColor = swatch.colors.get(i).getColor();
+        color = this.apc40Mk2Colors.nearest(palColor);
+      }
+      sendNoteOn(mode, pitch, color);
+    }
+  }
+
+  private void makeRainbowGrid() {
+    rainbowGrid = new int[RAINBOW_GRID_COLUMNS * RAINBOW_GRID_ROWS];
+    for (int col = 0; col < RAINBOW_GRID_COLUMNS; ++col) {
+      int hue = col * RAINBOW_HUE_STEP;
+      for (int row = 0; row < RAINBOW_GRID_ROWS; ++row) {
+        int i = col * RAINBOW_GRID_ROWS + row;
+        rainbowGrid[i++] = LXColor.hsb(hue, RAINBOW_GRID_SAT[row], RAINBOW_GRID_BRI[row]);
+      }
+    }
+  }
+
+  private int rainbowGridColor(int relCol, int row) {
+    int absCol = (RAINBOW_GRID_COLUMNS + relCol + this.rainbowColumnOffset) % RAINBOW_GRID_COLUMNS;
+    return rainbowGrid[absCol * RAINBOW_GRID_ROWS + row];
+  }
+
+  // Cover the grid with a rainbox of APC colors
+  private void sendRainbowPickerGrid() {
+    for (int col = 0; col < NUM_CHANNELS; ++col) {
+      for (int row = 0; row < PALETTE_SWATCH_ROWS; ++row) {
+        int pitch = CLIP_LAUNCH + col + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - row);
+        int color = rainbowGridColor(col, row);
+        int colorId = apc40Mk2Colors.nearest(color);
+        sendNoteOn(LED_MODE_PRIMARY, pitch, colorId);
+      }
+    }
+  }
+
   private void sendChannelFocus() {
     int focusedChannel = this.lx.engine.mixer.focusedChannel.getValuei();
     boolean masterFocused = (focusedChannel == this.lx.engine.mixer.channels.size());
     for (int i = 0; i < NUM_CHANNELS; ++i) {
-      sendNoteOn(i, CHANNEL_FOCUS, (!masterFocused && (i == focusedChannel)) ? LED_ON : LED_OFF);
+      boolean on;
+      if (this.rainbowMode) {
+        on = false;
+      } else if (this.gridMode == GridMode.PALETTE) {
+        on = i < lx.engine.palette.swatches.size();
+      } else {
+        on = !masterFocused && (i == focusedChannel);
+      }
+      sendNoteOn(i, CHANNEL_FOCUS, on ? LED_ON : LED_OFF);
     }
     sendNoteOn(0, MASTER_FOCUS, masterFocused ? LED_ON : LED_OFF);
   }
@@ -781,6 +928,16 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     return getChannel(message.getChannel());
   }
 
+  private LXSwatch getSwatch(int index) {
+    if (index < 0) {
+      return this.lx.engine.palette.swatch;
+    }
+    if (index < this.lx.engine.palette.swatches.size()) {
+      return this.lx.engine.palette.swatches.get(index);
+    }
+    return null;
+  }
+
   private void noteReceived(MidiNote note, boolean on) {
     int pitch = note.getPitch();
 
@@ -793,7 +950,30 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       if (on) {
         this.bankOn = !this.bankOn;
         sendNoteOn(note.getChannel(), pitch, this.bankOn ? LED_ON : LED_OFF);
+        if (this.deviceLockOn) {
+          this.deviceLockOn = false;
+          sendNoteOn(note.getChannel(), DEVICE_LOCK, LED_OFF);
+          resetPaletteVars();
+        }
+        this.setGridMode();
         sendChannelGrid();
+        sendChannelFocus();
+      }
+      return;
+    case DEVICE_LOCK:
+      if (on) {
+        this.deviceLockOn = !this.deviceLockOn;
+        sendNoteOn(note.getChannel(), pitch, this.deviceLockOn ? LED_ON : LED_OFF);
+        if (this.bankOn) {
+          sendNoteOn(note.getChannel(), BANK, LED_OFF);
+          this.bankOn = false;
+        }
+        if (!this.deviceLockOn) {
+          resetPaletteVars();
+        }
+        this.setGridMode();
+        sendChannelGrid();
+        sendChannelFocus();
       }
       return;
     case METRONOME:
@@ -802,7 +982,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       return;
     case TAP_TEMPO:
-      lx.engine.tempo.tap.setValue(on);
+      if (this.rainbowMode) {
+        this.rainbowMode = false;
+        sendChannelGrid();
+      } else {
+        lx.engine.tempo.tap.setValue(on);
+      }
       return;
     case NUDGE_MINUS:
       lx.engine.tempo.nudgeDown.setValue(on);
@@ -815,11 +1000,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     // Global momentary light-up buttons
     switch (pitch) {
     case CLIP_STOP:
-    case SCENE_LAUNCH:
       sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
       break;
     }
-    if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
+    if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX && this.gridMode != GridMode.PALETTE) {
       sendNoteOn(note.getChannel(), pitch, on ? LED_GREEN : LED_OFF);
     }
 
@@ -842,13 +1026,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       case BANK_SELECT_UP:
         bus = this.lx.engine.mixer.getFocusedChannel();
         if (bus instanceof LXChannel) {
-          ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1 , false);
+          ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
         return;
       case BANK_SELECT_DOWN:
         bus = this.lx.engine.mixer.getFocusedChannel();
         if (bus instanceof LXChannel) {
-          ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1 , false);
+          ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
         return;
       case CLIP_DEVICE_VIEW:
@@ -858,21 +1042,53 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.lx.engine.mixer.cueB.toggle();
         return;
       case STOP_ALL_CLIPS:
-        this.lx.engine.mixer.stopClips();
+        if (this.gridMode == GridMode.PALETTE) {
+          this.colorClipboard = null;
+        } else {
+          this.lx.engine.mixer.stopClips();
+        }
         return;
       }
 
       if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
-        this.lx.engine.mixer.launchScene(pitch - SCENE_LAUNCH);
+        int index = pitch - SCENE_LAUNCH;
+        if (this.gridMode == GridMode.PALETTE) {
+          // A button corresponding to an entry in the main palette swatch has been tapped.
+          // Make it the focusColor (i.e., turning the CUE LEVEL knob will tweak it), and
+          // if there's a color on the clipboard, paste it here.
+          LXSwatch swatch = getSwatch(MASTER_SWATCH);
+          this.focusColor = swatch.getColor(index);
+          if (this.colorClipboard != null) {
+            this.focusColor.primary.setColor(this.colorClipboard);
+            sendSwatch(MASTER_SWATCH);
+          }
+        } else {
+          this.lx.engine.mixer.launchScene(index);
+        }
         return;
       }
 
       if (pitch >= CLIP_LAUNCH && pitch <= CLIP_LAUNCH_MAX) {
         int channelIndex = (pitch - CLIP_LAUNCH) % CLIP_LAUNCH_COLUMNS;
         int index = CLIP_LAUNCH_ROWS - 1 - ((pitch - CLIP_LAUNCH) / CLIP_LAUNCH_COLUMNS);
+
+        if (this.rainbowMode) {
+          this.colorClipboard = rainbowGridColor(channelIndex, index);
+          return;
+        }
+
+        if (this.gridMode == GridMode.PALETTE) {
+          LXSwatch swatch = getSwatch(channelIndex);
+          if (swatch != null && index < swatch.colors.size()) {
+            this.colorClipboard = swatch.colors.get(index).primary.getColor();
+          } else {
+            this.colorClipboard = null;
+          }
+          return;
+        }
         LXAbstractChannel channel = getChannel(channelIndex);
         if (channel != null) {
-          if (this.bankOn) {
+          if (this.gridMode == GridMode.PATTERN) {
             if (channel instanceof LXChannel) {
               LXChannel c = (LXChannel) channel;
               index += c.controlSurfaceFocusIndex.getValuei();
@@ -901,8 +1117,33 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
+
     // Channel messages
+
+    if (this.rainbowMode) {
+      return;
+    }
+
+    if (this.gridMode == GridMode.PALETTE) {
+      if (!on) {
+        return;
+      }
+      switch (note.getPitch()) {
+      case CHANNEL_FOCUS:
+        int swatchNum = note.getChannel();
+        if (swatchNum < lx.engine.palette.swatches.size()) {
+          lx.engine.palette.setSwatch(lx.engine.palette.swatches.get(swatchNum));
+          sendSwatch(MASTER_SWATCH);
+        }
+        break;
+      default:
+        LXMidiEngine.error("APC40mk2 in DEV_LOCK received unmapped note: " + note);
+      }
+      return;
+    }
+
     LXAbstractChannel channel = getChannel(note);
+
     if (channel != null) {
       if (!on) {
         return;
@@ -941,14 +1182,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.deviceListener.onDeviceOnOff();
         return;
       case DEVICE_LEFT:
-        this.deviceListener.registerPrevious();
-        return;
-      case DEVICE_RIGHT:
-        this.deviceListener.registerNext();
-        return;
       case BANK_LEFT:
         this.deviceListener.registerPrevious();
         return;
+      case DEVICE_RIGHT:
       case BANK_RIGHT:
         this.deviceListener.registerNext();
         return;
@@ -973,7 +1210,16 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     int number = cc.getCC();
     switch (number) {
     case TEMPO:
-      if (this.shiftOn) {
+      if (this.gridMode == GridMode.PALETTE) {
+        if (this.rainbowMode) {
+          this.rainbowColumnOffset = (this.rainbowColumnOffset + cc.getRelative())
+                  % RAINBOW_GRID_COLUMNS;
+        } else {
+          this.rainbowMode = true;
+          sendChannelFocus();
+        }
+        sendRainbowPickerGrid();
+      } else if (this.shiftOn) {
         this.lx.engine.tempo.adjustBpm(.1 * cc.getRelative());
       } else {
         this.lx.engine.tempo.adjustBpm(cc.getRelative());
@@ -981,9 +1227,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return;
     case CUE_LEVEL:
       if (this.shiftOn) {
-        this.lx.engine.palette.color.primary.saturation.incrementValue(cc.getRelative());
+        this.focusColor.primary.saturation.incrementValue(cc.getRelative());
       } else {
-        this.lx.engine.palette.color.primary.hue.incrementValue(cc.getRelative(), true);
+        this.focusColor.primary.hue.incrementValue(cc.getRelative(), true);
+      }
+      if (this.gridMode == GridMode.PALETTE) {
+        sendSwatch(MASTER_SWATCH);
       }
       return;
     case CHANNEL_FADER:
