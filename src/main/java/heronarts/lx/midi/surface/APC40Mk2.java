@@ -152,6 +152,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   public static final int LED_OFF = 0;
   public static final int LED_ON = 1;
   public static final int LED_GRAY = 2;
+  public static final int LED_CYAN = 114;
   public static final int LED_GRAY_DIM = 117;
   public static final int LED_RED = 120;
   public static final int LED_RED_HALF = 121;
@@ -748,12 +749,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     int mode = LED_MODE_PRIMARY;
     int pitch = CLIP_LAUNCH + channelIndex + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - clipIndex);
     if (channel != null && clip != null) {
-      color = channel.arm.isOn() ? LED_RED_HALF : LED_GRAY;
+      color = channel.arm.isOn() ? LED_RED_HALF :
+              clip.loop.isOn() ? LED_CYAN : LED_GRAY;
       if (clip.isRunning()) {
         color = channel.arm.isOn() ? LED_RED : LED_GREEN;
         sendNoteOn(LED_MODE_PRIMARY, pitch, color);
         mode = LED_MODE_PULSE;
-        color = channel.arm.isOn() ? LED_RED_HALF : LED_GREEN_HALF;
+        color = channel.arm.isOn() ? LED_RED_HALF :
+                clip.loop.isOn() ? LED_CYAN : LED_GREEN_HALF;
       }
     }
     sendNoteOn(mode, pitch, color);
@@ -1105,14 +1108,15 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           } else {
             LXClip clip = channel.getClip(index);
             if (clip == null) {
-              clip = channel.addClip(index);
+              channel.addClip(index);
+            } else if (this.shiftOn) {
+              clip.loop.toggle();
+              sendClip(channelIndex, channel, index, clip);
+            } else if (clip.isRunning()) {
+              clip.stop();
             } else {
-              if (clip.isRunning()) {
-                clip.stop();
-              } else {
-                clip.trigger();
-                this.lx.engine.clips.setFocusedClip(clip);
-              }
+              clip.trigger();
+              this.lx.engine.clips.setFocusedClip(clip);
             }
           }
         }
