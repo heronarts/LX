@@ -436,6 +436,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
           clip.running.addListener(this);
+          clip.loop.addListener(this);
         }
       }
     }
@@ -460,6 +461,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
           clip.running.removeListener(this);
+          clip.loop.removeListener(this);
         }
       }
     }
@@ -549,12 +551,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     @Override
     public void clipAdded(LXBus bus, LXClip clip) {
       clip.running.addListener(this);
+      clip.loop.addListener(this);
       sendClip(this.channel.getIndex(), this.channel, clip.getIndex(), clip);
     }
 
     @Override
     public void clipRemoved(LXBus bus, LXClip clip) {
       clip.running.removeListener(this);
+      clip.loop.removeListener(this);
       sendChannelClips(this.channel.getIndex(), this.channel);
     }
 
@@ -1108,10 +1112,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           } else {
             LXClip clip = channel.getClip(index);
             if (clip == null) {
-              channel.addClip(index, this.shiftOn);
+              clip = channel.addClip(index);
+              clip.loop.setValue(this.shiftOn);
             } else if (this.shiftOn) {
               clip.loop.toggle();
-              sendClip(channelIndex, channel, index, clip);
             } else if (clip.isRunning()) {
               clip.stop();
             } else {
