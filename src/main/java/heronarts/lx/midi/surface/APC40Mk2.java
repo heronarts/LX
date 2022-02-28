@@ -183,8 +183,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   private boolean rainbowMode = false;
   // Scroll offset for Rainbow Mode
   private int rainbowColumnOffset = 0;
-  // Grouped by column
-  private static int[] rainbowGrid = null;
 
   private final APC40Mk2Colors apc40Mk2Colors = new APC40Mk2Colors();
 
@@ -198,16 +196,22 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     PALETTE;
   }
 
-  private GridMode gridMode = GridMode.PATTERN;
+  private GridMode gridMode = getGridMode();
 
-  private void setGridMode() {
+  private GridMode getGridMode() {
     if (this.deviceLockOn) {
-      this.gridMode = GridMode.PALETTE;
+      return GridMode.PALETTE;
     } else if (this.bankOn) {
-      this.gridMode = GridMode.PATTERN;
+      return GridMode.PATTERN;
     } else {
-      this.gridMode = GridMode.CLIP;
+      return GridMode.CLIP;
     }
+  }
+
+  private void updateGridMode() {
+    this.gridMode = getGridMode();
+    sendChannelGrid();
+    sendChannelFocus();
   }
 
   private class DeviceListener implements LXParameterListener {
@@ -611,7 +615,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     if (!reconnect) {
       resetPaletteVars();
-      makeRainbowGrid();
     }
 
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
@@ -789,8 +792,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
   }
 
-  private void makeRainbowGrid() {
-    rainbowGrid = new int[RAINBOW_GRID_COLUMNS * RAINBOW_GRID_ROWS];
+  private static int[] makeRainbowGrid() {
+    int[] rainbowGrid = new int[RAINBOW_GRID_COLUMNS * RAINBOW_GRID_ROWS];
     for (int col = 0; col < RAINBOW_GRID_COLUMNS; ++col) {
       int hue = col * RAINBOW_HUE_STEP;
       for (int row = 0; row < RAINBOW_GRID_ROWS; ++row) {
@@ -798,11 +801,15 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         rainbowGrid[i++] = LXColor.hsb(hue, RAINBOW_GRID_SAT[row], RAINBOW_GRID_BRI[row]);
       }
     }
+    return rainbowGrid;
   }
+
+  // Grouped by column
+  private static final int[] RAINBOW_GRID = makeRainbowGrid();
 
   private int rainbowGridColor(int relCol, int row) {
     int absCol = (RAINBOW_GRID_COLUMNS + relCol + this.rainbowColumnOffset) % RAINBOW_GRID_COLUMNS;
-    return rainbowGrid[absCol * RAINBOW_GRID_ROWS + row];
+    return RAINBOW_GRID[absCol * RAINBOW_GRID_ROWS + row];
   }
 
   // Cover the grid with a rainbox of APC colors
@@ -811,7 +818,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       for (int row = 0; row < PALETTE_SWATCH_ROWS; ++row) {
         int pitch = CLIP_LAUNCH + col + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - row);
         int color = rainbowGridColor(col, row);
-        int colorId = apc40Mk2Colors.nearest(color);
+        int colorId = this.apc40Mk2Colors.nearest(color);
         sendNoteOn(LED_MODE_PRIMARY, pitch, colorId);
       }
     }
@@ -955,9 +962,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           sendNoteOn(note.getChannel(), DEVICE_LOCK, LED_OFF);
           resetPaletteVars();
         }
-        this.setGridMode();
-        sendChannelGrid();
-        sendChannelFocus();
+        updateGridMode();
       }
       return;
     case DEVICE_LOCK:
@@ -971,9 +976,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         if (!this.deviceLockOn) {
           resetPaletteVars();
         }
-        this.setGridMode();
-        sendChannelGrid();
-        sendChannelFocus();
+        updateGridMode();
       }
       return;
     case METRONOME:
