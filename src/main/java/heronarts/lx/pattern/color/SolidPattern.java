@@ -24,8 +24,12 @@ import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXSwatch;
+import heronarts.lx.midi.surface.APC40Mk2;
+import heronarts.lx.midi.surface.APC40Mk2Colors;
+import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
 
 @LXCategory(LXCategory.COLOR)
@@ -69,6 +73,31 @@ public class SolidPattern extends LXPattern {
     addParameter("color", this.color);
     addParameter("colorMode", this.colorMode);
     addParameter("paletteIndex", this.paletteIndex);
+
+    final LXParameterListener checkAPC = (p) -> {
+      APC40Mk2 apcSurface = (APC40Mk2) lx.engine.midi.findSurface("APC40 mkII");
+      if (apcSurface != null) {
+        APC40Mk2.ActiveColor activeColor = apcSurface.activeColor();
+        Integer newColor = null;
+        if (activeColor.color != null) {
+          this.colorMode.setValue(ColorMode.FIXED);
+          newColor = activeColor.color;
+        } else if (activeColor.source != null) {
+          LXSwatch swatch = activeColor.source.getSwatch();
+          this.colorMode.setValue(ColorMode.PALETTE);
+          int index = swatch.getIndex();
+          this.paletteIndex.setValue(index);
+          newColor = swatch.getColor(index).primary.getColor();
+        }
+        if (newColor != null) {
+          LX.log("This is where we'd set the color to " + newColor);
+          // ...except that seems to lead to a stack overflow
+        }
+      }
+    };
+    this.color.addListener(checkAPC);
+    this.colorMode.addListener(checkAPC);
+    this.paletteIndex.addListener(checkAPC);
   }
 
   public LXDynamicColor getPaletteColor() {
