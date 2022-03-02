@@ -1414,7 +1414,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       this.colorClipboard = this.focusColor.primary.getColor();
       if (this.gridMode == GridMode.PALETTE) {
-        sendSwatches();
+        if (this.rainbowMode) {
+          sendSwatch(MASTER_SWATCH);
+        } else {
+          sendSwatches();
+        }
       }
       return;
     case CHANNEL_FADER:
