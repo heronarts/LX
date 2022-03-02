@@ -29,6 +29,7 @@ import java.util.Map;
 import com.google.gson.JsonObject;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.DiscreteColorParameter;
+import heronarts.lx.color.LinkableColorParameter;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
@@ -884,10 +885,18 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
     if (parameter instanceof ColorParameter) {
       // NOTE: order is important, brightness must be saved/loaded first
+      // TODO: Why?
       ColorParameter colorParameter = (ColorParameter) parameter;
       addParameter(path + "/" + ColorParameter.PATH_BRIGHTNESS, colorParameter.brightness);
       addParameter(path + "/" + ColorParameter.PATH_SATURATION, colorParameter.saturation);
       addParameter(path + "/" + ColorParameter.PATH_HUE, colorParameter.hue);
+    }
+    if (parameter instanceof LinkableColorParameter) {
+      LinkableColorParameter linkableColorParameter = (LinkableColorParameter) parameter;
+      addParameter(path + "/" + LinkableColorParameter.PATH_SWATCH_NUMBER,
+              linkableColorParameter.swatchNumber);
+      addParameter(path + "/" + LinkableColorParameter.PATH_SWATCH_COLOR_NUMBER,
+              linkableColorParameter.swatchColorNumber);
     }
     return this;
   }

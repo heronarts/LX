@@ -40,6 +40,8 @@ public abstract class LXListenableParameter implements LXParameter {
   private final List<LXParameterListener> listeners = new ArrayList<LXParameterListener>();
 
   private LXComponent parent;
+  public LXListenableParameter parentParameter = null;
+
   private String path;
 
   private Units units = Units.NONE;

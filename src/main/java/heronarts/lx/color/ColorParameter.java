@@ -33,7 +33,7 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
   public static final String PATH_SATURATION = "saturation";
   public static final String PATH_BRIGHTNESS = "brightness";
 
-  private int color;
+  protected int color;
   private boolean internalValueUpdate = false;
   private boolean internalHsbUpdate = false;
 
@@ -53,6 +53,9 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
     this.hue.addListener(this);
     this.saturation.addListener(this);
     this.brightness.addListener(this);
+    this.hue.parentParameter = this;
+    this.saturation.parentParameter = this;
+    this.brightness.parentParameter = this;
     this.color = color;
   }
 
@@ -71,7 +74,7 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
   }
 
   public String getHexString() {
-    return String.format("0x%08x", this.color);
+    return String.format("0x%08x", this.getColor());
   }
 
   @Override
