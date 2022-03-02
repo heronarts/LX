@@ -35,34 +35,6 @@ public class NewSolidPattern extends LXPattern {
     super(lx);
     this.color = new LinkableColorParameter(lx, "Color", color);
     addParameter("color", this.color);
-
-/*
-    final LXParameterListener checkAPC = (p) -> {
-      APC40Mk2 apcSurface = (APC40Mk2) lx.engine.midi.findSurface("APC40 mkII");
-      if (apcSurface != null) {
-        APC40Mk2.ActiveColor activeColor = apcSurface.activeColor();
-        Integer newColor = null;
-        if (activeColor.color != null) {
-          this.colorMode.setValue(ColorMode.FIXED);
-          newColor = activeColor.color;
-        } else if (activeColor.source != null) {
-          LXSwatch swatch = activeColor.source.getSwatch();
-          this.colorMode.setValue(ColorMode.PALETTE);
-          int index = swatch.getIndex();
-          this.paletteIndex.setValue(index);
-          newColor = swatch.getColor(index).primary.getColor();
-        }
-        if (newColor != null) {
-          LX.log("This is where we'd set the color to " + newColor);
-          // ...except that seems to lead to a stack overflow
-        }
-      }
-    };
-    this.color.addListener(checkAPC);
-    this.colorMode.addListener(checkAPC);
-    this.paletteIndex.addListener(checkAPC);
-    */
-
   }
 
   @Override
