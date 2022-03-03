@@ -287,7 +287,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     void resend() {
       for (int i = 0; i < this.knobs.length; ++i) {
-        LXListenableNormalizedParameter parameter = getKnobParameter(this.knobs[i]);
+        LXListenableNormalizedParameter parameter = getKnobParameter(this.knobs[i], false);
         if (parameter != null) {
           sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
           double normalized = (parameter instanceof CompoundParameter) ?
@@ -415,7 +415,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         sendNoteOn(0, DEVICE_ON_OFF, this.effect.enabled.isOn() ? LED_ON : LED_OFF);
       } else {
         for (int i = 0; i < this.knobs.length; ++i) {
-          LXListenableNormalizedParameter knobParam = getKnobParameter(this.knobs[i]);
+          LXListenableNormalizedParameter knobParam = getKnobParameter(this.knobs[i], false);
           if (parameter == knobParam) {
             double normalized = (parameter instanceof CompoundParameter) ?
               ((CompoundParameter) parameter).getBaseNormalized() :
@@ -427,7 +427,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    private LXListenableNormalizedParameter getKnobParameter(LXListenableParameter knob) {
+    private LXListenableNormalizedParameter getKnobParameter(LXListenableParameter knob,
+                                                             boolean wasTouched) {
       if (knob == null || knob instanceof LXListenableNormalizedParameter) {
         return (LXListenableNormalizedParameter) knob;
       }
@@ -438,12 +439,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       // If there's an active color, touching the knob in any way should just
       // set it to the active color.
       ActiveColor activeColor = activeColor();
-      if (activeColor.color != null) {
+      if (wasTouched && activeColor.color != null) {
         linkable.swatchNumber.setValue(LinkableColorParameter.NO_SWATCH);
         linkable.setColor(activeColor.color);
         return null;
       }
-      if (activeColor.source != null) {
+      if (wasTouched && activeColor.source != null) {
         LXSwatch swatch = activeColor.source.getSwatch();
         int swatchNumber = lx.engine.palette.swatch == swatch ?
                 LinkableColorParameter.MASTER_SWATCH : swatch.getIndex();
@@ -476,7 +477,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     void onKnob(int index, double normalized) {
-      LXListenableNormalizedParameter knobParam = getKnobParameter(this.knobs[index]);
+      LXListenableNormalizedParameter knobParam = getKnobParameter(this.knobs[index], true);
       if (knobParam != null) {
         // FIXME: The .endsWith() calls below are both terrible hacks until I find a better way to
         // indicate/check that a parameter is hue or swatch number.
@@ -515,8 +516,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               ((ColorParameter) this.knobs[i]).hue.removeListener(this);
               ((ColorParameter) this.knobs[i]).saturation.removeListener(this);
               ((ColorParameter) this.knobs[i]).brightness.removeListener(this);
+            } else {
+              this.knobs[i].removeListener(this);
             }
-            this.knobs[i].removeListener(this);
             this.knobs[i] = null;
             sendControlChange(0, DEVICE_KNOB + i, 0);
             sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
@@ -1208,6 +1210,16 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           this.lx.engine.mixer.stopClips();
         }
         return;
+      case BANK_LEFT:
+        this.bankLeftOn = !this.bankLeftOn;
+        this.bankRightOn = false;
+        this.updateBankLeftRightLights();
+        return;
+      case BANK_RIGHT:
+        this.bankRightOn = !this.bankRightOn;
+        this.bankLeftOn = false;
+        this.updateBankLeftRightLights();
+        return;
       }
 
       if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
@@ -1348,16 +1360,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         return;
       case DEVICE_RIGHT:
         this.deviceListener.registerNext();
-        return;
-      case BANK_LEFT:
-        this.bankLeftOn = !this.bankLeftOn;
-        this.bankRightOn = false;
-        this.updateBankLeftRightLights();
-        return;
-      case BANK_RIGHT:
-        this.bankRightOn = !this.bankRightOn;
-        this.bankLeftOn = false;
-        this.updateBankLeftRightLights();
         return;
       }
     }
