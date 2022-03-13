@@ -1067,6 +1067,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           // Make it the focusColor (i.e., turning the CUE LEVEL knob will tweak it), and
           // if there's a color on the clipboard, paste it here.
           LXSwatch swatch = getSwatch(MASTER_SWATCH);
+          if (index > swatch.colors.size()-1 && index < LXSwatch.MAX_COLORS) {
+            swatch.addColor();
+          }
           this.focusColor = swatch.getColor(index);
           if (this.colorClipboard != null) {
             this.focusColor.primary.setColor(this.colorClipboard);
