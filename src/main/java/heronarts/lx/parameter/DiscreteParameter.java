@@ -64,6 +64,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     super(label, value);
     setRange(min, max);
     setUnits(LXParameter.Units.INTEGER);
+    setWrap(true);
   }
 
   /**
@@ -177,7 +178,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter increment() {
-    return increment(1, true);
+    return increment(1, isWrap());
   }
 
   public DiscreteParameter increment(boolean wrap) {
@@ -185,7 +186,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter increment(int amt) {
-    return increment(amt, true);
+    return increment(amt, isWrap());
   }
 
   public DiscreteParameter increment(int amt, boolean wrap) {
@@ -198,7 +199,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter decrement() {
-    return decrement(1, true);
+    return decrement(1, isWrap());
   }
 
   public DiscreteParameter decrement(boolean wrap) {
@@ -206,7 +207,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter decrement(int amt) {
-    return decrement(amt, true);
+    return decrement(amt, isWrap());
   }
 
   public DiscreteParameter decrement(int amt, boolean wrap) {
