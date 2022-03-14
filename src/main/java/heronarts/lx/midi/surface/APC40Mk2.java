@@ -1112,7 +1112,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               this.colorClipboard = null;
             }
           }
-
           return;
         }
         LXAbstractChannel channel = getChannel(channelIndex);
