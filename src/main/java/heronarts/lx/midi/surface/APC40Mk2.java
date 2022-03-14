@@ -1066,13 +1066,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           // A button corresponding to an entry in the main palette swatch has been tapped.
           // Make it the focusColor (i.e., turning the CUE LEVEL knob will tweak it), and
           // if there's a color on the clipboard, paste it here.
+          boolean colorChanged = false;
           LXSwatch swatch = getSwatch(MASTER_SWATCH);
           if (index > swatch.colors.size()-1 && index < LXSwatch.MAX_COLORS) {
             swatch.addColor();
+            colorChanged = true;
           }
           this.focusColor = swatch.getColor(index);
           if (this.colorClipboard != null) {
             this.focusColor.primary.setColor(this.colorClipboard);
+            colorChanged = true;
+          }
+          if (colorChanged) {
             sendSwatch(MASTER_SWATCH);
           }
         } else {
@@ -1092,11 +1097,22 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
         if (this.gridMode == GridMode.PALETTE) {
           LXSwatch swatch = getSwatch(channelIndex);
-          if (swatch != null && index < swatch.colors.size()) {
-            this.colorClipboard = swatch.colors.get(index).primary.getColor();
-          } else {
-            this.colorClipboard = null;
+          if (swatch != null) {
+            if (index < swatch.colors.size()) {
+              this.colorClipboard = swatch.colors.get(index).primary.getColor();
+            } else if (index < LXSwatch.MAX_COLORS) {
+              LXDynamicColor color = swatch.addColor();
+              if (this.colorClipboard != null) {
+                color.primary.setColor(this.colorClipboard);
+              } else {
+                this.colorClipboard = color.primary.getColor();
+              }
+              sendSwatch(channelIndex);
+            } else {
+              this.colorClipboard = null;
+            }
           }
+
           return;
         }
         LXAbstractChannel channel = getChannel(channelIndex);
