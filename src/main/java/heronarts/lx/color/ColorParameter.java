@@ -18,24 +18,21 @@
 
 package heronarts.lx.color;
 
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.LXParameterListener;
 
-public class ColorParameter extends LXListenableParameter implements LXParameterListener {
+public class ColorParameter extends AggregateParameter {
 
   public final CompoundParameter hue;
   public final CompoundParameter saturation;
   public final CompoundParameter brightness;
 
-  public static final String PATH_HUE = "hue";
-  public static final String PATH_SATURATION = "saturation";
   public static final String PATH_BRIGHTNESS = "brightness";
+  public static final String PATH_SATURATION = "saturation";
+  public static final String PATH_HUE = "hue";
 
-  private int color;
-  private boolean internalValueUpdate = false;
-  private boolean internalHsbUpdate = false;
+  protected int color;
 
   public ColorParameter(String label) {
     this(label, 0xff000000);
@@ -50,9 +47,13 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
       .setDescription("Saturation component of the color");
     this.brightness = new CompoundParameter("Brightness", LXColor.b(color), 0, 100)
       .setDescription("Brightness component of the color");
-    this.hue.addListener(this);
-    this.saturation.addListener(this);
-    this.brightness.addListener(this);
+
+    // NOTE: register brightness and saturation first for load/save, otherwise if they
+    // are 0 the hue information could possibly be overwritten
+    addSubparameter(PATH_BRIGHTNESS, this.brightness);
+    addSubparameter(PATH_SATURATION, this.saturation);
+    addSubparameter(PATH_HUE, this.hue);
+
     this.color = color;
   }
 
@@ -61,6 +62,13 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
     return (ColorParameter) super.setDescription(description);
   }
 
+  /**
+   * Returns the fixed color defined by this parameter. Note that this does not
+   * take into account any modulation applied to the hue/saturation/brightness
+   * values.
+   *
+   * @return fixed color specified by the parameter
+   */
   public int getColor() {
     return this.color;
   }
@@ -75,43 +83,31 @@ public class ColorParameter extends LXListenableParameter implements LXParameter
   }
 
   @Override
-  protected double updateValue(double value) {
-    this.internalValueUpdate = true;
+  protected double onUpdateValue(double value) {
     this.color = (int) Double.doubleToRawLongBits(value);
-    if (!this.internalHsbUpdate) {
-      double b = LXColor.b(this.color);
-      this.brightness.setValue(b);
-      if (b > 0) {
-        double s = LXColor.s(this.color);
-        this.saturation.setValue(s);
-        if (s > 0) {
-          this.hue.setValue(LXColor.h(this.color));
-        }
-      }
-    }
-    this.internalValueUpdate = false;
     return value;
   }
 
   @Override
-  public void onParameterChanged(LXParameter parameter) {
-    if (!this.internalValueUpdate) {
-      this.internalHsbUpdate = true;
-      setColor(LXColor.hsb(
-        this.hue.getValue(),
-        this.saturation.getValue(),
-        this.brightness.getValue())
-      );
-      this.internalHsbUpdate = false;
+  protected void updateSubparameters(double value) {
+    double b = LXColor.b(this.color);
+    this.brightness.setValue(b);
+    if (b > 0) {
+      double s = LXColor.s(this.color);
+      this.saturation.setValue(s);
+      if (s > 0) {
+        this.hue.setValue(LXColor.h(this.color));
+      }
     }
   }
 
   @Override
-  public void dispose() {
-    this.hue.removeListener(this);
-    this.saturation.removeListener(this);
-    this.brightness.removeListener(this);
-    super.dispose();
+  protected void onSubparameterUpdate(LXParameter p) {
+    setColor(LXColor.hsb(
+      this.hue.getBaseValue(),
+      this.saturation.getBaseValue(),
+      this.brightness.getBaseValue())
+    );
   }
 
 }

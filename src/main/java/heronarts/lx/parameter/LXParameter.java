@@ -115,6 +115,15 @@ public interface LXParameter extends LXPath {
   };
 
   /**
+   * Returns the parent aggregate parameter that this parameter belongs to
+   *
+   * @return Parent aggregate parameter, or null
+   */
+  public default AggregateParameter getParentParameter() {
+    return null;
+  }
+
+  /**
    * Sets the component that owns this parameter
    *
    * @param component Component

@@ -20,44 +20,16 @@ package heronarts.lx.pattern.color;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
-import heronarts.lx.color.ColorParameter;
+import heronarts.lx.color.LinkedColorParameter;
 import heronarts.lx.color.LXColor;
-import heronarts.lx.color.LXDynamicColor;
-import heronarts.lx.color.LXSwatch;
-import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.pattern.LXPattern;
 
 @LXCategory(LXCategory.COLOR)
 public class SolidPattern extends LXPattern {
 
-  public enum ColorMode {
-    FIXED("Fixed"),
-    PALETTE("Palette");
-
-    public final String label;
-
-    private ColorMode(String label) {
-      this.label = label;
-    }
-
-    @Override
-    public String toString() {
-      return this.label;
-    }
-  }
-
-  public final EnumParameter<ColorMode> colorMode =
-    new EnumParameter<ColorMode>("Color Mode", ColorMode.FIXED)
-    .setDescription("Which source the gradient selects colors from");
-
-  public final ColorParameter color =
-    new ColorParameter("Color")
+  public final LinkedColorParameter color =
+    new LinkedColorParameter("Color")
     .setDescription("Color of the pattern");
-
-  public final DiscreteParameter paletteIndex =
-    new DiscreteParameter("Index", 1, LXSwatch.MAX_COLORS + 1)
-    .setDescription("Which index at the palette to start from");
 
   public SolidPattern(LX lx) {
     this(lx, LXColor.RED);
@@ -67,22 +39,16 @@ public class SolidPattern extends LXPattern {
     super(lx);
     this.color.setColor(color);
     addParameter("color", this.color);
-    addParameter("colorMode", this.colorMode);
-    addParameter("paletteIndex", this.paletteIndex);
-  }
-
-  public LXDynamicColor getPaletteColor() {
-    return this.lx.engine.palette.getSwatchColor(this.paletteIndex.getValuei() - 1);
   }
 
   @Override
   public void run(double deltaMs) {
-    switch (this.colorMode.getEnum()) {
+    switch (this.color.mode.getEnum()) {
     case PALETTE:
-      setColors(getPaletteColor().getColor());
+      setColors(color.getPaletteColor().getColor());
       break;
     default:
-    case FIXED:
+    case STATIC:
       // There may be modulators applied to the h/s/b values!
       setColors(LXColor.hsb(
         this.color.hue.getValue(),

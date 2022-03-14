@@ -34,13 +34,13 @@ import heronarts.lx.LXLayer;
 import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.color.ColorParameter;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -217,13 +217,13 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       if (this.component == null) {
         throw new IllegalStateException("Cannot store a snapshot view of a parameter with no parent");
       }
+      if (parameter instanceof AggregateParameter) {
+        throw new IllegalStateException("Cannot store a snapshot view of an AggregateParameter");
+      }
       this.parameter = parameter;
       this.value = getBaseValue();
       if (parameter instanceof DiscreteParameter) {
         this.intValue = ((DiscreteParameter) parameter).getValuei();
-        this.stringValue = null;
-      } else if (parameter instanceof ColorParameter) {
-        this.intValue = ((ColorParameter) parameter).getColor();
         this.stringValue = null;
       } else if (parameter instanceof StringParameter) {
         this.intValue = 0;
@@ -250,14 +250,13 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       if (this.component == null) {
         throw new IllegalStateException("Cannot store a snapshot view of a parameter with no parent");
       }
+      if (this.parameter instanceof AggregateParameter) {
+        throw new IllegalStateException("Cannot restore a snapshot view of an AggregateParameter");
+      }
       if (this.parameter instanceof DiscreteParameter) {
         this.value = this.intValue = obj.get(KEY_VALUE).getAsInt();
         this.stringValue = null;
         obj.addProperty(KEY_VALUE, this.intValue);
-      } else if (parameter instanceof ColorParameter) {
-        this.intValue = obj.get(KEY_VALUE).getAsInt();
-        this.value = Double.longBitsToDouble(this.intValue);
-        this.stringValue = null;
       } else if (parameter instanceof StringParameter) {
         this.stringValue = obj.get(KEY_VALUE).getAsString();
         this.intValue = 0;
@@ -290,8 +289,6 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     protected void recall() {
       if (this.parameter instanceof DiscreteParameter) {
         ((DiscreteParameter) this.parameter).setValue(this.intValue);
-      } else if (this.parameter instanceof ColorParameter) {
-        ((ColorParameter) this.parameter).setColor(this.intValue);
       } else if (parameter instanceof StringParameter) {
         ((StringParameter) this.parameter).setValue(this.stringValue);
       } else {
@@ -357,8 +354,6 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
       super.save(lx, obj);
       obj.addProperty(KEY_PARAMETER_PATH, this.parameter.getCanonicalPath());
       if (parameter instanceof DiscreteParameter) {
-        obj.addProperty(KEY_VALUE, this.intValue);
-      } else if (parameter instanceof ColorParameter) {
         obj.addProperty(KEY_VALUE, this.intValue);
       } else if (parameter instanceof StringParameter) {
         obj.addProperty(KEY_VALUE, this.stringValue);
@@ -641,8 +636,8 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
   }
 
   private void addParameterView(ViewScope scope, LXParameter p) {
-    if (p instanceof ColorParameter) {
-      // Don't add ColorParameter directly, let the sub-hue/sat/bright values do it
+    if (p instanceof AggregateParameter) {
+      // Don't add AggregateParameters directly, let the sub-values restore
       return;
     }
     addView(new ParameterView(scope, p));

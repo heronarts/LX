@@ -39,7 +39,10 @@ public abstract class LXListenableParameter implements LXParameter {
 
   private final List<LXParameterListener> listeners = new ArrayList<LXParameterListener>();
 
+  private AggregateParameter parentParameter = null;
+
   private LXComponent parent;
+
   private String path;
 
   private Units units = Units.NONE;
@@ -141,6 +144,15 @@ public abstract class LXListenableParameter implements LXParameter {
     this.parent = component;
     this.path = path;
     return this;
+  }
+
+  void setParentParameter(AggregateParameter parentParameter) {
+    this.parentParameter = parentParameter;
+  }
+
+  @Override
+  public AggregateParameter getParentParameter() {
+    return this.parentParameter;
   }
 
   @Override

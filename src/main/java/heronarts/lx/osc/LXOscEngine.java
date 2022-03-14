@@ -268,8 +268,7 @@ public class LXOscEngine extends LXComponent {
             oscInt.setValue(((DiscreteParameter) parameter).getValuei());
             oscMessage.add(oscInt);
           } else if (parameter instanceof LXNormalizedParameter) {
-            oscFloat
-              .setValue(((LXNormalizedParameter) parameter).getNormalizedf());
+            oscFloat.setValue(((LXNormalizedParameter) parameter).getNormalizedf());
             oscMessage.add(oscFloat);
           } else {
             oscFloat.setValue(parameter.getValuef());

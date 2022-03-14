@@ -35,6 +35,7 @@ import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscArgument;
 import heronarts.lx.osc.OscInt;
 import heronarts.lx.osc.OscMessage;
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -618,21 +619,23 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       return false;
     }
 
+    return handleOscParameter(message, parameter, parts, index);
+  }
+
+  private boolean handleOscParameter(OscMessage message, LXParameter parameter, String[] parts, int index) {
     // Handle OSC messages for different parameter types
     if (parameter instanceof BooleanParameter) {
       ((BooleanParameter) parameter).setValue(message.getBoolean());
     } else if (parameter instanceof StringParameter) {
       ((StringParameter) parameter).setValue(message.getString());
-    } else if (parameter instanceof ColorParameter) {
+    } else if (parameter instanceof AggregateParameter) {
       if (parts.length >= index + 1) {
-        if (parts[index + 1].equals(ColorParameter.PATH_HUE)) {
-          ((ColorParameter) parameter).hue.setNormalized(message.getFloat());
-        } else if (parts[index + 1].equals(ColorParameter.PATH_SATURATION)) {
-          ((ColorParameter) parameter).saturation
-            .setNormalized(message.getFloat());
-        } else if (parts[index + 1].equals(ColorParameter.PATH_BRIGHTNESS)) {
-          ((ColorParameter) parameter).brightness
-            .setNormalized(message.getFloat());
+        LXParameter subparameter = ((AggregateParameter) parameter).subparameters.get(parts[index+1]);
+        if (subparameter != null) {
+          return handleOscParameter(message, subparameter, parts, index+1);
+        } else {
+          LXOscEngine.error("Component " + this + " did not find anything at OSC path: " + path + " (" + message + ")");
+          return false;
         }
       } else {
         ((ColorParameter) parameter).setColor(message.getInt());
@@ -685,7 +688,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     String key = parts[index];
     LXParameter parameter = this.parameters.get(key);
     if (parameter != null) {
-      if (parameter instanceof ColorParameter) {
+      if (parameter instanceof AggregateParameter) {
         if (index < parts.length - 1) {
           String subparam = parts[index] + "/" + parts[index+1];
           return this.parameters.get(subparam);
@@ -882,12 +885,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         ((LXListenableParameter) parameter).addListener(this.oscListener);
       }
     }
-    if (parameter instanceof ColorParameter) {
-      // NOTE: order is important, brightness must be saved/loaded first
-      ColorParameter colorParameter = (ColorParameter) parameter;
-      addParameter(path + "/" + ColorParameter.PATH_BRIGHTNESS, colorParameter.brightness);
-      addParameter(path + "/" + ColorParameter.PATH_SATURATION, colorParameter.saturation);
-      addParameter(path + "/" + ColorParameter.PATH_HUE, colorParameter.hue);
+    if (parameter instanceof AggregateParameter) {
+      for (Map.Entry<String, LXListenableParameter> entry : ((AggregateParameter) parameter).subparameters.entrySet()) {
+        addParameter(path + "/" + entry.getKey(), entry.getValue());
+      }
     }
     return this;
   }
@@ -988,8 +989,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       LXParameter thatParameter = entry.getValue();
       if (thisParameter instanceof StringParameter) {
         ((StringParameter) thisParameter).setValue(((StringParameter) thatParameter).getString());
-      } else if (thisParameter instanceof ColorParameter) {
-        ((ColorParameter) thisParameter).setColor(((ColorParameter) thatParameter).getColor());
+      } else if (thisParameter instanceof AggregateParameter) {
+        // NOTE(mcslee): do nothing! Let the sub-parameters copy over in this instance
       } else if (thisParameter instanceof CompoundParameter) {
         thisParameter.setValue(((CompoundParameter) thatParameter).getBaseValue());
       } else {
@@ -1019,8 +1020,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   protected static void saveParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
     for (String path : parameters.keySet()) {
       LXParameter parameter = parameters.get(path);
-      if (parameter instanceof ColorParameter) {
-        // Let this store/restore from hue/sat/brightness instead
+      if (parameter instanceof AggregateParameter) {
+        // Let this store/restore from the underlying parameter values
         continue;
       }
       LXSerializable.Utils.saveParameter(parameter, obj, path);
@@ -1040,8 +1041,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       if ((parameter == component.label) && !(component instanceof LXComponent.Renamable)) {
         continue;
       }
-      if (parameter instanceof ColorParameter) {
-        // Let this be loaded by the sub-added hue/sat/color
+      if (parameter instanceof AggregateParameter) {
+        // Let this store/restore from the underlying parameter values
         continue;
       }
       LXSerializable.Utils.loadParameter(parameters.get(path), obj, path);
