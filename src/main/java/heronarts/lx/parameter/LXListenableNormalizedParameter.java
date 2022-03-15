@@ -29,7 +29,7 @@ public abstract class LXListenableNormalizedParameter extends
 
   private double exponent = 1;
   private boolean mappable = true;
-  private boolean allowWrap = false;
+  private boolean wrappable = false;
 
   protected LXListenableNormalizedParameter(String label, double value) {
     super(label, value);
@@ -58,17 +58,18 @@ public abstract class LXListenableNormalizedParameter extends
     return this.mappable;
   }
 
-  public boolean isWrap() {
-    return this.allowWrap;
-  }
-
-  public LXListenableNormalizedParameter setWrap(boolean allowWrap) {
-    this.allowWrap = allowWrap;
+  public LXListenableNormalizedParameter setWrappable(boolean wrappable) {
+    this.wrappable = wrappable;
     return this;
   }
 
+  @Override
+  public boolean isWrappable() {
+    return this.wrappable;
+  }
+
   public LXListenableNormalizedParameter incrementNormalized(double amount) {
-    return incrementNormalized(amount, this.allowWrap);
+    return incrementNormalized(amount, this.wrappable);
   }
 
   public LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap) {

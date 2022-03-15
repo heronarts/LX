@@ -177,7 +177,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter increment() {
-    return increment(1, isWrap());
+    return increment(1, isWrappable());
   }
 
   public DiscreteParameter increment(boolean wrap) {
@@ -185,7 +185,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter increment(int amt) {
-    return increment(amt, isWrap());
+    return increment(amt, isWrappable());
   }
 
   public DiscreteParameter increment(int amt, boolean wrap) {
@@ -198,7 +198,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter decrement() {
-    return decrement(1, isWrap());
+    return decrement(1, isWrappable());
   }
 
   public DiscreteParameter decrement(boolean wrap) {
@@ -206,7 +206,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter decrement(int amt) {
-    return decrement(amt, isWrap());
+    return decrement(amt, isWrappable());
   }
 
   public DiscreteParameter decrement(int amt, boolean wrap) {

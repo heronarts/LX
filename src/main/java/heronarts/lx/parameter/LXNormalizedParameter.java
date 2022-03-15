@@ -60,4 +60,14 @@ public interface LXNormalizedParameter extends LXParameter {
     return 1;
   }
 
+  /**
+   * Whether this parameter should wrap when incremented or decremented
+   * at the extent of its range.
+   *
+   * @return <code>true</code> if wrappable, false if otherwise
+   */
+  default public boolean isWrappable() {
+    return false;
+  }
+
 }
