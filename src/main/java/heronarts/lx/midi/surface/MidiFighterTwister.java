@@ -361,43 +361,29 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    private final static double KNOB_INCREMENT_AMOUNT = 1.0/128.0;
+    private final static double KNOB_INCREMENT_AMOUNT = 1/128.;
 
-    private void onKnobDecrement(int index) {
+    private void onKnobIncrement(int index, boolean isUp) {
       LXListenableNormalizedParameter knob = this.knobs[index];
       if (knob != null) {
         if (knob instanceof DiscreteParameter) {
           // Move after a set number of ticks in the same direction
-          this.knobTicks[index] = LXUtils.min(this.knobTicks[index], 0) - 1;
-          if (this.knobTicks[index] == 0-KNOB_TICKS_PER_DISCRETE_INCREMENT) {
+          if (isUp) {
+            this.knobTicks[index] = LXUtils.max(this.knobTicks[index], 0) + 1;
+          } else {
+            this.knobTicks[index] = LXUtils.min(this.knobTicks[index], 0) - 1;
+          }
+          if (this.knobTicks[index] == KNOB_TICKS_PER_DISCRETE_INCREMENT * (isUp ? 1 : -1)) {
             this.knobTicks[index] = 0;
-            ((DiscreteParameter)knob).decrement();
+            if (isUp) {
+              ((DiscreteParameter)knob).increment();
+            } else {
+              ((DiscreteParameter)knob).decrement();
+            }
           }
         } else {
-          onKnobIncrement(knob, 0-KNOB_INCREMENT_AMOUNT);
+          knob.incrementNormalized(KNOB_INCREMENT_AMOUNT * (isUp ? 1 : -1));
         }
-      }
-    }
-
-    private void onKnobIncrement(int index) {
-      LXListenableNormalizedParameter knob = this.knobs[index];
-      if (knob != null) {
-        if (knob instanceof DiscreteParameter) {
-          // Move after a set number of ticks in the same direction
-          this.knobTicks[index] = LXUtils.max(this.knobTicks[index], 0) + 1;
-          if (this.knobTicks[index] == KNOB_TICKS_PER_DISCRETE_INCREMENT) {
-            this.knobTicks[index] = 0;
-            ((DiscreteParameter)knob).increment();
-          }
-        } else {
-          onKnobIncrement(knob, KNOB_INCREMENT_AMOUNT);
-        }
-      }
-    }
-
-    private void onKnobIncrement(LXListenableNormalizedParameter knob, double amount) {
-      if (knob != null) {
-        knob.incrementNormalized(amount);
       }
     }
 
@@ -551,9 +537,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           int iKnob = number - DEVICE_KNOB;
           if (this.deviceListener.isKnobRelative(iKnob)) {
             if (note == KNOB_INCREMENT || note == KNOB_INCREMENT_FAST || note == KNOB_INCREMENT_VERYFAST) {
-              this.deviceListener.onKnobIncrement(iKnob);
+              this.deviceListener.onKnobIncrement(iKnob, true);
             } else if (note == KNOB_DECREMENT || note == KNOB_DECREMENT_FAST || note == KNOB_DECREMENT_VERYFAST) {
-              this.deviceListener.onKnobDecrement(iKnob);
+              this.deviceListener.onKnobIncrement(iKnob, false);
             } else {
               // Knob sent absolute values but software is expecting relative values
               LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received note " + note);
