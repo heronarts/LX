@@ -529,20 +529,20 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   public void controlChangeReceived(MidiControlChange cc) {
     int channel = cc.getChannel();
     int number = cc.getCC();
-    int note = cc.getValue();
+    int value = cc.getValue();
 
     switch (channel) {
       case CHANNEL_ROTARY_ENCODER:
         if (number >= DEVICE_KNOB && number <= DEVICE_KNOB_MAX) {
           int iKnob = number - DEVICE_KNOB;
           if (this.deviceListener.isKnobRelative(iKnob)) {
-            if (note == KNOB_INCREMENT || note == KNOB_INCREMENT_FAST || note == KNOB_INCREMENT_VERYFAST) {
+            if (value == KNOB_INCREMENT || value == KNOB_INCREMENT_FAST || value == KNOB_INCREMENT_VERYFAST) {
               this.deviceListener.onKnobIncrement(iKnob, true);
-            } else if (note == KNOB_DECREMENT || note == KNOB_DECREMENT_FAST || note == KNOB_DECREMENT_VERYFAST) {
+            } else if (value == KNOB_DECREMENT || value == KNOB_DECREMENT_FAST || value == KNOB_DECREMENT_VERYFAST) {
               this.deviceListener.onKnobIncrement(iKnob, false);
             } else {
               // Knob sent absolute values but software is expecting relative values
-              LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received note " + note);
+              LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received value " + value);
               // Let it through just to be nice
               this.deviceListener.onKnob(iKnob, cc.getNormalized());
             }
@@ -566,7 +566,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK2:
           case BANK3:
           case BANK4:
-            if (note == BANK_ON)
+            if (value == BANK_ON)
                 updateBank(number);
             return;
           case BANK1_LEFT1:
