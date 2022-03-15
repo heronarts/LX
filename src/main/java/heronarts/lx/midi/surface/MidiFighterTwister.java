@@ -39,6 +39,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.DiscreteParameter.IncrementMode;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
@@ -192,11 +193,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     private final LXListenableNormalizedParameter[] knobs =
       new LXListenableNormalizedParameter[DEVICE_KNOB_NUM];
     private final int[] knobTicks = new int[DEVICE_KNOB_NUM];
+    private final int[] knobIncrementSize = new int[DEVICE_KNOB_NUM];
 
     DeviceListener() {
       for (int i = 0; i < this.knobs.length; ++i) {
         this.knobs[i] = null;
         this.knobTicks[i] = 0;
+        this.knobIncrementSize[i] = 1;
       }
     }
 
@@ -280,6 +283,11 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             this.knobs[i] = parameter;
             this.knobTicks[i] = 0;
             if (parameter != null) {
+              // We will track an absolute knob value for Normalized DiscreteParameters even though MFT sends relative CCs.
+              if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
+                this.knobTicks[i] = (int) (parameter.getNormalized() * 127);
+                this.knobIncrementSize[i] = LXUtils.max(1, 128/((DiscreteParameter)parameter).getRange());
+              }
               parameter.addListener(this);
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
@@ -320,7 +328,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_25);
           sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 0);
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
-          this.knobTicks[i] = 0;
           ++i;
         }
 
@@ -343,6 +350,11 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             double normalized = (parameter instanceof CompoundParameter) ?
               ((CompoundParameter) parameter).getBaseNormalized() :
               this.knobs[i].getNormalized();
+            // Normalized DiscreteParameters need artificial tracking of absolute knob location.
+            // Keep local tracking in sync with changes from other source.
+            if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
+              this.knobTicks[i] = (int) (normalized * 127);
+            }
             sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
             break;
           }
@@ -367,18 +379,35 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       LXListenableNormalizedParameter knob = this.knobs[index];
       if (knob != null) {
         if (knob instanceof DiscreteParameter) {
-          // Move after a set number of ticks in the same direction
-          if (isUp) {
-            this.knobTicks[index] = LXUtils.max(this.knobTicks[index], 0) + 1;
-          } else {
-            this.knobTicks[index] = LXUtils.min(this.knobTicks[index], 0) - 1;
-          }
-          if (this.knobTicks[index] == KNOB_TICKS_PER_DISCRETE_INCREMENT * (isUp ? 1 : -1)) {
-            this.knobTicks[index] = 0;
-            if (isUp) {
-              ((DiscreteParameter)knob).increment();
+          if (((DiscreteParameter)knob).getIncrementMode() ==  IncrementMode.NORMALIZED) {
+            int value = this.knobTicks[index] + (isUp ? 1 : -1);
+            if (knob.isWrappable()) {
+              // Make the length of the wrap space the same as the length between other values on this parameter
+              if (value < 0-this.knobIncrementSize[index] || value > 127+this.knobIncrementSize[index]) {
+                value = value < 0 ? 127 : 0;
+              }
+              this.knobTicks[index] = value;
+              value = LXUtils.constrain(value, 0, 127);
             } else {
-              ((DiscreteParameter)knob).decrement();
+              value = LXUtils.constrain(value, 0, 127);
+              this.knobTicks[index] = value;
+            }
+            knob.setNormalized(value/128.);
+          } else {
+            // IncrementMode == RELATIVE
+            // Move after a set number of ticks in the same direction
+            if (isUp) {
+              this.knobTicks[index] = LXUtils.max(this.knobTicks[index], 0) + 1;
+            } else {
+              this.knobTicks[index] = LXUtils.min(this.knobTicks[index], 0) - 1;
+            }
+            if (this.knobTicks[index] == KNOB_TICKS_PER_DISCRETE_INCREMENT * (isUp ? 1 : -1)) {
+              this.knobTicks[index] = 0;
+              if (isUp) {
+                ((DiscreteParameter)knob).increment();
+              } else {
+                ((DiscreteParameter)knob).decrement();
+              }
             }
           }
         } else {
@@ -421,6 +450,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           if (this.knobs[i] != null) {
             this.knobs[i].removeListener(this);
             this.knobs[i] = null;
+            this.knobTicks[i] = 0;
+            this.knobIncrementSize[i] = 1;
           }
         }
         this.device.controlSurfaceSemaphore.decrement();

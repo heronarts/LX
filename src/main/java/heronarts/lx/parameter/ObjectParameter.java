@@ -25,6 +25,7 @@ public class ObjectParameter<T> extends DiscreteParameter {
   public ObjectParameter(String label, T[] objects) {
     super(label, 0, objects.length);
     setObjects(objects);
+    setIncrementMode(IncrementMode.RELATIVE);
   }
 
   public ObjectParameter(String label, T[] objects, T value) {

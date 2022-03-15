@@ -31,6 +31,13 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
 
   private String[] options = null;
 
+  public enum IncrementMode {
+    NORMALIZED,
+    RELATIVE
+  }
+
+  private IncrementMode incrementMode = IncrementMode.NORMALIZED;
+
   /**
    * Parameter with values from [0, range-1], 0 by default
    *
@@ -236,6 +243,15 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
       --value;
     }
     setValue(this.minValue + value);
+    return this;
+  }
+
+  public IncrementMode getIncrementMode() {
+    return this.incrementMode;
+  }
+
+  public DiscreteParameter setIncrementMode(IncrementMode incrementMode) {
+    this.incrementMode = incrementMode;
     return this;
   }
 
