@@ -33,6 +33,8 @@ public class SolidPattern extends LXPattern {
 
   public SolidPattern(LX lx) {
     this(lx, LXColor.RED);
+    this.color.mode.setValue(LinkedColorParameter.Mode.PALETTE);
+    this.color.index.setValue(1);
   }
 
   public SolidPattern(LX lx, int color) {
@@ -43,19 +45,6 @@ public class SolidPattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    switch (this.color.mode.getEnum()) {
-    case PALETTE:
-      setColors(color.getPaletteColor().getColor());
-      break;
-    default:
-    case STATIC:
-      // There may be modulators applied to the h/s/b values!
-      setColors(LXColor.hsb(
-        this.color.hue.getValue(),
-        this.color.saturation.getValue(),
-        this.color.brightness.getValue()
-      ));
-      break;
-    }
+    setColors(color.calcColor());
   }
 }
