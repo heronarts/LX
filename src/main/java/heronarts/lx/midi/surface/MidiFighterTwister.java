@@ -362,11 +362,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    private boolean isKnobRelative(int index) {
-      // Fixed for now but could be expanded to poll MFT encoder settings on startup with sysex
-      return true;
-    }
-
     private void onKnob(int index, double normalized) {
       if (this.knobs[index] != null) {
         this.knobs[index].setNormalized(normalized);
@@ -566,18 +561,14 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       case CHANNEL_ROTARY_ENCODER:
         if (number >= DEVICE_KNOB && number <= DEVICE_KNOB_MAX) {
           int iKnob = number - DEVICE_KNOB;
-          if (this.deviceListener.isKnobRelative(iKnob)) {
-            if (value == KNOB_INCREMENT || value == KNOB_INCREMENT_FAST || value == KNOB_INCREMENT_VERYFAST) {
-              this.deviceListener.onKnobIncrement(iKnob, true);
-            } else if (value == KNOB_DECREMENT || value == KNOB_DECREMENT_FAST || value == KNOB_DECREMENT_VERYFAST) {
-              this.deviceListener.onKnobIncrement(iKnob, false);
-            } else {
-              // Knob sent absolute values but software is expecting relative values
-              LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received value " + value);
-              // Let it through just to be nice
-              this.deviceListener.onKnob(iKnob, cc.getNormalized());
-            }
+          if (value == KNOB_INCREMENT || value == KNOB_INCREMENT_FAST || value == KNOB_INCREMENT_VERYFAST) {
+            this.deviceListener.onKnobIncrement(iKnob, true);
+          } else if (value == KNOB_DECREMENT || value == KNOB_DECREMENT_FAST || value == KNOB_DECREMENT_VERYFAST) {
+            this.deviceListener.onKnobIncrement(iKnob, false);
           } else {
+            // Knob sent absolute values but software is expecting relative values
+            LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received value " + value);
+            // Let it through just to be nice
             this.deviceListener.onKnob(iKnob, cc.getNormalized());
           }
           return;
