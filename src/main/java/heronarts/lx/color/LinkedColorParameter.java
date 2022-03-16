@@ -76,6 +76,23 @@ public class LinkedColorParameter extends ColorParameter {
     }
   }
 
+  // Returns the real-time value of the color, which may be different from what
+  // getColor() returns if there are LFOs/etc being applied.
+  public int calcColor() {
+    switch (this.mode.getEnum()) {
+    case PALETTE:
+      return this.getPaletteColor().getColor();
+    default:
+    case STATIC:
+      // There may be modulators applied to the h/s/b values!
+      return LXColor.hsb(
+              this.hue.getValue(),
+              this.saturation.getValue(),
+              this.brightness.getValue()
+      );
+    }
+  }
+
   @Override
   public int getColor() {
     switch (this.mode.getEnum()) {

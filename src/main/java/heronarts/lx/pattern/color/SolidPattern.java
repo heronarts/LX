@@ -43,19 +43,6 @@ public class SolidPattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    switch (this.color.mode.getEnum()) {
-    case PALETTE:
-      setColors(color.getPaletteColor().getColor());
-      break;
-    default:
-    case STATIC:
-      // There may be modulators applied to the h/s/b values!
-      setColors(LXColor.hsb(
-        this.color.hue.getValue(),
-        this.color.saturation.getValue(),
-        this.color.brightness.getValue()
-      ));
-      break;
-    }
+    setColors(color.calcColor());
   }
 }
