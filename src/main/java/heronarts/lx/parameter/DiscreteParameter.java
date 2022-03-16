@@ -31,6 +31,13 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
 
   private String[] options = null;
 
+  public enum IncrementMode {
+    NORMALIZED,
+    RELATIVE
+  }
+
+  private IncrementMode incrementMode = IncrementMode.NORMALIZED;
+
   /**
    * Parameter with values from [0, range-1], 0 by default
    *
@@ -177,7 +184,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter increment() {
-    return increment(1, true);
+    return increment(1, isWrappable());
   }
 
   public DiscreteParameter increment(boolean wrap) {
@@ -185,7 +192,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter increment(int amt) {
-    return increment(amt, true);
+    return increment(amt, isWrappable());
   }
 
   public DiscreteParameter increment(int amt, boolean wrap) {
@@ -198,7 +205,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter decrement() {
-    return decrement(1, true);
+    return decrement(1, isWrappable());
   }
 
   public DiscreteParameter decrement(boolean wrap) {
@@ -206,7 +213,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public DiscreteParameter decrement(int amt) {
-    return decrement(amt, true);
+    return decrement(amt, isWrappable());
   }
 
   public DiscreteParameter decrement(int amt, boolean wrap) {
@@ -236,6 +243,15 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
       --value;
     }
     setValue(this.minValue + value);
+    return this;
+  }
+
+  public IncrementMode getIncrementMode() {
+    return this.incrementMode;
+  }
+
+  public DiscreteParameter setIncrementMode(IncrementMode incrementMode) {
+    this.incrementMode = incrementMode;
     return this;
   }
 

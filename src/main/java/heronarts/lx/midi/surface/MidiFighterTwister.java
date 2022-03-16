@@ -39,7 +39,9 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.DiscreteParameter.IncrementMode;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.utils.LXUtils;
 
 public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
@@ -56,8 +58,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
    *     Right Button 2 Function: Next Bank
    *     Right Button 3 Function: CC Toggle
    * Encoder Settings (click Multiple, select all encoders):
+   *   Sensitivity: High Resolution
    *   Switch Action Type: CC Hold
-   *   Encoder MIDI Type: CC
+   *   Encoder MIDI Type: ENC 3FH/41H
    *   Encoder Switch MIDI Settings:
    *     Switch MIDI Channel: 2
    *     Switch MIDI Number: 6
@@ -80,6 +83,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   public static final int DEVICE_KNOB = 0;
   public static final int DEVICE_KNOB_NUM = 64;
   public static final int DEVICE_KNOB_MAX = DEVICE_KNOB + DEVICE_KNOB_NUM;
+  public static final int KNOB_DECREMENT_VERYFAST = 61;
+  public static final int KNOB_DECREMENT_FAST = 62;
+  public static final int KNOB_DECREMENT = 63;
+  public static final int KNOB_INCREMENT = 65;
+  public static final int KNOB_INCREMENT_FAST = 66;
+  public static final int KNOB_INCREMENT_VERYFAST = 67;
+  public static final int KNOB_TICKS_PER_DISCRETE_INCREMENT = 8;
 
   // MIDI ControlChanges on System channel
   public static final int BANK1 = 0;
@@ -182,10 +192,14 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
     private final LXListenableNormalizedParameter[] knobs =
       new LXListenableNormalizedParameter[DEVICE_KNOB_NUM];
+    private final int[] knobTicks = new int[DEVICE_KNOB_NUM];
+    private final int[] knobIncrementSize = new int[DEVICE_KNOB_NUM];
 
     DeviceListener() {
       for (int i = 0; i < this.knobs.length; ++i) {
         this.knobs[i] = null;
+        this.knobTicks[i] = 0;
+        this.knobIncrementSize[i] = 1;
       }
     }
 
@@ -267,7 +281,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               break;
             }
             this.knobs[i] = parameter;
+            this.knobTicks[i] = 0;
             if (parameter != null) {
+              // We will track an absolute knob value for Normalized DiscreteParameters even though MFT sends relative CCs.
+              if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
+                this.knobTicks[i] = (int) (parameter.getNormalized() * 127);
+                this.knobIncrementSize[i] = LXUtils.max(1, 128/((DiscreteParameter)parameter).getRange());
+              }
               parameter.addListener(this);
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
@@ -330,6 +350,11 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             double normalized = (parameter instanceof CompoundParameter) ?
               ((CompoundParameter) parameter).getBaseNormalized() :
               this.knobs[i].getNormalized();
+            // Normalized DiscreteParameters need artificial tracking of absolute knob location.
+            // Keep local tracking in sync with changes from other source.
+            if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
+              this.knobTicks[i] = (int) (normalized * 127);
+            }
             sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
             break;
           }
@@ -340,6 +365,49 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     private void onKnob(int index, double normalized) {
       if (this.knobs[index] != null) {
         this.knobs[index].setNormalized(normalized);
+      }
+    }
+
+    private final static double KNOB_INCREMENT_AMOUNT = 1/128.;
+
+    private void onKnobIncrement(int index, boolean isUp) {
+      LXListenableNormalizedParameter knob = this.knobs[index];
+      if (knob != null) {
+        if (knob instanceof DiscreteParameter) {
+          if (((DiscreteParameter)knob).getIncrementMode() ==  IncrementMode.NORMALIZED) {
+            int value = this.knobTicks[index] + (isUp ? 1 : -1);
+            if (knob.isWrappable()) {
+              // Make the length of the wrap space the same as the length between other values on this parameter
+              if (value < 0-this.knobIncrementSize[index] || value > 127+this.knobIncrementSize[index]) {
+                value = value < 0 ? 127 : 0;
+              }
+              this.knobTicks[index] = value;
+              value = LXUtils.constrain(value, 0, 127);
+            } else {
+              value = LXUtils.constrain(value, 0, 127);
+              this.knobTicks[index] = value;
+            }
+            knob.setNormalized(value/128.);
+          } else {
+            // IncrementMode == RELATIVE
+            // Move after a set number of ticks in the same direction
+            if (isUp) {
+              this.knobTicks[index] = LXUtils.max(this.knobTicks[index], 0) + 1;
+            } else {
+              this.knobTicks[index] = LXUtils.min(this.knobTicks[index], 0) - 1;
+            }
+            if (this.knobTicks[index] == KNOB_TICKS_PER_DISCRETE_INCREMENT * (isUp ? 1 : -1)) {
+              this.knobTicks[index] = 0;
+              if (isUp) {
+                ((DiscreteParameter)knob).increment();
+              } else {
+                ((DiscreteParameter)knob).decrement();
+              }
+            }
+          }
+        } else {
+          knob.incrementNormalized(KNOB_INCREMENT_AMOUNT * (isUp ? 1 : -1));
+        }
       }
     }
 
@@ -377,6 +445,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           if (this.knobs[i] != null) {
             this.knobs[i].removeListener(this);
             this.knobs[i] = null;
+            this.knobTicks[i] = 0;
+            this.knobIncrementSize[i] = 1;
           }
         }
         this.device.controlSurfaceSemaphore.decrement();
@@ -485,14 +555,24 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   public void controlChangeReceived(MidiControlChange cc) {
     int channel = cc.getChannel();
     int number = cc.getCC();
-    int note = cc.getValue();
+    int value = cc.getValue();
 
     switch (channel) {
       case CHANNEL_ROTARY_ENCODER:
         if (number >= DEVICE_KNOB && number <= DEVICE_KNOB_MAX) {
-            this.deviceListener.onKnob(number - DEVICE_KNOB, cc.getNormalized());
-            return;
+          int iKnob = number - DEVICE_KNOB;
+          if (value == KNOB_INCREMENT || value == KNOB_INCREMENT_FAST || value == KNOB_INCREMENT_VERYFAST) {
+            this.deviceListener.onKnobIncrement(iKnob, true);
+          } else if (value == KNOB_DECREMENT || value == KNOB_DECREMENT_FAST || value == KNOB_DECREMENT_VERYFAST) {
+            this.deviceListener.onKnobIncrement(iKnob, false);
+          } else {
+            // Knob sent absolute values but software is expecting relative values
+            LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received value " + value);
+            // Let it through just to be nice
+            this.deviceListener.onKnob(iKnob, cc.getNormalized());
           }
+          return;
+        }
         LXMidiEngine.error("MFT Unknown Knob: " + number);
         break;
       case CHANNEL_SWITCH_AND_COLOR:
@@ -508,7 +588,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK2:
           case BANK3:
           case BANK4:
-            if (note == BANK_ON)
+            if (value == BANK_ON)
                 updateBank(number);
             return;
           case BANK1_LEFT1:
