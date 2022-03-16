@@ -588,8 +588,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK2:
           case BANK3:
           case BANK4:
-            if (value == BANK_ON)
-                updateBank(number);
+            if (value == BANK_ON) {
+              updateBank(number);
+            }
             return;
           case BANK1_LEFT1:
           case BANK1_LEFT2:

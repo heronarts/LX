@@ -69,20 +69,19 @@ public abstract class LXListenableNormalizedParameter extends
   }
 
   public LXListenableNormalizedParameter incrementNormalized(double amount) {
-    return incrementNormalized(amount, this.wrappable);
+    return incrementNormalized(amount, isWrappable());
   }
 
   public LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap) {
     double normalized = this.getNormalized() + amount;
     if (wrap) {
-      while (normalized > 1) {
-        normalized -= 1;
-      }
-      while (normalized < 0) {
-        normalized += 1;
+      if (normalized > 1) {
+        normalized = normalized % 1;
+      } else if (normalized < 0) {
+        normalized = 1 + (normalized % 1);
       }
     }
-    return (LXListenableNormalizedParameter)this.setNormalized(normalized);
+    return (LXListenableNormalizedParameter) setNormalized(normalized);
   }
 
 }
