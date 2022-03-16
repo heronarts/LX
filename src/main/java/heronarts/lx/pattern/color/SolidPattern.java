@@ -33,8 +33,6 @@ public class SolidPattern extends LXPattern {
 
   public SolidPattern(LX lx) {
     this(lx, LXColor.RED);
-    this.color.mode.setValue(LinkedColorParameter.Mode.PALETTE);
-    this.color.index.setValue(1);
   }
 
   public SolidPattern(LX lx, int color) {

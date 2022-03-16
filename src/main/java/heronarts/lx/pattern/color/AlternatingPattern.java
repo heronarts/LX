@@ -61,15 +61,12 @@ public class AlternatingPattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    LinkedColorParameter[] colorParameters = {this.firstColor, this.secondColor};
-    int[] colorValues = new int[2];
-    for (int i = 0; i <= 1; i++) {
-      colorValues[i] = colorParameters[i].calcColor();
-    }
-
+    int stripeLength = this.stripeLength.getValuei();
+    int color1 = this.firstColor.calcColor();
+    int color2 = this.secondColor.calcColor();
     for (int i = 0; i < colors.length; ++i) {
-      int phase = (i / this.stripeLength.getValuei()) % 2;
-      this.colors[i] = colorValues[phase];
+      int phase = (i / stripeLength) % 2;
+      this.colors[i] = (phase == 0) ? color1 : color2;
     }
   }
 }

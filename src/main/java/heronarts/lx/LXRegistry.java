@@ -113,7 +113,6 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_PATTERNS = new ArrayList<Class<? extends LXPattern>>();
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.GradientPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.SolidPattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.AlternatingPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.form.PlanesPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.texture.NoisePattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.texture.SparklePattern.class);
