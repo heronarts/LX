@@ -786,6 +786,18 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
   }
 
+  public LXMixerEngine enableChannelCue(LXAbstractChannel channel, boolean isExclusive) {
+    channel.cueActive.setValue(true);
+    if (isExclusive) {
+      for (LXAbstractChannel c : getChannels()) {
+        if (channel != c) {
+          c.cueActive.setValue(false);
+        }
+      }
+    }
+    return this;
+  }
+
   private class BlendStack {
 
     private int[] destination;
