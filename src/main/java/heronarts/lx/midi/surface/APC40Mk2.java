@@ -634,6 +634,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
     sendChannels();
+    this.cueDown = 0;
+    this.singleCueStartedOn = false;
   }
 
   private void resetPaletteVars() {
@@ -952,6 +954,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     return null;
   }
 
+  private int cueDown = 0;
+  private boolean singleCueStartedOn = false;
+
   private void noteReceived(MidiNote note, boolean on) {
     int pitch = note.getPitch();
 
@@ -1174,6 +1179,43 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     LXAbstractChannel channel = getChannel(note);
 
     if (channel != null) {
+      if (note.getPitch() == CHANNEL_SOLO) {
+        if (on) {
+          if (this.cueDown == 0) {
+            // First cue pressed, if active, could be un-cue or start of multi-select
+            this.singleCueStartedOn = channel.cueActive.isOn();
+          } else {
+            this.singleCueStartedOn = false;
+          }
+          if (channel.cueActive.isOn()) {
+            if (this.cueDown == 0) {
+              for (LXAbstractChannel c : this.lx.engine.mixer.getChannels()) {
+                if (channel != c) {
+                  c.cueActive.setValue(false);
+                }
+              }
+            } else {
+              channel.cueActive.setValue(false);
+            }
+          } else {
+            if (this.cueDown == 0) {
+              this.lx.engine.mixer.enableChannelCue(channel, true);
+            } else {
+              this.lx.engine.mixer.enableChannelCue(channel, false);
+            }
+          }
+          this.cueDown++;
+        } else {
+          this.cueDown--;
+            if (this.singleCueStartedOn) {
+              // Turn this one off.  Already got the others on the cue down
+              channel.cueActive.setValue(false);
+              this.singleCueStartedOn = false;
+            }
+        }
+        return;
+      }
+
       if (!on) {
         return;
       }
@@ -1183,9 +1225,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         return;
       case CHANNEL_ACTIVE:
         channel.enabled.toggle();
-        return;
-      case CHANNEL_SOLO:
-        channel.cueActive.toggle();
         return;
       case CHANNEL_CROSSFADE_GROUP:
         if (this.shiftOn) {
