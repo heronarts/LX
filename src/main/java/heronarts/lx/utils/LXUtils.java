@@ -80,6 +80,51 @@ public class LXUtils {
     return value < min ? min : (value > max ? max : value);
   }
 
+  public static double wrapn(double value) {
+    if (value > 1.) {
+      return value % 1.;
+    } else if (value < 0.) {
+      return 1. + (value % 1.);
+    }
+    return value;
+  }
+
+  public static double wrapnf(float value) {
+    if (value > 1f) {
+      return value % 1f;
+    } else if (value < 0f) {
+      return 1f + (value % 1f);
+    }
+    return value;
+  }
+
+  public static int wrap(int value, int min, int max) {
+    if (value > max) {
+      return min + (value - max) % (max - min);
+    } else if (value < min) {
+      return max + (min - value) % (max - min);
+    }
+    return value;
+  }
+
+  public static double wrap(double value, double min, double max) {
+    if (value > max) {
+      return min + (value - max) % (max - min);
+    } else if (value < min) {
+      return max + (value - min) % (max - min);
+    }
+    return value;
+  }
+
+  public static double wrapf(float value, float min, float max) {
+    if (value > max) {
+      return min + (value - max) % (max - min);
+    } else if (value < min) {
+      return max + (value - min) % (max - min);
+    }
+    return value;
+  }
+
   public static double random(double min, double max) {
     return min + Math.random() * (max - min);
   }
