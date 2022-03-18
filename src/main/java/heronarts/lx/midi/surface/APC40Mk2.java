@@ -45,6 +45,7 @@ import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.utils.LXUtils;
 
 public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
@@ -1181,37 +1182,31 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     if (channel != null) {
       if (note.getPitch() == CHANNEL_SOLO) {
         if (on) {
-          if (this.cueDown == 0) {
-            // First cue pressed, if active, could be un-cue or start of multi-select
-            this.singleCueStartedOn = channel.cueActive.isOn();
-          } else {
-            this.singleCueStartedOn = false;
-          }
-          if (channel.cueActive.isOn()) {
+          boolean cueAlreadyOn = channel.cueActive.isOn();
+
+          // First cue pressed, if active, could be un-cue or start of multi-select
+          this.singleCueStartedOn = (this.cueDown == 0) && cueAlreadyOn;
+          if (cueAlreadyOn) {
             if (this.cueDown == 0) {
-              for (LXAbstractChannel c : this.lx.engine.mixer.getChannels()) {
-                if (channel != c) {
-                  c.cueActive.setValue(false);
-                }
-              }
-            } else {
-              channel.cueActive.setValue(false);
-            }
-          } else {
-            if (this.cueDown == 0) {
+              // Turn off all other cues on the first fresh press, leave this one on
               this.lx.engine.mixer.enableChannelCue(channel, true);
             } else {
-              this.lx.engine.mixer.enableChannelCue(channel, false);
-            }
-          }
-          this.cueDown++;
-        } else {
-          this.cueDown--;
-            if (this.singleCueStartedOn) {
-              // Turn this one off.  Already got the others on the cue down
               channel.cueActive.setValue(false);
-              this.singleCueStartedOn = false;
             }
+          } else {
+            this.lx.engine.mixer.enableChannelCue(channel, this.cueDown == 0);
+          }
+          ++this.cueDown;
+        } else {
+          // Play defense here, just in case a button was down *before* control surface mode
+          // was activated and gets released after
+          this.cueDown = LXUtils.max(0, this.cueDown - 1);
+
+          if (this.singleCueStartedOn) {
+            // Turn this one off.  Already got the others on the cue down
+            channel.cueActive.setValue(false);
+            this.singleCueStartedOn = false;
+          }
         }
         return;
       }
