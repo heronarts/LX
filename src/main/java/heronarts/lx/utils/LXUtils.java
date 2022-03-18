@@ -102,7 +102,7 @@ public class LXUtils {
     if (value > max) {
       return min + (value - max) % (max - min);
     } else if (value < min) {
-      return max + (min - value) % (max - min);
+      return max + (value - min) % (max - min);
     }
     return value;
   }
