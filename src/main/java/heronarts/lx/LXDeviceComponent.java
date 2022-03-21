@@ -95,17 +95,6 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     return (annotation != null) ? annotation.value() : LXCategory.OTHER;
   }
 
-  /**
-   * Subclasses may override this to filter out parameters that should not
-   * be controlled by a remote surface
-   *
-   * @param parameter Parameter to check
-   * @return Whether parameter is eligible for remote control
-   */
-  protected boolean isRemoteControl(LXListenableNormalizedParameter parameter) {
-    return true;
-  }
-
   protected void setRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
     this.remoteControls = remoteControls;
   }
