@@ -43,6 +43,7 @@ import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
@@ -126,6 +127,19 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
     protected final int numChannels;
 
+    private final FunctionalParameter brightness = new FunctionalParameter() {
+      @Override
+      public double getValue() {
+        double brightness = 1.;
+        LXFixture fixture = LXFixture.this;
+        while (fixture != null) {
+          brightness *= fixture.brightness.getValue();
+          fixture = fixture.getParentFixture();
+        }
+        return brightness;
+      }
+    };
+
     protected Segment(int start, int num, int stride) {
       this(start, num, stride, false);
     }
@@ -182,7 +196,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     protected LXParameter getBrightness() {
-      return LXFixture.this.brightness;
+      return this.brightness;
     }
 
   }
@@ -391,6 +405,18 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   protected int getFirstPointIndex() {
     return this.firstPointIndex;
+  }
+
+  /**
+   * Returns the parent fixture that this fixture is a child of, if any. Otherwise null.
+   *
+   * @return Parent fixture, or null if none
+   */
+  private LXFixture getParentFixture() {
+    if (this.container instanceof LXFixture) {
+      return (LXFixture) this.container;
+    }
+    return null;
   }
 
   private void setContainer(LXFixtureContainer container) {
