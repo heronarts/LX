@@ -84,12 +84,7 @@ public class LinkedColorParameter extends ColorParameter {
       return this.getPaletteColor().getColor();
     default:
     case STATIC:
-      // There may be modulators applied to the h/s/b values!
-      return LXColor.hsb(
-              this.hue.getValue(),
-              this.saturation.getValue(),
-              this.brightness.getValue()
-      );
+      return super.calcColor();
     }
   }
 

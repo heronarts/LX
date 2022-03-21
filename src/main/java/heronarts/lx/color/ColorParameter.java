@@ -73,6 +73,21 @@ public class ColorParameter extends AggregateParameter {
     return this.color;
   }
 
+  /**
+   * Calculates the potentially modulated value of the color parameter
+   * based upon the parameter values at this precise instance.
+   *
+   * @return Generated color value
+   */
+  public int calcColor() {
+    // There may be modulators applied to the h/s/b values!
+    return LXColor.hsb(
+      this.hue.getValue(),
+      this.saturation.getValue(),
+      this.brightness.getValue()
+    );
+  }
+
   public ColorParameter setColor(int color) {
     setValue(Double.longBitsToDouble(color));
     return this;
