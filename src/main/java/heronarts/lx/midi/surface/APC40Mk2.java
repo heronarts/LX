@@ -18,15 +18,15 @@
 
 package heronarts.lx.midi.surface;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.clip.LXClip;
-import heronarts.lx.color.LXColor;
-import heronarts.lx.color.LXDynamicColor;
-import heronarts.lx.color.LXSwatch;
+import heronarts.lx.color.*;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
@@ -40,10 +40,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.mixer.LXMixerEngine;
-import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.LXListenableNormalizedParameter;
-import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.*;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
@@ -176,6 +173,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   private boolean bankOn = true;
   // DEV. LOCK: Toggle, lit when on. Repurposes much of the hardware for color control.
   private boolean deviceLockOn = false;
+  // "<-- BANK (3)": Toggle, lit when on. Makes LinkedColor knobs affect Saturation instead of Hue
+  private boolean bankLeftOn = false;
+  // "BANK --> (4)": Toggle, lit when on. Makes LinkedColor knobs affect Brightness instead of Hue
+  private boolean bankRightOn = false;
 
   // "Copies" a color for pasting into the main swatch
   private Integer colorClipboard = null;
@@ -216,6 +217,45 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendChannelFocus();
   }
 
+  // When turning a knob that sometimes controls Hue, sometimes Brightness,
+  // sometimes Saturation, look up the current mode of the surface and return
+  // the appropriate subparameter that this knob currently controls.
+  private CompoundParameter getColorSubparam(ColorParameter colorParameter) {
+    if (this.shiftOn) {
+      if (this.bankLeftOn || this.bankRightOn) {
+        return colorParameter.hue;
+      } else {
+        return colorParameter.saturation;
+      }
+    } else if (this.bankLeftOn) {
+      return colorParameter.saturation;
+    } else if (this.bankRightOn) {
+      return colorParameter.brightness;
+    } else {
+      return colorParameter.hue;
+    }
+  }
+
+  // When non-null, touching a LinkedColorParameter knob sets it to this
+  // instead of updating the value in the usual fashion.
+  // It's either an Integer, in which case the LCP is made static
+  // and initialized to this value, or it's a LXDynamicColor that belongs
+  // to a swatch entry, in which case the LCP is linked to it.
+  private Object getStickyColor() {
+    if (this.gridMode != GridMode.PALETTE) {
+      return null;
+    } else if (this.focusColor == null) {
+      return this.colorClipboard;
+    } else {
+      return this.focusColor;
+    }
+  }
+
+  private void updateBankLeftRightLights() {
+    sendNoteOn(0, BANK_LEFT, this.bankLeftOn ? LED_ON : LED_OFF);
+    sendNoteOn(0, BANK_RIGHT, this.bankRightOn ? LED_ON : LED_OFF);
+  }
+
   private class DeviceListener implements LXParameterListener {
 
     private LXDeviceComponent device = null;
@@ -223,18 +263,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     private LXPattern pattern = null;
     private LXBus channel = null;
 
-    private final LXListenableNormalizedParameter[] knobs =
-      new LXListenableNormalizedParameter[DEVICE_KNOB_NUM];
+    private final LXListenableParameter[] knobs =
+            new LXListenableParameter[DEVICE_KNOB_NUM];
 
     DeviceListener() {
-      for (int i = 0; i < this.knobs.length; ++i) {
-        this.knobs[i] = null;
-      }
+      Arrays.fill(this.knobs, null);
     }
 
     void resend() {
       for (int i = 0; i < this.knobs.length; ++i) {
-        LXListenableNormalizedParameter parameter = this.knobs[i];
+        // If the knob is a LinkedColorParameter, we need to look up which subparameter
+        // to pull the value from to send to the surface to display.
+        LXListenableNormalizedParameter parameter = parameterForKnob(this.knobs[i]);
         if (parameter != null) {
           sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
           double normalized = (parameter instanceof CompoundParameter) ?
@@ -265,6 +305,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       } else {
         register(null);
       }
+      updateLCPKnobs();
     }
 
     void registerPrevious() {
@@ -291,50 +332,88 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
+    private void clearKnobsAfter(int i) {
+      while (i < this.knobs.length) {
+        sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
+        ++i;
+      }
+    }
+
     void register(LXDeviceComponent device) {
-      if (this.device != device) {
-        unregister();
-        this.device = device;
-        if (this.device instanceof LXEffect) {
-          this.effect = (LXEffect) this.device;
-          this.effect.enabled.addListener(this);
-        } else if (this.device instanceof LXPattern) {
-          this.pattern = (LXPattern) this.device;
+      if (this.device == device) {
+        return;
+      }
+      unregister();
+      this.device = device;
+
+      if (this.device == null) {
+        clearKnobsAfter(0);
+        return;
+      } else if (this.device instanceof LXEffect) {
+        this.effect = (LXEffect) this.device;
+        this.effect.enabled.addListener(this);
+      } else if (this.device instanceof LXPattern) {
+        this.pattern = (LXPattern) this.device;
+      }
+
+      this.device.controlSurfaceSemaphore.increment();
+
+      boolean isEnabled = false;
+      if (this.effect != null) {
+        isEnabled = this.effect.isEnabled();
+      } else if (this.pattern != null) {
+        isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
+      }
+      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
+
+      int i = 0;
+      LXListenableParameter currentParentParameter = null;
+      for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
+        if (parameter == null) {
+          this.knobs[i] = null;
+          sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
+          continue;
         }
 
-        int i = 0;
-        boolean isEnabled = false;
-        if (this.device != null) {
-          if (this.effect != null) {
-            isEnabled = this.effect.isEnabled();
-          } else if (this.pattern != null) {
-            isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
+        if (i >= this.knobs.length) {
+          // Subtle: Even if all the knobs are full, we need to keep adding
+          // listeners for all children of the final knob. So only break
+          // if we're up to a parameter with no parent or a different parent.
+          if (parameter.parentParameter == null || parameter.parentParameter != currentParentParameter) {
+            break;
           }
-          for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
-            if (i >= this.knobs.length) {
-              break;
-            }
-            this.knobs[i] = parameter;
-            if (parameter != null) {
-              parameter.addListener(this);
-              sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
-              double normalized = (parameter instanceof CompoundParameter) ?
+        }
+
+        parameter.addListener(this);
+
+        LXListenableParameter knobParam = parameter;
+
+        if (parameter.parentParameter != null) {
+          if (parameter.parentParameter != currentParentParameter) {
+            // This parameter is the first child to a parent.
+            // Attach the parent to the knob, and keep track of it
+            // so we can skip this step for upcoming siblings.
+            currentParentParameter = parameter.parentParameter;
+            knobParam = currentParentParameter;
+          } else {
+            // This parameter is the non-first child to a parent.
+            // The parent's was already attached to a knob when
+            // we processed its oldest sibling.
+            continue;
+          }
+        }
+        this.knobs[i] = knobParam;
+
+        sendControlChange(0, DEVICE_KNOB_STYLE + i,
+                parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ?
+                        LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
+        double normalized = (parameter instanceof CompoundParameter) ?
                 ((CompoundParameter) parameter).getBaseNormalized() :
                 parameter.getNormalized();
-              sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
-            } else {
-              sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
-            }
-            ++i;
-          }
-          this.device.controlSurfaceSemaphore.increment();
-        }
-        sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
-        while (i < this.knobs.length) {
-          sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
-          ++i;
-        }
+        sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+        ++i;
       }
+      clearKnobsAfter(i);
     }
 
     @Override
@@ -349,14 +428,36 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         sendNoteOn(0, DEVICE_ON_OFF, this.effect.enabled.isOn() ? LED_ON : LED_OFF);
       } else {
         for (int i = 0; i < this.knobs.length; ++i) {
-          if (parameter == this.knobs[i]) {
+          LXListenableNormalizedParameter knobParam = parameterForKnob(this.knobs[i]);
+          if (parameter == knobParam) {
             double normalized = (parameter instanceof CompoundParameter) ?
               ((CompoundParameter) parameter).getBaseNormalized() :
-              this.knobs[i].getNormalized();
+                    knobParam.getNormalized();
             sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
             break;
           }
         }
+      }
+    }
+
+    // Returns what parameter should be changed when a physical knob is turned. This
+    // is trivial except for LinkedColorParameters, whose function changes depending
+    // on the surface's mode.
+    private LXListenableNormalizedParameter parameterForKnob(LXListenableParameter knob) {
+      if (knob == null || knob instanceof LXListenableNormalizedParameter) {
+        // If the knob is unused or linked to a vanilla parameter, we're done.
+        return (LXListenableNormalizedParameter) knob;
+      }
+
+      // The knob is attached to an LinkableColorParameter.
+      LinkedColorParameter lcp = (LinkedColorParameter) knob;
+
+      if (lcp.mode.getEnum() == LinkedColorParameter.Mode.PALETTE) {
+        // If it's palette-linked, the knob always controls the palette index.
+        return lcp.index;
+      } else {
+        // Otherwise, it controls H, S, or B, based on the current mode.
+        return getColorSubparam(lcp);
       }
     }
 
@@ -370,8 +471,46 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     void onKnob(int index, double normalized) {
-      if (this.knobs[index] != null) {
-        this.knobs[index].setNormalized(normalized);
+      LXListenableParameter knob = this.knobs[index];
+
+      if (knob == null) {
+        return;
+      }
+
+      Object stickyColor = getStickyColor();
+      if (knob instanceof LinkedColorParameter) {
+        LinkedColorParameter lcp = (LinkedColorParameter) knob;
+        // If a Sticky Color was set, override the usual effect.
+        if (stickyColor instanceof Integer) {
+          lcp.mode.setValue(LinkedColorParameter.Mode.STATIC);
+          lcp.setColor((Integer) stickyColor);
+          return;
+        } else if (stickyColor instanceof LXDynamicColor) {
+          int palIndex = lx.engine.palette.swatch.colors.indexOf(stickyColor);
+          // It could be -1 if the focus color is from a side swatch.
+          if (palIndex >= 0) {
+            lcp.mode.setValue(LinkedColorParameter.Mode.PALETTE);
+            lcp.index.setValue(palIndex + 1);
+            return;
+          }
+        }
+      }
+
+      // There was no Sticky Color set, or this is just a mundane knob.
+
+      LXListenableNormalizedParameter knobParam = parameterForKnob(knob);
+
+      // If it's a wrappable parameter, let it wrap
+      if (knobParam.isWrappable()) {
+        if (normalized == 0.0) {
+          normalized = 1.0;
+        } else {
+          normalized = (normalized + 1.0) % 1.0;
+        }
+      }
+
+      if (knobParam != null) {
+        knobParam.setNormalized(normalized);
       }
     }
 
@@ -381,12 +520,19 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       if (this.device != null) {
         for (int i = 0; i < this.knobs.length; ++i) {
-          if (this.knobs[i] != null) {
+          if (this.knobs[i] == null) {
+            continue;
+          } else if (this.knobs[i] instanceof AggregateParameter) {
+            AggregateParameter ap = (AggregateParameter) this.knobs[i];
+            for (LXListenableParameter sub : ap.subparameters.values()) {
+              sub.removeListener(this);
+            }
+          } else {
             this.knobs[i].removeListener(this);
-            this.knobs[i] = null;
-            sendControlChange(0, DEVICE_KNOB + i, 0);
-            sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
           }
+          this.knobs[i] = null;
+          sendControlChange(0, DEVICE_KNOB + i, 0);
+          sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
         }
         this.device.controlSurfaceSemaphore.decrement();
       }
@@ -396,13 +542,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     private void unregisterChannel() {
-           if (this.channel != null) {
-             if (this.channel instanceof LXChannel) {
-               ((LXChannel) this.channel).focusedPattern.removeListener(this);
-             }
-           }
-           this.channel = null;
-         }
+      if (this.channel != null) {
+        if (this.channel instanceof LXChannel) {
+          ((LXChannel) this.channel).focusedPattern.removeListener(this);
+        }
+      }
+      this.channel = null;
+    }
 
     private void dispose() {
       unregister();
@@ -621,7 +767,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     if (!reconnect) {
       resetPaletteVars();
+      this.bankLeftOn = false;
+      this.bankRightOn = false;
     }
+
+    this.updateBankLeftRightLights();
 
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
       sendControlChange(0, DEVICE_KNOB_STYLE+i, LED_STYLE_OFF);
@@ -641,7 +791,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private void resetPaletteVars() {
     this.colorClipboard = null;
-    this.focusColor = this.lx.engine.palette.color;
+    this.focusColor = null;
     this.rainbowMode = false;
 
     clearSceneLaunch();
@@ -775,6 +925,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
   }
 
+  private void sendSwatches() {
+    for (int i = 0; i < NUM_CHANNELS; ++i) {
+      sendSwatch(i);
+    }
+    sendSwatch(MASTER_SWATCH);
+  }
+
   // Sends the specified swatch index to the channel grid, or
   // if MASTER_SWATCH, sends the main palette swatch to the SCENE LAUNCH column
   private void sendSwatch(int index) {
@@ -831,6 +988,30 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         int colorId = this.apc40Mk2Colors.nearest(color);
         sendNoteOn(LED_MODE_PRIMARY, pitch, colorId);
       }
+    }
+  }
+
+  // For each knob controlling a LinkedColorParameter, update its lighting to match
+  // the value it would change if turned right now. If we ever have an
+  // AggregateParameter knob where some subparameters are unipolar and others
+  // bipolar, we'll need to do a sendControlChange() as well here. For now,
+  // though, that never happens.
+  private void updateLCPKnobs() {
+    for (int i = 0; i < this.deviceListener.knobs.length; i++) {
+      LXListenableParameter knob = this.deviceListener.knobs[i];
+      if (knob instanceof LinkedColorParameter) {
+        LinkedColorParameter lcp = (LinkedColorParameter) knob;
+
+        LXListenableNormalizedParameter subparam;
+
+        if (lcp.mode.getEnum() == LinkedColorParameter.Mode.PALETTE) {
+          subparam = lcp.index;
+        } else {
+          subparam = getColorSubparam(lcp);
+        }
+        double normalized = subparam.getNormalized();
+        sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+      };
     }
   }
 
@@ -965,6 +1146,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     switch (pitch) {
     case SHIFT:
       this.shiftOn = on;
+      updateLCPKnobs();
       return;
     case BANK:
       if (on) {
@@ -1000,6 +1182,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     case TAP_TEMPO:
       if (this.rainbowMode) {
         this.rainbowMode = false;
+        this.focusColor = null;
+        this.colorClipboard = null;
         sendChannelGrid();
       } else {
         lx.engine.tempo.tap.setValue(on);
@@ -1060,9 +1244,22 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       case STOP_ALL_CLIPS:
         if (this.gridMode == GridMode.PALETTE) {
           this.colorClipboard = null;
+          this.focusColor = null;
         } else {
           this.lx.engine.mixer.stopClips();
         }
+        return;
+      case BANK_LEFT:
+        this.bankLeftOn = !this.bankLeftOn;
+        this.bankRightOn = false;
+        this.updateBankLeftRightLights();
+        updateLCPKnobs();
+        return;
+      case BANK_RIGHT:
+        this.bankRightOn = !this.bankRightOn;
+        this.bankLeftOn = false;
+        this.updateBankLeftRightLights();
+        updateLCPKnobs();
         return;
       }
 
@@ -1105,7 +1302,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           LXSwatch swatch = getSwatch(channelIndex);
           if (swatch != null) {
             if (index < swatch.colors.size()) {
-              this.colorClipboard = swatch.colors.get(index).primary.getColor();
+              this.focusColor = swatch.colors.get(index);
+              this.colorClipboard = this.focusColor.primary.getColor();
             } else if (index < LXSwatch.MAX_COLORS) {
               LXDynamicColor color = swatch.addColor();
               if (this.colorClipboard != null) {
@@ -1245,11 +1443,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.deviceListener.onDeviceOnOff();
         return;
       case DEVICE_LEFT:
-      case BANK_LEFT:
         this.deviceListener.registerPrevious();
         return;
       case DEVICE_RIGHT:
-      case BANK_RIGHT:
         this.deviceListener.registerNext();
         return;
       }
@@ -1277,6 +1473,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         if (this.rainbowMode) {
           this.rainbowColumnOffset = (this.rainbowColumnOffset + cc.getRelative())
                   % RAINBOW_GRID_COLUMNS;
+          this.focusColor = null;
+          this.colorClipboard = null;
         } else {
           this.rainbowMode = true;
           sendChannelFocus();
@@ -1289,13 +1487,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       return;
     case CUE_LEVEL:
-      if (this.shiftOn) {
-        this.focusColor.primary.saturation.incrementValue(cc.getRelative());
-      } else {
-        this.focusColor.primary.hue.incrementValue(cc.getRelative(), true);
+      if (this.focusColor == null) {
+        this.focusColor = this.lx.engine.palette.color;
       }
+      CompoundParameter subparam = getColorSubparam(this.focusColor.primary);
+      subparam.incrementValue(cc.getRelative(), subparam.isWrappable());
+      this.colorClipboard = this.focusColor.primary.getColor();
       if (this.gridMode == GridMode.PALETTE) {
-        sendSwatch(MASTER_SWATCH);
+        if (this.rainbowMode) {
+          sendSwatch(MASTER_SWATCH);
+        } else {
+          sendSwatches();
+        }
       }
       return;
     case CHANNEL_FADER:

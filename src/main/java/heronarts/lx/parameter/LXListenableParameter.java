@@ -39,7 +39,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   private final List<LXParameterListener> listeners = new ArrayList<LXParameterListener>();
 
-  private AggregateParameter parentParameter = null;
+  public AggregateParameter parentParameter = null;
 
   private LXComponent parent;
 
