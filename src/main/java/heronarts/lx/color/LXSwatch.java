@@ -66,7 +66,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
   public LXSwatch(LX lx) {
     super(lx, "Swatch");
     this.mutableColors.add(new LXDynamicColor(this));
-    addArray("colors", this.colors);
+    addArray("color", this.colors);
     addParameter("recall", this.recall);
     addParameter("autoCycleEligible", this.autoCycleEligible);
   }
