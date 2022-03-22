@@ -236,21 +236,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
   }
 
-  // When non-null, touching a LinkedColorParameter knob sets it to this
-  // instead of updating the value in the usual fashion.
-  // It's either an Integer, in which case the LCP is made static
-  // and initialized to this value, or it's a LXDynamicColor that belongs
-  // to a swatch entry, in which case the LCP is linked to it.
-  private Object getStickyColor() {
-    if (this.gridMode != GridMode.PALETTE) {
-      return null;
-    } else if (this.focusColor == null) {
-      return this.colorClipboard;
-    } else {
-      return this.focusColor;
-    }
-  }
-
   private void updateBankLeftRightLights() {
     sendNoteOn(0, BANK_LEFT, this.bankLeftOn ? LED_ON : LED_OFF);
     sendNoteOn(0, BANK_RIGHT, this.bankRightOn ? LED_ON : LED_OFF);
@@ -477,26 +462,27 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         return;
       }
 
-      Object stickyColor = getStickyColor();
+      // If the knob's an LCP, touching it should link it to the focusColor,
+      // if one is set and it belongs to the main palette and not a side
+      // swatch, or set it static and initialize it to the colorClipboard,
+      // if there is one. Otherwise, have it control the value as normal.
       if (knob instanceof LinkedColorParameter) {
         LinkedColorParameter lcp = (LinkedColorParameter) knob;
-        // If a Sticky Color was set, override the usual effect.
-        if (stickyColor instanceof Integer) {
-          lcp.mode.setValue(LinkedColorParameter.Mode.STATIC);
-          lcp.setColor((Integer) stickyColor);
-          return;
-        } else if (stickyColor instanceof LXDynamicColor) {
-          int palIndex = lx.engine.palette.swatch.colors.indexOf(stickyColor);
-          // It could be -1 if the focus color is from a side swatch.
+
+        if (focusColor != null) {
+          int palIndex = lx.engine.palette.swatch.colors.indexOf(focusColor);
           if (palIndex >= 0) {
             lcp.mode.setValue(LinkedColorParameter.Mode.PALETTE);
             lcp.index.setValue(palIndex + 1);
             return;
           }
         }
+        if (colorClipboard != null) {
+          lcp.mode.setValue(LinkedColorParameter.Mode.STATIC);
+          lcp.setColor(colorClipboard);
+          return;
+        }
       }
-
-      // There was no Sticky Color set, or this is just a mundane knob.
 
       LXListenableNormalizedParameter knobParam = parameterForKnob(knob);
 
@@ -509,9 +495,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         }
       }
 
-      if (knobParam != null) {
-        knobParam.setNormalized(normalized);
-      }
+      knobParam.setNormalized(normalized);
     }
 
     private void unregister() {
