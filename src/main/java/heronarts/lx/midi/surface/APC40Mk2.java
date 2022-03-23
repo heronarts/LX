@@ -361,7 +361,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
 
       int i = 0;
-      Set<LXListenableParameter> knownParents = new HashSet<>();
+      Set<AggregateParameter> knownParents = new HashSet<>();
       for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
         if (parameter == null) {
           this.knobs[i] = null;
@@ -369,28 +369,28 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           continue;
         }
 
-        LXListenableParameter parent = parameter.getParentParameter();
+        AggregateParameter parent = parameter.getParentParameter();
 
-        if (knownParents.contains(parent)) {
-          parameter.addListener(this);
+        if (knownParents.contains(parent) || i >= this.knobs.length) {
           continue;
         }
-
-        if (i >= this.knobs.length) {
-          continue;
-        }
-
-        parameter.addListener(this);
 
         sendControlChange(0, DEVICE_KNOB_STYLE + i,
                 parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ?
                         LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
 
         if (parent != null) {
-          knownParents.add(parent);
+          // When an Aggregate's first sub is encountered, put the agg on a knob,
+          // add listeners for all of its children, and remember that we've seen
+          // the parent so we can skip this process when we encounter its other subs.
           this.knobs[i] = parent;
+          for (LXListenableParameter subParam : parent.subparameters.values()) {
+            subParam.addListener(this);
+          }
+          knownParents.add(parent);
         } else {
           this.knobs[i] = parameter;
+          parameter.addListener(this);
           double normalized = (parameter instanceof CompoundParameter) ?
                   ((CompoundParameter) parameter).getBaseNormalized() :
                   parameter.getNormalized();
