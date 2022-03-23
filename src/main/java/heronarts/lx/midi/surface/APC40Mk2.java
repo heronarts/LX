@@ -18,9 +18,7 @@
 
 package heronarts.lx.midi.surface;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
@@ -363,7 +361,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
 
       int i = 0;
-      LXListenableParameter currentParent = null;
+      Set<LXListenableParameter> knownParents = new HashSet<>();
       for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
         if (parameter == null) {
           this.knobs[i] = null;
@@ -373,42 +371,31 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
         LXListenableParameter parent = parameter.getParentParameter();
 
+        if (knownParents.contains(parent)) {
+          parameter.addListener(this);
+          continue;
+        }
+
         if (i >= this.knobs.length) {
-          // Subtle: Even if all the knobs are full, we need to keep adding
-          // listeners for all children of the final knob. So only break
-          // if we're up to a parameter with no parent or a different parent.
-          if (parent == null || parent != currentParent) {
-            break;
-          }
+          continue;
         }
 
         parameter.addListener(this);
 
-        LXListenableParameter knobParam = parameter;
-
-        if (parent != null) {
-          if (parent != currentParent) {
-            // This parameter is the first child to a parent.
-            // Attach the parent to the knob, and keep track of it
-            // so we can skip this step for upcoming siblings.
-            currentParent = parent;
-            knobParam = currentParent;
-          } else {
-            // This parameter is the non-first child to a parent.
-            // The parent's was already attached to a knob when
-            // we processed its oldest sibling.
-            continue;
-          }
-        }
-        this.knobs[i] = knobParam;
-
         sendControlChange(0, DEVICE_KNOB_STYLE + i,
                 parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ?
                         LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
-        double normalized = (parameter instanceof CompoundParameter) ?
-                ((CompoundParameter) parameter).getBaseNormalized() :
-                parameter.getNormalized();
-        sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+
+        if (parent != null) {
+          knownParents.add(parent);
+          this.knobs[i] = parent;
+        } else {
+          this.knobs[i] = parameter;
+          double normalized = (parameter instanceof CompoundParameter) ?
+                  ((CompoundParameter) parameter).getBaseNormalized() :
+                  parameter.getNormalized();
+          sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+        }
         ++i;
       }
       clearKnobsAfter(i);
@@ -1490,7 +1477,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.focusColor = this.lx.engine.palette.color;
       }
       LXListenableNormalizedParameter subparam = getActiveSubparameter(this.focusColor.primary);
-      subparam.incrementNormalized(cc.getNormalized());
+      CompoundParameter cp = (CompoundParameter) subparam;
+      cp.incrementValue(cc.getRelative());
       this.colorClipboard = this.focusColor.primary.getColor();
       if (this.gridMode == GridMode.PALETTE) {
         if (this.rainbowMode) {
