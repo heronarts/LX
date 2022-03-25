@@ -52,6 +52,8 @@ public class LXAudioComponent extends LXComponent {
   public final LXAudioBuffer right = new LXAudioBuffer(SAMPLE_BUFFER_SIZE, SAMPLE_RATE);
   public final LXAudioBuffer mix = new LXAudioBuffer(SAMPLE_BUFFER_SIZE, SAMPLE_RATE);
 
+  protected boolean stopped = false;
+
   LXAudioComponent(LX lx, String label) {
     super(lx, label);
   }

@@ -45,7 +45,7 @@ public class LXAudioOutput extends LXAudioComponent implements LXOscComponent, L
   private AudioFormat format;
   private AudioInputStream inputStream;
 
-  private boolean stopped = false;
+
   private boolean closed = false;
 
   public final BooleanParameter trigger = new BooleanParameter("Trigger", false)

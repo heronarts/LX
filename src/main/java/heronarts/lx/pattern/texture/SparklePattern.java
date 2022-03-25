@@ -90,6 +90,10 @@ public class SparklePattern extends LXPattern {
       .setUnits(CompoundParameter.Units.SECONDS)
       .setDescription("Maximum interval between sparkles");
 
+    public final CompoundParameter amount1 =
+            new CompoundParameter("Amount", 1)
+                    .setDescription("Amount of sparkle to apply");
+
     public final CompoundParameter speed =
       new CompoundParameter("Speed", 0.5)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)

@@ -44,7 +44,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent, Li
   public final ObjectParameter<Device> device;
 
   private boolean closed = true;
-  private boolean stopped = false;
+
 
   private InputThread inputThread = null;
 

@@ -31,13 +31,11 @@ public class SparkleEffect extends LXEffect {
 
   public final SparklePattern.Engine engine = new SparklePattern.Engine(model);
 
-  public final CompoundParameter amount =
-    new CompoundParameter("Amount", 1)
-    .setDescription("Amount of sparkle to apply");
+
 
   public SparkleEffect(LX lx) {
     super(lx);
-    addParameter("amount", this.amount);
+    addParameter("amount", engine.amount1);
     addParameter("density", engine.density);
     addParameter("speed", engine.speed);
     addParameter("variation", engine.variation);
@@ -58,7 +56,7 @@ public class SparkleEffect extends LXEffect {
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
-    this.engine.amount = enabledAmount * this.amount.getValue();
+    this.engine.amount = enabledAmount * engine.amount1.getValue();
     this.engine.run(deltaMs, model);
 
     for (int i = 0; i < colors.length; ++i) {

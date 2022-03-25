@@ -122,8 +122,8 @@ public class StrobeEffect extends LXEffect {
 
   @Override
   public void run(double deltaMs, double enabledAmount) {
-    float amt = (float) enabledAmount * this.depth.getValuef();
-    if (amt > 0) {
+    float amount = (float) enabledAmount * this.depth.getValuef();
+    if (amount > 0) {
       double strobeBasis = this.tempoSync.isOn() ? getTempoBasis() : this.basis.getValue();
       float strobe = LXUtils.lerpf(1, compute(strobeBasis, false), (float) enabledAmount);
 

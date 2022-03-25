@@ -137,27 +137,9 @@ public class FourierTransform {
       this.real[i] = samples[bri] * this.windowCoefficients[bri];
       this.imaginary[i] = 0f;
     }
-    // Iterate through l = [0, logN-1], N = 2^l
-    for (int l = 0, n = 1; l < this.logN; ++l, n <<= 1) {
-      float cosN = this.cosN[l];
-      float sinN = this.sinN[l];
-      float phaseR = 1f;
-      float phaseI = 0f;
-      for (int f = 0; f < n; ++f) {
-        for (int i = f; i < this.bufferSize; i += 2*n) {
-          int n2 = i + n;
-          float tR = phaseR * this.real[n2] - phaseI * this.imaginary[n2];
-          float tI = phaseR * this.imaginary[n2] + phaseI * this.real[n2];
-          this.real[n2] = this.real[i] - tR;
-          this.imaginary[n2] = this.imaginary[i] - tI;
-          this.real[i] += tR;
-          this.imaginary[i] += tI;
-        }
-        float tmpR = phaseR;
-        phaseR = (phaseR * cosN) - (phaseI * sinN);
-        phaseI = (tmpR * sinN) + (phaseI * cosN);
-      }
-    }
+
+    computeComplexNum();
+
     // Amplitude
     for (int i = 0; i < this.amplitude.length; ++i) {
       this.amplitude[i] = (float) Math.sqrt(this.real[i]*this.real[i] + this.imaginary[i]*this.imaginary[i]);
@@ -176,6 +158,33 @@ public class FourierTransform {
 
     return this;
   }
+
+
+  public FourierTransform computeComplexNum() {
+    // Iterate through l = [0, logN-1], N = 2^l
+    for (int l = 0, n = 1; l < this.logN; ++l, n <<= 1) {
+      float cosN = this.cosN[l];
+      float sinN = this.sinN[l];
+      float phaseR = 1f;
+      float phaseI = 0f;
+      for (int f = 0; f < n; ++f) {
+        for (int i = f; i < this.bufferSize; i += 2 * n) {
+          int n2 = i + n;
+          float tR = phaseR * this.real[n2] - phaseI * this.imaginary[n2];
+          float tI = phaseR * this.imaginary[n2] + phaseI * this.real[n2];
+          this.real[n2] = this.real[i] - tR;
+          this.imaginary[n2] = this.imaginary[i] - tI;
+          this.real[i] += tR;
+          this.imaginary[i] += tI;
+        }
+        float tmpR = phaseR;
+        phaseR = (phaseR * cosN) - (phaseI * sinN);
+        phaseI = (tmpR * sinN) + (phaseI * cosN);
+      }
+    }
+    return this;
+  }
+
 
   public float get(int i) {
     return this.amplitude[i];
