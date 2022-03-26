@@ -23,7 +23,11 @@ import java.util.*;
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.clip.LXClip;
-import heronarts.lx.color.*;
+import heronarts.lx.color.ColorParameter;
+import heronarts.lx.color.LXColor;
+import heronarts.lx.color.LXDynamicColor;
+import heronarts.lx.color.LXSwatch;
+import heronarts.lx.color.LinkedColorParameter;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
@@ -37,7 +41,12 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.mixer.LXMixerEngine;
-import heronarts.lx.parameter.*;
+import heronarts.lx.parameter.AggregateParameter;
+import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
+import heronarts.lx.parameter.LXListenableParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
@@ -224,25 +233,29 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         // If it's palette-linked, the knob always controls the palette index.
         return lcp.index;
       }
+      // Fall through to handle other color parameter types
     }
-
-    // So far, ColorParameters are the only kind of AggregateParameter. If
-    // we add more later, we'll have to add custom code here to handle them.
-    ColorParameter colorParameter = (ColorParameter) agg;
-
-    if (this.shiftOn) {
-      if (this.bankLeftOn || this.bankRightOn) {
-        return colorParameter.hue;
-      } else {
+    if (agg instanceof ColorParameter) {
+      // So far, ColorParameters are the only kind of AggregateParameter. If
+      // we add more later, we'll have to add custom code here to handle them.
+      ColorParameter colorParameter = (ColorParameter) agg;
+      if (this.shiftOn) {
+        if (this.bankLeftOn || this.bankRightOn) {
+          return colorParameter.hue;
+        } else {
+          return colorParameter.saturation;
+        }
+      } else if (this.bankLeftOn) {
         return colorParameter.saturation;
+      } else if (this.bankRightOn) {
+        return colorParameter.brightness;
+      } else {
+        return colorParameter.hue;
       }
-    } else if (this.bankLeftOn) {
-      return colorParameter.saturation;
-    } else if (this.bankRightOn) {
-      return colorParameter.brightness;
-    } else {
-      return colorParameter.hue;
     }
+
+    LX.error("APC40Mk2 found AggregateParameter type with no subparameter: " + agg.getClass().getName());
+    return null;
   }
 
   private void updateBankLeftRightLights() {
@@ -258,7 +271,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     private LXBus channel = null;
 
     private final LXListenableParameter[] knobs =
-            new LXListenableParameter[DEVICE_KNOB_NUM];
+      new LXListenableParameter[DEVICE_KNOB_NUM];
 
     DeviceListener() {
       Arrays.fill(this.knobs, null);
@@ -299,7 +312,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       } else {
         register(null);
       }
-      updateColorKnobs();
     }
 
     void registerPrevious() {
@@ -340,29 +352,30 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       unregister();
       this.device = device;
 
+      boolean isEnabled = false;
+      if (this.device instanceof LXEffect) {
+        this.effect = (LXEffect) this.device;
+        this.effect.enabled.addListener(this);
+        isEnabled = this.effect.isEnabled();
+      } else if (this.device instanceof LXPattern) {
+        this.pattern = (LXPattern) this.device;
+        isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
+      }
+
+      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
       if (this.device == null) {
         clearKnobsAfter(0);
         return;
-      } else if (this.device instanceof LXEffect) {
-        this.effect = (LXEffect) this.device;
-        this.effect.enabled.addListener(this);
-      } else if (this.device instanceof LXPattern) {
-        this.pattern = (LXPattern) this.device;
       }
 
       this.device.controlSurfaceSemaphore.increment();
 
-      boolean isEnabled = false;
-      if (this.effect != null) {
-        isEnabled = this.effect.isEnabled();
-      } else if (this.pattern != null) {
-        isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
-      }
-      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
-
       int i = 0;
       Set<AggregateParameter> knownParents = new HashSet<>();
       for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
+        if (i >= this.knobs.length) {
+          break;
+        }
         if (parameter == null) {
           this.knobs[i] = null;
           sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
@@ -370,32 +383,36 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         }
 
         AggregateParameter parent = parameter.getParentParameter();
-
-        if (knownParents.contains(parent) || i >= this.knobs.length) {
-          continue;
-        }
-
-        sendControlChange(0, DEVICE_KNOB_STYLE + i,
-                parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ?
-                        LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
-
         if (parent != null) {
           // When an Aggregate's first sub is encountered, put the agg on a knob,
           // add listeners for all of its children, and remember that we've seen
           // the parent so we can skip this process when we encounter its other subs.
           this.knobs[i] = parent;
-          for (LXListenableParameter subParam : parent.subparameters.values()) {
-            subParam.addListener(this);
+          if (!knownParents.contains(parent)) {
+            for (LXListenableParameter subParam : parent.subparameters.values()) {
+              subParam.addListener(this);
+            }
+            knownParents.add(parent);
           }
-          knownParents.add(parent);
         } else {
           this.knobs[i] = parameter;
           parameter.addListener(this);
-          double normalized = (parameter instanceof CompoundParameter) ?
-                  ((CompoundParameter) parameter).getBaseNormalized() :
-                  parameter.getNormalized();
+        }
+
+        LXListenableNormalizedParameter knobParam = parameterForKnob(this.knobs[i]);
+        if (knobParam == null) {
+          // Weird situation, AggregateParameter has no control surface subs...
+          sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
+        } else {
+          sendControlChange(0, DEVICE_KNOB_STYLE + i,
+            parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ?
+                    LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
+          double normalized = (knobParam instanceof CompoundParameter) ?
+            ((CompoundParameter) knobParam).getBaseNormalized() :
+              knobParam.getNormalized();
           sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
         }
+
         ++i;
       }
       clearKnobsAfter(i);
@@ -434,10 +451,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         return (LXListenableNormalizedParameter) knob;
       }
 
-      // The knob is attached to an AggregateParameter.
-      AggregateParameter agg = (AggregateParameter) knob;
+      if (knob instanceof AggregateParameter) {
+        // Find an appropriate subparam for an AggregateParameter.
+        return getActiveSubparameter((AggregateParameter) knob);
+      }
 
-      return getActiveSubparameter(agg);
+      return null;
     }
 
     void onDeviceOnOff() {
@@ -512,13 +531,17 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.effect.enabled.removeListener(this);
       }
       if (this.device != null) {
+        Set<AggregateParameter> knownParents = new HashSet<>();
         for (int i = 0; i < this.knobs.length; ++i) {
           if (this.knobs[i] == null) {
             continue;
           } else if (this.knobs[i] instanceof AggregateParameter) {
             AggregateParameter ap = (AggregateParameter) this.knobs[i];
-            for (LXListenableParameter sub : ap.subparameters.values()) {
-              sub.removeListener(this);
+            if (!knownParents.contains(ap)) {
+              for (LXListenableParameter sub : ap.subparameters.values()) {
+                sub.removeListener(this);
+              }
+              knownParents.add(ap);
             }
           } else {
             this.knobs[i].removeListener(this);
