@@ -58,14 +58,14 @@ public class SparkleEffect extends LXEffect {
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
-    this.engine.amount = enabledAmount * this.amount.getValue();
+    double amount = enabledAmount * this.amount.getValue();
 
     // Even if amount is 0, keep the sparkles advancing, don't want a "freeze-frame" effect
     // when turning the amount off and on
-    this.engine.run(deltaMs, model);
+    this.engine.run(deltaMs, model, amount);
 
     // But no need to multiply if amount is 0
-    if (this.engine.amount > 0) {
+    if (amount > 0) {
       for (int i = 0; i < colors.length; ++i) {
         colors[i] = LXColor.multiply(colors[i], LXColor.gray(LXUtils.clamp(engine.outputLevels[i], 0, 100)), 0x100);
       }

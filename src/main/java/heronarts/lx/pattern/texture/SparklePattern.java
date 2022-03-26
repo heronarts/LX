@@ -94,8 +94,6 @@ public class SparklePattern extends LXPattern {
     private int numSparkles;
     private int maxPixelsPerSparkle;
 
-    public double amount = 1;
-
     public final CompoundParameter minInterval = (CompoundParameter)
       new CompoundParameter("Fast", 1, .1, 60)
       .setExponent(2)
@@ -173,14 +171,14 @@ public class SparklePattern extends LXPattern {
       }
     }
 
-    public void run(double deltaMs, LXModel model) {
+    public void run(double deltaMs, LXModel model, double amount) {
       final double minIntervalMs = 1000 * this.minInterval.getValue();
       final double maxIntervalMs = 1000 * this.maxInterval.getValue();
       final double speed = this.speed.getValue();
       final double variation = .01 * this.variation.getValue();
       final double durationInv = 100 / this.duration.getValue();
       final double density = .01 * this.density.getValue();
-      final double baseLevel = LXUtils.lerp(100, this.baseLevel.getValue(), this.amount);
+      final double baseLevel = LXUtils.lerp(100, this.baseLevel.getValue(), amount);
 
       LXWaveshape waveshape = this.waveshape.getObject();
 
@@ -190,8 +188,8 @@ public class SparklePattern extends LXPattern {
       // Amount is used when in effect mode, if amount is cranked down to 0, then
       // the max and min levels with both lerp back to 100 resulting in a full-white
       // output that doesn't mask anything
-      maxLevel = LXUtils.lerp(100, maxLevel, this.amount);
-      minLevel = LXUtils.lerp(100, minLevel, this.amount);
+      maxLevel = LXUtils.lerp(100, maxLevel, amount);
+      minLevel = LXUtils.lerp(100, minLevel, amount);
 
       // Compute how much brightness sparkles can add to reach top level
       final double maxDelta = maxLevel - baseLevel;
@@ -237,7 +235,7 @@ public class SparklePattern extends LXPattern {
         }
 
         // Process active sparkles
-        if (sparkle.isOn && (this.amount > 0)) {
+        if (sparkle.isOn && (amount > 0)) {
           // The duration is a percentage 0-100% of the total period time for which the
           // sparkle is active. Here we scale the sparkle's raw 0-1 basis onto this portion
           // of duration, and only process the sparkle if it's still in the 0-1 range, e.g.
@@ -288,7 +286,7 @@ public class SparklePattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    engine.run(deltaMs, model);
+    engine.run(deltaMs, model, 1.);
     int i = 0;
     for (LXPoint p : model.points) {
       colors[p.index] = LXColor.gray(LXUtils.clamp(engine.outputLevels[i++], 0, 100));
