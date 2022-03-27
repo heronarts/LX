@@ -32,6 +32,7 @@ import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -109,7 +110,18 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     if (this.remoteControls == null) {
       List<LXListenableNormalizedParameter> remoteControls = new ArrayList<LXListenableNormalizedParameter>();
       for (LXParameter parameter : getParameters()) {
-        if (parameter instanceof LXListenableNormalizedParameter) {
+        // Do not include subparams of AggregateParameter
+        if (parameter.getParentParameter() != null) {
+          continue;
+        }
+        if (parameter instanceof AggregateParameter) {
+          // For aggregate parameters, include the specified sub-param
+          LXListenableNormalizedParameter subparameter = ((AggregateParameter) parameter).getRemoteControl();
+          if (subparameter != null) {
+            remoteControls.add(subparameter);
+          }
+        } else if (parameter instanceof LXListenableNormalizedParameter) {
+          // Otherwise include any parameter of a knob-able type
           boolean valid = true;
           if (this instanceof LXPattern) {
             valid = parameter != ((LXPattern) this).recall;

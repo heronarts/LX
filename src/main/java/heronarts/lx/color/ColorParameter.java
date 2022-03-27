@@ -20,6 +20,7 @@ package heronarts.lx.color;
 
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 
 public class ColorParameter extends AggregateParameter {
@@ -56,6 +57,11 @@ public class ColorParameter extends AggregateParameter {
     addSubparameter(PATH_HUE, this.hue);
 
     this.color = color;
+  }
+
+  @Override
+  public LXListenableNormalizedParameter getRemoteControl() {
+    return this.hue;
   }
 
   @Override

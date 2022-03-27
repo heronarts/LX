@@ -106,6 +106,21 @@ public abstract class AggregateParameter extends LXListenableParameter {
    */
   protected abstract void onSubparameterUpdate(LXParameter p);
 
+  /**
+   * Subclasses may override. By default an AggregateParameter returns its first subparameter
+   * that is an LXListenableNormalizedParameter for remote control surface.
+   *
+   * @return Subparameter to be used by a remote control surface
+   */
+  public LXListenableNormalizedParameter getRemoteControl() {
+    for (LXListenableParameter subparam : this.subparameters.values()) {
+      if (subparam instanceof LXListenableNormalizedParameter) {
+        return (LXListenableNormalizedParameter) subparam;
+      }
+    }
+    return null;
+  }
+
   @Override
   public void dispose() {
     for (LXListenableParameter parameter : this._subparameters.values()) {
