@@ -69,6 +69,11 @@ public abstract class LXPeriodicModulator extends LXModulator {
    */
   private boolean looped = false;
 
+  /** The number of times the modulator looped on this cycle; should be
+   * 0 or 1 unless the period's extremely short and/or the machine is overworked.
+   */
+  private int numLoops = 0;
+
   /**
    * Flag set when we are restarted
    */
@@ -236,9 +241,9 @@ public abstract class LXPeriodicModulator extends LXModulator {
 
   @Override
   public void loop(double deltaMs) {
-    // Reset the finished and looped flags
     this.finished = false;
     this.looped = false;
+    this.numLoops = 0;
     super.loop(deltaMs);
   }
 
@@ -248,6 +253,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
   protected final double computeValue(double deltaMs) {
     this.finished = false;
     this.looped = false;
+    this.numLoops = 0;
     this.needsReset = false;
     double periodv = this.period.getValue();
     if (this.tempoSync.isOn()) {
@@ -274,9 +280,8 @@ public abstract class LXPeriodicModulator extends LXModulator {
     if (this.basis >= 1.) {
       if (this.looping.isOn()) {
         this.looped = true;
-        if (this.basis > 1) {
-          this.basis = this.basis % 1;
-        }
+        this.numLoops = (int) this.basis;
+        this.basis = this.basis % 1;
       } else {
         this.basis = 1.;
         this.finished = true;
@@ -294,6 +299,16 @@ public abstract class LXPeriodicModulator extends LXModulator {
    */
   public final boolean loop() {
     return this.looped;
+  }
+
+  /**
+   * Returns the number of times the modulator looped on the last cycle; should be
+   * 0 or 1 unless the period's extremely short and/or the machine is overworked.
+   *
+   * @return number of loops on the last cycle
+   */
+  public final int numLoops() {
+    return this.numLoops;
   }
 
   /**
