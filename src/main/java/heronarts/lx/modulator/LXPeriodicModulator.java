@@ -69,7 +69,8 @@ public abstract class LXPeriodicModulator extends LXModulator {
    */
   private boolean looped = false;
 
-  /** The number of times the modulator looped on this cycle; should be
+  /**
+   * The number of times the modulator looped on this cycle; should be
    * 0 or 1 unless the period's extremely short and/or the machine is overworked.
    */
   private int numLoops = 0;
