@@ -870,7 +870,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.mixer.loop(buffer.render, deltaMs);
 
     // Add fixture identification very last
-    int identifyColor = LXColor.hsb(0, 100, Math.abs(-100 + (runStart / 8000000) % 200));
+    double identifyBrightness = Math.abs(-100 + (runStart / 8000000) % 200);
+    int identifyRed = LXColor.hsb(0, 100, identifyBrightness);
+    int identifyGreen = LXColor.hsb(120, 100, identifyBrightness);
     for (LXFixture fixture : this.lx.structure.fixtures) {
       if (fixture.deactivate.isOn()) {
         // Does not apply to deactivated fixtures
@@ -886,12 +888,17 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           }
         }
       } else if (fixture.identify.isOn()) {
+        int identifyColor = identifyGreen;
         int start = fixture.getIndexBufferOffset();
         int end = start + fixture.totalSize();
         if (end > start) {
           for (int i = start; i < end; ++i) {
+            if (i - start == 90) {
+              identifyColor = identifyRed;
+            }
             this.buffer.render.main[i] = identifyColor;
             this.buffer.render.cue[i] = identifyColor;
+
           }
         }
       }
