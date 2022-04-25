@@ -18,6 +18,9 @@
 
 package heronarts.lx;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -25,7 +28,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiListener;
@@ -36,6 +42,7 @@ import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
 
 /**
@@ -80,6 +87,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     new BooleanParameter("Modulation Expanded", false)
     .setDescription("Whether the device modulation section is expanded");
 
+  public final StringParameter presetFile =
+    new StringParameter("Preset", null)
+    .setDescription("Name of last preset file that has been loaded/saved");
+
   protected LXDeviceComponent(LX lx) {
     this(lx, null);
   }
@@ -89,6 +100,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     addChild("modulation", this.modulation = new LXModulationEngine(lx));
     addInternalParameter("expanded", this.controlsExpanded);
     addInternalParameter("modulationExpanded", this.modulationExpanded);
+    addInternalParameter("presetFile", this.presetFile);
   }
 
   public static String getCategory(Class<? extends LXDeviceComponent> clazz) {
@@ -184,6 +196,43 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   }
 
   protected static final String KEY_DEVICE_VERSION = "deviceVersion";
+  private final static String KEY_VERSION = "version";
+  private final static String KEY_TIMESTAMP = "timestamp";
+
+  public void loadPreset(File file) {
+    try (FileReader fr = new FileReader(file)) {
+      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      this.lx.componentRegistry.projectLoading = true;
+      this.lx.componentRegistry.setIdCounter(this.lx.getMaxId(obj, this.lx.componentRegistry.getIdCounter()) + 1);
+      load(this.lx, obj);
+      this.lx.componentRegistry.projectLoading = false;
+      this.presetFile.setValue(file.getName());
+      LX.log("Device preset loaded successfully from " + file.toString());
+    } catch (IOException iox) {
+      LX.error("Could not load device preset file: " + iox.getLocalizedMessage());
+      this.lx.pushError(iox, "Could not load device preset file: " + iox.getLocalizedMessage());
+    } catch (Exception x) {
+      LX.error(x, "Exception in loadPreset: " + x.getLocalizedMessage());
+      this.lx.pushError(x, "Exception in loadPreset: " + x.getLocalizedMessage());
+    } finally {
+      this.lx.componentRegistry.projectLoading = false;
+    }
+  }
+
+  public void savePreset(File file) {
+    JsonObject obj = new JsonObject();
+    obj.addProperty(KEY_VERSION, LX.VERSION);
+    obj.addProperty(KEY_TIMESTAMP, System.currentTimeMillis());
+    save(this.lx, obj);
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      this.presetFile.setValue(file.getName());
+      LX.log("Device preset saved successfully to " + file.toString());
+    } catch (IOException iox) {
+      LX.error(iox, "Could not write device preset to output file: " + file.toString());
+    }
+  }
 
   @Override
   public void save(LX lx, JsonObject obj) {

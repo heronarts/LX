@@ -105,6 +105,7 @@ public class LX {
     FIXTURES("Fixtures"),
     PROJECTS("Projects"),
     MODELS("Models"),
+    PRESETS("Presets"),
     LOGS("Logs"),
     DELETED("Deleted");
 
@@ -869,7 +870,7 @@ public class LX {
     return this;
   }
 
-  private int getMaxId(JsonObject obj, int max) {
+  int getMaxId(JsonObject obj, int max) {
     for (Entry<String, JsonElement> entry : obj.entrySet()) {
       if (entry.getKey().equals(LXComponent.KEY_ID)) {
         int id = entry.getValue().getAsInt();
@@ -1059,6 +1060,25 @@ public class LX {
       return file;
     }
     return new File(getMediaPath(), path);
+  }
+
+  /**
+   * Get the folder to hold presets for a device
+   *
+   * @param device Device
+   * @return Folder that holds presets for this device
+   */
+  public File getPresetFolder(LXDeviceComponent device) {
+    File presetFolder = getMediaFolder(Media.PRESETS);
+    File deviceFolder = new File(presetFolder, device.getClass().getName());
+    if (!deviceFolder.exists()) {
+      deviceFolder.mkdir();
+    }
+    return deviceFolder;
+  }
+
+  public File getPresetFile(LXDeviceComponent device, String name) {
+    return new File(getPresetFolder(device), (name != null) ? name : "default.lxd");
   }
 
   public LXModel instantiateModel(String className) throws InstantiationException {

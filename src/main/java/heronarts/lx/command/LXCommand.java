@@ -18,6 +18,7 @@
 
 package heronarts.lx.command;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +28,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clipboard.LXNormalizedValue;
 import heronarts.lx.color.ColorParameter;
@@ -611,7 +613,7 @@ public abstract class LXCommand {
 
       public SetFader(LXAbstractChannel channel, boolean enabled, double fader) {
         this.setEnabled = new Parameter.SetNormalized(channel.enabled, enabled);
-        this.setFader= new Parameter.SetValue(channel.fader, fader);
+        this.setFader = new Parameter.SetValue(channel.fader, fader);
       }
 
       @Override
@@ -899,6 +901,34 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) {
         this.channel.get().moveEffect(this.effect.get(), this.fromIndex);
+      }
+    }
+
+    public static class LoadDevicePreset extends LXCommand {
+
+      private final ComponentReference<LXDeviceComponent> device;
+      private final JsonObject deviceObj;
+      private final File file;
+
+      public LoadDevicePreset(LXDeviceComponent device, File file) {
+        this.device = new ComponentReference<LXDeviceComponent>(device);
+        this.deviceObj = LXSerializable.Utils.toObject(device);
+        this.file = file;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Load Preset " + this.file.getName();
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.device.get().loadPreset(this.file);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.device.get().load(lx, this.deviceObj);
       }
     }
 
