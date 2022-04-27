@@ -46,9 +46,6 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
-
 import com.google.gson.JsonObject;
 
 /**
@@ -405,11 +402,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           this.networkThread.start();
         }
       }
-    } else if (p == this.framesPerSecond) {
-      EngineThread engineThread = this.engineThread;
-      if (engineThread != null) {
-        engineThread.updateFramerate();
-      }
     }
   }
 
@@ -525,15 +517,15 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       throw new IllegalStateException("Cannot set thread state to current state: " + threaded);
     }
     if (!threaded) {
-      if (Thread.currentThread() == this.engineThread.thread) {
+      if (Thread.currentThread() == this.engineThread) {
         throw new IllegalStateException("Cannot call to stop engine thread from itself");
       }
 
       // Tell the engine thread to stop
-      this.engineThread.stop();
+      this.engineThread.interrupt();
       try {
         // Wait for it to finish
-        this.engineThread.thread.join();
+        this.engineThread.join();
       } catch (InterruptedException ix) {
         throw new IllegalThreadStateException("Interrupted waiting to join LXEngine thread");
       }
@@ -550,106 +542,109 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
   }
 
-  private class EngineThread extends Timer {
+  private class EngineThread extends Thread {
 
     public static final String THREAD_NAME = "LXEngine Core Thread";
 
-    private class InitSemaphore {
-      boolean hasThread = false;
-    }
-
-    private final InitSemaphore initSemaphore = new InitSemaphore();
-
-    private Thread thread;
-    private RenderTask renderTask;
-
     private EngineThread() {
       super(THREAD_NAME);
-      schedule(new TimerTask() {
-        @Override
-        public void run() {
-          thread = Thread.currentThread();
-          thread.setPriority(lx.flags.engineThreadPriority);
-          synchronized (initSemaphore) {
-            initSemaphore.hasThread = true;
-            initSemaphore.notify();
-          }
+      setPriority(lx.flags.engineThreadPriority);
+    }
+
+    @Override
+    public void run() {
+      LX.log(getName() + " starting.");
+
+      int sampleCount = 0;
+      long lastSampleTime = System.currentTimeMillis();
+      long cpuTime = 0;
+
+      long msUntilInput = 0;
+      long msUntilRender = 0;
+      long minWait = 0;
+
+      long loopStart, loopEnd = System.currentTimeMillis(), loopMs, sleepMs;
+      boolean didInput = false, didRender = false;
+
+      while (!isInterrupted()) {
+
+        loopStart = System.currentTimeMillis();
+        if (loopStart < loopEnd) {
+          LX.error("EngineThread detected negative system time change between iterations");
+          // The system clock changed!! Reset counters...
+          sampleCount = 0;
+          cpuTime = 0;
+          lastSampleTime = loopStart;
+          // Process everything on this frame
+          msUntilInput = 0;
+          msUntilRender = 0;
+        } else {
+          // Decrease counters by real time elapsed since last pass
+          sleepMs = loopStart - loopEnd;
+          msUntilInput -= sleepMs;
+          msUntilRender -= sleepMs;
         }
-      }, 0);
-      waitForThreadStart();
-    }
 
-    private void waitForThreadStart() {
-      synchronized (this.initSemaphore) {
-        if (!this.initSemaphore.hasThread) {
-          try {
-            this.initSemaphore.wait();
-          } catch (InterruptedException ix) {
-            // Why the fuck? Can't happen...
-            throw new RuntimeException(ix);
-          }
-        }
-      }
-    }
-
-    private boolean isRunning = false;
-
-    private void updateFramerate() {
-      if (this.isRunning) {
-        this.renderTask.cancel();
-        long period = (long) (1000.f / framesPerSecond.getValuef());
-        scheduleAtFixedRate(this.renderTask = new RenderTask(), period, period);
-      }
-    }
-
-    private void start() {
-      if (this.isRunning) {
-        throw new IllegalStateException("May not start already running EngineThread");
-      }
-      this.isRunning = true;
-      LX.log(this.thread.getName() + " starting.");
-      scheduleAtFixedRate(this.renderTask = new RenderTask(), 0, (long) (1000.f / framesPerSecond.getValuef()));
-      scheduleAtFixedRate(new TimerTask() {
-        @Override
-        public void run() {
+        // Process input events
+        if (didInput = (msUntilInput <= 0)) {
           processInputEvents();
         }
-      }, 0, 16);
-    }
+        // Run core engine loop
+        if (didRender = (msUntilRender <= 0)) {
+          LXEngine.this.run(true);
+        }
 
-    private void stop() {
-      if (!this.isRunning) {
-        throw new IllegalStateException("Can not stop a non-running EngineThread");
-      }
-      cancel();
-      this.isRunning = false;
-      LX.log(this.thread.getName() + " stopped.");
-    }
+        // Check timing of the loop end
+        loopEnd = System.currentTimeMillis();
+        loopMs = loopEnd - loopStart;
 
-    private class RenderTask extends TimerTask {
+        // Check for a sneaky system clock change!
+        if (loopEnd < loopStart) {
+          LX.error("EngineThread detected system time change during run");
+          // Do not include this in sampling... reset counters and pretend this loop took 1ms to process
+          loopMs = 1;
+          loopStart = loopEnd - loopMs;
+          sampleCount = 0;
+          cpuTime = 0;
+          lastSampleTime = loopEnd;
+        }
 
-      private int sampleCount = 0;
-      private long lastSampleTime = System.currentTimeMillis();
-      private long cpuTime = 0;
+        // Schedule the next input event to be 16ms (60FPS) minus however
+        // long we just spent here
+        if (didInput) {
+          msUntilInput = 16 - loopMs;
+        }
 
-      @Override
-      public void run() {
-        long frameStart = System.currentTimeMillis();
-        LXEngine.this.run(true);
-        long frameEnd = System.currentTimeMillis();
-        this.cpuTime += (frameEnd - frameStart);
-        ++this.sampleCount;
+        // Schedule the next render event based upon the engine's FPS setting
+        if (didRender) {
+          msUntilRender = (long) (1000f / framesPerSecond.getValuef()) - loopMs;
 
+          cpuTime += loopMs;
+          ++sampleCount;
 
-        // Sample the real performance of the engine every 500ms
-        if (frameEnd - this.lastSampleTime > 500) {
-          cpuLoad = this.cpuTime * framesPerSecond.getValuef() / 1000f / this.sampleCount;
-          actualFrameRate = 1000f * this.sampleCount / (frameEnd - this.lastSampleTime);
-          this.sampleCount = 0;
-          this.cpuTime = 0;
-          this.lastSampleTime = frameEnd;
+          // Sample the real performance of the engine every 500ms
+          if (loopEnd - lastSampleTime > 500) {
+            cpuLoad = cpuTime * framesPerSecond.getValuef() / 1000f / sampleCount;
+            actualFrameRate = 1000f * sampleCount / (loopEnd - lastSampleTime);
+            sampleCount = 0;
+            cpuTime = 0;
+            lastSampleTime = loopEnd;
+          }
+        }
+
+        // Sleep until the next event is required
+        minWait = Math.min(msUntilInput, msUntilRender);
+        if (minWait > 0) {
+          try {
+            sleep(minWait);
+          } catch (InterruptedException ix) {
+            break;
+          }
         }
       }
+
+      // Thread has stopped
+      LX.log(getName() + " stopped.");
     };
   }
 
@@ -802,10 +797,22 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Compute elapsed time
     this.nowMillis = System.currentTimeMillis();
     if (this.lastMillis == INIT_RUN) {
-      // Initial frame is arbitrarily 16 milliseconds (~60 fps)
-      this.lastMillis = this.nowMillis - 16;
+      // Initial frame is set to be the framerate
+      this.lastMillis = this.nowMillis - (long) (1000f / framesPerSecond.getValuef());
     }
     double deltaMs = this.nowMillis - this.lastMillis;
+
+    // Check for tricky system clock changes!
+    if (deltaMs < 0) {
+      LX.error("Negative system clock change detected at currentTimeMillis(): " + this.nowMillis);
+      // If that happens, just pretend we ran at framerate
+      deltaMs = 1000 / framesPerSecond.getValue();
+    } else if (deltaMs > 60000) {
+      // A frame took over a minute? Was probably a system clock moving forward...
+      LX.error("System clock moved over 60s in a frame, assuming clock change at currentTimeMillis():" + this.nowMillis);
+      deltaMs = 1000 / framesPerSecond.getValue();
+    }
+
     this.lastMillis = this.nowMillis;
 
     // Override deltaMs if in fixed render mode
@@ -822,7 +829,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
 
     // Process input events, unless we're running on the engine thread
-    // which uses a separate timer task to do this
+    // which uses timing in its main loop to do this. Note that these input
+    // events can trigger all sorts of LX API calls, which may result in
+    // parameter changes, model rebuilds, etc.
     if (!fromEngineThread) {
       processInputEvents();
     }
