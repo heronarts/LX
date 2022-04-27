@@ -213,7 +213,7 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
       DatagramSocket socket = (this.socket != null) ? this.socket : LXDatagram.getDefaultSocket();
       long latencyCheck = System.currentTimeMillis();
       socket.send(this.packet);
-      if (System.currentTimeMillis() - latencyCheck > 0) {
+      if (System.currentTimeMillis() - latencyCheck > 1) {
         // Check that this call is not blocking, this issue has been noticed by multiple users on
         // Raspberry Pi systems, when any address being sent is unresolvable, the output queues fill causing
         // major framerate degradation to all addresses. A solution for this (thanks to Brian Bulkowski)
