@@ -94,13 +94,13 @@ public class LXView extends LXModel {
       for (LXModel sub : group) {
         // Replicate all the points from each group submodel
         for (LXPoint p : sub.points) {
-          if (clonedPoints.containsKey(p.index)) {
-            throw new IllegalStateException("LXView has same point in two unique submodels: " + p);
+          if (!clonedPoints.containsKey(p.index)) {
+            LXPoint copy = new LXPoint(p);
+            clonedPoints.put(p.index, copy);
+            groupPoints.add(copy);
+            allPoints.add(copy);
           }
-          LXPoint copy = new LXPoint(p);
-          clonedPoints.put(p.index, copy);
-          groupPoints.add(copy);
-          allPoints.add(copy);
+
         }
         // Clone the submodel of this group
         groupChildren[c++] = cloneModel(clonedPoints, sub);
