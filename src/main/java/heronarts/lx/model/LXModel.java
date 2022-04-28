@@ -589,6 +589,23 @@ public class LXModel implements LXSerializable {
   }
 
   /**
+   * Returns the first ancestor of this model with the given tag, if it exists.
+   *
+   * @param tag Tag to search ancestors for
+   * @return Nearest ancestor with tag, or null
+   */
+  public LXModel ancestor(String tag) {
+    LXModel parent = getParent();
+    while (parent != null) {
+      if (parent.tags.contains(tag)) {
+        return parent;
+      }
+      parent = parent.getParent();
+    }
+    return parent;
+  }
+
+  /**
    * Gets a meta data property
    *
    * @param key Meta data key
@@ -869,14 +886,19 @@ public class LXModel implements LXSerializable {
   }
 
   public void dispose() {
+    // NOTE: Derived views may contain other derived views as children,
+    // so a single call to dispose might result in a few derived views
+    // being removed. The views take care to remove themselves from the
+    // model's derivedViews list on dispose. So we need to use a while
+    // loop here rather than standard iteration.
+    while (!this.derivedViews.isEmpty()) {
+      this.derivedViews.get(this.derivedViews.size() - 1).dispose();
+    }
+
     for (LXModel child : this.children) {
       child.dispose();
     }
-    // NOTE: reverse iterate because the dispose call will mutate
-    // the list.
-    for (int i = this.derivedViews.size() - 1; i >= 0; --i) {
-      this.derivedViews.get(i).dispose();
-    }
+
     this.listeners.clear();
   }
 
