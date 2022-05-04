@@ -198,6 +198,8 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
     addParameter("gate", this.gate);
     addParameter("average", this.average);
     addParameter("tap", this.teachTempo);
+
+    setDescription("Envelope that fires when a beat is detected");
   }
 
   @Override
