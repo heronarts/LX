@@ -904,6 +904,13 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       }
     }
 
+    // Check for performance quality
+    long nanoLimit = (long) (1000000000 / this.lx.engine.framesPerSecond.getValuef() * .5);
+    for (LXAbstractChannel channel : this.channels) {
+      long renderNanos = channel.profiler.renderNanos();
+      channel.performanceWarning.setValue(renderNanos > nanoLimit);
+    }
+
     // Step 3: blend the channel buffers down
     boolean blendLeft = leftBusActive || this.cueA.isOn();
     boolean blendRight = rightBusActive || this.cueB.isOn();

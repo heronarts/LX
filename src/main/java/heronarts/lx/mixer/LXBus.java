@@ -61,6 +61,11 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
 
   public class Profiler extends LXModulatorComponent.Profiler {
     public long effectNanos;
+
+    @Override
+    public long renderNanos() {
+      return super.renderNanos() + this.effectNanos;
+    }
   }
 
   @Override

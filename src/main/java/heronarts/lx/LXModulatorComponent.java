@@ -33,6 +33,10 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
 
   public class Profiler {
     public long loopNanos;
+
+    public long renderNanos() {
+      return this.loopNanos;
+    }
   }
 
   protected Profiler constructProfiler() {

@@ -142,6 +142,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     new EnumParameter<LXView.Normalization>("View Normalization", LXView.Normalization.RELATIVE)
     .setDescription("Whether view coordinates are noramlized relative to the view, or absolute model");
 
+  public final BooleanParameter performanceWarning =
+    new BooleanParameter("Warning", false)
+    .setDescription("Set to true by the engine if this channel is using too many CPU resources");
 
   /**
    * Model view used on this bus

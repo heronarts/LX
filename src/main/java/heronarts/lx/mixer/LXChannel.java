@@ -884,6 +884,7 @@ public class LXChannel extends LXAbstractChannel {
     } else {
       this.transitionProgress = 0;
     }
+    this.profiler.loopNanos = System.nanoTime() - loopStart;
 
     // Apply effects
     long effectStart = System.nanoTime();
@@ -901,7 +902,6 @@ public class LXChannel extends LXAbstractChannel {
     ((LXBus.Profiler) this.profiler).effectNanos = System.nanoTime() - effectStart;
 
     this.colors = colors;
-    this.profiler.loopNanos = System.nanoTime() - loopStart;
   }
 
   @Override
