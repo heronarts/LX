@@ -41,11 +41,15 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
-
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+
 import com.google.gson.JsonObject;
 
 /**
@@ -55,6 +59,12 @@ import com.google.gson.JsonObject;
  * blended together, and effects are then applied.
  */
 public class LXEngine extends LXComponent implements LXOscComponent, LXModulationContainer {
+
+  public enum ThreadMode {
+    SCHEDULED_EXECUTOR_SERVICE,
+    BASIC_THREAD_SLEEP,
+    BASIC_THREAD_SPINYIELD;
+  };
 
   public final LXPalette palette;
 
@@ -294,7 +304,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     .setMappable(false)
     .setDescription("Whether the network output is on a separate thread");
 
-  private EngineThread engineThread = null;
+  private Thread engineThread = null;
+  private final ExecutorService engineExecutorService;
 
   private boolean isNetworkThreadStarted = false;
   public final NetworkThread networkThread;
@@ -319,6 +330,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Initialize double-buffer of frame contents
     this.buffer = new DoubleBuffer(lx);
+
+    // Create an engine executor service (doesn't start it)
+    this.engineExecutorService = new ExecutorService();
 
     // Initialize network thread (don't start it yet)
     this.networkThread = new NetworkThread(lx);
@@ -402,6 +416,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           this.networkThread.start();
         }
       }
+    } else if (p == this.framesPerSecond) {
+      this.engineExecutorService.updateFramerate();
     }
   }
 
@@ -520,15 +536,21 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       if (Thread.currentThread() == this.engineThread) {
         throw new IllegalStateException("Cannot call to stop engine thread from itself");
       }
+      if (this.lx.flags.threadMode == ThreadMode.SCHEDULED_EXECUTOR_SERVICE) {
+        this.engineExecutorService.stop();
+      } else {
+        // Tell the engine thread to stop
+        this.engineThread.interrupt();
+      }
 
-      // Tell the engine thread to stop
-      this.engineThread.interrupt();
       try {
         // Wait for it to finish
         this.engineThread.join();
       } catch (InterruptedException ix) {
         throw new IllegalThreadStateException("Interrupted waiting to join LXEngine thread");
       }
+
+      // Clear off the engine thread
       this.engineThread = null;
 
     } else {
@@ -537,9 +559,127 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       // working on drawing.
       this.buffer.sync();
       this.buffer.flip();
-      this.engineThread = new EngineThread();
-      this.engineThread.start();
+
+      if (this.lx.flags.threadMode == ThreadMode.SCHEDULED_EXECUTOR_SERVICE) {
+        this.engineExecutorService.start();
+      } else {
+        this.engineThread = new EngineThread();
+        this.engineThread.start();
+      }
     }
+  }
+
+  private static final long NANOS_PER_MS = TimeUnit.MILLISECONDS.toNanos(1);
+  private static final long NANOS_PER_SECOND = TimeUnit.SECONDS.toNanos(1);
+  private static final long NANOS_INTERVAL_60FPS = NANOS_PER_SECOND / 60;
+
+  private class EngineSampler {
+    private long cpuTimeNanos = 0;
+    private long lastSampleNanos = -1;
+    private int sampleCount = 0;
+
+    private void reset(long sampleTime) {
+      this.cpuTimeNanos = 0;
+      this.sampleCount = 0;
+      this.lastSampleNanos = sampleTime;
+    }
+
+    private void sample(long loopStart, long loopEnd) {
+      this.cpuTimeNanos += (loopEnd - loopStart);
+      ++this.sampleCount;
+
+      // Sample the real performance of the engine every 500ms
+      if (loopEnd - this.lastSampleNanos > 500 * NANOS_PER_MS) {
+        cpuLoad = this.cpuTimeNanos * framesPerSecond.getValuef() / NANOS_PER_SECOND / this.sampleCount;
+        actualFrameRate = NANOS_PER_SECOND * this.sampleCount / (loopEnd - this.lastSampleNanos);
+        reset(loopEnd);
+      }
+    }
+  }
+
+  private final EngineSampler sampler = new EngineSampler();
+
+  private class ExecutorService {
+
+    private ScheduledExecutorService service = null;
+    private ScheduledFuture<?> inputFuture = null;
+    private ScheduledFuture<?> runFuture = null;
+
+    private class Bootstrap {
+      boolean bootstrap = false;
+    }
+
+    public void start() {
+      sampler.reset(-1);
+      this.service = Executors.newSingleThreadScheduledExecutor();
+      final Bootstrap bootstrap = new Bootstrap();
+      this.service.execute(() -> {
+        engineThread = Thread.currentThread();
+        engineThread.setName(EngineThread.THREAD_NAME);
+        engineThread.setPriority(lx.flags.engineThreadPriority);
+        LX.log("LXEngine.ExecutorService starting...");
+        synchronized (bootstrap) {
+          bootstrap.bootstrap = true;
+          bootstrap.notify();
+        }
+      });
+      this.inputFuture = service.scheduleAtFixedRate(LXEngine.this::processInputEvents, 0, NANOS_INTERVAL_60FPS, TimeUnit.NANOSECONDS);
+      this.runFuture = service.scheduleAtFixedRate(this::runLoop, 0, (long) (NANOS_PER_SECOND / framesPerSecond.getValue()), TimeUnit.NANOSECONDS);
+
+      // Do not return until we know we've gotten the executor thread up and running
+      synchronized (bootstrap) {
+        if (!bootstrap.bootstrap) {
+          try {
+            bootstrap.wait();
+          } catch (InterruptedException ix) {
+            throw new IllegalThreadStateException("Interrupted waiting for ExecutorService to bootstrap");
+          }
+        }
+      }
+    }
+
+    private void stop() {
+      this.inputFuture.cancel(false);
+      this.runFuture.cancel(false);
+      this.service.shutdown();
+      try {
+        this.service.awaitTermination(1, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        throw new IllegalThreadStateException("Interrupted waiting for ExecutorService to terminate");
+      }
+      LX.log("LXEngine.ExecutorService has finished.");
+      this.service = null;
+      this.inputFuture = null;
+      this.runFuture = null;
+    }
+
+    private void updateFramerate() {
+      if (this.service != null) {
+        this.runFuture.cancel(false);
+        this.runFuture = this.service.scheduleAtFixedRate(this::runLoop, 0, (long) (NANOS_PER_SECOND / framesPerSecond.getValue()), TimeUnit.NANOSECONDS);
+      }
+    }
+
+    private void runLoop() {
+      long loopStart = System.nanoTime();
+      if (sampler.lastSampleNanos < 0) {
+        sampler.reset(loopStart);
+      }
+      LXEngine.this.run(true);
+      long loopEnd = System.nanoTime();
+
+      // Check for a sneaky system clock change!
+      if (loopEnd < loopStart) {
+        LX.error("LXEngine.ExecutorService detected system time change during run");
+        // Do not include this in sampling... reset counters and pretend this loop took 1ms to process
+        loopStart = loopEnd - NANOS_PER_MS;
+        sampler.reset(loopEnd);
+      }
+
+      sampler.sample(loopStart, loopEnd);
+
+    };
+
   }
 
   private class EngineThread extends Thread {
@@ -555,88 +695,80 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     public void run() {
       LX.log(getName() + " starting.");
 
-      int sampleCount = 0;
-      long lastSampleTime = System.currentTimeMillis();
-      long cpuTime = 0;
-
-      long msUntilInput = 0;
-      long msUntilRender = 0;
+      long nanosUntilInput = 0;
+      long nanosUntilRender = 0;
       long minWait = 0;
 
-      long loopStart, loopEnd = System.currentTimeMillis(), loopMs, sleepMs;
-      boolean didInput = false, didRender = false;
+      long loopStart, loopEnd = System.nanoTime(), loopNanos, sleepNanos;
+      boolean didInput = false, didRender = false, didSleep = false;
+
+      sampler.reset(loopEnd);
 
       while (!isInterrupted()) {
 
-        loopStart = System.currentTimeMillis();
+        loopStart = System.nanoTime();
         if (loopStart < loopEnd) {
-          LX.error("EngineThread detected negative system time change between iterations");
+          LX.error("EngineThread detected negative System.nanoTime() change between iterations");
           // The system clock changed!! Reset counters...
-          sampleCount = 0;
-          cpuTime = 0;
-          lastSampleTime = loopStart;
+          sampler.reset(loopStart);
           // Process everything on this frame
-          msUntilInput = 0;
-          msUntilRender = 0;
-        } else {
-          // Decrease counters by real time elapsed since last pass
-          sleepMs = loopStart - loopEnd;
-          msUntilInput -= sleepMs;
-          msUntilRender -= sleepMs;
+          nanosUntilInput = 0;
+          nanosUntilRender = 0;
+        } else if (didSleep) {
+          // Decrease counters by real time elapsed since last pass, making sure that
+          // we decrease by at least 1ms in the case of super-high CPU usage where there's
+          // no effective sleep!
+          sleepNanos = loopStart - loopEnd;
+          nanosUntilInput -= sleepNanos;
+          nanosUntilRender -= sleepNanos;
         }
 
         // Process input events
-        if (didInput = (msUntilInput <= 0)) {
+        if (didInput = (nanosUntilInput <= 0)) {
           processInputEvents();
         }
         // Run core engine loop
-        if (didRender = (msUntilRender <= 0)) {
+        if (didRender = (nanosUntilRender <= 0)) {
           LXEngine.this.run(true);
         }
 
         // Check timing of the loop end
-        loopEnd = System.currentTimeMillis();
-        loopMs = loopEnd - loopStart;
+        loopEnd = System.nanoTime();
 
         // Check for a sneaky system clock change!
         if (loopEnd < loopStart) {
           LX.error("EngineThread detected system time change during run");
           // Do not include this in sampling... reset counters and pretend this loop took 1ms to process
-          loopMs = 1;
-          loopStart = loopEnd - loopMs;
-          sampleCount = 0;
-          cpuTime = 0;
-          lastSampleTime = loopEnd;
+          loopStart = loopEnd - NANOS_PER_MS;
+          sampler.reset(loopEnd);
         }
 
-        // Schedule the next input event to be 16ms (60FPS) minus however
-        // long we just spent here
+
+        // Schedule the next input event to be 16ms (60FPS) minus
         if (didInput) {
-          msUntilInput = 16 - loopMs;
+          nanosUntilInput = NANOS_INTERVAL_60FPS;
         }
 
         // Schedule the next render event based upon the engine's FPS setting
         if (didRender) {
-          msUntilRender = (long) (1000f / framesPerSecond.getValuef()) - loopMs;
-
-          cpuTime += loopMs;
-          ++sampleCount;
-
-          // Sample the real performance of the engine every 500ms
-          if (loopEnd - lastSampleTime > 500) {
-            cpuLoad = cpuTime * framesPerSecond.getValuef() / 1000f / sampleCount;
-            actualFrameRate = 1000f * sampleCount / (loopEnd - lastSampleTime);
-            sampleCount = 0;
-            cpuTime = 0;
-            lastSampleTime = loopEnd;
-          }
+          nanosUntilRender = (long) (NANOS_PER_SECOND / framesPerSecond.getValue());
+          sampler.sample(loopStart, loopEnd);
         }
 
+        // Subtract time just spent
+        loopNanos = loopEnd - loopStart;
+        nanosUntilInput -= loopNanos;
+        nanosUntilRender -= loopNanos;
+
         // Sleep until the next event is required
-        minWait = Math.min(msUntilInput, msUntilRender);
-        if (minWait > 0) {
+        minWait = Math.min(nanosUntilInput, nanosUntilRender);
+        if (didSleep = (minWait > 0)) {
           try {
-            sleep(minWait);
+            if (lx.flags.threadMode == ThreadMode.BASIC_THREAD_SPINYIELD) {
+              sleepNanos(minWait);
+            } else {
+              sleep(minWait / NANOS_PER_MS, (int) (minWait % NANOS_PER_MS));
+            }
           } catch (InterruptedException ix) {
             break;
           }
@@ -646,6 +778,32 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       // Thread has stopped
       LX.log(getName() + " stopped.");
     };
+
+    private final long SLEEP_PRECISION = TimeUnit.MILLISECONDS.toNanos(2);
+    private final long SPIN_YIELD_PRECISION = TimeUnit.MILLISECONDS.toNanos(1);
+
+    /**
+     * Spin-yield loop based alternative to Thread.sleep
+     * Based on the code of Andy Malakov
+     * http://andy-malakov.blogspot.fr/2010/06/alternative-to-threadsleep.html
+     */
+    private void sleepNanos(long nanoDuration) throws InterruptedException {
+      final long end = System.nanoTime() + nanoDuration;
+      long timeLeft = nanoDuration;
+      do {
+        if (timeLeft > SLEEP_PRECISION) {
+          sleep(1);
+        } else {
+          if (timeLeft > SPIN_YIELD_PRECISION) {
+            yield();
+          }
+        }
+        timeLeft = end - System.nanoTime();
+        if (isInterrupted()) {
+          throw new InterruptedException();
+        }
+      } while (timeLeft > 0);
+    }
   }
 
   /**
@@ -804,12 +962,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Check for tricky system clock changes!
     if (deltaMs < 0) {
-      LX.error("Negative system clock change detected at currentTimeMillis(): " + this.nowMillis);
+      LX.error("Negative system clock change detected at System.currentTimeMillis(): " + this.nowMillis);
       // If that happens, just pretend we ran at framerate
       deltaMs = 1000 / framesPerSecond.getValue();
     } else if (deltaMs > 60000) {
       // A frame took over a minute? Was probably a system clock moving forward...
-      LX.error("System clock moved over 60s in a frame, assuming clock change at currentTimeMillis():" + this.nowMillis);
+      LX.error("System clock moved over 60s in a frame, assuming clock change at System.currentTimeMillis(): " + this.nowMillis);
       deltaMs = 1000 / framesPerSecond.getValue();
     }
 

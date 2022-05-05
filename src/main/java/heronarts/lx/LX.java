@@ -95,6 +95,7 @@ public class LX {
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
+    public LXEngine.ThreadMode threadMode = LXEngine.ThreadMode.SCHEDULED_EXECUTOR_SERVICE;
     public int engineThreadPriority = Thread.MAX_PRIORITY;
     public String mediaPath = ".";
     public LXPlugin initialize = null;
