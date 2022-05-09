@@ -264,10 +264,15 @@ public abstract class LXPeriodicModulator extends LXModulator {
         this.basis = rawBasis % 1.;
         if (this.restarted) {
           this.restarted = false;
-        } else if ((measure != this.lastMeasure) && !this.looping.isOn()) {
-          this.basis = 1;
-          this.finished = true;
-          this.stop();
+        } else if (measure != this.lastMeasure) {
+          if (this.looping.isOn()) {
+            this.looped = true;
+            this.numLoops = (measure > this.lastMeasure) ? (measure - this.lastMeasure) : 1;
+          } else {
+            this.basis = 1;
+            this.finished = true;
+            this.stop();
+          }
         }
         this.lastMeasure = measure;
       } else {
