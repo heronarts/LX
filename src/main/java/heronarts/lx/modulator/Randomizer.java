@@ -1,5 +1,24 @@
+/**
+ * Copyright 2022- Mark C. Slee, Heron Arts LLC
+ *
+ * This file is part of the LX Studio software library. By using
+ * LX, you agree to the terms of the LX Studio Software License
+ * and Distribution Agreement, available at: http://lx.studio/license
+ *
+ * Please note that the LX license is not open-source. The license
+ * allows for free, non-commercial use.
+ *
+ * HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR
+ * OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF
+ * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
+ * PURPOSE, WITH RESPECT TO THE SOFTWARE.
+ *
+ * @author Mark C. Slee <mark@heronarts.com>
+ */
+
 package heronarts.lx.modulator;
 
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FunctionalParameter;
@@ -13,19 +32,24 @@ import heronarts.lx.utils.LXUtils;
  */
 @LXModulator.Global("Randomizer")
 @LXModulator.Device("Randomizer")
-public class Randomizer extends LXModulator implements LXNormalizedParameter, LXTriggerSource {
+public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
 
   public final CompoundParameter periodMs = (CompoundParameter)
-    new CompoundParameter("Interval", 100, 10, 1000*60)
+    new CompoundParameter("Interval", 1000, 10, 1000*60)
     .setExponent(3)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
     .setDescription("Base interval for random target value updates");
 
   public final CompoundParameter randomMs = (CompoundParameter)
-    new CompoundParameter("Random", 100, 0, 1000*60)
+    new CompoundParameter("Random", 0, 0, 1000*60)
     .setExponent(3)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
     .setDescription("Range of random time added to each interval");
+
+  public final CompoundParameter chance = (CompoundParameter)
+    new CompoundParameter("Chance", 100, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Chance that the randomizer fires on each interval");
 
   private double randomInterval = 0;
 
@@ -39,8 +63,6 @@ public class Randomizer extends LXModulator implements LXNormalizedParameter, LX
       return periodMs.getValue() + randomInterval * randomMs.getValue();
     }
   };
-
-  private final Click click = new Click(this.totalMs);
 
   public final CompoundParameter speed =
     new CompoundParameter("Speed", 5, .1, 10)
@@ -73,9 +95,12 @@ public class Randomizer extends LXModulator implements LXNormalizedParameter, LX
   }
 
   private Randomizer(String label) {
-    super(label);
+    super(label, null);
+    setPeriod(this.totalMs);
+
     addParameter("periodMs", this.periodMs);
     addParameter("randomMs", this.randomMs);
+    addParameter("chance", this.chance);
 
     addParameter("damping", this.damping);
     addParameter("speed", this.speed);
@@ -86,7 +111,6 @@ public class Randomizer extends LXModulator implements LXNormalizedParameter, LX
 
     addParameter("triggerOut", this.triggerOut);
 
-    this.click.start();
     this.damper.start();
 
     setDescription("Random value updated with specified interval and range");
@@ -101,12 +125,14 @@ public class Randomizer extends LXModulator implements LXNormalizedParameter, LX
   }
 
   @Override
-  protected double computeValue(double deltaMs) {
-    this.click.loop(deltaMs);
-    if (this.click.click()) {
-      this.randomInterval = Math.random();
-      this.target.setValue(LXUtils.lerp(this.min.getValue(), this.max.getValue(), Math.random()));
-      this.triggerOut.setValue(true);
+  protected double computeValue(double deltaMs, double basis) {
+    if (loop() || finished()) {
+      double d = Math.random();
+      if (d*100 < this.chance.getValue()) {
+        this.randomInterval = Math.random();
+        this.target.setValue(LXUtils.lerp(this.min.getValue(), this.max.getValue(), Math.random()));
+        this.triggerOut.setValue(true);
+      }
     }
     this.damper.loop(deltaMs);
     if (this.damping.isOn()) {
@@ -130,6 +156,11 @@ public class Randomizer extends LXModulator implements LXNormalizedParameter, LX
   @Override
   public BooleanParameter getTriggerSource() {
     return this.triggerOut;
+  }
+
+  @Override
+  protected double computeBasis(double basis, double value) {
+    return 0;
   }
 
 }
