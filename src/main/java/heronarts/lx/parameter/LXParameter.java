@@ -57,7 +57,8 @@ public interface LXParameter extends LXPath {
     MIDI_NOTE,
     DEGREES,
     RADIANS,
-    PERCENT;
+    PERCENT,
+    CLOCK;
 
     @Override
     public String format(double value) {
@@ -106,6 +107,8 @@ public interface LXParameter extends LXPath {
         return MidiNote.getPitchString((int) value);
       case DEGREES:
         return String.format("%d", (int) value);
+      case CLOCK:
+        return String.format("%02d", (int) value);
       default:
       case RADIANS:
       case NONE:

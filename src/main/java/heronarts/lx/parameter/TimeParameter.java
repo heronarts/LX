@@ -18,6 +18,8 @@
 
 package heronarts.lx.parameter;
 
+import java.util.Calendar;
+
 /**
  * A time parameter is a utility for specifying a time of day in discrete
  * hours, minutes, and seconds components.
@@ -30,23 +32,31 @@ public class TimeParameter extends AggregateParameter {
   public static final int SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
   public static final int SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
 
-  public final DiscreteParameter hours =
+  public final DiscreteParameter hours = (DiscreteParameter)
     new DiscreteParameter("Hours", 0, 24)
-    .setDescription("Hours of the day");
+    .setUnits(DiscreteParameter.Units.CLOCK)
+    .setDescription("Hours of the day (0-23)");
 
-  public final DiscreteParameter minutes =
+  public final DiscreteParameter minutes = (DiscreteParameter)
     new DiscreteParameter("Minutes", 0, 60)
-    .setDescription("Minutes of the hours");
+    .setUnits(DiscreteParameter.Units.CLOCK)
+    .setDescription("Minutes of the hour (0-59)");
 
-  public final DiscreteParameter seconds =
+  public final DiscreteParameter seconds = (DiscreteParameter)
     new DiscreteParameter("Seconds", 0, 60)
-    .setDescription("Seconds of the hour");
+    .setUnits(DiscreteParameter.Units.CLOCK)
+    .setDescription("Seconds of the minute (0-59)");
 
-  protected TimeParameter(String label) {
+  public TimeParameter(String label) {
     super(label);
     addSubparameter("hours", this.hours);
     addSubparameter("minutes", this.minutes);
     addSubparameter("seconds", this.seconds);
+  }
+
+  @Override
+  public TimeParameter setDescription(String description) {
+    return (TimeParameter) super.setDescription(description);
   }
 
   /**
@@ -73,7 +83,7 @@ public class TimeParameter extends AggregateParameter {
     } else if (seconds > SECONDS_PER_HOUR) {
       throw new IllegalArgumentException("TimeParameter seconds may not be > 59 (" + seconds + ")");
     }
-    return setTime(hours * SECONDS_PER_HOUR + minutes * SECONDS_PER_MINUTE + seconds);
+    return setTime(getSecondsOfDay(hours, minutes, seconds));
   }
 
   /**
@@ -99,6 +109,18 @@ public class TimeParameter extends AggregateParameter {
    */
   public int getSecondsOfDay() {
     return (int) getValue();
+  }
+
+  public static int getSecondsOfDay(int hours, int minutes, int seconds) {
+    return hours * SECONDS_PER_HOUR + minutes * SECONDS_PER_MINUTE + seconds;
+  }
+
+  public static int getSecondsOfDay(Calendar calendar) {
+    return getSecondsOfDay(
+      calendar.get(Calendar.HOUR_OF_DAY),
+      calendar.get(Calendar.MINUTE),
+      calendar.get(Calendar.SECOND)
+    );
   }
 
   @Override
