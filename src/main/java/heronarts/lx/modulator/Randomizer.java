@@ -70,7 +70,8 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     .setDescription("Speed of value update");
 
   public final CompoundParameter accel =
-    new CompoundParameter("Acceleration", 5, 1, 10)
+    new CompoundParameter("Acceleration", 5, .1, 10)
+    .setExponent(2)
     .setDescription("Acceleration on value change");
 
   public final CompoundParameter min =
