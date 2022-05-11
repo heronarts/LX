@@ -824,6 +824,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   // Map of String key to internal-only parameters
   protected final Map<String, LXParameter> internalParameters = new LinkedHashMap<String, LXParameter>();
 
+  protected final Map<String, LXParameter> legacyParameters = new LinkedHashMap<String, LXParameter>();
+
   /**
    * Adds a parameter to this component, using its label as the path by default. This method
    * is deprecated and heavily discouraged, it is best always to provide a specific path
@@ -890,6 +892,22 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         addParameter(path + "/" + entry.getKey(), entry.getValue());
       }
     }
+    return this;
+  }
+
+  /**
+   * Adds a redundant legacy parameter path. If a stored file refers to this path which is no longer active, it
+   * will load to the new parameter position.
+   *
+   * @param legacyPath Legacy parameter path, not used anymore
+   * @param parameter Parameter that should be loaded
+   * @return this
+   */
+  protected LXComponent addLegacyParameter(String legacyPath, LXParameter parameter) {
+    if (this.legacyParameters.containsKey(legacyPath)) {
+      throw new IllegalStateException("Cannot register duplicate parameter to legacy path: " + legacyPath);
+    }
+    this.legacyParameters.put(legacyPath, parameter);
     return this;
   }
 
@@ -1092,7 +1110,9 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       loadParameters(this, obj.getAsJsonObject(KEY_INTERNAL), this.internalParameters);
     }
     if (obj.has(KEY_PARAMETERS)) {
-      loadParameters(this, obj.getAsJsonObject(KEY_PARAMETERS), this.parameters);
+      JsonObject parametersObj = obj.getAsJsonObject(KEY_PARAMETERS);
+      loadParameters(this, parametersObj, this.legacyParameters);
+      loadParameters(this, parametersObj, this.parameters);
     }
 
     // Load child components
