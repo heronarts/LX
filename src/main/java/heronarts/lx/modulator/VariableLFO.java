@@ -20,7 +20,6 @@ package heronarts.lx.modulator;
 
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
@@ -31,23 +30,7 @@ import heronarts.lx.parameter.ObjectParameter;
  */
 @LXModulator.Global("LFO")
 @LXModulator.Device("LFO")
-public class VariableLFO extends LXRangeModulator implements LXWaveshape, LXOscComponent {
-
-  public enum ClockMode {
-    FAST,
-    SLOW,
-    SYNC;
-
-    @Override
-    public String toString() {
-      switch (this) {
-      case FAST: return "Fast";
-      case SLOW: return "Slow";
-      default:
-      case SYNC: return "Sync";
-      }
-    }
-  };
+public class VariableLFO extends LXVariablePeriodModulator implements LXWaveshape, LXOscComponent {
 
   /**
    * Parameter of {@link LXWaveshape} objects that select the wave shape used by this LFO.
@@ -57,22 +40,6 @@ public class VariableLFO extends LXRangeModulator implements LXWaveshape, LXOscC
 
   /** Period of the waveform, in ms */
   public final CompoundParameter periodCustom;
-
-  public final EnumParameter<ClockMode> clockMode =
-    new EnumParameter<ClockMode>("Clock Mode", ClockMode.FAST)
-    .setDescription("Clock mode of the variable LFO");
-
-  public final CompoundParameter periodFast =
-    (CompoundParameter) new CompoundParameter("Period", 1000, 100, 60000)
-    .setDescription("Sets the period of the LFO in msecs")
-    .setExponent(4)
-    .setUnits(LXParameter.Units.MILLISECONDS);
-
-  public final CompoundParameter periodSlow =
-    (CompoundParameter) new CompoundParameter("Period", 10000, 1000, 900000)
-    .setDescription("Sets the period of the LFO in msecs")
-    .setExponent(4)
-    .setUnits(LXParameter.Units.MILLISECONDS);
 
   public final CompoundParameter skew = new CompoundParameter("Skew", 0, -1, 1)
   .setDescription("Sets a skew coefficient for the waveshape")
@@ -138,37 +105,12 @@ public class VariableLFO extends LXRangeModulator implements LXWaveshape, LXOscC
       setPeriod(this.periodFast);
     }
 
-    addParameter("clockMode", this.clockMode);
-    addParameter("periodFast", this.periodFast);
-    addParameter("periodSlow", this.periodSlow);
     addParameter("wave", this.waveshape);
     addParameter("skew", this.skew);
     addParameter("shape", this.shape);
     addParameter("bias", this.bias);
     addParameter("phase", this.phase);
     addParameter("exp", this.exp);
-  }
-
-  @Override
-  public void onParameterChanged(LXParameter p) {
-    super.onParameterChanged(p);
-    if (p == this.clockMode) {
-      switch (this.clockMode.getEnum()) {
-      case FAST:
-        setPeriod(this.periodFast);
-        this.tempoSync.setValue(false);
-        break;
-      case SLOW:
-        setPeriod(this.periodSlow);
-        this.tempoSync.setValue(false);
-        break;
-      case SYNC:
-        this.tempoSync.setValue(true);
-        break;
-      }
-    } else if (p == this.tempoSync) {
-      this.clockMode.setValue(this.tempoSync.isOn() ? ClockMode.SYNC : ClockMode.FAST);
-    }
   }
 
   public LXWaveshape getWaveshape() {

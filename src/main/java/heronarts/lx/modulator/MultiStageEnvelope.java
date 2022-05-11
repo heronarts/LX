@@ -29,15 +29,13 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FixedParameter;
-import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXModulator.Global("Envelope")
 @LXModulator.Device("Envelope")
-public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape, LXOscComponent {
+public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXWaveshape, LXOscComponent {
 
   public class Stage implements LXSerializable {
     private double basis;
@@ -126,12 +124,6 @@ public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape,
     }
   }
 
-  public final CompoundParameter period = (CompoundParameter)
-    new CompoundParameter("Period", 1000, 100, 10000)
-    .setDescription("Sets the period of the Envelope in secs")
-    .setExponent(2)
-    .setUnits(LXParameter.Units.MILLISECONDS);
-
   private final List<Stage> mutableStages = new ArrayList<Stage>();
 
   public final List<Stage> stages = Collections.unmodifiableList(mutableStages);
@@ -148,9 +140,12 @@ public class MultiStageEnvelope extends LXRangeModulator implements LXWaveshape,
 
   public MultiStageEnvelope(String label, float initialValue, float endValue) {
     super(label, new FixedParameter(0), new FixedParameter(1), new FixedParameter(1000));
-    setPeriod(period);
+    setPeriod(this.periodFast);
     setLooping(false);
-    addParameter("period", period);
+    this.tempoLock.setValue(false);
+
+    addLegacyParameter("period", this.periodFast);
+
     this.mutableStages.add(new Stage(0, initialValue, 1, true, false));
     this.mutableStages.add(new Stage(1, endValue, 1, false, true));
     updateStages();
