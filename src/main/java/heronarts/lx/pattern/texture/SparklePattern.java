@@ -218,12 +218,14 @@ public class SparklePattern extends LXPattern {
           sparkle.basis = sparkle.basis % 1.;
 
           int desiredPixels = (int) (model.size * density);
+          float desiredPixelsPerSparkle = desiredPixels / (float) this.numSparkles;
+
           if (desiredPixels < this.numSparkles) {
             sparkle.activePixels = 1;
-            sparkle.isOn = Math.random() < desiredPixels / this.numSparkles;
+            sparkle.isOn = Math.random() < desiredPixelsPerSparkle;
           } else {
             sparkle.isOn = true;
-            sparkle.activePixels = Math.round(desiredPixels / this.numSparkles);
+            sparkle.activePixels = Math.round(desiredPixelsPerSparkle);
           }
 
           // Re-randomize this sparkle
