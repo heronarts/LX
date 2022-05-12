@@ -135,6 +135,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_CHANNEL = "channel";
   private static final String KEY_OFFSET = "offset";
   private static final String KEY_START = "start";
+  private static final String KEY_COMPONENT_INDEX = "componentIndex";
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
   private static final String KEY_REVERSE = "reverse";
@@ -1634,7 +1635,7 @@ public class JsonFixture extends LXFixture {
 
     // Load up the segment definitions
     List<JsonSegmentDefinition> segments = new ArrayList<JsonSegmentDefinition>();
-    loadSegments(segments, outputObj, byteOrder);
+    loadSegments(fixture, segments, outputObj, byteOrder);
 
     this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, fps, segments));
   }
@@ -1654,9 +1655,9 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_STRIDE, KEY_REVERSE };
+  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_STRIDE, KEY_REVERSE };
 
-  private void loadSegments(List<JsonSegmentDefinition> segments, JsonObject outputObj, JsonByteOrderDefinition defaultByteOrder) {
+  private void loadSegments(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject outputObj, JsonByteOrderDefinition defaultByteOrder) {
     if (outputObj.has(KEY_SEGMENTS)) {
       // Specifying an array of segments, keys should not be there by default
       for (String segmentKey : SEGMENT_KEYS) {
@@ -1669,7 +1670,7 @@ public class JsonFixture extends LXFixture {
       if (segmentsArr != null) {
         for (JsonElement segmentElem : segmentsArr) {
           if (segmentElem.isJsonObject()) {
-            loadSegment(segments, segmentElem.getAsJsonObject(), defaultByteOrder, false);
+            loadSegment(fixture, segments, segmentElem.getAsJsonObject(), defaultByteOrder, false);
           } else if (!segmentElem.isJsonNull()) {
             addWarning(KEY_SEGMENTS + " should only contain segment elements in JSON object format, found invalid: " + segmentElem);
           }
@@ -1677,17 +1678,40 @@ public class JsonFixture extends LXFixture {
       }
     } else {
       // Just specifying one, no need for segments key, defined directly in output
-      loadSegment(segments, outputObj, defaultByteOrder, true);
+      loadSegment(fixture, segments, outputObj, defaultByteOrder, true);
     }
   }
 
-  private void loadSegment(List<JsonSegmentDefinition> segments, JsonObject segmentObj, JsonByteOrderDefinition outputByteOrder, boolean isOutput) {
-    int start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
-    if (start < 0) {
-      addWarning("Output " + KEY_START + " may not be negative");
-      return;
+  private void loadSegment(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject segmentObj, JsonByteOrderDefinition outputByteOrder, boolean isOutput) {
+    int start = 0, num = JsonOutputDefinition.ALL_POINTS;
+    if (segmentObj.has(KEY_COMPONENT_INDEX)) {
+      if (segmentObj.has(KEY_START)) {
+        addWarning("Output specifies " + KEY_COMPONENT_INDEX + ", ignoring " + KEY_START);
+      }
+      if (!(fixture instanceof JsonFixture)) {
+        addWarning("Output " + KEY_COMPONENT_INDEX + " may only be used on custom fixtures");
+        return;
+      }
+      int componentIndex = loadInt(segmentObj, KEY_COMPONENT_INDEX, true, "Output " + KEY_COMPONENT_INDEX + " must be a valid integer");
+      if (componentIndex < 0) {
+        addWarning("Output " + KEY_COMPONENT_INDEX + " may not be negative");
+        return;
+      }
+      if (componentIndex >= fixture.children.size()) {
+        addWarning("Output " + KEY_COMPONENT_INDEX + " is out of fixture range (" + componentIndex + ")");
+        return;
+      }
+      LXFixture childComponent = fixture.children.get(componentIndex);
+      start = ((JsonFixture) fixture).getFixtureOffset(childComponent);
+      num = childComponent.totalSize();
+    } else {
+      start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
+      if (start < 0) {
+        addWarning("Output " + KEY_START + " may not be negative");
+        return;
+      }
     }
-    int num = JsonOutputDefinition.ALL_POINTS;
+
     if (segmentObj.has(KEY_NUM)) {
       num = loadInt(segmentObj, KEY_NUM, true, "Output " + KEY_NUM + " must be a valid integer");
       if (num < 0) {
