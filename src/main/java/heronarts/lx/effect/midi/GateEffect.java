@@ -24,8 +24,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
-import heronarts.lx.modulator.ADEnvelope;
-import heronarts.lx.modulator.ADSREnvelope;
+import heronarts.lx.modulator.AHDSREnvelope;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -38,9 +37,30 @@ import heronarts.lx.utils.LXUtils;
 @LXCategory(LXCategory.MIDI)
 public class GateEffect extends LXEffect {
 
+  public enum EnvelopeMode {
+    GATE("Gate", AHDSREnvelope.StageMode.AHDSR, false),
+    TRIGGER("1-Shot", AHDSREnvelope.StageMode.AHD, true);
+
+    public final String label;
+    public final AHDSREnvelope.StageMode stageMode;
+    public final boolean oneshot;
+
+    private EnvelopeMode(String label, AHDSREnvelope.StageMode stageMode, boolean oneshot) {
+      this.label = label;
+      this.stageMode = stageMode;
+      this.oneshot = oneshot;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   public enum TriggerMode {
-    GATE("Gate"),
-    TRIGGER("Trig");
+    RETRIG("Retrig"),
+    LEGATO("Legato"),
+    RESET("Reset");
 
     public final String label;
 
@@ -54,19 +74,31 @@ public class GateEffect extends LXEffect {
     }
   }
 
-  public final CompoundParameter floor =
-    new CompoundParameter("Floor", 0, 0, 100)
-    .setDescription("Minimum Value");
+  public final CompoundParameter initial =
+    new CompoundParameter("Initial", 0, 0, 1)
+    .setDescription("Initial Value");
 
-  public final CompoundParameter ceiling =
-    new CompoundParameter("Ceiling", 100, 0, 100)
-    .setDescription("Maximum Value");
+  public final CompoundParameter peak =
+    new CompoundParameter("Peak", 1, 0, 1)
+    .setDescription("Peak Value");
+
+  public final CompoundParameter delay = (CompoundParameter)
+    new CompoundParameter("Delay", 0, 0, 5000)
+    .setExponent(2)
+    .setUnits(CompoundParameter.Units.MILLISECONDS)
+    .setDescription("Delay Time");
 
   public final CompoundParameter attack = (CompoundParameter)
     new CompoundParameter("Attack", 100, 0, 5000)
     .setExponent(2)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
     .setDescription("Attack Time");
+
+  public final CompoundParameter hold = (CompoundParameter)
+    new CompoundParameter("Hold", 0, 0, 5000)
+    .setExponent(2)
+    .setUnits(CompoundParameter.Units.MILLISECONDS)
+    .setDescription("Hold Time");
 
   public final CompoundParameter decay = (CompoundParameter)
     new CompoundParameter("Decay", 1000, 0, 5000)
@@ -75,7 +107,7 @@ public class GateEffect extends LXEffect {
     .setDescription("Decay Time");
 
   public final CompoundParameter sustain =
-    new CompoundParameter("Sustain", .8)
+    new CompoundParameter("Sustain", 1)
     .setDescription("Sustain Level");
 
   public final CompoundParameter release = (CompoundParameter)
@@ -87,34 +119,55 @@ public class GateEffect extends LXEffect {
   public final CompoundParameter shape =
     new CompoundParameter("Shape", 0, -1, 1)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
-    .setDescription("Shape of the response curves");
+    .setDescription("Shape of the envelope response curves");
+
+  public final EnumParameter<EnvelopeMode> envelopeMode =
+    new EnumParameter<EnvelopeMode>("Mode", EnvelopeMode.GATE)
+    .setDescription("Envelope Mode");
 
   public final EnumParameter<TriggerMode> triggerMode =
-    new EnumParameter<TriggerMode>("Mode", TriggerMode.GATE)
+    new EnumParameter<TriggerMode>("Trigger Mode", TriggerMode.RETRIG)
     .setDescription("Trigger Mode");
 
   public final BooleanParameter manualTrigger =
-    new BooleanParameter("Trigger", false)
+    new BooleanParameter("Engage", false)
     .setMode(BooleanParameter.Mode.MOMENTARY)
-    .setDescription("Manually trigger the gate");
+    .setDescription("Manually engage the gate");
+
+  public final BooleanParameter targetTrigger =
+    new BooleanParameter("Engage", false)
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Engage the gate from a trigger");
 
   public final BooleanParameter midiEnabled =
     new BooleanParameter("MIDI", true)
     .setDescription("Whether to gate on MIDI notes");
 
   public final BoundedParameter midiVelocityResponse = (BoundedParameter)
-    new BoundedParameter("Velocity", 25, 0, 100)
+    new BoundedParameter("Velocity", 25, -100, 100)
     .setUnits(BoundedParameter.Units.PERCENT)
     .setDescription("Degree to which MIDI velocity influences ceiling level");
 
+  public final BoundedParameter midiNoteResponse = (BoundedParameter)
+    new BoundedParameter("Note Response", 0, -100, 100)
+    .setUnits(BoundedParameter.Units.PERCENT)
+    .setDescription("Degree to which MIDI note influences ceiling level");
+
   public final DiscreteParameter midiMinNote = (DiscreteParameter)
-    new DiscreteParameter("Min Note", 0, 128)
+    new DiscreteParameter("Base Note", 0, 128)
     .setUnits(DiscreteParameter.Units.MIDI_NOTE)
-    .setDescription("Minimum MIDI note");
+    .setDescription("Base MIDI note");
 
   public final DiscreteParameter midiNoteRange =
-    new DiscreteParameter("Range", 127, 1, 128)
-    .setDescription("MIDI note range");
+    new DiscreteParameter("Range", 127, 1, 129)
+    .setDescription("MIDI note range, including the base note and above");
+
+  private final FunctionalParameter effectivePeak = new FunctionalParameter("Peak") {
+    @Override
+    public double getValue() {
+      return LXUtils.lerp(initial.getValue(), peak.getValue(), amount);
+    }
+  };
 
   private final FunctionalParameter shapePow = new FunctionalParameter("Shape") {
     @Override
@@ -128,51 +181,67 @@ public class GateEffect extends LXEffect {
     }
   };
 
-  private final ADSREnvelope adsr =
-    new ADSREnvelope("ADSR", 0, 1, this.attack, this.decay, this.sustain, this.release, this.shapePow);
-
-  private final ADEnvelope ad =
-    new ADEnvelope("AD", 0, 1, this.attack, this.decay, this.shapePow);
+  public final AHDSREnvelope env =
+    new AHDSREnvelope("ADSR", this.delay, this.attack, this.hold, this.decay, this.sustain, this.release, this.initial, this.effectivePeak, this.shapePow);
 
   public GateEffect(LX lx) {
     super(lx);
-    addParameter("floor", this.floor);
-    addParameter("ceiling", this.ceiling);
+    addParameter("initial", this.initial);
+    addParameter("peak", this.peak);
+    addParameter("delay", this.delay);
     addParameter("attack", this.attack);
+    addParameter("hold", this.hold);
     addParameter("decay", this.decay);
     addParameter("sustain", this.sustain);
     addParameter("release", this.release);
     addParameter("shape", this.shape);
+    addParameter("envelopeMode", this.envelopeMode);
     addParameter("triggerMode", this.triggerMode);
     addParameter("manualTrigger", this.manualTrigger);
+    addParameter("targetTrigger", this.targetTrigger);
     addParameter("midiEnabled", this.midiEnabled);
     addParameter("midiVelocityResponse", this.midiVelocityResponse);
+    addParameter("midiNoteResponse", this.midiNoteResponse);
     addParameter("midiMinNote", this.midiMinNote);
     addParameter("midiNoteRange", this.midiNoteRange);
 
-    addModulator(this.adsr);
-    addModulator(this.ad);
+    startModulator(this.env);
+
+    onParameterChanged(this.envelopeMode);
+    onParameterChanged(this.triggerMode);
   }
 
-  private float velocity = 1;
+  private float amount = 1;
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (p == this.manualTrigger) {
-      this.velocity = 1;
-      this.ad.engage.setValue(this.manualTrigger.isOn());
-      this.adsr.engage.setValue(this.manualTrigger.isOn());
+    if (p == this.midiEnabled) {
+      // Reset MIDI anytime this is toggled
+      this.midiLegatoCount = 0;
+      this.env.engage.setValue(false);
+    } else if (p == this.manualTrigger) {
+      this.amount = 1;
+      this.env.engage.setValue(this.manualTrigger.isOn());
+    } else if (p == this.targetTrigger) {
+      this.env.engage.setValue(this.targetTrigger.isOn());
+      this.targetTrigger.setValue(false);
     } else if (p == this.midiEnabled) {
-      if (!this.midiEnabled.isOn()) {
-        this.ad.engage.setValue(false);
-        this.adsr.engage.setValue(false);
+      if (!this.midiEnabled.isOn() && !this.manualTrigger.isOn()) {
+        this.env.engage.setValue(false);
       }
+    } else if (p == this.envelopeMode) {
+      EnvelopeMode triggerMode = this.envelopeMode.getEnum();
+      this.env.stageMode.setValue(triggerMode.stageMode);
+      this.env.oneshot.setValue(triggerMode.oneshot);
+    } else if (p == this.triggerMode) {
+      this.env.resetMode.setValue(this.triggerMode.getEnum() == TriggerMode.RESET);
     }
   }
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
-    double level = LXUtils.lerp(100, LXUtils.lerp(this.floor.getValue(), this.ceiling.getValue(), this.velocity * this.ad.getValue()), enabledAmount);
+    // double level = LXUtils.lerp(100, LXUtils.lerp(this.floor.getValue(), this.ceiling.getValue(), this.amount * this.env.getValue()), enabledAmount);
+    double level = LXUtils.lerp(100, 100 * this.env.getValue(), enabledAmount);
     if (level < 100) {
       int mask = LXColor.gray(level);
       int alpha = 0x100;
@@ -189,20 +258,59 @@ public class GateEffect extends LXEffect {
     return (pitch >= min) && (pitch < max);
   }
 
+  private int midiLegatoCount = 0;
+
   @Override
   public void noteOnReceived(MidiNoteOn note) {
     if (this.midiEnabled.isOn() && isValidNote(note)) {
-      this.velocity = LXUtils.lerpf(1, note.getVelocity() / 127f, this.midiVelocityResponse.getNormalizedf());
-      this.ad.engage.setValue(true);
-      this.adsr.engage.setValue(true);
+      ++this.midiLegatoCount;
+      TriggerMode triggerMode = this.triggerMode.getEnum();
+      if ((triggerMode == TriggerMode.LEGATO) && (this.midiLegatoCount > 1)) {
+        return;
+      }
+
+      float velocity = 0;
+      float velResponse = this.midiVelocityResponse.getValuef() / 100;
+      if (velResponse >= 0) {
+        velocity = LXUtils.lerpf(1, note.getVelocity() / 127f, velResponse);
+      } else {
+        velocity = LXUtils.lerpf(1, 1 - (note.getVelocity() / 127f), -velResponse);
+      }
+
+      float noteResponse = this.midiNoteResponse.getValuef() / 100;
+      if (noteResponse >= 0) {
+        float noteVelocity = (note.getPitch() - this.midiMinNote.getValuef() + 1) / this.midiNoteRange.getValuef();
+        this.amount = velocity * LXUtils.lerpf(1, noteVelocity, noteResponse);
+      } else {
+        float noteVelocity = (this.midiMinNote.getValuef() + this.midiNoteRange.getValuef() + 1 - note.getPitch()) / this.midiNoteRange.getValuef();
+        this.amount = velocity * LXUtils.lerpf(1, noteVelocity, -noteResponse);
+      }
+
+      if (this.env.engage.isOn()) {
+        switch (triggerMode) {
+        case RETRIG:
+          this.env.retrig.setValue(true);
+          break;
+        case RESET:
+          this.env.engage.setValue(false);
+          this.env.engage.setValue(true);
+          break;
+        case LEGATO:
+          break;
+        }
+      } else {
+        this.env.engage.setValue(true);
+      }
     }
   }
 
   @Override
   public void noteOffReceived(MidiNote note) {
     if (this.midiEnabled.isOn() && isValidNote(note)) {
-      this.ad.engage.setValue(false);
-      this.adsr.engage.setValue(false);
+      this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
+      if (this.midiLegatoCount == 0) {
+        this.env.engage.setValue(false);
+      }
     }
   }
 
