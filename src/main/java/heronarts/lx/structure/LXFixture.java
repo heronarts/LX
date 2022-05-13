@@ -37,6 +37,7 @@ import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
+import heronarts.lx.output.LEDscapeDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
@@ -88,7 +89,12 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     /**
      * Color Kinetics KiNET - <a href="https://www.colorkinetics.com/">https://www.colorkinetics.com/</a>
      */
-    KINET("KiNET", KinetDatagram.KINET_PORT, KinetDatagram.MAX_DATA_LENGTH);
+    KINET("KiNET", KinetDatagram.KINET_PORT, KinetDatagram.MAX_DATA_LENGTH),
+
+    /**
+     * LEDscape - <a href="https://github.com/Yona-Appletree/LEDscape">https://github.com/Yona-Appletree/LEDscape</a>
+     */
+    LEDSCAPE("LEDscape", LEDscapeDatagram.LEDSCAPE_DEFAULT_PORT, LEDscapeDatagram.MAX_CHANNELS_TEMP);
 
     private final String label;
     public final int defaultPort;

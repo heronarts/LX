@@ -45,6 +45,7 @@ import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.IndexBuffer;
 import heronarts.lx.output.KinetDatagram;
+import heronarts.lx.output.LEDscapeDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.OPCSocket;
@@ -106,6 +107,12 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
             return false;
           }
           return true;
+        case LEDSCAPE:
+          /*if (this.universe >= KinetDatagram.MAX_KINET_PORT) {
+            outputErrors.add(this.protocol.toString() + this.address.toString() + " - overflow port" + this.universe);
+            return false;
+          }*/
+          return true;
         case DDP:
         case OPC:
         default:
@@ -119,6 +126,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         switch (this.protocol) {
         case ARTNET:
         case SACN:
+        case LEDSCAPE:
           err +=
             "univ " + this.universe +
             ((collisionStart == collisionEnd) ? (" channel " + collisionStart) : (" channels " + collisionStart + "-" + collisionEnd));
@@ -194,6 +202,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
           break;
         case DDP:
           output = new DDPDatagram(lx, toIndexBuffer(), this.universe);
+          break;
+        case LEDSCAPE:
+          output = new LEDscapeDatagram(lx, toIndexBuffer());
           break;
         case NONE:
           break;

@@ -132,6 +132,7 @@ public abstract class LXProtocolFixture extends LXFixture {
     case SACN:
     case DDP:
     case KINET:
+    case LEDSCAPE:
     case NONE:
     default:
       return protocol.defaultPort;
@@ -142,6 +143,7 @@ public abstract class LXProtocolFixture extends LXFixture {
     switch (this.protocol.getEnum()) {
     case ARTNET:
     case SACN:
+    case LEDSCAPE:
       return this.artNetUniverse.getValuei();
     case DDP:
       return this.ddpDataOffset.getValuei();
@@ -160,6 +162,7 @@ public abstract class LXProtocolFixture extends LXFixture {
     case ARTNET:
     case SACN:
     case KINET:
+    case LEDSCAPE:
       return this.dmxChannel.getValuei();
     case OPC:
       return this.opcOffset.getValuei();

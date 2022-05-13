@@ -152,7 +152,8 @@ public class JsonFixture extends LXFixture {
     SACN(LXProtocolFixture.Protocol.SACN, KEY_UNIVERSE, KEY_CHANNEL, "sacn", "e131"),
     DDP(LXProtocolFixture.Protocol.DDP, KEY_DDP_DATA_OFFSET, null, "ddp"),
     OPC(LXProtocolFixture.Protocol.OPC, KEY_OPC_CHANNEL, KEY_OFFSET, "opc"),
-    KINET(LXProtocolFixture.Protocol.KINET, KEY_KINET_PORT, KEY_CHANNEL, "kinet");
+    KINET(LXProtocolFixture.Protocol.KINET, KEY_KINET_PORT, KEY_CHANNEL, "kinet"),
+    LEDSCAPE(LXProtocolFixture.Protocol.LEDSCAPE, KEY_UNIVERSE, KEY_CHANNEL, "ledscape");
 
     private final LXProtocolFixture.Protocol protocol;
     private final String universeKey;
@@ -1306,7 +1307,7 @@ public class JsonFixture extends LXFixture {
     }
     int numPoints = loadInt(stripObj, KEY_NUM_POINTS, true, "Strip must specify a positive integer for " + KEY_NUM_POINTS);
     if (numPoints <= 0) {
-      addWarning("Strip must specify positive integer value for " + KEY_NUM_POINTS);
+      // addWarning("Strip must specify positive integer value for " + KEY_NUM_POINTS);  // **JKB: commented temporarily
       return null;
     }
     if (numPoints > StripFixture.MAX_POINTS) {
