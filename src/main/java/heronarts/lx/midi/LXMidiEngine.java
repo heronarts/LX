@@ -34,7 +34,9 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.ObjectParameter;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiException;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiNotification;
@@ -139,10 +141,17 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   private final InitializationLock initializationLock = new InitializationLock();
 
-  public final BooleanParameter computerKeyboardEnabled = (BooleanParameter)
+  public final BooleanParameter computerKeyboardEnabled =
     new BooleanParameter("Computer MIDI Keyboard", false)
-    .setMappable(false)
     .setDescription("Whether the computer keyboard plays notes to MIDI tracks");
+
+  public final DiscreteParameter computerKeyboardOctave =
+    new DiscreteParameter("Computer MIDI Keyboard Octave", 5, 0, 11)
+    .setDescription("What octave the MIDI computer keyboard is in");
+
+  public final ObjectParameter<Integer> computerKeyboardVelocity =
+    new ObjectParameter<Integer>("Computer MIDI Keyboard Velocity", new Integer[] { 1, 20, 40, 60, 80, 100, 127 }, 100)
+    .setDescription("What velocity the MIDI computer keyboard uses");
 
   public LXMidiEngine(LX lx) {
     super(lx);
@@ -151,7 +160,14 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     this.registeredSurfaces.put(APCmini.DEVICE_NAME, APCmini.class);
     this.registeredSurfaces.put(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
     this.registeredSurfaces.put(MidiFighterTwister.DEVICE_NAME, MidiFighterTwister.class);
+
+    this.computerKeyboardEnabled.setMappable(false);
+    this.computerKeyboardOctave.setMappable(false);
+    this.computerKeyboardVelocity.setMappable(false);
+    this.computerKeyboardVelocity.setWrappable(false);
     addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
+    addParameter("computerKeyboardOctave", this.computerKeyboardOctave);
+    addParameter("computerKeyboardVelocity", this.computerKeyboardVelocity);
   }
 
   public LXMidiEngine registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {

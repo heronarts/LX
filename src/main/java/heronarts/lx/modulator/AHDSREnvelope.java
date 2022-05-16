@@ -109,6 +109,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     addParameter("stageMode", this.stageMode);
     addParameter("resetMode", this.resetMode);
     addParameter("oneshot", this.oneshot);
+    setDescription("Envelope Value");
 
     this.delay = delay;
     this.attack = attack;

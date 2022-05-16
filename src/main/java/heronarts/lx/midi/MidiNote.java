@@ -36,7 +36,11 @@ public abstract class MidiNote extends LXShortMessage {
   };
 
   public static String getPitchString(int pitch) {
-    return PITCHES[pitch % 12] +  Integer.toString(pitch/12);
+    // NOTE: we use the ableton/yamaha "C3" middle-C standard here... there is
+    // no clear standard about what number C MIDI note 60 should be given, but
+    // Ableton and "European" manufacturers seem to call it C3. Sticking with
+    // that as matching Ableton is probably the most common use case.
+    return PITCHES[pitch % 12] +  Integer.toString(pitch/12 - 2);
   }
 
   public String getPitchString() {
