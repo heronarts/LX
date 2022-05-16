@@ -32,6 +32,8 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXEngine;
 import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.midi.LXMidiListener;
+import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -241,6 +243,19 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
       }
     }
     return count;
+  }
+
+  /**
+   * Dispatch a MIDI message to any modulators on this engine which are running and receive MIDI
+   *
+   * @param message Message
+   */
+  public void midiDispatch(LXShortMessage message) {
+    for (LXModulator modulator : this.modulators) {
+      if ((modulator instanceof LXMidiListener) && modulator.running.isOn()) {
+        message.dispatch((LXMidiListener) modulator);
+      }
+    }
   }
 
   @Override

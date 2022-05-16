@@ -315,7 +315,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   public void midiDispatch(LXShortMessage message) {
     for (LXEffect effect : this.effects) {
       if (effect.enabled.isOn()) {
-        message.dispatch(effect);
+        effect.midiDispatch(message);
       }
     }
   }

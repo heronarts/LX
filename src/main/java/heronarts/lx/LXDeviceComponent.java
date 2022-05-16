@@ -35,6 +35,7 @@ import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiListener;
+import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -193,6 +194,17 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
   public LXModulationEngine getModulationEngine() {
     return this.modulation;
+  }
+
+  /**
+   * Dispatch a MIDI message to this device, and any of its modulators which should receive that
+   *
+   * @param message Message
+   */
+  public void midiDispatch(LXShortMessage message) {
+    message.dispatch(this);
+    getModulationEngine().midiDispatch(message);
+
   }
 
   protected static final String KEY_DEVICE_VERSION = "deviceVersion";

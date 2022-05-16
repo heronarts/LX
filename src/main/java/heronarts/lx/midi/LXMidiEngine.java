@@ -879,6 +879,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
           channelBus.midiMessage(message);
         }
       }
+      lx.engine.modulation.midiDispatch(message);
     }
   }
 

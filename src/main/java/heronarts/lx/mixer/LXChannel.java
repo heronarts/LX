@@ -301,10 +301,10 @@ public class LXChannel extends LXAbstractChannel {
   @Override
   public void midiDispatch(LXShortMessage message) {
     LXPattern activePattern = getActivePattern();
-    message.dispatch(activePattern);
+    activePattern.midiDispatch(message);
     LXPattern nextPattern = getNextPattern();
     if (nextPattern != null && nextPattern != activePattern) {
-      message.dispatch(nextPattern);
+      nextPattern.midiDispatch(message);
     }
     super.midiDispatch(message);
   }
