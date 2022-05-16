@@ -136,12 +136,12 @@ public class LXRegistry implements LXSerializable {
   static {
     DEFAULT_MODULATORS = new ArrayList<Class<? extends LXModulator>>();
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.VariableLFO.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiModeEnvelope.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiStageEnvelope.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiModeEnvelope.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Randomizer.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Timer.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
   };
 
   private static final List<Class<? extends LXBlend>> DEFAULT_CHANNEL_BLENDS;
