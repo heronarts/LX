@@ -20,6 +20,7 @@ package heronarts.lx.modulator;
 
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.utils.LXUtils;
@@ -85,14 +86,16 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     .setDescription("Sets whether the envelope completely resets on each new engagement");
 
   public final BooleanParameter oneshot =
-    new BooleanParameter("One-shot", false)
+    new BooleanParameter("Oneshot", false)
     .setDescription("Sets whether the envelope plays out even when disengaged");
 
   public EnumParameter<StageMode> stageMode =
     new EnumParameter<StageMode>("Stage Mode", StageMode.AHDSR)
     .setDescription("Which stages of the envelope are active");
 
-  public final LXParameter delay, attack, hold, decay, sustain, release, initial, peak, shape;
+  public final LXParameter delay, attack, hold, decay, sustain, release, initial, peak;
+
+  private LXParameter shape;
 
   private double attackFrom = 0;
   private double decayFrom = 1;
@@ -102,7 +105,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
 
   private double stageBasis = 0;
 
-  public AHDSREnvelope(String label, LXParameter delay, LXParameter attack, LXParameter hold, LXParameter decay, LXParameter sustain, LXParameter release, LXParameter initial, LXParameter peak, LXParameter shape) {
+  public AHDSREnvelope(String label, LXParameter delay, LXParameter attack, LXParameter hold, LXParameter decay, LXParameter sustain, LXParameter release, LXParameter initial, LXParameter peak) {
     super(label);
     addParameter("engage", this.engage);
     addParameter("retrig", this.retrig);
@@ -119,10 +122,15 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     this.release = release;
     this.initial = initial;
     this.peak = peak;
-    this.shape = shape;
+    this.shape = new FixedParameter(1);;
 
     this.attackFrom = initial.getValue();
     this.decayFrom = this.releaseFrom = peak.getValue();
+  }
+
+  public AHDSREnvelope setShape(LXParameter shape) {
+    this.shape = shape;
+    return this;
   }
 
   @Override
@@ -220,8 +228,9 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     case HOLD: return this.hold.getValue();
     case DECAY: return this.decay.getValue();
     case RELEASE: return this.release.getValue();
-
     case SUSTAIN:
+      // End the sustain stage if in one-shot mode and not engaged!
+      return (this.oneshot.isOn() && !this.engage.isOn()) ? 0 : -1;
     case OFF:
     default:
       return -1;
