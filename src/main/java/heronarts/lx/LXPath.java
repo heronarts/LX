@@ -47,6 +47,23 @@ public interface LXPath {
   public LXComponent getParent();
 
   /**
+   * Determines whether this path object is a descendant of a root component
+   *
+   * @param root Root component
+   * @return Whether this object descends from the root
+   */
+  public default boolean isDescendant(LXComponent root) {
+    LXComponent parent = getParent();
+    while (parent != null) {
+      if (parent == root) {
+        return true;
+      }
+      parent = parent.getParent();
+    }
+    return false;
+  }
+
+  /**
    * Gets the canonical path of a Path object up to a given root
    *
    * @param root Root component
