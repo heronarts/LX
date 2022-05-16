@@ -32,7 +32,7 @@ import heronarts.lx.utils.LXUtils;
  */
 @LXModulator.Global("Randomizer")
 @LXModulator.Device("Randomizer")
-public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
+public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXTriggerTarget, LXOscComponent {
 
   public final CompoundParameter periodMs = (CompoundParameter)
     new CompoundParameter("Interval", 1000, 10, 1000*60)
@@ -157,6 +157,11 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
   @Override
   public BooleanParameter getTriggerSource() {
     return this.triggerOut;
+  }
+
+  @Override
+  public BooleanParameter getTriggerTarget() {
+    return this.trigger;
   }
 
   @Override

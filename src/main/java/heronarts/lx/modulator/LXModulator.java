@@ -62,6 +62,8 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
 
   private Polarity polarity = Polarity.UNIPOLAR;
 
+  private boolean isMappingSource = true;
+
   private String description = null;
 
   private int index = 0;
@@ -167,6 +169,15 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
 
   public Polarity getPolarity() {
     return this.polarity;
+  }
+
+  public LXModulator setMappingSource(boolean isMappingSource) {
+    this.isMappingSource = isMappingSource;
+    return this;
+  }
+
+  public boolean isMappingSource() {
+    return this.isMappingSource;
   }
 
   /**

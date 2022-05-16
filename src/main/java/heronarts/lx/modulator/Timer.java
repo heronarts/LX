@@ -86,6 +86,8 @@ public class Timer extends LXModulator implements LXNormalizedParameter, LXTrigg
     addParameter("saturday", this.saturday);
 
     addParameter("triggerOut", this.triggerOut);
+
+    setMappingSource(false);
   }
 
   @Override

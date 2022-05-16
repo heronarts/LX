@@ -33,7 +33,7 @@ import heronarts.lx.utils.LXUtils;
 
 @LXModulator.Global("AHDSR")
 @LXModulator.Device("AHDSR")
-public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, LXNormalizedParameter, LXMidiListener {
+public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, LXNormalizedParameter, LXTriggerSource, LXTriggerTarget, LXMidiListener {
 
   private final static CompoundParameter initial() {
     return new CompoundParameter("Initial", 0, 0, 1)
@@ -197,6 +197,16 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     }
   }
 
+  @Override
+  public BooleanParameter getTriggerSource() {
+    return this.engage;
+  }
+
+  @Override
+  public BooleanParameter getTriggerTarget() {
+    return this.targetTrigger;
+  }
+
   private boolean isValidNote(MidiNote note) {
     int pitch = note.getPitch();
     int min = this.midiMinNote.getValuei();
@@ -257,4 +267,5 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
       }
     }
   }
+
 }
