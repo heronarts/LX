@@ -140,7 +140,7 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     .setDescription("Whether to skip retrigger on legato midi notes");
 
   public MultiModeEnvelope() {
-    this("ADHSR");
+    this("AHDSR");
   }
 
   public MultiModeEnvelope(String label) {
