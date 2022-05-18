@@ -1580,6 +1580,40 @@ public abstract class LXCommand {
         }
       }
     }
+
+    public static class Remove extends LXCommand {
+
+      private final List<LXCommand> remove = new ArrayList<LXCommand>();
+
+      public Remove(LXModulationEngine engine, List<LXParameterModulation> modulations) {
+        for (LXParameterModulation modulation : modulations) {
+          if (modulation instanceof LXCompoundModulation) {
+            this.remove.add(new RemoveModulation(engine, (LXCompoundModulation) modulation));
+          } else if (modulation instanceof LXTriggerModulation) {
+            this.remove.add(new RemoveTrigger(engine, (LXTriggerModulation) modulation));
+          }
+        }
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        for (LXCommand remove : this.remove) {
+          remove.perform(lx);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (LXCommand remove : this.remove) {
+          remove.undo(lx);
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Modulations";
+      }
+    }
   }
 
   public static class Palette {
