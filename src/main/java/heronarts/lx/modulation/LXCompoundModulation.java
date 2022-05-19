@@ -37,7 +37,7 @@ public class LXCompoundModulation extends LXParameterModulation {
     new EnumParameter<LXParameter.Polarity>("Polarity", LXParameter.Polarity.UNIPOLAR)
     .setDescription("Specifies whether this modulation is unipolar (one-directional) or bipolar (bi-directional)");
 
-  public final BoundedParameter range = (BoundedParameter)
+  public final BoundedParameter range =
     new BoundedParameter("Range", 0, -1, 1)
     .setDescription("Specifies the depth of this modulation, may be positive or negative")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
@@ -55,8 +55,11 @@ public class LXCompoundModulation extends LXParameterModulation {
     this.source = source;
     this.target = target;
     this.polarity.setValue(source.getPolarity());
-    addParameter("Polarity", this.polarity);
-    addParameter("Range", this.range);
+    addParameter("polarity", this.polarity);
+    addParameter("range", this.range);
+    addLegacyParameter("Polarity", this.polarity);
+    addLegacyParameter("Range", this.range);
+
     target.addModulation(this);
     setParent(scope);
   }
