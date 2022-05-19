@@ -219,10 +219,10 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     // NOTE(mcslee): this may not be strictly necessary? The dispose() call in
     // super.removeModulator is probably going to do it again...
     removeModulations(modulator);
-    super.removeModulator(modulator);
     for (Listener listener : this.listeners) {
       listener.modulatorRemoved(this, modulator);
     }
+    super.removeModulator(modulator);
     return modulator;
   }
 
