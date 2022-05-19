@@ -19,8 +19,10 @@
 package heronarts.lx.parameter;
 
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 import heronarts.lx.modulation.LXCompoundModulation;
 import heronarts.lx.utils.LXUtils;
@@ -35,6 +37,27 @@ public class CompoundParameter extends BoundedParameter {
 
   public final List<LXCompoundModulation> modulations =
     Collections.unmodifiableList(this.mutableModulations);
+
+  public interface ModulationListener {
+    public void modulationAdded(CompoundParameter parameter, LXCompoundModulation modulation);
+    public void modulationRemoved(CompoundParameter parameter, LXCompoundModulation modulation);
+  }
+
+  private final List<ModulationListener> modulationListeners = new ArrayList<ModulationListener>();
+
+  public final CompoundParameter addModulationListener(ModulationListener listener) {
+    Objects.requireNonNull(listener, "May not add null CompoundParameter.ModulationListener");
+    if (this.modulationListeners.contains(listener)) {
+      throw new IllegalStateException("Cannod add CompoundParameter.ModulationListener listener twice: " + listener);
+    }
+    this.modulationListeners.add(listener);
+    return this;
+  }
+
+  public final CompoundParameter removeModulationListener(ModulationListener listener) {
+    this.modulationListeners.remove(listener);
+    return this;
+  }
 
   /**
    * Labeled parameter with value of 0 and range of 0-1
@@ -130,6 +153,9 @@ public class CompoundParameter extends BoundedParameter {
       throw new IllegalStateException("Cannot add same modulation twice");
     }
     this.mutableModulations.add(modulation);
+    for (ModulationListener listener : this.modulationListeners) {
+      listener.modulationAdded(this, modulation);
+    }
     bang();
     return this;
   }
@@ -142,6 +168,9 @@ public class CompoundParameter extends BoundedParameter {
    */
   public CompoundParameter removeModulation(LXCompoundModulation modulation) {
     this.mutableModulations.remove(modulation);
+    for (ModulationListener listener : this.modulationListeners) {
+      listener.modulationRemoved(this, modulation);
+    }
     bang();
     return this;
   }
