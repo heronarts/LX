@@ -37,7 +37,7 @@ import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
-import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.LXParameter;
 
 public class LXModulationEngine extends LXModulatorComponent implements LXOscComponent {
 
@@ -67,7 +67,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     addArray("trigger", this.triggers);
   }
 
-  public boolean isValidTarget(CompoundParameter target) {
+  public boolean isValidTarget(LXParameter target) {
     LXComponent parent = getParent();
     if (parent instanceof LXEngine) {
       return true;
