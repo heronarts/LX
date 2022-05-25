@@ -172,19 +172,30 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void unregister() {
+      unregister(false);
+    }
+
+    private void unregister(final boolean close) {
       if (this.registered) {
         // NOTE(mcslee): horrible hack here... firing this off on a separate thread
-        // because this call can unfortuantely block for many seconds
+        // because this call can unfortunately block for many seconds
         new Thread(() -> {
           log("Unregistering zeroconf OSC services...");
           this.jmdns.unregisterAllServices();
+          if (close) {
+            try {
+              this.jmdns.close();
+            } catch (IOException iox) {
+              error(iox, "Exception closing JmDNS");
+            }
+          }
         }).start();
       }
       this.registered = false;
     }
 
     private void dispose() {
-      unregister();
+      unregister(true);
     }
   }
 
