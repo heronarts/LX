@@ -95,6 +95,7 @@ public class LX {
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
+    public boolean zeroconf = false;
     public LXEngine.ThreadMode threadMode = LXEngine.ThreadMode.SCHEDULED_EXECUTOR_SERVICE;
     public int engineThreadPriority = Thread.MAX_PRIORITY;
     public String mediaPath = ".";
@@ -1282,6 +1283,8 @@ public class LX {
         if (++i < args.length) {
           setLogFile(new File(args[i]));
         }
+      } else if ("-zc".equals(args[i]) || ("--zeroconf").equals(args[i])) {
+        flags.zeroconf = true;
       } else if (args[i].endsWith(".lxp") || args[i].endsWith(".lxs")) {
         projectFile = new File(args[i]);
       }

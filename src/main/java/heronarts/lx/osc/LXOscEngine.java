@@ -31,10 +31,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import javax.jmdns.JmDNS;
+import javax.jmdns.ServiceInfo;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -124,8 +128,76 @@ public class LXOscEngine extends LXComponent {
 
   private EngineTransmitter engineTransmitter;
 
+  private final LXOscQueryServer oscQueryServer;
+  private final Zeroconf zeroconf;
+
+  private static class Zeroconf {
+
+    private final JmDNS jmdns;
+    private boolean registered = false;
+
+    private static Zeroconf create() {
+      try {
+        return new Zeroconf();
+      } catch (Exception x) {
+        error(x, "Failed to create Zeroconf instance");
+      }
+      return null;
+    }
+
+    private Zeroconf() throws IOException {
+      this.jmdns = JmDNS.create(InetAddress.getLocalHost());
+    }
+
+    private void register(int port) {
+      unregister();
+      try {
+        log("Registering zeroconf OSC services on port " + port);
+        this.jmdns.registerService(ServiceInfo.create(
+          "_osc._udp.local.",
+          "LX:" + port,
+          port,
+          ""
+        ));
+        this.registered = true;
+        this.jmdns.registerService(ServiceInfo.create(
+          "_oscjson._tcp.local.",
+          "LX:" + port,
+          port,
+          ""
+        ));
+      } catch (Exception x) {
+        error(x, "Failed to register zeroconf services");
+      }
+    }
+
+    private void unregister() {
+      if (this.registered) {
+        // NOTE(mcslee): horrible hack here... firing this off on a separate thread
+        // because this call can unfortuantely block for many seconds
+        new Thread(() -> {
+          log("Unregistering zeroconf OSC services...");
+          this.jmdns.unregisterAllServices();
+        }).start();
+      }
+      this.registered = false;
+    }
+
+    private void dispose() {
+      unregister();
+    }
+  }
+
   public LXOscEngine(LX lx) {
     super(lx, "OSC");
+
+    if (lx.flags.zeroconf) {
+      this.oscQueryServer = new LXOscQueryServer(lx);
+      this.zeroconf = Zeroconf.create();
+    } else {
+      this.oscQueryServer = null;
+      this.zeroconf = null;
+    }
 
     // Note order of ioActive parameter coming after host / port, this saves some
     // churn on a reload, update the host and port before trying to bind
@@ -198,8 +270,7 @@ public class LXOscEngine extends LXComponent {
           throw new OscException();
         }
       } catch (Exception x) {
-        error("Failed to handle OSC message: "
-          + message.getAddressPattern().getValue());
+        error("Failed to handle OSC message: " + message.getAddressPattern().getValue());
       }
     }
 
@@ -267,6 +338,9 @@ public class LXOscEngine extends LXComponent {
           } else if (parameter instanceof DiscreteParameter) {
             oscInt.setValue(((DiscreteParameter) parameter).getValuei());
             oscMessage.add(oscInt);
+          } else if (parameter instanceof CompoundParameter) {
+            oscFloat.setValue(((CompoundParameter) parameter).getBaseNormalizedf());
+            oscMessage.add(oscFloat);
           } else if (parameter instanceof LXNormalizedParameter) {
             oscFloat.setValue(((LXNormalizedParameter) parameter).getNormalizedf());
             oscMessage.add(oscFloat);
@@ -491,6 +565,12 @@ public class LXOscEngine extends LXComponent {
       this.unknownReceiveHost.setValue(false);
       this.receiveState.setValue(IOState.BOUND);
       log("Started OSC listener " + this.engineReceiver.address);
+      if (this.oscQueryServer != null) {
+        this.oscQueryServer.bind(port);
+      }
+      if (this.zeroconf != null) {
+        this.zeroconf.register(port);
+      }
     } catch (UnknownHostException uhx) {
       error("Bad OSC receive host: " + uhx.getLocalizedMessage());
       this.unknownReceiveHost.setValue(true);
@@ -507,6 +587,12 @@ public class LXOscEngine extends LXComponent {
     if (this.engineReceiver != null) {
       this.engineReceiver.stop();
       this.engineReceiver = null;
+    }
+    if (this.oscQueryServer != null) {
+      this.oscQueryServer.unbind();
+    }
+    if (this.zeroconf != null) {
+      this.zeroconf.unregister();
     }
     this.receiveState.setValue(state);
   }
@@ -590,6 +676,12 @@ public class LXOscEngine extends LXComponent {
   @Override
   public void dispose() {
     super.dispose();
+    if (this.oscQueryServer != null) {
+      this.oscQueryServer.unbind();
+    }
+    if (this.zeroconf != null) {
+      this.zeroconf.dispose();
+    }
     stopReceiver(IOState.STOPPED);
     for (Receiver receiver : this.receivers) {
       receiver.stop();

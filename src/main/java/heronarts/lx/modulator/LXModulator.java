@@ -64,8 +64,6 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
 
   private boolean isMappingSource = true;
 
-  private String description = null;
-
   private int index = 0;
 
   /**
@@ -118,16 +116,6 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
       return parent.getOscAddress() + "/" + getOscPath();
     }
     return null;
-  }
-
-  public LXParameter setDescription(String description) {
-    this.description = description;
-    return this;
-  }
-
-  @Override
-  public String getDescription() {
-    return this.description;
   }
 
   @Override

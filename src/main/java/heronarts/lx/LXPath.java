@@ -40,6 +40,14 @@ public interface LXPath {
   public String getLabel();
 
   /**
+   * Returns a contextual help message explaining the purpose of this parameter or component
+   * to the user, or null if none is available.
+   *
+   * @return Contextual help string explaining purpose of the element
+   */
+  public String getDescription();
+
+  /**
    * Returns the component that this object belongs to
    *
    * @return Parent component of this path object, or null if it is unowned

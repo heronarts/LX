@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.DiscreteColorParameter;
@@ -106,6 +107,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * the LX hierarchy yet.
    */
   private int id;
+
+  private String description = null;
 
   /**
    * The user-facing label of this component. May be editable if this LXComponent
@@ -674,6 +677,101 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
   }
 
+  public JsonObject toOscQuery() {
+    JsonObject obj = new JsonObject();
+    obj.addProperty("FULL_PATH", getCanonicalPath());
+    String description = getDescription();
+    if (description == null) {
+      description = getClass().getName();
+    }
+    obj.addProperty("DESCRIPTION", description);
+    JsonObject contents = new JsonObject();
+    for (Map.Entry<String, LXParameter> parameterEntry : this.parameters.entrySet()) {
+      LXParameter parameter = parameterEntry.getValue();
+      if ((this.label == parameter) && !(this instanceof Renamable)) {
+        continue;
+      }
+      contents.add(parameterEntry.getKey(), toOscQuery(parameter));
+    }
+    for (Map.Entry<String, LXComponent> childEntry : this.children.entrySet()) {
+      LXComponent child = childEntry.getValue();
+      if (child instanceof LXOscComponent) {
+        contents.add(childEntry.getKey(), child.toOscQuery());
+      }
+    }
+    for (Map.Entry<String, List<? extends LXComponent>> childArrayEntry : this.childArrays.entrySet()) {
+      JsonObject arrObj = new JsonObject();
+      arrObj.addProperty("FULL_PATH", getCanonicalPath() + "/" + childArrayEntry.getKey());
+      arrObj.addProperty("DESCRIPTION", "Container element");
+      JsonObject arrContents = new JsonObject();
+      List<? extends LXComponent> childArr = childArrayEntry.getValue();
+      for (int i = 0; i < childArr.size(); ++i) {
+        LXComponent child = childArr.get(i);
+        if (child instanceof LXOscComponent) {
+          arrContents.add("" + (i+1), child.toOscQuery());
+        }
+      }
+      arrObj.add("CONTENTS", arrContents);
+      contents.add(childArrayEntry.getKey(), arrObj);
+    }
+
+    obj.add("CONTENTS", contents);
+    return obj;
+  }
+
+  public JsonObject toOscQuery(LXParameter parameter) {
+    if (!(this instanceof LXOscComponent)) {
+      return null;
+    }
+    JsonObject obj = new JsonObject();
+    obj.addProperty("FULL_PATH", parameter.getCanonicalPath());
+    obj.addProperty("DESCRIPTION", parameter.getDescription());
+
+    JsonObject range = null;
+
+    // TODO(mcslee): handle aggregate parameter in here
+    if (parameter instanceof BooleanParameter) {
+      boolean isOn = ((BooleanParameter) parameter).isOn();
+      obj.addProperty("VALUE", isOn);
+      obj.addProperty("TYPE", isOn ? "T" : "F");
+    } else if (parameter instanceof StringParameter) {
+      obj.addProperty("VALUE", ((StringParameter)parameter).getString());
+      obj.addProperty("TYPE", "s");
+    } else if (parameter instanceof ColorParameter) {
+      obj.addProperty("VALUE", ((ColorParameter)parameter).getColor());
+      obj.addProperty("TYPE", "r");
+    } else if (parameter instanceof DiscreteParameter) {
+      obj.addProperty("VALUE", ((DiscreteParameter) parameter).getValuei());
+      obj.addProperty("TYPE", "i");
+      range = new JsonObject();
+      range.addProperty("MIN", ((DiscreteParameter) parameter).getMinValue());
+      range.addProperty("MAX", ((DiscreteParameter) parameter).getMaxValue());
+    } else if (parameter instanceof CompoundParameter) {
+      obj.addProperty("VALUE", ((CompoundParameter) parameter).getBaseNormalizedf());
+      obj.addProperty("TYPE", "f");
+      range = new JsonObject();
+      range.addProperty("MIN", 0f);
+      range.addProperty("MAX", 1f);
+    } else if (parameter instanceof LXNormalizedParameter) {
+      obj.addProperty("VALUE", ((LXNormalizedParameter) parameter).getNormalizedf());
+      obj.addProperty("TYPE", "f");
+      range = new JsonObject();
+      range.addProperty("MIN", 0f);
+      range.addProperty("MAX", 1f);
+    } else {
+      obj.addProperty("VALUE", parameter.getValuef());
+      obj.addProperty("TYPE", "f");
+    }
+
+    if (range != null) {
+      JsonArray rangeArr = new JsonArray();
+      rangeArr.add(range);
+      obj.add("RANGE", rangeArr);
+    }
+
+    return obj;
+  }
+
   /**
    * Finds the child parameter or component at the specified path
    *
@@ -745,6 +843,15 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    */
   public String getLabel() {
     return this.label.getString();
+  }
+
+  public String getDescription() {
+    return this.description;
+  }
+
+  protected LXComponent setDescription(String description) {
+    this.description = description;
+    return this;
   }
 
   /**
