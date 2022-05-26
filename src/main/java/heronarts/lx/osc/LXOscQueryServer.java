@@ -139,40 +139,65 @@ public class LXOscQueryServer {
       socket.close();
     }
 
-    private void sendResponse(URI uri, OutputStream os) throws IOException {
-      String rc = "200 OK";
-      String query = uri.getQuery();
+    private class OscQueryResponse {
+      private boolean ready = false;
+      private String rc = "200 OK";
+      private JsonObject obj = new JsonObject();
+    }
 
-      JsonObject response = new JsonObject();
-      if ("HOST_INFO".equals(query)) {
-        response.addProperty("NAME", "Chromatik");
-        response.addProperty("OSC_PORT", LXOscEngine.DEFAULT_RECEIVE_PORT);
+    private void sendResponse(final URI uri, OutputStream os) throws IOException {
+      final OscQueryResponse response = new OscQueryResponse();
+      if ("HOST_INFO".equals(uri.getQuery())) {
+        response.obj.addProperty("NAME", "LX:" + this.port);
+        response.obj.addProperty("OSC_PORT", this.port);
         JsonObject extensions = new JsonObject();
         extensions.addProperty("VALUE", true);
         extensions.addProperty("DESCRIPTION", true);
-        response.add("EXTENSIONS", extensions);
-      } else if ("/".equals(uri.getPath())) {
-        response.addProperty("FULL_PATH", "/");
-        response.addProperty("DESCRIPTION", "Root Node");
-        JsonObject contents = new JsonObject();
-        contents.add("lx", lx.engine.toOscQuery());
-        response.add("CONTENTS", contents);
+        response.obj.add("EXTENSIONS", extensions);
       } else {
-        LXPath path = LXPath.get(lx, uri.getPath());
-        if (path == null) {
-          rc = "404 NOT FOUND";
-        } else if (path instanceof LXComponent) {
-          response = ((LXComponent) path).toOscQuery();
-        } else if (path instanceof LXParameter) {
-          response = path.getParent().toOscQuery((LXParameter) path);
+        // We need to iterate through the LX hierarchy...
+        // prepare the OSC query response on the LX engine thread
+        lx.engine.addTask(() -> {
+          if ("/".equals(uri.getPath())) {
+            response.obj.addProperty("FULL_PATH", "/");
+            response.obj.addProperty("DESCRIPTION", "Root Node");
+            JsonObject contents = new JsonObject();
+            contents.add("lx", lx.engine.toOscQuery());
+            response.obj.add("CONTENTS", contents);
+          } else {
+            LXPath path = LXPath.get(lx, uri.getPath());
+            if (path == null) {
+              response.rc = "404 NOT FOUND";
+            } else if (path instanceof LXComponent) {
+              response.obj = ((LXComponent) path).toOscQuery();
+            } else if (path instanceof LXParameter) {
+              response.obj = path.getParent().toOscQuery((LXParameter) path);
+            }
+          }
+          // Notify the HTTP server thread that the goods are good to go
+          synchronized (response) {
+            response.ready = true;
+            response.notify();
+          }
+        });
+
+        // Wait for the LX engine thread to prepare the response object
+        synchronized (response) {
+          if (!response.ready) {
+            try {
+              response.wait();
+            } catch (InterruptedException ix) {
+              // ignore it...
+            }
+          }
         }
       }
 
-      String json = new Gson().toJson(response);
-      byte[] bytes = json.getBytes();
+      String json = new Gson().toJson(response.obj);
+      byte[] bytes = json.getBytes("UTF-8");
 
       String httpHeader =
-        "HTTP/1.1 " + rc + "\r\n" +
+        "HTTP/1.1 " + response.rc + "\r\n" +
         "Content-Type: application/json\r\n"+
         "Connection: keep-alive\r\n"+
         "Content-Length: " + bytes.length + "\r\n\r\n";
