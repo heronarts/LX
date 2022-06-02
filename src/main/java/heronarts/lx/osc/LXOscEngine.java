@@ -133,19 +133,21 @@ public class LXOscEngine extends LXComponent {
 
   private static class Zeroconf {
 
+    private final String serviceName;
     private final JmDNS jmdns;
     private boolean registered = false;
 
-    private static Zeroconf create() {
+    private static Zeroconf create(String serviceName) {
       try {
-        return new Zeroconf();
+        return new Zeroconf(serviceName);
       } catch (Exception x) {
         error(x, "Failed to create Zeroconf instance");
       }
       return null;
     }
 
-    private Zeroconf() throws IOException {
+    private Zeroconf(String serviceName) throws IOException {
+      this.serviceName = serviceName;
       this.jmdns = JmDNS.create(InetAddress.getLocalHost());
     }
 
@@ -155,14 +157,14 @@ public class LXOscEngine extends LXComponent {
         log("Registering zeroconf OSC services on port " + port);
         this.jmdns.registerService(ServiceInfo.create(
           "_osc._udp.local.",
-          "LX:" + port,
+          this.serviceName + ":" + port,
           port,
           ""
         ));
         this.registered = true;
         this.jmdns.registerService(ServiceInfo.create(
           "_oscjson._tcp.local.",
-          "LX:" + port,
+          this.serviceName + ":" + port,
           port,
           ""
         ));
@@ -204,7 +206,7 @@ public class LXOscEngine extends LXComponent {
 
     if (lx.flags.zeroconf) {
       this.oscQueryServer = new LXOscQueryServer(lx);
-      this.zeroconf = Zeroconf.create();
+      this.zeroconf = Zeroconf.create(lx.flags.zeroconfServiceName);
     } else {
       this.oscQueryServer = null;
       this.zeroconf = null;

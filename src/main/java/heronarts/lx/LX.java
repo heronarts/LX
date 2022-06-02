@@ -96,6 +96,7 @@ public class LX {
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
     public boolean zeroconf = false;
+    public String zeroconfServiceName = "LX";
     public LXEngine.ThreadMode threadMode = LXEngine.ThreadMode.SCHEDULED_EXECUTOR_SERVICE;
     public int engineThreadPriority = Thread.MAX_PRIORITY;
     public String mediaPath = ".";
