@@ -168,6 +168,14 @@ public class LXUtils {
     return (v1 + v2) / 2.f;
   }
 
+  public static double dist(double x1, double y1, double x2, double y2) {
+    return Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+  }
+
+  public static float distf(float x1, float y1, float x2, float y2) {
+    return (float) Math.sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+  }
+
   /**
    * Computes the distance between v1 and v2 with a wrap-around at the modulus.
    * Both v1 and v2 must be in the range [0, modulus]. For example, if v1=1, v2=11,
