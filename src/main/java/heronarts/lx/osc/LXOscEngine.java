@@ -178,12 +178,14 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void unregister(final boolean close) {
-      if (this.registered) {
+      final boolean registered = this.registered;
+      if (registered || close) {
         // NOTE(mcslee): horrible hack here... firing this off on a separate thread
         // because this call can unfortunately block for many seconds
         new Thread(() -> {
-          log("Unregistering zeroconf OSC services...");
-          this.jmdns.unregisterAllServices();
+          if (registered) {
+            this.jmdns.unregisterAllServices();
+          }
           if (close) {
             try {
               this.jmdns.close();
