@@ -28,15 +28,17 @@ import heronarts.lx.pattern.LXPattern;
 
 public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Listener {
 
-  public final PatternClipLane patternLane = new PatternClipLane(this);
-
   public final LXChannel channel;
+  public final PatternClipLane patternLane;
 
   public LXChannelClip(LX lx, LXChannel channel, int index) {
     super(lx, channel, index, false);
     this.channel = channel;
-    this.mutableLanes.add(this.patternLane);
+    this.mutableLanes.add(this.patternLane = new PatternClipLane(this));
 
+    // Note that we passed false to the parent class's register listener, because
+    // we're going to do it here ourselves, and a channel listener supersedes
+    // a bus listener
     channel.addListener(this);
     for (LXPattern pattern : channel.patterns) {
       registerComponent(pattern);

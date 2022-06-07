@@ -56,6 +56,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXSnapshot;
+import heronarts.lx.snapshot.LXGlobalSnapshot;
 import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.JsonFixture;
 import heronarts.lx.structure.LXFixture;
@@ -1825,7 +1826,7 @@ public abstract class LXCommand {
 
     public static class AddSnapshot extends LXCommand {
 
-      private ComponentReference<LXSnapshot> snapshot;
+      private ComponentReference<LXGlobalSnapshot> snapshot;
       private JsonObject initialObj = null;
       private JsonObject snapshotObj = null;
       private final int index;
@@ -1847,20 +1848,20 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) {
         if (this.snapshotObj == null) {
-          LXSnapshot instance;
+          LXGlobalSnapshot instance;
           if (this.initialObj != null) {
-            instance = new LXSnapshot(lx);
+            instance = new LXGlobalSnapshot(lx);
             instance.load(lx, this.initialObj);
             lx.engine.snapshots.addSnapshot(instance, this.index);
           } else {
             instance = lx.engine.snapshots.addSnapshot();
           }
-          this.snapshot = new ComponentReference<LXSnapshot>(instance);
+          this.snapshot = new ComponentReference<LXGlobalSnapshot>(instance);
           this.snapshotObj = LXSerializable.Utils.toObject(lx, instance);
         } else {
-          LXSnapshot instance = new LXSnapshot(lx);
+          LXGlobalSnapshot instance = new LXGlobalSnapshot(lx);
           instance.load(lx, this.snapshotObj);
-          this.snapshot = new ComponentReference<LXSnapshot>(instance);
+          this.snapshot = new ComponentReference<LXGlobalSnapshot>(instance);
           lx.engine.snapshots.addSnapshot(instance);
         }
       }
@@ -1873,12 +1874,12 @@ public abstract class LXCommand {
 
     public static class MoveSnapshot extends LXCommand {
 
-      private final ComponentReference<LXSnapshot> snapshot;
+      private final ComponentReference<LXGlobalSnapshot> snapshot;
       private final int fromIndex;
       private final int toIndex;
 
-      public MoveSnapshot(LXSnapshot snapshot, int toIndex) {
-        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+      public MoveSnapshot(LXGlobalSnapshot snapshot, int toIndex) {
+        this.snapshot = new ComponentReference<LXGlobalSnapshot>(snapshot);
         this.fromIndex = snapshot.getIndex();
         this.toIndex = toIndex;
       }
@@ -1901,13 +1902,13 @@ public abstract class LXCommand {
 
     public static class RemoveSnapshot extends RemoveComponent {
 
-      private final ComponentReference<LXSnapshot> snapshot;
+      private final ComponentReference<LXGlobalSnapshot> snapshot;
       private final JsonObject snapshotObj;
       private final int snapshotIndex;
 
-      public RemoveSnapshot(LXSnapshot snapshot) {
+      public RemoveSnapshot(LXGlobalSnapshot snapshot) {
         super(snapshot);
-        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+        this.snapshot = new ComponentReference<LXGlobalSnapshot>(snapshot);
         this.snapshotObj = LXSerializable.Utils.toObject(snapshot);
         this.snapshotIndex = snapshot.getIndex();
       }
@@ -1924,7 +1925,7 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        LXSnapshot snapshot = new LXSnapshot(lx);
+        LXGlobalSnapshot snapshot = new LXGlobalSnapshot(lx);
         snapshot.load(lx, this.snapshotObj);
         lx.engine.snapshots.addSnapshot(snapshot, this.snapshotIndex);
         super.undo(lx);
@@ -1960,12 +1961,12 @@ public abstract class LXCommand {
 
     public static class Recall extends LXCommand {
 
-      private final ComponentReference<LXSnapshot> snapshot;
+      private final ComponentReference<LXGlobalSnapshot> snapshot;
       private final List<LXCommand> commands = new ArrayList<LXCommand>();
       private boolean recalled = false;
 
-      public Recall(LXSnapshot snapshot) {
-        this.snapshot = new ComponentReference<LXSnapshot>(snapshot);
+      public Recall(LXGlobalSnapshot snapshot) {
+        this.snapshot = new ComponentReference<LXGlobalSnapshot>(snapshot);
       }
 
       @Override

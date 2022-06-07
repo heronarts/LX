@@ -583,6 +583,15 @@ public class LXChannel extends LXAbstractChannel {
     return this.patterns.get(this.focusedPattern.getValuei());
   }
 
+  @Override
+  public String getClipLabel() {
+    LXPattern pattern = getActivePattern();
+    if (pattern != null) {
+      return pattern.getLabel();
+    }
+    return super.getClipLabel();
+  }
+
   /**
    * Returns the index of the currently active pattern, if any
    *

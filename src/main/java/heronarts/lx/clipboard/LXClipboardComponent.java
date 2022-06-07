@@ -31,7 +31,7 @@ import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
-import heronarts.lx.snapshot.LXSnapshot;
+import heronarts.lx.snapshot.LXGlobalSnapshot;
 import heronarts.lx.structure.LXFixture;
 
 public class LXClipboardComponent<T extends LXComponent> implements LXClipboardItem {
@@ -68,9 +68,9 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
     }
   }
 
-  public static class Snapshot extends LXClipboardComponent<LXSnapshot> {
-    public Snapshot(LXSnapshot snapshot) {
-      super(LXSnapshot.class, snapshot);
+  public static class Snapshot extends LXClipboardComponent<LXGlobalSnapshot> {
+    public Snapshot(LXGlobalSnapshot snapshot) {
+      super(LXGlobalSnapshot.class, snapshot);
     }
   }
 

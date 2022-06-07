@@ -349,12 +349,17 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
       this.mutableClips.add(null);
     }
     LXClip clip = constructClip(index);
-    clip.label.setValue("Clip-" + (index+1));
+    clip.snapshot.initialize();
+    clip.label.setValue(getClipLabel() + "-" + (index+1));
     this.mutableClips.set(index, clip);
     for (ClipListener listener : this.clipListeners) {
       listener.clipAdded(this, clip);
     }
     return clip;
+  }
+
+  protected String getClipLabel() {
+    return "Clip";
   }
 
   public LXBus stopClips() {

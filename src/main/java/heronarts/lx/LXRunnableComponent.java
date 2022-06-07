@@ -66,6 +66,7 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
       }
     } else if (parameter == this.trigger) {
       if (this.trigger.isOn()) {
+        onTrigger();
         onReset();
         start();
         this.trigger.setValue(false);
@@ -126,8 +127,8 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
    * @return this
    */
   public final LXRunnableComponent reset() {
-    this.stop();
-    this.onReset();
+    stop();
+    onReset();
     return this;
   }
 
@@ -150,6 +151,15 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
    */
   protected/* abstract */void onReset() {
   }
+
+  /**
+   * Optional subclass method when trigger is fired, called before onReset
+   * and onStart
+   */
+  protected/* abstract */void onTrigger() {
+
+  }
+
 
   @Override
   public void loop(double deltaMs) {

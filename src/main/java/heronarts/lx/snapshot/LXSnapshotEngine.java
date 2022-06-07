@@ -32,8 +32,10 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.LXClip;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -93,7 +95,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
      * @param engine Snapshot engine
      * @param snapshot Snapshot
      */
-    public void snapshotAdded(LXSnapshotEngine engine, LXSnapshot snapshot);
+    public void snapshotAdded(LXSnapshotEngine engine, LXGlobalSnapshot snapshot);
 
     /**
      * A snapshot has been removed from the engine
@@ -101,7 +103,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
      * @param engine Snapshot engine
      * @param snapshot Snapshot that was removed
      */
-    public void snapshotRemoved(LXSnapshotEngine engine, LXSnapshot snapshot);
+    public void snapshotRemoved(LXSnapshotEngine engine, LXGlobalSnapshot snapshot);
 
     /**
      * A snapshot's position in the engine has been moved
@@ -109,17 +111,17 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
      * @param engine Snapshot engine
      * @param snapshot Snapshot that has been moved
      */
-    public void snapshotMoved(LXSnapshotEngine engine, LXSnapshot snapshot);
+    public void snapshotMoved(LXSnapshotEngine engine, LXGlobalSnapshot snapshot);
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
-  private final List<LXSnapshot> mutableSnapshots = new ArrayList<LXSnapshot>();
+  private final List<LXGlobalSnapshot> mutableSnapshots = new ArrayList<LXGlobalSnapshot>();
 
   /**
    * Public read-only view of all the snapshots.
    */
-  public final List<LXSnapshot> snapshots = Collections.unmodifiableList(this.mutableSnapshots);
+  public final List<LXGlobalSnapshot> snapshots = Collections.unmodifiableList(this.mutableSnapshots);
 
   public final BooleanParameter recallMixer =
     new BooleanParameter("Mixer", true)
@@ -188,7 +190,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Triggers a snapshot change");
 
-  private LXSnapshot inTransition = null;
+  private LXGlobalSnapshot inTransition = null;
 
   private LinearEnvelope transition = new LinearEnvelope(0, 1, new FunctionalParameter() {
     @Override
@@ -277,7 +279,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
 
   private void _reindexSnapshots() {
     int i = 0;
-    for (LXSnapshot snapshot : this.snapshots) {
+    for (LXGlobalSnapshot snapshot : this.snapshots) {
       snapshot.setIndex(i++);
     }
   }
@@ -287,8 +289,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    *
    * @return New snapshot that holds a view of the current state
    */
-  public LXSnapshot addSnapshot() {
-    LXSnapshot snapshot = new LXSnapshot(getLX());
+  public LXGlobalSnapshot addSnapshot() {
+    LXGlobalSnapshot snapshot = new LXGlobalSnapshot(this.lx);
     snapshot.initialize();
     snapshot.label.setValue("Snapshot-" + (snapshots.size() + 1));
     addSnapshot(snapshot);
@@ -302,7 +304,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    * @param snapshot Snapshot to add
    * @return this
    */
-  public LXSnapshotEngine addSnapshot(LXSnapshot snapshot) {
+  public LXSnapshotEngine addSnapshot(LXGlobalSnapshot snapshot) {
     return addSnapshot(snapshot, -1);
   }
 
@@ -314,7 +316,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    * @param index Index to add at
    * @return this
    */
-  public LXSnapshotEngine addSnapshot(LXSnapshot snapshot, int index) {
+  public LXSnapshotEngine addSnapshot(LXGlobalSnapshot snapshot, int index) {
     Objects.requireNonNull(snapshot, "May not LXSnapshotEngine.addSnapshot(null)");
     if (this.snapshots.contains(snapshot)) {
       throw new IllegalStateException("May not add same snapshot instance twice: " + snapshot);
@@ -342,7 +344,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    * @param snapshot Snapshot to remove
    * @return this
    */
-  public LXSnapshotEngine removeSnapshot(LXSnapshot snapshot) {
+  public LXSnapshotEngine removeSnapshot(LXGlobalSnapshot snapshot) {
     if (!this.snapshots.contains(snapshot)) {
       throw new IllegalStateException("Cannot remove snapshot that is not present: " + snapshot);
     }
@@ -367,11 +369,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    * @param index New position to occupy
    * @return this
    */
-  public LXSnapshotEngine moveSnapshot(LXSnapshot snapshot, int index) {
+  public LXSnapshotEngine moveSnapshot(LXGlobalSnapshot snapshot, int index) {
     if (!this.snapshots.contains(snapshot)) {
       throw new IllegalArgumentException("Cannot move snapshot not in engine: " + snapshot);
     }
-    LXSnapshot autoCycleSnapshot = null;
+    LXGlobalSnapshot autoCycleSnapshot = null;
     int auto = this.autoCycleCursor.getValuei();
     if (auto >= 0 && auto < this.snapshots.size()) {
       autoCycleSnapshot = this.snapshots.get(auto);
@@ -393,7 +395,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    *
    * @return Snapshot or null
    */
-  public LXSnapshot getCursorSnapshot() {
+  public LXGlobalSnapshot getCursorSnapshot() {
     int cursorIndex = this.autoCycleCursor.getValuei();
     if (cursorIndex >= 0 && cursorIndex < this.snapshots.size()) {
       return this.snapshots.get(cursorIndex);
@@ -410,7 +412,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    * @param snapshot The snapshot to recall
    * @return True the snapshot was recalled, false if it was already mid-transition
    */
-  public boolean recall(LXSnapshot snapshot) {
+  public boolean recall(LXGlobalSnapshot snapshot) {
     return recall(snapshot, null);
   }
 
@@ -422,7 +424,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    * @param commands Array to populate with all the commands processed
    * @return True the snapshot was recalled, false if it was already mid-transition
    */
-  public boolean recall(LXSnapshot snapshot, List<LXCommand> commands) {
+  public boolean recall(LXGlobalSnapshot snapshot, List<LXCommand> commands) {
     if (this.inTransition == snapshot) {
       finishTransition();
       return false;
@@ -528,7 +530,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       }
       this.autoCycleProgress = 0;
     } else if (this.autoCycleEnabled.isOn()) {
-      LXSnapshot cursorSnapshot = getCursorSnapshot();
+      LXGlobalSnapshot cursorSnapshot = getCursorSnapshot();
       double cycleSecs =
         (cursorSnapshot != null && cursorSnapshot.hasCustomCycleTime.isOn()) ?
           cursorSnapshot.cycleTimeSecs.getValue() :
@@ -562,7 +564,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       if (startIndex < 0) {
         startIndex = 0;
       }
-      LXSnapshot next = this.snapshots.get(nextIndex);
+      LXGlobalSnapshot next = this.snapshots.get(nextIndex);
       if (next.autoCycleEligible.isOn()) {
         recall(next);
         return;
@@ -575,11 +577,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (this.snapshots.size() <= 1) {
       return;
     }
-    List<LXSnapshot> eligible = new ArrayList<LXSnapshot>();
+    List<LXGlobalSnapshot> eligible = new ArrayList<LXGlobalSnapshot>();
     int autoIndex = this.autoCycleCursor.getValuei();
     for (int i = 0; i < this.snapshots.size(); ++i) {
       if (i != autoIndex) {
-        LXSnapshot test = this.snapshots.get(i);
+        LXGlobalSnapshot test = this.snapshots.get(i);
         if (test.autoCycleEligible.isOn()) {
           eligible.add(test);
         }
@@ -587,7 +589,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
     int numEligible = eligible.size();
     if (numEligible > 0) {
-      LXSnapshot random = eligible.get(LXUtils.constrain((int) LXUtils.random(0, numEligible), 0, numEligible - 1));
+      LXGlobalSnapshot random = eligible.get(LXUtils.constrain((int) LXUtils.random(0, numEligible), 0, numEligible - 1));
       recall(random);
     }
   }
@@ -606,7 +608,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
     String path = parts[index];
-    for (LXSnapshot snapshot : this.snapshots) {
+    for (LXGlobalSnapshot snapshot : this.snapshots) {
       if (path.equals(snapshot.getOscPath())) {
         return snapshot.handleOscMessage(message, parts, index+1);
       }
@@ -623,14 +625,32 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    */
   public List<LXSnapshot.View> findSnapshotViews(LXComponent component) {
     List<LXSnapshot.View> views = null;
-    for (LXSnapshot snapshot : this.snapshots) {
-      for (LXSnapshot.View view : snapshot.views) {
-        if (view.isDependentOf(component)) {
-          if (views == null) {
-            views = new ArrayList<LXSnapshot.View>();
-          }
-          views.add(view);
+    for (LXGlobalSnapshot snapshot : this.snapshots) {
+      views = findSnapshotViews(views, component, snapshot);
+    }
+    for (LXBus bus : this.lx.engine.mixer.channels) {
+      findSnapshotViews(views, component, bus);
+    }
+    findSnapshotViews(views, component, this.lx.engine.mixer.masterBus);
+    return views;
+  }
+
+  private List<LXSnapshot.View> findSnapshotViews(List<LXSnapshot.View> views, LXComponent component, LXBus bus) {
+    for (LXClip clip : bus.clips) {
+      if (clip != null) {
+        views = findSnapshotViews(views, component, clip.snapshot);
+      }
+    }
+    return views;
+  }
+
+  private List<LXSnapshot.View> findSnapshotViews(List<LXSnapshot.View> views, LXComponent component, LXSnapshot snapshot) {
+    for (LXSnapshot.View view : snapshot.views) {
+      if (view.isDependentOf(component)) {
+        if (views == null) {
+          views = new ArrayList<LXSnapshot.View>();
         }
+        views.add(view);
       }
     }
     return views;
@@ -670,7 +690,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       for (JsonElement snapshotElement : snapshotArr) {
         JsonObject snapshotObj = snapshotElement.getAsJsonObject();
         try {
-          LXSnapshot snapshot = new LXSnapshot(this.lx);
+          LXGlobalSnapshot snapshot = new LXGlobalSnapshot(this.lx);
           snapshot.load(lx, snapshotObj);
           addSnapshot(snapshot);
         } catch (Exception x) {

@@ -44,6 +44,7 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.snapshot.LXClipSnapshot;
 
 public abstract class LXClip extends LXRunnableComponent implements LXOscComponent, LXComponent.Renamable, LXBus.Listener {
 
@@ -67,7 +68,20 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   protected final List<LXClipLane> mutableLanes = new ArrayList<LXClipLane>();
   public final List<LXClipLane> lanes = Collections.unmodifiableList(this.mutableLanes);
 
+  public final BooleanParameter snapshotEnabled =
+    new BooleanParameter("Snapshot", true)
+    .setDescription("Whether snapshot recall is enabled for this clip");
+
+  public final BooleanParameter snapshotTransitionEnabled =
+    new BooleanParameter("Transition", true)
+    .setDescription("Whether snapshot transition is enabled for this clip");
+
+  public final BooleanParameter automationEnabled =
+    new BooleanParameter("Automation", false)
+    .setDescription("Whether automation playback is enabled for this clip");
+
   public final LXBus bus;
+  public final LXClipSnapshot snapshot;
 
   private int index;
   private final boolean busListener;
@@ -95,10 +109,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     setParent(this.bus);
     addParameter("length", this.length);
     addParameter("loop", this.loop);
+    addParameter("snapshotEnabled", this.snapshotEnabled);
+    addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
+    addParameter("automationEnabled", this.automationEnabled);
+
+    addChild("snapshot", this.snapshot = new LXClipSnapshot(lx));
 
     for (LXEffect effect : bus.effects) {
       registerComponent(effect);
     }
+
+    // This class is not always registered as a listener... in the case of LXChannelClip,
+    // that parent class will take care of registering as a listener and this will avoid
+    // having duplicated double-listeners
     if (registerListener) {
       bus.addListener(this);
     }
@@ -107,6 +130,23 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   public String getPath() {
     return "clip/" + (index + 1);
+  }
+
+  @Override
+  public void onTrigger() {
+    super.onTrigger();
+    if (this.snapshotEnabled.isOn()) {
+      this.snapshot.recall();
+    }
+    if (this.bus.arm.isOn()) {
+      this.automationEnabled.setValue(true);
+    }
+  }
+
+  @Override
+  public void onStop() {
+    super.onStop();
+    this.snapshot.stopTransition();
   }
 
   @Override
@@ -284,24 +324,39 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   protected void run(double deltaMs) {
     double nextCursor = this.cursor + deltaMs;
-    double lengthValue = this.length.getValue();
-    if (!this.bus.arm.isOn()) {
-      // TODO(mcslee): make this more efficient, keep track of our indices...
-      advanceCursor(this.cursor, nextCursor);
-      while (nextCursor > lengthValue) {
-        if (!this.loop.isOn() || (lengthValue == 0)) {
-          this.cursor = nextCursor = lengthValue;
-          stop();
-          break;
-        } else {
-          nextCursor -= lengthValue;
-          advanceCursor(0, nextCursor);
-        }
-      }
-    } else {
+    if (this.bus.arm.isOn()) {
+      // Recording mode... lane and event listeners will pick up and record
+      // all the events. All we need to do here is update the clip length
       this.length.setValue(nextCursor);
+      this.cursor = nextCursor;
+    } else {
+      boolean automationFinished = true;
+      if (this.automationEnabled.isOn()) {
+        double lengthValue = this.length.getValue();
+        automationFinished = false;
+        // TODO(mcslee): make this more efficient, keep track of our indices?
+        advanceCursor(this.cursor, nextCursor);
+        while (nextCursor > lengthValue) {
+          if (!this.loop.isOn() || (lengthValue == 0)) {
+            this.cursor = nextCursor = lengthValue;
+            automationFinished = true;
+            break;
+          } else {
+            nextCursor -= lengthValue;
+            advanceCursor(0, nextCursor);
+          }
+        }
+        this.cursor = nextCursor;
+      }
+      if (this.snapshotEnabled.isOn()) {
+        this.snapshot.loop(deltaMs);
+      }
+      // Did we finish automation and snapshot playback, stop!
+      if (automationFinished && !this.snapshot.isInTransition()) {
+        stop();
+      }
     }
-    this.cursor = nextCursor;
+
   }
 
   @Override

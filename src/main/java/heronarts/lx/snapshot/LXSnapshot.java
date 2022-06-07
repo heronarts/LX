@@ -37,9 +37,8 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
-import heronarts.lx.modulator.LXModulator;
-import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -57,9 +56,7 @@ import heronarts.lx.utils.LXUtils;
  * of state in the program at some time. Typically this is a parameter value,
  * but some special cases exist, like the active pattern on a channel.
  */
-public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LXOscComponent {
-
-  private int index;
+public abstract class LXSnapshot extends LXComponent {
 
   private final List<View> mutableViews = new ArrayList<View>();
 
@@ -497,72 +494,14 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     }
   }
 
-  public final BooleanParameter recall =
-    new BooleanParameter("Recall", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
-    .setDescription("Restores the values of this snapshot");
-
-  public final BooleanParameter autoCycleEligible =
-    new BooleanParameter("Cycle", true)
-    .setDescription("Whether the snapshot is eligible for auto-cycle");
-
-  public final BoundedParameter cycleTimeSecs = (BoundedParameter)
-    new BoundedParameter("Cycle Time", 60, .1, 60*60*24)
-    .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
-    .setUnits(LXParameter.Units.SECONDS);
-
-  public final BooleanParameter hasCustomCycleTime =
-    new BooleanParameter("Custom Cycle", false)
-    .setDescription("When enabled, this snapshot uses its own custom duration rather than the default cycle time");
-
   public final BoundedParameter transitionTimeSecs = (BoundedParameter)
-    new BoundedParameter("Transition Time", 5, .1, 180)
+    new BoundedParameter("Transition Time", 1, .1, 180)
     .setDescription("Sets the duration of interpolated transitions between snapshots")
     .setUnits(LXParameter.Units.SECONDS);
 
-  public final BooleanParameter hasCustomTransitionTime =
-    new BooleanParameter("Custom Transition", false)
-    .setDescription("When enabled, this snapshot uses its own custom transition rather than the default transition time");
-
-
-  public LXSnapshot(LX lx) {
+  protected LXSnapshot(LX lx) {
     super(lx, "Snapshot");
-    setParent(lx.engine.snapshots);
-    addParameter("recall", this.recall);
-    addParameter("autoCycleEligible", this.autoCycleEligible);
-    addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
-    addParameter("cycleTimeSecs", this.cycleTimeSecs);
-    addParameter("hasCustomTransitionTime", this.hasCustomTransitionTime);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
-  }
-
-  @Override
-  public void onParameterChanged(LXParameter p) {
-    if (this.recall == p) {
-      if (this.recall.isOn()) {
-        this.recall.setValue(false);
-        this.lx.engine.snapshots.recall(this);
-      }
-    }
-  }
-
-  // Package-only method for LXSnapshotEngine to update indices
-  void setIndex(int index) {
-    this.index = index;
-  }
-
-  @Override
-  public String getPath() {
-    return "snapshot/" + (this.index+1);
-  }
-
-  /**
-   * Public accessor for the index of this snapshot in the list
-   *
-   * @return This snapshot's position in the global list
-   */
-  public int getIndex() {
-    return this.index;
   }
 
   /**
@@ -573,58 +512,49 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     initialize();
   }
 
-  // Internal engine-only call, initializes a new snapshot with views of everything
-  // relevant in the project scope. It's a bit of an arbitrary selection at the moment
-  void initialize() {
-    LX lx = getLX();
-    addParameterView(ViewScope.OUTPUT, lx.engine.output.brightness);
-    addParameterView(ViewScope.MIXER, lx.engine.mixer.crossfader);
-    for (LXAbstractChannel bus : lx.engine.mixer.channels) {
-      // Top-level bus settings
-      addView(new ChannelFaderView(bus));
-      addParameterView(ViewScope.MIXER, bus.crossfadeGroup);
+  public abstract void initialize();
 
-      // Active pattern settings
-      if (bus instanceof LXChannel) {
-        LXChannel channel = (LXChannel) bus;
-        LXPattern pattern = channel.getActivePattern();
-        if (pattern != null) {
-          addView(new ActivePatternView(channel));
-          for (LXParameter p : pattern.getParameters()) {
-            if (p != pattern.label) {
-              addParameterView(ViewScope.PATTERNS, p);
-            }
-          }
-          addLayeredView(ViewScope.PATTERNS, pattern);
-        }
-      }
+  protected void initializeBus(LXBus bus) {
+    // Top-level bus settings
+    if (bus instanceof LXAbstractChannel) {
+      LXAbstractChannel channel = (LXAbstractChannel) bus;
+      addView(new ChannelFaderView(channel));
+      addParameterView(ViewScope.MIXER, channel.crossfadeGroup);
+    }
 
-      // Effect settings
-      for (LXEffect effect : bus.effects) {
-        if (effect.enabled.isOn()) {
-          // If the effect is on, store all its parameters (including that it's enabled)
-          for (LXParameter p : effect.getParameters()) {
-            if (p != effect.label) {
-              addParameterView(ViewScope.EFFECTS, p);
-            }
+    // Active pattern settings
+    if (bus instanceof LXChannel) {
+      LXChannel channel = (LXChannel) bus;
+      LXPattern pattern = channel.getActivePattern();
+      if (pattern != null) {
+        addView(new ActivePatternView(channel));
+        for (LXParameter p : pattern.getParameters()) {
+          if (p != pattern.label) {
+            addParameterView(ViewScope.PATTERNS, p);
           }
-          addLayeredView(ViewScope.EFFECTS, effect);
-        } else {
-          // If the effect is off, then we only recall that it is off
-          addParameterView(ViewScope.EFFECTS, effect.enabled);
         }
+        addLayeredView(ViewScope.PATTERNS, pattern);
       }
     }
 
-    // Modulator settings
-    for (LXModulator modulator : lx.engine.modulation.getModulators()) {
-      for (LXParameter p : modulator.getParameters()) {
-        addParameterView(ViewScope.MODULATION, p);
+    // Effect settings
+    for (LXEffect effect : bus.effects) {
+      if (effect.enabled.isOn()) {
+        // If the effect is on, store all its parameters (including that it's enabled)
+        for (LXParameter p : effect.getParameters()) {
+          if (p != effect.label) {
+            addParameterView(ViewScope.EFFECTS, p);
+          }
+        }
+        addLayeredView(ViewScope.EFFECTS, effect);
+      } else {
+        // If the effect is off, then we only recall that it is off
+        addParameterView(ViewScope.EFFECTS, effect.enabled);
       }
     }
   }
 
-  private void addLayeredView(ViewScope scope, LXLayeredComponent component) {
+  protected void addLayeredView(ViewScope scope, LXLayeredComponent component) {
     for (LXParameter p : component.getParameters()) {
       if (p != component.label) {
         addParameterView(scope, p);
@@ -635,7 +565,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
     }
   }
 
-  private void addParameterView(ViewScope scope, LXParameter p) {
+  protected void addParameterView(ViewScope scope, LXParameter p) {
     if (p instanceof AggregateParameter) {
       // Don't add AggregateParameters directly, let the sub-values restore
       return;
@@ -716,25 +646,7 @@ public class LXSnapshot extends LXComponent implements LXComponent.Renamable, LX
   }
 
   ChannelFaderView getMissingChannelView(LXAbstractChannel channel) {
-    return new LXSnapshot.ChannelFaderView(channel, false, 0);
-  }
-
-  @Override
-  public String getOscPath() {
-    String path = super.getOscPath();
-    if (path != null) {
-      return path;
-    }
-    return getOscLabel();
-  }
-
-  @Override
-  public String getOscAddress() {
-    LXComponent parent = getParent();
-    if (parent instanceof LXOscComponent) {
-      return parent.getOscAddress() + "/" + getOscPath();
-    }
-    return null;
+    return new LXGlobalSnapshot.ChannelFaderView(channel, false, 0);
   }
 
   @Override
