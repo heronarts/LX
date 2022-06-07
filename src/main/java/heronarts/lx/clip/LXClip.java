@@ -135,6 +135,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   public void onTrigger() {
     super.onTrigger();
+    this.cursor = 0;
     if (this.snapshotEnabled.isOn()) {
       this.snapshot.recall();
     }
@@ -158,6 +159,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       this.bus.removeListener(this);
     }
     this.mutableLanes.clear();
+    this.snapshot.dispose();
     this.listeners.clear();
     super.dispose();
   }
@@ -226,9 +228,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
-    if (p == this.trigger) {
-      this.cursor = 0;
-    } else if (p == this.running) {
+    if (p == this.running) {
       if (this.running.isOn()) {
         for (LXClip clip : this.bus.clips) {
           if (clip != null && clip != this) {
