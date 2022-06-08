@@ -342,6 +342,10 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   public LXClip addClip(int index) {
+    return addClip(null, index);
+  }
+
+  public LXClip addClip(JsonObject clipObj, int index) {
     if (getClip(index) != null) {
       throw new IllegalStateException("Cannot add clip at index " + index + " which already holds a clip: " + this);
     }
@@ -349,8 +353,12 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
       this.mutableClips.add(null);
     }
     LXClip clip = constructClip(index);
-    clip.snapshot.initialize();
-    clip.label.setValue(getClipLabel() + "-" + (index+1));
+    if (clipObj != null) {
+      clip.load(this.lx, clipObj);
+    } else {
+      clip.snapshot.initialize();
+      clip.label.setValue(getClipLabel() + "-" + (index+1));
+    }
     this.mutableClips.set(index, clip);
     for (ClipListener listener : this.clipListeners) {
       listener.clipAdded(this, clip);

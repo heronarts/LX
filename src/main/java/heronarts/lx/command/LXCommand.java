@@ -30,6 +30,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.LXClip;
 import heronarts.lx.clipboard.LXNormalizedValue;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXDynamicColor;
@@ -2271,6 +2272,141 @@ public abstract class LXCommand {
         for (LXCommand.Parameter.SetValue setValue : this.setValues.values()) {
           setValue.undo(lx);
         }
+      }
+
+    }
+  }
+
+  public static class Clip {
+
+    public static class Add extends LXCommand {
+
+      private final ComponentReference<LXBus> bus;
+      private final int index;
+      private JsonObject clipObj = null;
+
+      public Add(LXBus bus, int index) {
+        this.bus = new ComponentReference<LXBus>(bus);
+        this.index = index;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Clip";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        LXClip clip = this.bus.get().addClip(this.clipObj, this.index);
+        this.clipObj = LXSerializable.Utils.toObject(lx, clip);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.bus.get().removeClip(this.index);
+      }
+
+    }
+
+    public static class Remove extends LXCommand {
+
+      private final ComponentReference<LXBus> bus;
+      private final int index;
+      private final JsonObject clipObj;
+
+      public Remove(LXClip clip) {
+        this.bus = new ComponentReference<LXBus>(clip.bus);
+        this.clipObj = LXSerializable.Utils.toObject(clip);
+        this.index = clip.getIndex();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Clip";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.bus.get().removeClip(this.index);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.bus.get().addClip(this.clipObj, this.index);
+      }
+
+    }
+
+    public static class Trigger extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      private final List<LXCommand> commands = new ArrayList<LXCommand>();
+      private boolean ignore = false;
+
+      public Trigger(LXClip clip) {
+        this.clip = new ComponentReference<LXClip>(clip);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Trigger Clip";
+      }
+
+      @Override
+      public void perform(LX lx){
+        this.commands.clear();
+        LXClip clip = this.clip.get();
+        // Were we recording, or automation was not enabled?
+        this.ignore = clip.bus.arm.isOn() || !clip.snapshotEnabled.isOn();
+        if (!this.ignore) {
+          clip.snapshot.getCommands(this.commands);
+        }
+        clip.trigger();
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return this.ignore;
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (LXCommand command : this.commands) {
+          command.undo(lx);
+        }
+      }
+
+    }
+
+    public static class Record extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      private final JsonObject clipObjPre;
+      private JsonObject clipObjPost = null;
+
+      public Record(LXClip clip) {
+        this.clip = new ComponentReference<LXClip>(clip);
+        this.clipObjPre = LXSerializable.Utils.toObject(clip.getLX(), clip);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Record Clip";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        LXClip clip = this.clip.get();
+        if (this.clipObjPost == null) {
+          this.clipObjPost = LXSerializable.Utils.toObject(lx, clip);
+        } else {
+          clip.load(lx, this.clipObjPost);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.clip.get().load(lx, this.clipObjPre);
       }
 
     }

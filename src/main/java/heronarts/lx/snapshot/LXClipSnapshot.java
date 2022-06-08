@@ -53,16 +53,15 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
     return this.transitionProgress;
   }
 
-  public void recall() {
-    recall(null);
+  public void getCommands(List<LXCommand> commands) {
+    for (View view : this.views) {
+      commands.add(view.getCommand());
+    }
   }
 
-  public void recall(List<LXCommand> commands) {
+  public void recall() {
     boolean transitionEnabled = getClip().snapshotTransitionEnabled.isOn();
     for (View view : this.views) {
-      if (commands != null) {
-        commands.add(view.getCommand());
-      }
       if (transitionEnabled) {
         view.startTransition();
       } else {
