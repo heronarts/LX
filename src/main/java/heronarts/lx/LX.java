@@ -107,6 +107,7 @@ public class LX {
     CONTENT("Content"),
     FIXTURES("Fixtures"),
     PROJECTS("Projects"),
+    PIXELBLAZE("Pixelblaze"),
     MODELS("Models"),
     PRESETS("Presets"),
     LOGS("Logs"),
