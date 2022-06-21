@@ -128,6 +128,8 @@ public class LXOscEngine extends LXComponent {
 
   private EngineTransmitter engineTransmitter;
 
+  private final List<LXOscListener> listeners = new ArrayList<LXOscListener>();
+
   private final LXOscQueryServer oscQueryServer;
   private final Zeroconf zeroconf;
 
@@ -226,6 +228,27 @@ public class LXOscEngine extends LXComponent {
     addParameter("logOutput", this.logOutput);
   }
 
+  public LXOscEngine addListener(LXOscListener listener) {
+    Objects.requireNonNull("May not add null LXOscListener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException(
+        "Cannot add duplicate LXOscEngine.LXOscListener: "
+          + listener);
+    }
+    this.listeners.add(listener);
+    return this;
+  }
+
+  public LXOscEngine removeListener(LXOscListener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException(
+        "Cannot remove non-existent LXOscEngine.LXOscListener: "
+          + listener);
+    }
+    this.listeners.remove(listener);
+    return this;
+  }
+
   public LXOscEngine sendMessage(String path, int value) {
     if (this.engineTransmitter != null) {
       this.engineTransmitter.sendMessage(path, value);
@@ -281,11 +304,20 @@ public class LXOscEngine extends LXComponent {
         String[] parts = trim.split("/");
         if (parts[1].equals(lx.engine.getPath())) {
           lx.engine.handleOscMessage(message, parts, 2);
-        } else {
+        } else if (LXOscEngine.this.listeners.isEmpty()) {
           throw new OscException();
         }
       } catch (Exception x) {
         error("Failed to handle OSC message: " + message.getAddressPattern().getValue());
+      }
+
+      // Dispatch to custom listeners
+      for (LXOscListener listener : LXOscEngine.this.listeners) {
+        try {
+          listener.oscMessage(message);
+        } catch (Exception x) {
+          error(x, "Uncaught exception in custom listener: " + message.getAddressPattern().getValue());
+        }
       }
     }
 
@@ -691,6 +723,7 @@ public class LXOscEngine extends LXComponent {
   @Override
   public void dispose() {
     super.dispose();
+    this.listeners.clear();
     if (this.oscQueryServer != null) {
       this.oscQueryServer.unbind();
     }
