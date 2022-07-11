@@ -204,7 +204,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   private static final String PATH_SET_BPM = "setBPM";
   
   public boolean setBpmRange(double min, double max) {
-    if (min >= 0.0 && min >= max) {
+    if (min <= 0.0 || min >= max) {
       // do not set to invalid range of BPMs
       return false;
     }
