@@ -49,8 +49,11 @@ import heronarts.lx.parameter.MutableParameter;
  */
 public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
-  public final static double MIN_BPM = 20;
-  public final static double MAX_BPM = 240;
+  public final static double DEFAULT_MIN_BPM = 20;
+  public final static double DEFAULT_MAX_BPM = 240;
+
+  private double minBpm;
+  private double maxBpm;
 
   public static enum Division {
 
@@ -132,7 +135,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     .setDescription("Beats per measure");
 
   public final BoundedParameter bpm =
-    new BoundedParameter("BPM", DEFAULT_BPM, MIN_BPM, MAX_BPM)
+    new BoundedParameter("BPM", DEFAULT_BPM, DEFAULT_MIN_BPM, DEFAULT_MAX_BPM)
     .setDescription("Beats per minute of the master tempo object");
 
   public final BooleanParameter trigger =
@@ -191,16 +194,38 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
     addModulator("nudge", this.nudge);
+
+    // set initial minBpm, maxBpm
+    minBpm = DEFAULT_MIN_BPM;
+    maxBpm = DEFAULT_MAX_BPM;
   }
 
   private static final String PATH_BEAT = "beat";
   private static final String PATH_SET_BPM = "setBPM";
+  
+  public boolean setBpmRange(double min, double max) {
+    if (min >= 0.0 && min >= max) {
+      // do not set to invalid range of BPMs
+      return false;
+    }
+    
+    minBpm = min;
+    maxBpm = max;
+    return true;
+  }
+
+  public boolean isValidBpm(double bpm) {
+    return bpm >= minBpm && bpm <= maxBpm;
+  }
 
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
     if (parts[index].equals(PATH_SET_BPM)) {
       if (message.size() > 0) {
-        this.bpm.setValue(message.getFloat());
+        float newBpm = message.getFloat();
+        if (isValidBpm(newBpm)) {
+          this.bpm.setValue(message.getFloat());
+        }
         return true;
       }
     } else if (parts[index].equals(PATH_BEAT)) {
