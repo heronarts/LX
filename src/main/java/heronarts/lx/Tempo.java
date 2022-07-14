@@ -52,8 +52,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   public final static double DEFAULT_MIN_BPM = 20;
   public final static double DEFAULT_MAX_BPM = 240;
 
-  private double minBpm;
-  private double maxBpm;
+  private double minBpm = DEFAULT_MIN_BPM;
+  private double maxBpm = DEFAULT_MAX_BPM;
 
   public static enum Division {
 
@@ -135,7 +135,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     .setDescription("Beats per measure");
 
   public final BoundedParameter bpm =
-    new BoundedParameter("BPM", DEFAULT_BPM, DEFAULT_MIN_BPM, DEFAULT_MAX_BPM)
+    new BoundedParameter("BPM", DEFAULT_BPM, this.minBpm, this.maxBpm)
     .setDescription("Beats per minute of the master tempo object");
 
   public final BooleanParameter trigger =
@@ -194,28 +194,23 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
     addModulator("nudge", this.nudge);
-
-    // set initial minBpm, maxBpm
-    minBpm = DEFAULT_MIN_BPM;
-    maxBpm = DEFAULT_MAX_BPM;
   }
 
   private static final String PATH_BEAT = "beat";
   private static final String PATH_SET_BPM = "setBPM";
   
-  public boolean setBpmRange(double min, double max) {
+  public Tempo setBpmRange(double min, double max) {
     if (min <= 0.0 || min >= max) {
       // do not set to invalid range of BPMs
-      return false;
+      throw new IllegalArgumentException("Tried to set invalid bpm range!");
     }
-    
-    minBpm = min;
-    maxBpm = max;
-    return true;
+    this.minBpm = min;
+    this.maxBpm = max;
+    return this;
   }
 
   public boolean isValidBpm(double bpm) {
-    return bpm >= minBpm && bpm <= maxBpm;
+    return bpm >= this.minBpm && bpm <= this.maxBpm;
   }
 
   @Override
@@ -224,7 +219,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
       if (message.size() > 0) {
         float newBpm = message.getFloat();
         if (isValidBpm(newBpm)) {
-          this.bpm.setValue(message.getFloat());
+          this.bpm.setValue(newBpm);
         }
         return true;
       }
