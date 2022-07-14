@@ -52,8 +52,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   public final static double DEFAULT_MIN_BPM = 20;
   public final static double DEFAULT_MAX_BPM = 240;
 
-  private double minBpm = DEFAULT_MIN_BPM;
-  private double maxBpm = DEFAULT_MAX_BPM;
+  private double minOscBpm = DEFAULT_MIN_BPM;
+  private double maxOscBpm = DEFAULT_MAX_BPM;
 
   public static enum Division {
 
@@ -135,7 +135,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     .setDescription("Beats per measure");
 
   public final BoundedParameter bpm =
-    new BoundedParameter("BPM", DEFAULT_BPM, this.minBpm, this.maxBpm)
+    new BoundedParameter("BPM", DEFAULT_BPM, this.minOscBpm, this.maxOscBpm)
     .setDescription("Beats per minute of the master tempo object");
 
   public final BooleanParameter trigger =
@@ -199,18 +199,18 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   private static final String PATH_BEAT = "beat";
   private static final String PATH_SET_BPM = "setBPM";
   
-  public Tempo setBpmRange(double min, double max) {
+  public Tempo setOscBpmRange(double min, double max) {
     if (min <= 0.0 || min >= max) {
       // do not set to invalid range of BPMs
       throw new IllegalArgumentException("Tried to set invalid bpm range!");
     }
-    this.minBpm = min;
-    this.maxBpm = max;
+    this.minOscBpm = min;
+    this.maxOscBpm = max;
     return this;
   }
 
-  public boolean isValidBpm(double bpm) {
-    return bpm >= this.minBpm && bpm <= this.maxBpm;
+  public boolean isValidOscBpm(double bpm) {
+    return bpm >= this.minOscBpm && bpm <= this.maxOscBpm;
   }
 
   @Override
@@ -218,7 +218,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     if (parts[index].equals(PATH_SET_BPM)) {
       if (message.size() > 0) {
         float newBpm = message.getFloat();
-        if (isValidBpm(newBpm)) {
+        if (isValidOscBpm(newBpm)) {
           this.bpm.setValue(newBpm);
         }
         return true;
