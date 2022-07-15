@@ -49,8 +49,11 @@ import heronarts.lx.parameter.MutableParameter;
  */
 public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
-  public final static double MIN_BPM = 20;
-  public final static double MAX_BPM = 240;
+  public final static double DEFAULT_MIN_BPM = 20;
+  public final static double DEFAULT_MAX_BPM = 240;
+
+  private double minOscBpm = DEFAULT_MIN_BPM;
+  private double maxOscBpm = DEFAULT_MAX_BPM;
 
   public static enum Division {
 
@@ -132,7 +135,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     .setDescription("Beats per measure");
 
   public final BoundedParameter bpm =
-    new BoundedParameter("BPM", DEFAULT_BPM, MIN_BPM, MAX_BPM)
+    new BoundedParameter("BPM", DEFAULT_BPM, this.minOscBpm, this.maxOscBpm)
     .setDescription("Beats per minute of the master tempo object");
 
   public final BooleanParameter trigger =
@@ -195,12 +198,29 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   private static final String PATH_BEAT = "beat";
   private static final String PATH_SET_BPM = "setBPM";
+  
+  public Tempo setOscBpmRange(double min, double max) {
+    if (min <= 0.0 || min >= max) {
+      // do not set to invalid range of BPMs
+      throw new IllegalArgumentException("Tried to set invalid bpm range!");
+    }
+    this.minOscBpm = min;
+    this.maxOscBpm = max;
+    return this;
+  }
+
+  public boolean isValidOscBpm(double bpm) {
+    return bpm >= this.minOscBpm && bpm <= this.maxOscBpm;
+  }
 
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
     if (parts[index].equals(PATH_SET_BPM)) {
       if (message.size() > 0) {
-        this.bpm.setValue(message.getFloat());
+        float newBpm = message.getFloat();
+        if (isValidOscBpm(newBpm)) {
+          this.bpm.setValue(newBpm);
+        }
         return true;
       }
     } else if (parts[index].equals(PATH_BEAT)) {
