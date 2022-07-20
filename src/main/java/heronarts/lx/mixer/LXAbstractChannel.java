@@ -108,6 +108,13 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     new BooleanParameter("Cue", false)
     .setDescription("Toggles the channel CUE state, determining whether it is shown in the preview window");
 
+  /**
+   * Whether this channel should show in the aux UI.
+   */
+  public final BooleanParameter auxActive =
+    new BooleanParameter("Aux", false)
+    .setDescription("Toggles the channel AUX state, determining whether it is shown in the auxiliary window");
+
   public final CompoundParameter fader =
     new CompoundParameter("Fader", 1)
     .setDescription("Sets the alpha level of the output of this channel");
@@ -209,6 +216,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
     addParameter("enabled", this.enabled);
     addParameter("cue", this.cueActive);
+    addParameter("aux", this.auxActive);
     addParameter("fader", this.fader);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
@@ -283,6 +291,12 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
           this.lx.engine.mixer.selectChannel(this);
           this.lx.engine.mixer.setFocusedChannel(this);
         }
+      }
+    } if (p == this.auxActive) {
+      if (this.auxActive.isOn()) {
+        this.lx.engine.mixer.auxA.setValue(false);
+        this.lx.engine.mixer.auxB.setValue(false);
+        this.lx.engine.mixer.setFocusedChannelAux(this);
       }
     } else if (p == this.blendMode) {
       this.activeBlend.onInactive();

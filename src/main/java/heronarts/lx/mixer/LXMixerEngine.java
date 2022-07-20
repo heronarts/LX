@@ -87,6 +87,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new DiscreteParameter("Channel", 1)
     .setDescription("Which channel is currently focused in the UI");
 
+  public final DiscreteParameter focusedChannelAux =
+    new DiscreteParameter("Aux", 1)
+    .setDescription("Which channel is currently focused in the auxiliary UI");
+
   public final CompoundParameter crossfader = new CompoundParameter("Crossfader", 0.5)
   .setDescription("Applies blending between output groups A and B")
   .setPolarity(LXParameter.Polarity.BIPOLAR);
@@ -102,6 +106,13 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Cue-B", false)
     .setDescription("Enables cue preview of crossfade group B");
 
+  public final BooleanParameter auxA =
+    new BooleanParameter("Aux-A", false)
+    .setDescription("Enables aux preview of crossfade group A");
+
+  public final BooleanParameter auxB =
+    new BooleanParameter("Aux-B", false)
+    .setDescription("Enables aux preview of crossfade group B");
 
   final ModelBuffer backgroundBlack;
   final ModelBuffer backgroundTransparent;
@@ -189,8 +200,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("crossfader", this.crossfader);
     addParameter("crossfaderBlendMode", this.crossfaderBlendMode);
     addParameter("focusedChannel", this.focusedChannel);
+    addParameter("focusedChannelAux", this.focusedChannelAux);
     addParameter("cueA", this.cueA);
     addParameter("cueB", this.cueB);
+    addParameter("auxA", this.auxA);
+    addParameter("auxB", this.auxB);
     addParameter("viewCondensed", this.viewCondensed);
 
   }
@@ -214,6 +228,20 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         this.cueA.setValue(false);
         for (LXAbstractChannel channel : this.channels) {
           channel.cueActive.setValue(false);
+        }
+      }
+    } else if (this.auxA == p) {
+      if (this.auxA.isOn()) {
+        this.auxB.setValue(false);
+        for (LXAbstractChannel channel : this.channels) {
+          channel.auxActive.setValue(false);
+        }
+      }
+    } else if (this.auxB == p) {
+      if (this.auxB.isOn()) {
+        this.auxA.setValue(false);
+        for (LXAbstractChannel channel : this.channels) {
+          channel.auxActive.setValue(false);
         }
       }
     } else if (this.focusedChannel == p) {
@@ -405,6 +433,22 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return this;
   }
 
+  public LXBus getFocusedChannelAux() {
+    if (this.focusedChannelAux.getValuei() == this.mutableChannels.size()) {
+      return this.masterBus;
+    }
+    return getChannel(this.focusedChannelAux.getValuei());
+  }
+
+  public LXMixerEngine setFocusedChannelAux(LXBus channel) {
+    if (channel == this.masterBus) {
+      this.focusedChannelAux.setValue(this.mutableChannels.size());
+    } else {
+      this.focusedChannelAux.setValue(this.mutableChannels.indexOf(channel));
+    }
+    return this;
+  }
+
   public LXMixerEngine deselectChannel(LXBus bus) {
     boolean otherSelected = false;
     for (LXAbstractChannel channel : this.channels) {
@@ -516,6 +560,13 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       this.focusedChannel.setValue(index);
     }
 
+    // For the aux bus as well
+    if (this.focusedChannelAux.getValuei() == index) {
+      this.focusedChannelAux.bang();
+    } else {
+      this.focusedChannelAux.setValue(index);
+    }
+
     return channel;
   }
 
@@ -538,6 +589,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
   public LXMixerEngine ungroup(LXChannel channel) {
     boolean focused = this.focusedChannel.getValuei() == channel.index;
+    boolean focusedAux = this.focusedChannelAux.getValuei() == channel.index;
     LXGroup group = channel.getGroup();
     if (group != null) {
       group.removeChannel(channel);
@@ -549,6 +601,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       }
       if (focused) {
         this.focusedChannel.setValue(channel.index);
+      }
+      if (focusedAux) {
+        this.focusedChannelAux.setValue(channel.index);
       }
     }
     return this;
@@ -600,6 +655,12 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     } else {
       this.focusedChannel.setValue(groupIndex);
     }
+    if (this.focusedChannelAux.getValuei() == groupIndex) {
+      this.focusedChannelAux.bang();
+    } else {
+      this.focusedChannelAux.setValue(groupIndex);
+    }
+
     selectChannel(group);
     return group;
   }
@@ -618,6 +679,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     channel.setMixer(this);
     this.mutableChannels.add(index, channel);
     this.focusedChannel.setRange(this.mutableChannels.size() + 1);
+    this.focusedChannelAux.setRange(this.mutableChannels.size() + 1);
     for (Listener listener : this.listeners) {
       listener.channelAdded(this, channel);
     }
@@ -671,6 +733,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Fix indexing on all channels
     _reindexChannels();
 
+    // Update the focused channel range
     boolean notified = false;
     if (this.focusedChannel.getValuei() > this.mutableChannels.size()) {
       notified = true;
@@ -680,6 +743,19 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     if (!notified) {
       this.focusedChannel.bang();
     }
+
+    // Update the focused channel aux range
+    boolean notifiedAux = false;
+    if (this.focusedChannelAux.getValuei() > this.mutableChannels.size()) {
+      notifiedAux = true;
+      this.focusedChannelAux.decrement();
+    }
+    this.focusedChannelAux.setRange(this.mutableChannels.size() + 1);
+    if (!notifiedAux) {
+      this.focusedChannelAux.bang();
+    }
+
+    // Notify listeners
     for (Listener listener : this.listeners) {
       listener.channelRemoved(this, channel);
     }
@@ -704,6 +780,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       throw new IllegalArgumentException("moveChannel() may only be called with delta of -1 or 1");
     }
     LXBus focused = getFocusedChannel();
+    LXBus focusedAux = getFocusedChannelAux();
 
     int index = channel.getIndex() + delta;
     if (index < 0 || index >= this.mutableChannels.size()) {
@@ -780,6 +857,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
     // Focused channel may have moved
     this.focusedChannel.setValue(focused.getIndex());
+    this.focusedChannelAux.setValue(focusedAux.getIndex());
 
     for (Listener listener : this.listeners) {
       listener.channelMoved(this, channel);
@@ -792,6 +870,18 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       for (LXAbstractChannel c : getChannels()) {
         if (channel != c) {
           c.cueActive.setValue(false);
+        }
+      }
+    }
+    return this;
+  }
+
+  public LXMixerEngine enableChannelAux(LXAbstractChannel channel, boolean isExclusive) {
+    channel.auxActive.setValue(true);
+    if (isExclusive) {
+      for (LXAbstractChannel c : getChannels()) {
+        if (channel != c) {
+          c.auxActive.setValue(false);
         }
       }
     }
@@ -837,6 +927,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
   private final BlendStack blendStackMain = new BlendStack();
   private final BlendStack blendStackCue = new BlendStack();
+  private final BlendStack blendStackAux = new BlendStack();
   private final BlendStack blendStackLeft = new BlendStack();
   private final BlendStack blendStackRight = new BlendStack();
 
@@ -846,6 +937,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Initialize blend stacks
     this.blendStackMain.initialize(this.backgroundBlack.getArray(), render.getMain());
     this.blendStackCue.initialize(this.backgroundBlack.getArray(), render.getCue());
+    this.blendStackAux.initialize(this.backgroundBlack.getArray(), render.getAux());
     this.blendStackLeft.initialize(this.backgroundBlack.getArray(), this.blendBufferLeft.getArray());
     this.blendStackRight.initialize(this.backgroundBlack.getArray(), this.blendBufferRight.getArray());
 
@@ -854,8 +946,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     boolean leftBusActive = crossfadeValue < 1.;
     boolean rightBusActive = crossfadeValue > 0.;
     boolean cueBusActive = false;
+    boolean auxBusActive = false;
 
-    boolean isChannelMultithreaded = this.lx.engine.isChannelMultithreaded.isOn();
+    final boolean isChannelMultithreaded = this.lx.engine.isChannelMultithreaded.isOn();
+    final boolean isPerformanceMode = this.lx.engine.performanceMode.isOn();
 
     // Step 1a: Loop all of the channels
     if (isChannelMultithreaded) {
@@ -956,6 +1050,12 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         this.blendStackCue.blend(this.addBlend, channel.getColors(), 1, channel.getModelView());
       }
 
+      // Blend into the aux buffer when in performance mode
+      if (isPerformanceMode && channel.auxActive.isOn()) {
+        auxBusActive = true;
+        this.blendStackAux.blend(this.addBlend, channel.getColors(), 1, channel.getModelView());
+      }
+
       ((LXAbstractChannel.Profiler) channel.profiler).blendNanos = System.nanoTime() - blendStart;
     }
 
@@ -966,6 +1066,17 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     } else if (this.cueB.isOn()) {
       this.blendStackCue.copyFrom(this.blendStackRight);
       cueBusActive = true;
+    }
+
+    // Crossfade groups can be aux-cued in performance mode
+    if (isPerformanceMode) {
+      if (this.auxA.isOn()) {
+        this.blendStackAux.copyFrom(this.blendStackLeft);
+        auxBusActive = true;
+      } else if (this.auxB.isOn()) {
+        this.blendStackAux.copyFrom(this.blendStackRight);
+        auxBusActive = true;
+      }
     }
 
     // Step 4: now we have three output buses that need mixing... the left/right crossfade
@@ -999,6 +1110,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
     // Mark the cue active state of the buffer
     render.setCueOn(cueBusActive);
+    render.setAuxOn(auxBusActive);
   }
 
   private static final String KEY_CHANNELS = "channels";

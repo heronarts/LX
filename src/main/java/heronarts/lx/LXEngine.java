@@ -99,6 +99,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     new BoundedParameter("Speed", 1, 0, 2)
     .setDescription("Overall speed adjustement to the entire engine (does not apply to master tempo and audio)");
 
+  public final BooleanParameter performanceMode =
+    new BooleanParameter("Performance", false)
+    .setDescription("Whether performance mode UI is enabled");
+
   public final LXModulationEngine modulation;
 
   public final LXSnapshotEngine snapshots;
@@ -201,14 +205,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final Profiler profiler = new Profiler();
 
   // Buffer for a single frame, which was rendered with
-  // a particular model state, has a main and a cue view,
-  // and a cue state
+  // a particular model state, has a main view along with
+  // a cue and auxiliary view, as well as cue/aux view state
   public static class Frame implements LXBuffer {
 
     private LXModel model;
     private int[] main = null;
     private int[] cue = null;
+    private int[] aux = null;
     private boolean cueOn = false;
+    private boolean auxOn = false;
 
     public Frame(LX lx) {
       setModel(lx.getModel());
@@ -219,6 +225,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       if ((this.main == null) || (this.main.length != model.size)) {
         this.main = new int[model.size];
         this.cue = new int[model.size];
+        this.aux = new int[model.size];
       }
     }
 
@@ -226,15 +233,25 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.cueOn = cueOn;
     }
 
+    public void setAuxOn(boolean auxOn) {
+      this.auxOn = auxOn;
+    }
+
     public void copyFrom(Frame that) {
       setModel(that.model);
       this.cueOn = that.cueOn;
+      this.auxOn = that.auxOn;
       System.arraycopy(that.main, 0, this.main, 0, this.main.length);
       System.arraycopy(that.cue, 0, this.cue, 0, this.cue.length);
+      System.arraycopy(that.aux, 0, this.aux, 0, this.aux.length);
     }
 
     public int[] getColors() {
       return this.cueOn ? this.cue : this.main;
+    }
+
+    public int[] getAuxColors() {
+      return this.auxOn ? this.aux : this.main;
     }
 
     public LXModel getModel() {
@@ -252,6 +269,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     public int[] getCue() {
       return this.cue;
+    }
+
+    public int[] getAux() {
+      return this.aux;
     }
   }
 
@@ -389,6 +410,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addParameter("networkMultithreaded", this.isNetworkMultithreaded);
     addParameter("framesPerSecond", this.framesPerSecond);
     addParameter("speed", this.speed);
+    addParameter("performanceMode", this.performanceMode);
   }
 
   public void logProfiler() {
@@ -926,6 +948,15 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   private void processInputEvents() {
+    try {
+      _processInputEvents();
+    } catch (Exception x) {
+      LX.error(x, "FATAL EXCEPTION INPUT EVENT: " + x.getLocalizedMessage());
+    }
+  }
+
+  private void _processInputEvents() {
+
     // Process MIDI events
     long midiStart = System.nanoTime();
     this.midi.dispatch();
@@ -1050,6 +1081,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           for (int i = start; i < end; ++i) {
             this.buffer.render.main[i] = LXColor.BLACK;
             this.buffer.render.cue[i] = LXColor.BLACK;
+            this.buffer.render.aux[i] = LXColor.BLACK;
           }
         }
       } else if (fixture.identify.isOn()) {
@@ -1059,6 +1091,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           for (int i = start; i < end; ++i) {
             this.buffer.render.main[i] = identifyColor;
             this.buffer.render.cue[i] = identifyColor;
+            this.buffer.render.aux[i] = identifyColor;
           }
         }
       }
@@ -1070,6 +1103,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
             if (i < start || i >= end) {
               this.buffer.render.main[i] = LXColor.BLACK;
               this.buffer.render.cue[i] = LXColor.BLACK;
+              this.buffer.render.aux[i] = LXColor.BLACK;
             }
           }
         }
