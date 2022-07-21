@@ -42,7 +42,9 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.AggregateParameter;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -193,6 +195,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   // Scroll offset for Rainbow Mode
   private int rainbowColumnOffset = 0;
 
+  private boolean isAux = false;
+
   private final APC40Mk2Colors apc40Mk2Colors = new APC40Mk2Colors();
 
   private final Map<LXAbstractChannel, ChannelListener> channelListeners = new HashMap<LXAbstractChannel, ChannelListener>();
@@ -263,6 +267,33 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendNoteOn(0, BANK_RIGHT, this.bankRightOn ? LED_ON : LED_OFF);
   }
 
+  private void updatePerformanceLights() {
+    boolean performanceMode = this.lx.engine.performanceMode.isOn();
+    sendNoteOn(0, PLAY, performanceMode && !this.isAux ? LED_ON : LED_OFF);
+    sendNoteOn(0, RECORD, performanceMode && this.isAux ? LED_ON : LED_OFF);
+    sendNoteOn(0, SESSION, performanceMode ? LED_ON : LED_OFF);
+  }
+
+  private void updateCueLights() {
+    if (isAuxActive()) {
+      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.auxA.isOn() ? 1 : 0);
+      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.auxB.isOn() ? 1 : 0);
+    } else {
+      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
+      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
+    }
+  }
+
+  private void setAux(boolean isAux) {
+    this.isAux = isAux;
+    this.lx.engine.performanceMode.setValue(true);
+    updatePerformanceLights();
+    updateCueLights();
+    sendChannelFocus();
+    this.deviceListener.registerFocusedChannel();
+    sendChannelCues();
+  }
+
   private class DeviceListener implements LXParameterListener {
 
     private LXDeviceComponent device = null;
@@ -299,6 +330,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
       }
       sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
+    }
+
+    void registerFocusedChannel() {
+      LXBus channel = isAuxActive() ? lx.engine.mixer.getFocusedChannelAux() : lx.engine.mixer.getFocusedChannel();
+      if (channel != this.channel) {
+        registerChannel(channel);
+      }
     }
 
     void registerChannel(LXBus channel) {
@@ -586,6 +624,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       channel.addClipListener(this);
       channel.cueActive.addListener(this);
+      channel.auxActive.addListener(this);
       channel.enabled.addListener(this);
       channel.crossfadeGroup.addListener(this);
       channel.arm.addListener(this);
@@ -612,6 +651,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       this.channel.removeClipListener(this);
       this.channel.cueActive.removeListener(this);
+      this.channel.auxActive.removeListener(this);
       this.channel.enabled.removeListener(this);
       this.channel.crossfadeGroup.removeListener(this);
       this.channel.arm.removeListener(this);
@@ -637,12 +677,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
       if (p == this.channel.cueActive) {
         sendNoteOn(index, CHANNEL_SOLO, this.channel.cueActive.isOn() ? LED_ON : LED_OFF);
+      } else if (p == this.channel.auxActive) {
+        if (lx.engine.performanceMode.isOn()) {
+          sendNoteOn(index, CHANNEL_ARM, this.channel.auxActive.isOn() ? LED_ON : LED_OFF);
+        }
       } else if (p == this.channel.enabled) {
         sendNoteOn(index, CHANNEL_ACTIVE, this.channel.enabled.isOn() ? LED_ON : LED_OFF);
       } else if (p == this.channel.crossfadeGroup) {
         sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, this.channel.crossfadeGroup.getValuei());
       } else if (p == this.channel.arm) {
-        sendNoteOn(index, CHANNEL_ARM, this.channel.arm.isOn() ? LED_ON : LED_OFF);
+        if (!lx.engine.performanceMode.isOn()) {
+          sendNoteOn(index, CHANNEL_ARM, this.channel.arm.isOn() ? LED_ON : LED_OFF);
+        }
         sendChannelClips(this.channel.getIndex(), this.channel);
       } else if (p.getParent() instanceof LXClip) {
         LXClip clip = (LXClip)p.getParent();
@@ -787,7 +833,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       this.bankRightOn = false;
     }
 
-    this.updateBankLeftRightLights();
+    updatePerformanceLights();
+    updateBankLeftRightLights();
 
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
       sendControlChange(0, DEVICE_KNOB_STYLE+i, LED_STYLE_OFF);
@@ -801,8 +848,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
     sendChannels();
-    this.cueDown = 0;
-    this.singleCueStartedOn = false;
+    this.cueState.reset();
+    this.auxState.reset();
   }
 
   private void resetPaletteVars() {
@@ -818,6 +865,19 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       sendChannel(i, getChannel(i));
     }
     sendChannelFocus();
+  }
+
+  private void sendChannelCues() {
+    for (int i = 0; i < NUM_CHANNELS; ++i) {
+      LXAbstractChannel channel = getChannel(i);
+      if (channel != null) {
+        sendNoteOn(i, CHANNEL_SOLO, channel.cueActive.isOn() ? LED_ON : LED_OFF);
+        sendNoteOn(i, CHANNEL_ARM, (this.lx.engine.performanceMode.isOn() ? channel.auxActive.isOn() : channel.arm.isOn()) ? LED_ON : LED_OFF);
+      } else {
+        sendNoteOn(i, CHANNEL_SOLO, LED_OFF);
+        sendNoteOn(i, CHANNEL_ARM, LED_OFF);
+      }
+    }
   }
 
   private void sendChannelGrid() {
@@ -844,7 +904,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       sendNoteOn(index, CHANNEL_ACTIVE, channel.enabled.isOn() ? LED_ON : LED_OFF);
       sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, channel.crossfadeGroup.getValuei());
       sendNoteOn(index, CHANNEL_SOLO, channel.cueActive.isOn() ? LED_ON : LED_OFF);
-      sendNoteOn(index, CHANNEL_ARM, channel.arm.isOn() ? LED_ON : LED_OFF);
+      sendNoteOn(index, CHANNEL_ARM, (this.lx.engine.performanceMode.isOn() ? channel.auxActive.isOn() : channel.arm.isOn()) ? LED_ON : LED_OFF);
     } else {
       sendNoteOn(index, CHANNEL_ACTIVE, LED_OFF);
       sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, LED_OFF);
@@ -1025,7 +1085,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendChannelFocus() {
-    int focusedChannel = this.lx.engine.mixer.focusedChannel.getValuei();
+    int focusedChannel = isAuxActive() ? this.lx.engine.mixer.focusedChannelAux.getValuei() : this.lx.engine.mixer.focusedChannel.getValuei();
     boolean masterFocused = (focusedChannel == this.lx.engine.mixer.channels.size());
     for (int i = 0; i < NUM_CHANNELS; ++i) {
       boolean on;
@@ -1061,52 +1121,98 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   };
 
   private final LXParameterListener focusedChannelListener = (p) -> {
-    sendChannelFocus();
-    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+    if (!isAuxActive()) {
+      sendChannelFocus();
+      this.deviceListener.registerFocusedChannel();
+    }
   };
 
+  private final LXParameterListener focusedChannelAuxListener = (p) -> {
+    if (isAuxActive()) {
+      sendChannelFocus();
+      this.deviceListener.registerFocusedChannel();
+    }
+  };
+
+  private boolean isAuxActive() {
+    return this.lx.engine.performanceMode.isOn() && this.isAux;
+  }
+
   private final LXParameterListener cueAListener = (p) -> {
-    sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
+    if (!isAuxActive()) {
+      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
+    }
   };
 
   private final LXParameterListener cueBListener = (p) -> {
-    sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
+    if (!isAuxActive()) {
+      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
+    }
+  };
+
+  private final LXParameterListener auxAListener = (p) -> {
+    if (isAuxActive()) {
+      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.auxA.isOn() ? 1 : 0);
+    }
+  };
+
+  private final LXParameterListener auxBListener = (p) -> {
+    if (isAuxActive()) {
+      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.auxB.isOn() ? 1 : 0);
+    }
   };
 
   private final LXParameterListener tempoListener = (p) -> {
     sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
   };
 
+  private final LXParameterListener performanceModeListener = (p) -> {
+    updatePerformanceLights();
+    updateCueLights();
+    sendChannelFocus();
+    sendChannelCues();
+    this.deviceListener.registerFocusedChannel();
+  };
+
   private boolean isRegistered = false;
 
   private void register() {
-    isRegistered = true;
+    this.isRegistered = true;
 
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       registerChannel(channel);
     }
 
+    this.lx.engine.performanceMode.addListener(this.performanceModeListener, true);
+
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
+    this.lx.engine.mixer.focusedChannelAux.addListener(this.focusedChannelAuxListener);
 
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
 
     this.lx.engine.mixer.cueA.addListener(this.cueAListener, true);
     this.lx.engine.mixer.cueB.addListener(this.cueBListener, true);
+    this.lx.engine.mixer.auxA.addListener(this.auxAListener, true);
+    this.lx.engine.mixer.auxB.addListener(this.auxBListener, true);
     this.lx.engine.tempo.enabled.addListener(this.tempoListener, true);
   }
 
   private void unregister() {
-    isRegistered = false;
+    this.isRegistered = false;
 
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       unregisterChannel(channel);
     }
 
+    this.lx.engine.performanceMode.removeListener(this.performanceModeListener);
     this.lx.engine.mixer.removeListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
+    this.lx.engine.mixer.focusedChannelAux.removeListener(this.focusedChannelAuxListener);
     this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
     this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
+    this.lx.engine.mixer.auxA.removeListener(this.auxAListener);
+    this.lx.engine.mixer.auxB.removeListener(this.auxBListener);
     this.lx.engine.tempo.enabled.removeListener(this.tempoListener);
 
     clearChannelGrid();
@@ -1145,8 +1251,26 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     return null;
   }
 
-  private int cueDown = 0;
-  private boolean singleCueStartedOn = false;
+  private LXBus getFocusedChannel() {
+    return isAuxActive() ? this.lx.engine.mixer.getFocusedChannelAux() : this.lx.engine.mixer.getFocusedChannel();
+  }
+
+  private DiscreteParameter getFocusedChannelTarget() {
+    return isAuxActive() ? this.lx.engine.mixer.focusedChannelAux : this.lx.engine.mixer.focusedChannel;
+  }
+
+  private class CueState {
+    private int cueDown = 0;
+    private boolean singleCueStartedOn = false;
+
+    private void reset() {
+      this.cueDown = 0;
+      this.singleCueStartedOn = false;
+    }
+  }
+
+  private final CueState cueState = new CueState();
+  private final CueState auxState = new CueState();
 
   private void noteReceived(MidiNote note, boolean on) {
     int pitch = note.getPitch();
@@ -1220,35 +1344,56 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     if (on) {
       LXBus bus;
       switch (pitch) {
+      case PLAY:
+        setAux(false);
+        return;
+      case RECORD:
+        setAux(true);
+        return;
+      case SESSION:
+        this.lx.engine.performanceMode.toggle();
+        return;
       case MASTER_FOCUS:
         lx.engine.mixer.selectChannel(lx.engine.mixer.masterBus);
-        lx.engine.mixer.focusedChannel.setValue(lx.engine.mixer.channels.size());
+        getFocusedChannelTarget().setValue(lx.engine.mixer.channels.size());
         return;
       case BANK_SELECT_LEFT:
-        this.lx.engine.mixer.focusedChannel.decrement(false);
-        lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        getFocusedChannelTarget().decrement(false);
+        if (!isAuxActive()) {
+          lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        }
         return;
       case BANK_SELECT_RIGHT:
-        this.lx.engine.mixer.focusedChannel.increment(false);
-        lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        getFocusedChannelTarget().increment(false);
+        if (!isAuxActive()) {
+          lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        }
         return;
       case BANK_SELECT_UP:
-        bus = this.lx.engine.mixer.getFocusedChannel();
+        bus = getFocusedChannel();
         if (bus instanceof LXChannel) {
           ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
         return;
       case BANK_SELECT_DOWN:
-        bus = this.lx.engine.mixer.getFocusedChannel();
+        bus = getFocusedChannel();
         if (bus instanceof LXChannel) {
           ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
         return;
       case CLIP_DEVICE_VIEW:
-        this.lx.engine.mixer.cueA.toggle();
+        if (isAuxActive()) {
+          this.lx.engine.mixer.auxA.toggle();
+        } else {
+          this.lx.engine.mixer.cueA.toggle();
+        }
         return;
       case DETAIL_VIEW:
-        this.lx.engine.mixer.cueB.toggle();
+        if (isAuxActive()) {
+          this.lx.engine.mixer.auxB.toggle();
+        } else {
+          this.lx.engine.mixer.cueB.toggle();
+        }
         return;
       case STOP_ALL_CLIPS:
         if (this.gridMode == GridMode.PALETTE) {
@@ -1261,13 +1406,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       case BANK_LEFT:
         this.bankLeftOn = !this.bankLeftOn;
         this.bankRightOn = false;
-        this.updateBankLeftRightLights();
+        updateBankLeftRightLights();
         updateColorKnobs();
         return;
       case BANK_RIGHT:
         this.bankRightOn = !this.bankRightOn;
         this.bankLeftOn = false;
-        this.updateBankLeftRightLights();
+        updateBankLeftRightLights();
         updateColorKnobs();
         return;
       }
@@ -1388,42 +1533,24 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     if (channel != null) {
       if (note.getPitch() == CHANNEL_SOLO) {
-        if (on) {
-          boolean cueAlreadyOn = channel.cueActive.isOn();
+        handleMultiCue(on, this.cueState, channel, false);
+        return;
+      }
 
-          // First cue pressed, if active, could be un-cue or start of multi-select
-          this.singleCueStartedOn = (this.cueDown == 0) && cueAlreadyOn;
-          if (cueAlreadyOn) {
-            if (this.cueDown == 0) {
-              // Turn off all other cues on the first fresh press, leave this one on
-              this.lx.engine.mixer.enableChannelCue(channel, true);
-            } else {
-              channel.cueActive.setValue(false);
-            }
-          } else {
-            this.lx.engine.mixer.enableChannelCue(channel, this.cueDown == 0);
-          }
-          ++this.cueDown;
-        } else {
-          // Play defense here, just in case a button was down *before* control surface mode
-          // was activated and gets released after
-          this.cueDown = LXUtils.max(0, this.cueDown - 1);
-
-          if (this.singleCueStartedOn) {
-            // Turn this one off.  Already got the others on the cue down
-            channel.cueActive.setValue(false);
-            this.singleCueStartedOn = false;
-          }
-        }
+      if ((note.getPitch() == CHANNEL_ARM) && this.lx.engine.performanceMode.isOn()) {
+        handleMultiCue(on, this.auxState, channel, true);
         return;
       }
 
       if (!on) {
         return;
       }
+
       switch (note.getPitch()) {
       case CHANNEL_ARM:
-        channel.arm.toggle();
+        if (!this.lx.engine.performanceMode.isOn()) {
+          channel.arm.toggle();
+        }
         return;
       case CHANNEL_ACTIVE:
         channel.enabled.toggle();
@@ -1444,8 +1571,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             ((LXChannel) channel).autoCycleEnabled.toggle();
           }
         } else {
-          this.lx.engine.mixer.focusedChannel.setValue(channel.getIndex());
-          lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+          getFocusedChannelTarget().setValue(channel.getIndex());
+          if (!isAuxActive()) {
+            lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+          }
         }
         return;
       case DEVICE_ON_OFF:
@@ -1461,6 +1590,45 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     LXMidiEngine.error("APC40mk2 received unmapped note: " + note);
+  }
+
+  private void handleMultiCue(boolean on, CueState state, LXAbstractChannel channel, boolean aux) {
+    BooleanParameter active = aux ? channel.auxActive : channel.cueActive;
+    if (on) {
+      boolean alreadyOn = active.isOn();
+
+      // First cue pressed, if active, could be un-cue or start of multi-select
+      state.singleCueStartedOn = (state.cueDown == 0) && alreadyOn;
+      if (alreadyOn) {
+        if (state.cueDown == 0) {
+          // Turn off all other cues on the first fresh press, leave this one on
+          if (aux) {
+            this.lx.engine.mixer.enableChannelAux(channel, true);
+          } else {
+            this.lx.engine.mixer.enableChannelCue(channel, true);
+          }
+        } else {
+          active.setValue(false);
+        }
+      } else {
+        if (aux) {
+          this.lx.engine.mixer.enableChannelAux(channel, state.cueDown == 0);
+        } else {
+          this.lx.engine.mixer.enableChannelCue(channel, state.cueDown == 0);
+        }
+      }
+      ++state.cueDown;
+    } else {
+      // Play defense here, just in case a button was down *before* control surface mode
+      // was activated and gets released after
+      state.cueDown = LXUtils.max(0, state.cueDown - 1);
+
+      if (state.singleCueStartedOn) {
+        // Turn this one off.  Already got the others on the cue down
+        active.setValue(false);
+        state.singleCueStartedOn = false;
+      }
+    }
   }
 
   @Override
