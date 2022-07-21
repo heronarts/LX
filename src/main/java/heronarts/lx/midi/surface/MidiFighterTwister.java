@@ -20,8 +20,6 @@ package heronarts.lx.midi.surface;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
-import heronarts.lx.color.DiscreteColorParameter;
-import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
@@ -32,10 +30,10 @@ import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
-import heronarts.lx.modulation.LXCompoundModulation;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
@@ -63,13 +61,20 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
    *   Encoder MIDI Type: ENC 3FH/41H
    *   Encoder Switch MIDI Settings:
    *     Switch MIDI Channel: 2
-   *     Switch MIDI Number: 6
    *   Encoder Rotary MIDI Settings:
    *     Encoder MIDI Channel: 1
-   *     Encoder MIDI Number: 6
    */
 
   public static final String DEVICE_NAME = "Midi Fighter Twister";
+
+  public enum MFTTarget {
+    FOCUSCHANNEL,
+    FOCUSCHANNELAUX
+  }
+
+  public final EnumParameter<MFTTarget> target =
+    new EnumParameter<MFTTarget>("Target", MFTTarget.FOCUSCHANNEL)
+    .setDescription("Target focusedChannel or focusedChannelAux. FocusedChannelAux is only visible in performance mode.");
 
   // MIDI Channels
   public static final int CHANNEL_ROTARY_ENCODER = 0;
@@ -129,6 +134,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   public static final int RGB_INACTIVE_COLOR = 0;
   public static final int RGB_ACTIVE_COLOR = 127;
   // To set RGB to any color use values 1-126
+  public static final int RGB_BLUE = 1;
+  public static final int RGB_GREEN = 50;
+  public static final int RGB_RED = 80;
 
   // MIDI Notes on Animation channel
   public static final int RGB_ANIMATION_NONE = 0;
@@ -204,6 +212,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     private void resend() {
+      int knobColor = getKnobColor();
       for (int i = 0; i < this.knobs.length; ++i) {
         LXListenableNormalizedParameter parameter = this.knobs[i];
         if (parameter != null) {
@@ -215,7 +224,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             parameter.getNormalized();
           sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
-          sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, 50);
+          sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, knobColor);
         } else {
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
@@ -263,6 +272,16 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
+    private int getKnobColor() {
+      switch (target.getEnum()) {
+        case FOCUSCHANNELAUX:
+          return RGB_RED;
+        case FOCUSCHANNEL:
+        default:
+          return RGB_BLUE;
+      }
+    }
+
     private void register(LXDeviceComponent device) {
       if (this.device != device) {
         unregister();
@@ -276,6 +295,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
         int i = 0;
         if (this.device != null) {
+          int knobColor = getKnobColor();
           for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
             if (i >= this.knobs.length) {
               break;
@@ -297,19 +317,10 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
               if (parameter instanceof CompoundParameter && ((CompoundParameter)parameter).modulations.size()>0) {
-                LXCompoundModulation modulation = ((CompoundParameter)parameter).modulations.get(0);
-                // TODO: color conversion not working
-                DiscreteColorParameter modulationColor = modulation.color;
-                int modColor = modulationColor.getColor();
-                float h = LXColor.h(modColor);
-                h = h * 125.f / 360.f;
-                h += 1.f;
-                int hInt = (int)h;
                 sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_PULSE_EVERY_2_BEATS);
-                sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, hInt);
               } else {
                 sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
-                sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, 50);
+                //sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, 50);
               }
             } else {
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
@@ -318,6 +329,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 0);
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
             }
+            sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, knobColor);
             ++i;
           }
           this.device.controlSurfaceSemaphore.increment();
@@ -475,8 +487,29 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     this.currentBank.setValue(bank);
   }
 
+  private void incrementTarget() {
+    this.target.increment();
+  }
+
+  private void decrementTarget() {
+    this.target.decrement();
+  }
+
   public MidiFighterTwister(LX lx, LXMidiInput input, LXMidiOutput output) {
       super(lx, input, output);
+
+      this.target.addListener(new LXParameterListener() {
+        @Override
+        public void onParameterChanged(LXParameter parameter) {
+          onTargetChanged(target.getEnum());
+        }
+      });
+  }
+
+  private void onTargetChanged(MFTTarget target) {
+    System.out.println("MFT Target: " + target);
+    registerChannelByTarget();
+    this.deviceListener.resend();
   }
 
   @Override
@@ -522,7 +555,15 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   }
 
   private final LXParameterListener focusedChannelListener = (p) -> {
-    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+    if (this.target.getEnum() == MFTTarget.FOCUSCHANNEL ) {
+      this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+    }
+    };
+
+  private final LXParameterListener focusedChannelAuxListener = (p) -> {
+    if (this.target.getEnum() == MFTTarget.FOCUSCHANNELAUX ) {
+      this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannelAux());
+    }
     };
 
   private boolean isRegistered = false;
@@ -531,14 +572,28 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     isRegistered = true;
 
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
+    this.lx.engine.mixer.focusedChannelAux.addListener(this.focusedChannelAuxListener);
 
-    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+    registerChannelByTarget();
+  }
+
+  private void registerChannelByTarget() {
+    switch (this.target.getEnum()) {
+      case FOCUSCHANNELAUX:
+        this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannelAux());
+        return;
+      case FOCUSCHANNEL:
+      default:
+        this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+        return;
+    }
   }
 
   private void unregister() {
     isRegistered = false;
 
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
+    this.lx.engine.mixer.focusedChannelAux.removeListener(this.focusedChannelAuxListener);
   }
 
   @Override
@@ -593,30 +648,34 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             }
             return;
           case BANK1_LEFT1:
-          case BANK1_LEFT2:
-          case BANK1_LEFT3:
           case BANK2_LEFT1:
-          case BANK2_LEFT2:
-          case BANK2_LEFT3:
           case BANK3_LEFT1:
-          case BANK3_LEFT2:
-          case BANK3_LEFT3:
           case BANK4_LEFT1:
+            this.decrementTarget();
+            return;
+          case BANK1_RIGHT1:
+          case BANK2_RIGHT1:
+          case BANK3_RIGHT1:
+          case BANK4_RIGHT1:
+            this.incrementTarget();
+            return;
+          case BANK1_LEFT2:
+          case BANK2_LEFT2:
+          case BANK3_LEFT2:
           case BANK4_LEFT2:
+          case BANK1_LEFT3:
+          case BANK2_LEFT3:
+          case BANK3_LEFT3:
           case BANK4_LEFT3:
             this.deviceListener.registerPrevious();
             return;
-          case BANK1_RIGHT1:
           case BANK1_RIGHT2:
-          case BANK1_RIGHT3:
-          case BANK2_RIGHT1:
           case BANK2_RIGHT2:
-          case BANK2_RIGHT3:
-          case BANK3_RIGHT1:
           case BANK3_RIGHT2:
-          case BANK3_RIGHT3:
-          case BANK4_RIGHT1:
           case BANK4_RIGHT2:
+          case BANK1_RIGHT3:
+          case BANK2_RIGHT3:
+          case BANK3_RIGHT3:
           case BANK4_RIGHT3:
             this.deviceListener.registerNext();
             return;
