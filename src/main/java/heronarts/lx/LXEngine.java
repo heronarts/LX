@@ -817,7 +817,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           sleep(1);
         } else {
           if (timeLeft > SPIN_YIELD_PRECISION) {
-            yield();
+            Thread.yield();
           }
         }
         timeLeft = end - System.nanoTime();
