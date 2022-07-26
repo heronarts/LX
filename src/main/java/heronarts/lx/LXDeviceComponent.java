@@ -84,6 +84,14 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     new BooleanParameter("Expanded", true)
     .setDescription("Whether the device controls are expanded");
 
+  public final BooleanParameter controlsExpandedCue =
+    new BooleanParameter("Expanded Cue", true)
+    .setDescription("Whether the device controls are expanded in cue view");
+
+  public final BooleanParameter controlsExpandedAux =
+    new BooleanParameter("Expanded Aux", true)
+    .setDescription("Whether the device controls are expanded in aux view");
+
   public final BooleanParameter modulationExpanded =
     new BooleanParameter("Modulation Expanded", false)
     .setDescription("Whether the device modulation section is expanded");
@@ -100,6 +108,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     super(lx, label);
     addChild("modulation", this.modulation = new LXModulationEngine(lx));
     addInternalParameter("expanded", this.controlsExpanded);
+    addInternalParameter("expandedCue", this.controlsExpandedCue);
+    addInternalParameter("expandedAux", this.controlsExpandedAux);
     addInternalParameter("modulationExpanded", this.modulationExpanded);
     addInternalParameter("presetFile", this.presetFile);
   }

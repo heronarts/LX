@@ -87,6 +87,14 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     new BooleanParameter("Selected")
     .setDescription("Whether the channel is selected");
 
+  public final BooleanParameter controlsExpandedCue =
+    new BooleanParameter("Expanded Cue", true)
+    .setDescription("Whether the control elements for this channel are expanded in cue view");
+
+  public final BooleanParameter controlsExpandedAux =
+    new BooleanParameter("Expanded Aux", true)
+    .setDescription("Whether the control elements for this channel are expanded in aux view");
+
   protected final List<LXEffect> mutableEffects = new ArrayList<LXEffect>();
   public final List<LXEffect> effects = Collections.unmodifiableList(mutableEffects);
 
@@ -106,6 +114,8 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     addArray("clip", this.clips);
     addParameter("arm", this.arm);
     addParameter("selected", this.selected);
+    addInternalParameter("controlsExpandedCue", this.controlsExpandedCue);
+    addInternalParameter("controlsExpandedAux", this.controlsExpandedAux);
   }
 
   public abstract int getIndex();
