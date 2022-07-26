@@ -789,7 +789,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
             if (lx.flags.threadMode == ThreadMode.BASIC_THREAD_SPINYIELD) {
               sleepNanos(minWait);
             } else {
-              sleep(minWait / NANOS_PER_MS, (int) (minWait % NANOS_PER_MS));
+              Thread.sleep(minWait / NANOS_PER_MS, (int) (minWait % NANOS_PER_MS));
             }
           } catch (InterruptedException ix) {
             break;
@@ -814,10 +814,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       long timeLeft = nanoDuration;
       do {
         if (timeLeft > SLEEP_PRECISION) {
-          sleep(1);
+          Thread.sleep(1);
         } else {
           if (timeLeft > SPIN_YIELD_PRECISION) {
-            yield();
+            Thread.yield();
           }
         }
         timeLeft = end - System.nanoTime();
