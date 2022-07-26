@@ -143,7 +143,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_VERSION = "version";
   private static final String KEY_PROJECT_FILE_NAME = "projectFileName";
   private static final String KEY_SCHEDULE_FILE_NAME = "scheduleFileName";
-  private static final String KEY_WINDOW_WIDTH = "windwWidth";
+  private static final String KEY_WINDOW_WIDTH = "windowWidth";
+  private static final String KEY_WINDOW_WIDTH_LEGACY = "windwWidth";
   private static final String KEY_WINDOW_HEIGHT = "windowHeight";
   private static final String KEY_UI_ZOOM = "uiZoom";
   private static final String KEY_FOCUS_CHANNEL_ON_CUE = "focusChannelOnCue";
@@ -187,6 +188,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
     if (object.has(KEY_WINDOW_WIDTH)) {
       this.windowWidth = object.get(KEY_WINDOW_WIDTH).getAsInt();
+    } else if (object.has(KEY_WINDOW_WIDTH_LEGACY)) {
+      this.windowWidth = object.get(KEY_WINDOW_WIDTH_LEGACY).getAsInt();
     }
     if (object.has(KEY_WINDOW_HEIGHT)) {
       this.windowHeight = object.get(KEY_WINDOW_HEIGHT).getAsInt();
