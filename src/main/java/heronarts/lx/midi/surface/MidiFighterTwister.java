@@ -200,7 +200,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     private final int[] knobTicks = new int[DEVICE_KNOB_NUM];
     private final int[] knobIncrementSize = new int[DEVICE_KNOB_NUM];
 
-    DeviceListener() {
+    private DeviceListener() {
       for (int i = 0; i < this.knobs.length; ++i) {
         this.knobs[i] = null;
         this.knobTicks[i] = 0;
@@ -231,7 +231,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    void registerFocusedChannel() {
+    private void registerFocusedChannel() {
       LXBus channel = isAux ? lx.engine.mixer.getFocusedChannelAux() : lx.engine.mixer.getFocusedChannel();
       if (channel != this.channel) {
         registerChannel(channel);

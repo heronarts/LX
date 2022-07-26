@@ -304,11 +304,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     private final LXListenableParameter[] knobs =
       new LXListenableParameter[DEVICE_KNOB_NUM];
 
-    DeviceListener() {
+    private DeviceListener() {
       Arrays.fill(this.knobs, null);
     }
 
-    void resend() {
+    private void resend() {
       for (int i = 0; i < this.knobs.length; ++i) {
         // If the knob is a LinkedColorParameter, we need to look up which subparameter
         // to pull the value from to send to the surface to display.
@@ -332,14 +332,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
     }
 
-    void registerFocusedChannel() {
+    private void registerFocusedChannel() {
       LXBus channel = isAuxActive() ? lx.engine.mixer.getFocusedChannelAux() : lx.engine.mixer.getFocusedChannel();
       if (channel != this.channel) {
         registerChannel(channel);
       }
     }
 
-    void registerChannel(LXBus channel) {
+    private void registerChannel(LXBus channel) {
       unregisterChannel();
       this.channel = channel;
       if (channel instanceof LXChannel) {
@@ -352,7 +352,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    void registerPrevious() {
+    private void registerPrevious() {
       if (this.effect != null) {
         int effectIndex = this.effect.getIndex();
         if (effectIndex > 0) {
@@ -363,7 +363,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    void registerNext() {
+    private void registerNext() {
       if (this.effect != null) {
         int effectIndex = this.effect.getIndex();
         if (effectIndex < this.effect.getBus().effects.size() - 1) {
@@ -383,7 +383,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    void register(LXDeviceComponent device) {
+    private void register(LXDeviceComponent device) {
       if (this.device == device) {
         return;
       }
@@ -497,7 +497,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return null;
     }
 
-    void onDeviceOnOff() {
+    private void onDeviceOnOff() {
       if (this.pattern != null) {
         this.pattern.getChannel().goPatternIndex(this.pattern.getIndex());
         sendNoteOn(0, DEVICE_ON_OFF, 1);
@@ -506,7 +506,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    void onKnob(int index, double normalized) {
+    private void onKnob(int index, double normalized) {
       LXListenableParameter knob = this.knobs[index];
 
       if (knob == null) {
