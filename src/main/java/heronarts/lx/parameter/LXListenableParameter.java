@@ -202,6 +202,10 @@ public abstract class LXListenableParameter implements LXParameter {
   private final Queue<Double> setValues = new ArrayDeque<Double>();
 
   public final LXParameter setValue(double value) {
+    return setValue(value, true);
+  }
+
+  public final LXParameter setValue(double value, boolean notifyListeners) {
     if (this.inListener) {
       // setValue() was called recursively from a parameter listener.
       // This is okay, but we need to call all the listeners with the
@@ -212,11 +216,13 @@ public abstract class LXListenableParameter implements LXParameter {
         value = updateValue(value);
         if (this.value != value) {
           this.value = value;
-          this.inListener = true;
-          for (LXParameterListener l : listeners) {
-            l.onParameterChanged(this);
+          if (notifyListeners) {
+            this.inListener = true;
+            for (LXParameterListener l : listeners) {
+              l.onParameterChanged(this);
+            }
+            this.inListener = false;
           }
-          this.inListener = false;
           while (!this.setValues.isEmpty()) {
             setValue(this.setValues.poll());
           }

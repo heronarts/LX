@@ -736,27 +736,28 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Fix indexing on all channels
     _reindexChannels();
 
-    // Update the focused channel range
-    boolean notified = false;
-    if (this.focusedChannel.getValuei() > this.mutableChannels.size()) {
-      notified = true;
-      this.focusedChannel.decrement();
+    // Update the focused channel ranges
+    final int numChannels = this.mutableChannels.size();
+    final int focused = this.focusedChannel.getValuei();
+    final int focusedAux = this.focusedChannelAux.getValuei();
+    if (focused > numChannels) {
+      this.focusedChannel.setValue(numChannels, false);
+    } else if ((numChannels > 0) && (focused == numChannels)) {
+      this.focusedChannel.setValue(numChannels - 1, false);
     }
-    this.focusedChannel.setRange(this.mutableChannels.size() + 1);
-    if (!notified) {
-      this.focusedChannel.bang();
+    if (focusedAux > numChannels) {
+      this.focusedChannelAux.setValue(numChannels, false);
+    } else if ((numChannels > 0) && (focusedAux == numChannels)) {
+      this.focusedChannelAux.setValue(numChannels - 1, false);
     }
+    this.focusedChannel.setRange(numChannels + 1);
+    this.focusedChannelAux.setRange(numChannels + 1);
 
-    // Update the focused channel aux range
-    boolean notifiedAux = false;
-    if (this.focusedChannelAux.getValuei() > this.mutableChannels.size()) {
-      notifiedAux = true;
-      this.focusedChannelAux.decrement();
-    }
-    this.focusedChannelAux.setRange(this.mutableChannels.size() + 1);
-    if (!notifiedAux) {
-      this.focusedChannelAux.bang();
-    }
+    // Notify both focused channel listeners after all the focus ranges have been updated,
+    // otherwise a listener to focusedChannel changing could retrieve an invalid value for
+    // the aux value
+    this.focusedChannel.bang();
+    this.focusedChannelAux.bang();
 
     // Notify listeners
     for (Listener listener : this.listeners) {
