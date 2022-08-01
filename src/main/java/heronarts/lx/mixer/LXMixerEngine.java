@@ -538,6 +538,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return addChannel(-1);
   }
 
+  public LXChannel addChannel(JsonObject channelObj) {
+    return addChannel(-1, new LXPattern[0], channelObj);
+  }
+
   public LXChannel addChannel(int index) {
     return addChannel(index, new LXPattern[0]);
   }
@@ -547,6 +551,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   }
 
   public LXChannel addChannel(int index, LXPattern[] patterns) {
+    return addChannel(index, patterns, null);
+  }
+
+  public LXChannel addChannel(int index, LXPattern[] patterns, JsonObject channelObj) {
     if (index > this.mutableChannels.size()) {
       throw new IllegalArgumentException("Invalid channel index: " + index);
     }
@@ -554,6 +562,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       index = this.mutableChannels.size();
     }
     LXChannel channel = new LXChannel(this.lx, index, patterns);
+    if (channelObj != null) {
+      channel.load(this.lx, channelObj);
+    }
+
     _addChannel(channel, index);
 
     // This new channel is focused now!

@@ -976,10 +976,7 @@ public abstract class LXCommand {
             throw new InvalidCommandException(x);
           }
         } else {
-          channel = lx.engine.mixer.addChannel();
-        }
-        if (this.channelObj != null) {
-          channel.load(lx, this.channelObj);
+          channel = lx.engine.mixer.addChannel(this.channelObj);
         }
         this.channelObj = LXSerializable.Utils.toObject(channel);
         this.channel = new ComponentReference<LXChannel>(channel);
