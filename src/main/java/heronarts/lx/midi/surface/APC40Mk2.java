@@ -1307,7 +1307,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return;
     case BANK:
       if (on) {
-        if (this.deviceLockOn) {
+        if (this.shiftOn) {
+          this.lx.engine.mixer.clipViewExpanded.toggle();
+        } else if (this.deviceLockOn) {
           this.deviceLockOn = false;
           sendNoteOn(note.getChannel(), DEVICE_LOCK, LED_OFF);
           resetPaletteVars();

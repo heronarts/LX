@@ -127,6 +127,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Condensed", false)
     .setDescription("Whether the mixer view should be condensed");
 
+  public final BooleanParameter clipViewExpanded =
+    new BooleanParameter("Clip View", false)
+    .setDescription("Whether the clip grid view is expanded");
 
   public LXMixerEngine(LX lx) {
     super(lx, "Mixer");
@@ -206,7 +209,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("auxA", this.auxA);
     addParameter("auxB", this.auxB);
     addParameter("viewCondensed", this.viewCondensed);
-
+    addParameter("clipViewExpanded", this.clipViewExpanded);
   }
 
   @Override
