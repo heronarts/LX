@@ -538,23 +538,27 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return addChannel(-1);
   }
 
+  public LXChannel addChannel(int index, JsonObject channelObj) {
+    return addChannel(index, channelObj, new LXPattern[0]);
+  }
+
   public LXChannel addChannel(JsonObject channelObj) {
-    return addChannel(-1, new LXPattern[0], channelObj);
+    return addChannel(-1, channelObj, new LXPattern[0]);
   }
 
   public LXChannel addChannel(int index) {
-    return addChannel(index, new LXPattern[0]);
+    return addChannel(index, null, new LXPattern[0]);
   }
 
   public LXChannel addChannel(LXPattern[] patterns) {
-    return addChannel(-1, patterns);
+    return addChannel(-1, null, patterns);
   }
 
   public LXChannel addChannel(int index, LXPattern[] patterns) {
-    return addChannel(index, patterns, null);
+    return addChannel(index, null, patterns);
   }
 
-  public LXChannel addChannel(int index, LXPattern[] patterns, JsonObject channelObj) {
+  public LXChannel addChannel(int index, JsonObject channelObj, LXPattern[] patterns) {
     if (index > this.mutableChannels.size()) {
       throw new IllegalArgumentException("Invalid channel index: " + index);
     }

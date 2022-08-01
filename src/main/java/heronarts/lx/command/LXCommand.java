@@ -943,20 +943,30 @@ public abstract class LXCommand {
       private final Class<? extends LXPattern> patternClass;
       private ComponentReference<LXChannel> channel;
       private JsonObject channelObj = null;
+      private final int index;
 
       public AddChannel() {
-        this(null, null);
+        this(null, null, -1);
       }
 
       public AddChannel(JsonObject channelObj) {
-        this(channelObj, null);
+        this(channelObj, null, -1);
+      }
+
+      public AddChannel(JsonObject channelObj, int index) {
+        this(channelObj, null, index);
       }
 
       public AddChannel(Class<? extends LXPattern> patternClass) {
-        this(null, patternClass);
+        this(null, patternClass, -1);
       }
 
       public AddChannel(JsonObject channelObj, Class<? extends LXPattern> patternClass) {
+        this(channelObj, patternClass, -1);
+      }
+
+      public AddChannel(JsonObject channelObj, Class<? extends LXPattern> patternClass, int index) {
+        this.index = index;
         this.channelObj = channelObj;
         this.patternClass = patternClass;
       }
@@ -971,12 +981,12 @@ public abstract class LXCommand {
         LXChannel channel;
         if (this.patternClass != null) {
           try {
-            channel = lx.engine.mixer.addChannel(new LXPattern[] { lx.instantiatePattern(this.patternClass) });
+            channel = lx.engine.mixer.addChannel(this.index, new LXPattern[] { lx.instantiatePattern(this.patternClass) });
           } catch (LX.InstantiationException x) {
             throw new InvalidCommandException(x);
           }
         } else {
-          channel = lx.engine.mixer.addChannel(this.channelObj);
+          channel = lx.engine.mixer.addChannel(this.index, this.channelObj);
         }
         this.channelObj = LXSerializable.Utils.toObject(channel);
         this.channel = new ComponentReference<LXChannel>(channel);
