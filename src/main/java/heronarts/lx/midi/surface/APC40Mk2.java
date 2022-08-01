@@ -1085,20 +1085,40 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendChannelFocus() {
-    int focusedChannel = isAuxActive() ? this.lx.engine.mixer.focusedChannelAux.getValuei() : this.lx.engine.mixer.focusedChannel.getValuei();
-    boolean masterFocused = (focusedChannel == this.lx.engine.mixer.channels.size());
+
+    final int focusedChannel = this.lx.engine.mixer.focusedChannel.getValuei();
+    final int focusedChannelAux = this.lx.engine.mixer.focusedChannelAux.getValuei();
+
+    final boolean masterFocused = (focusedChannel == this.lx.engine.mixer.channels.size());
+    final boolean masterFocusedAux = (focusedChannelAux == this.lx.engine.mixer.channels.size());
+
+    final boolean isAuxActive = isAuxActive();
+
+    final int focusedChannelMain = isAuxActive ? focusedChannelAux : focusedChannel;
+    final boolean masterFocusedMain = isAuxActive ? masterFocusedAux : masterFocused;
+
+    final int focusedChannelAlt = isAuxActive ? focusedChannel : focusedChannelAux;
+    final boolean masterFocusedAlt = isAuxActive ? masterFocused : masterFocusedAux;
+
     for (int i = 0; i < NUM_CHANNELS; ++i) {
-      boolean on;
-      if (this.rainbowMode) {
-        on = false;
-      } else if (this.gridMode == GridMode.PALETTE) {
-        on = i < lx.engine.palette.swatches.size();
-      } else {
-        on = !masterFocused && (i == focusedChannel);
+      boolean clipStopOn = false, focusOn = false;
+      if (this.gridMode == GridMode.PALETTE) {
+        if (!this.rainbowMode) {
+          clipStopOn = i < lx.engine.palette.swatches.size();
+        }
+      } else if (this.gridMode == GridMode.CLIP) {
+        // clip stop is for clip stop in this mode, it's off unless pressed
+      } else if (this.gridMode == GridMode.PATTERN) {
+        if (this.lx.engine.performanceMode.isOn()) {
+          clipStopOn = !masterFocusedAlt && (i == focusedChannelAlt);
+        }
       }
-      sendNoteOn(i, CHANNEL_FOCUS, on ? LED_ON : LED_OFF);
+      focusOn = !masterFocusedMain && (i == focusedChannelMain);
+
+      sendNoteOn(i, CLIP_STOP, clipStopOn ? LED_ON : LED_OFF);
+      sendNoteOn(i, CHANNEL_FOCUS, focusOn ? LED_ON : LED_OFF);
     }
-    sendNoteOn(0, MASTER_FOCUS, masterFocused ? LED_ON : LED_OFF);
+    sendNoteOn(0, MASTER_FOCUS, masterFocusedMain ? LED_ON : LED_OFF);
   }
 
   private final LXMixerEngine.Listener mixerEngineListener = new LXMixerEngine.Listener() {
@@ -1121,15 +1141,15 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   };
 
   private final LXParameterListener focusedChannelListener = (p) -> {
+    sendChannelFocus();
     if (!isAuxActive()) {
-      sendChannelFocus();
       this.deviceListener.registerFocusedChannel();
     }
   };
 
   private final LXParameterListener focusedChannelAuxListener = (p) -> {
+    sendChannelFocus();
     if (isAuxActive()) {
-      sendChannelFocus();
       this.deviceListener.registerFocusedChannel();
     }
   };
@@ -1259,6 +1279,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     return isAuxActive() ? this.lx.engine.mixer.focusedChannelAux : this.lx.engine.mixer.focusedChannel;
   }
 
+  private DiscreteParameter getFocusedChannelAltTarget() {
+    return isAuxActive() ? this.lx.engine.mixer.focusedChannel : this.lx.engine.mixer.focusedChannelAux;
+  }
+
   private class CueState {
     private int cueDown = 0;
     private boolean singleCueStartedOn = false;
@@ -1283,12 +1307,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return;
     case BANK:
       if (on) {
-        this.bankOn = !this.bankOn;
-        sendNoteOn(note.getChannel(), pitch, this.bankOn ? LED_ON : LED_OFF);
         if (this.deviceLockOn) {
           this.deviceLockOn = false;
           sendNoteOn(note.getChannel(), DEVICE_LOCK, LED_OFF);
           resetPaletteVars();
+        } else {
+          this.bankOn = !this.bankOn;
+          sendNoteOn(note.getChannel(), pitch, this.bankOn ? LED_ON : LED_OFF);
         }
         updateGridMode();
       }
@@ -1297,10 +1322,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       if (on) {
         this.deviceLockOn = !this.deviceLockOn;
         sendNoteOn(note.getChannel(), pitch, this.deviceLockOn ? LED_ON : LED_OFF);
-        if (this.bankOn) {
-          sendNoteOn(note.getChannel(), BANK, LED_OFF);
-          this.bankOn = false;
-        }
         if (!this.deviceLockOn) {
           resetPaletteVars();
         }
@@ -1317,6 +1338,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.rainbowMode = false;
         this.focusColor = null;
         this.colorClipboard = null;
+        sendChannelFocus();
         sendChannelGrid();
       } else {
         lx.engine.tempo.tap.setValue(on);
@@ -1333,7 +1355,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     // Global momentary light-up buttons
     switch (pitch) {
     case CLIP_STOP:
-      sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
+      if (this.gridMode == GridMode.CLIP) {
+        sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
+      }
       break;
     }
     if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX && this.gridMode != GridMode.PALETTE) {
@@ -1354,8 +1378,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.lx.engine.performanceMode.toggle();
         return;
       case MASTER_FOCUS:
-        lx.engine.mixer.selectChannel(lx.engine.mixer.masterBus);
         getFocusedChannelTarget().setValue(lx.engine.mixer.channels.size());
+        if (!isAuxActive()) {
+          lx.engine.mixer.selectChannel(lx.engine.mixer.masterBus);
+        }
         return;
       case BANK_SELECT_LEFT:
         getFocusedChannelTarget().decrement(false);
@@ -1399,8 +1425,15 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         if (this.gridMode == GridMode.PALETTE) {
           this.colorClipboard = null;
           this.focusColor = null;
-        } else {
+        } else if (this.gridMode == GridMode.CLIP) {
           this.lx.engine.mixer.stopClips();
+        } else if (this.gridMode == GridMode.PATTERN) {
+          if (this.lx.engine.performanceMode.isOn()) {
+            getFocusedChannelAltTarget().setValue(lx.engine.mixer.channels.size());
+            if (isAuxActive()) {
+              this.lx.engine.mixer.selectChannel(lx.engine.mixer.masterBus);
+            }
+          }
         }
         return;
       case BANK_LEFT:
@@ -1506,17 +1539,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
 
     // Channel messages
-
-    if (this.rainbowMode) {
-      return;
-    }
-
     if (this.gridMode == GridMode.PALETTE) {
-      if (!on) {
+      if (this.rainbowMode || !on) {
         return;
       }
       switch (note.getPitch()) {
-      case CHANNEL_FOCUS:
+      case CLIP_STOP:
         int swatchNum = note.getChannel();
         if (swatchNum < lx.engine.palette.swatches.size()) {
           lx.engine.palette.setSwatch(lx.engine.palette.swatches.get(swatchNum));
@@ -1529,67 +1557,79 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return;
     }
 
+    // The rest of the buttons are channel specific
     LXAbstractChannel channel = getChannel(note);
-
-    if (channel != null) {
-      if (note.getPitch() == CHANNEL_SOLO) {
-        handleMultiCue(on, this.cueState, channel, false);
-        return;
-      }
-
-      if ((note.getPitch() == CHANNEL_ARM) && this.lx.engine.performanceMode.isOn()) {
-        handleMultiCue(on, this.auxState, channel, true);
-        return;
-      }
-
-      if (!on) {
-        return;
-      }
-
-      switch (note.getPitch()) {
-      case CHANNEL_ARM:
-        if (!this.lx.engine.performanceMode.isOn()) {
-          channel.arm.toggle();
-        }
-        return;
-      case CHANNEL_ACTIVE:
-        channel.enabled.toggle();
-        return;
-      case CHANNEL_CROSSFADE_GROUP:
-        if (this.shiftOn) {
-          channel.blendMode.increment();
-        } else {
-          channel.crossfadeGroup.increment();
-        }
-        return;
-      case CLIP_STOP:
-        channel.stopClips();
-        return;
-      case CHANNEL_FOCUS:
-        if (this.shiftOn) {
-          if (channel instanceof LXChannel) {
-            ((LXChannel) channel).autoCycleEnabled.toggle();
-          }
-        } else {
-          getFocusedChannelTarget().setValue(channel.getIndex());
-          if (!isAuxActive()) {
-            lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
-          }
-        }
-        return;
-      case DEVICE_ON_OFF:
-        this.deviceListener.onDeviceOnOff();
-        return;
-      case DEVICE_LEFT:
-        this.deviceListener.registerPrevious();
-        return;
-      case DEVICE_RIGHT:
-        this.deviceListener.registerNext();
-        return;
-      }
+    if (channel == null) {
+      // No channel, bail out
+      return;
     }
 
-    LXMidiEngine.error("APC40mk2 received unmapped note: " + note);
+    if (note.getPitch() == CHANNEL_SOLO) {
+      handleMultiCue(on, this.cueState, channel, false);
+      return;
+    }
+
+    if ((note.getPitch() == CHANNEL_ARM) && this.lx.engine.performanceMode.isOn()) {
+      handleMultiCue(on, this.auxState, channel, true);
+      return;
+    }
+
+    // From here on, we only handle button *presses* - not releases
+    if (!on) {
+      return;
+    }
+
+    switch (note.getPitch()) {
+    case CHANNEL_ARM:
+      if (!this.lx.engine.performanceMode.isOn()) {
+        channel.arm.toggle();
+      }
+      break;
+    case CHANNEL_ACTIVE:
+      channel.enabled.toggle();
+      break;
+    case CHANNEL_CROSSFADE_GROUP:
+      if (this.shiftOn) {
+        channel.blendMode.increment();
+      } else {
+        channel.crossfadeGroup.increment();
+      }
+      break;
+    case CLIP_STOP:
+      if (this.gridMode == GridMode.CLIP) {
+        channel.stopClips();
+      } else if (this.gridMode == GridMode.PATTERN) {
+        if (this.lx.engine.performanceMode.isOn()) {
+          getFocusedChannelAltTarget().setValue(channel.getIndex());
+        }
+      }
+      break;
+    case CHANNEL_FOCUS:
+      if (this.shiftOn) {
+        if (channel instanceof LXChannel) {
+          ((LXChannel) channel).autoCycleEnabled.toggle();
+        }
+      } else {
+        getFocusedChannelTarget().setValue(channel.getIndex());
+        if (!isAuxActive()) {
+          lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        }
+      }
+      break;
+    case DEVICE_ON_OFF:
+      this.deviceListener.onDeviceOnOff();
+      break;
+    case DEVICE_LEFT:
+      this.deviceListener.registerPrevious();
+      break;
+    case DEVICE_RIGHT:
+      this.deviceListener.registerNext();
+      break;
+
+    default:
+      LXMidiEngine.error("APC40mk2 received unmapped note: " + note);
+    }
+
   }
 
   private void handleMultiCue(boolean on, CueState state, LXAbstractChannel channel, boolean aux) {
