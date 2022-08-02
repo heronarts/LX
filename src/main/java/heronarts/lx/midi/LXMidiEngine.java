@@ -182,7 +182,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     // in which case we need to check again for this newly registered surface
     whenReady(new Runnable() {
       public void run() {
-        checkForSurface(deviceName);
+        checkForNewSurfaceType(deviceName);
       }
     });
     return this;
@@ -251,7 +251,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
           if (CoreMidiDeviceProvider.isLibraryLoaded()) {
             CoreMidiDeviceProvider.addNotificationListener(new CoreMidiNotification() {
               public void midiSystemUpdated() {
-                synchronized(deviceUpdateThread) {
+                synchronized (deviceUpdateThread) {
                   deviceUpdateThread.notify();
                 }
               }
@@ -351,7 +351,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
       // Set up a list of devices that need to be checked for midi surfaces... we'll lazy-initialize
       // this below because this is often empty.
-      List<MidiDevice.Info> checkForSurface = null;
+      List<MidiDevice> checkForSurface = null;
 
       for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
         // First, check if we know this MidiDevice.Info instance, if it's the exact same instance
@@ -399,9 +399,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
                 // Add this to the list of devices that should be checked for control surface
                 if (checkForSurface == null) {
-                  checkForSurface = new ArrayList<MidiDevice.Info>();
+                  checkForSurface = new ArrayList<MidiDevice>();
                 }
-                checkForSurface.add(deviceInfo);
+                checkForSurface.add(device);
               }
             }
 
@@ -445,10 +445,10 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       // after the above loop because we need to ensure that *both* the input and output
       // of the control surface have been added first.
       if (checkForSurface != null) {
-        final List<MidiDevice.Info> checkForSurface2 = checkForSurface;
+        final List<MidiDevice> checkForSurface2 = checkForSurface;
         lx.engine.addTask(() -> {
-          for (MidiDevice.Info deviceInfo : checkForSurface2) {
-            checkForSurface(getDeviceName(deviceInfo));
+          for (MidiDevice device : checkForSurface2) {
+            checkForNewSurfaceDevice(device);
           }
         });
       }
@@ -494,27 +494,49 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return name;
   }
 
-  private void checkForSurface(String deviceName) {
-    // Has it already been made? Then we're good
+  private void checkForNewSurfaceDevice(MidiDevice device) {
+    // Is there already a control surface for this device?
+    for (LXMidiSurface surface : this.mutableSurfaces) {
+      if (surface.input.device == device) {
+        return;
+      }
+    }
+    // Attempt a new MIDI surface for this input device
+    attemptMidiSurface(findInput(device));
+  }
+
+  private void checkForNewSurfaceType(String deviceName) {
+    // Has it already been made? Then we're good, this isn't actually new...
     LXMidiSurface surface = findSurface(deviceName);
     if (surface != null) {
       return;
     }
-    // See if this input even exists
-    LXMidiInput input = findInput(deviceName);
-    if (input != null) {
-      surface = instantiateSurface(input, true);
-      if (surface != null) {
-        JsonObject unremember = null;
-        for (JsonObject remember : this.rememberMidiSurfaces) {
-          if (remember.get(LXMidiSurface.KEY_NAME).getAsString().equals(surface.getName())) {
-            unremember = remember;
-            surface.enabled.setValue(true);
-            break;
-          }
-        }
-        this.rememberMidiSurfaces.remove(unremember);
+    // Match every potential input of this surface type...
+    for (LXMidiInput input : this.mutableInputs) {
+      if (input.getName().equals(deviceName)) {
+        attemptMidiSurface(input);
       }
+    }
+  }
+
+  private void attemptMidiSurface(LXMidiInput input) {
+    if (input == null) {
+      return;
+    }
+    LXMidiSurface surface = instantiateSurface(input, true);
+    if (surface == null) {
+      return;
+    }
+    JsonObject unremember = null;
+    for (JsonObject remember : this.rememberMidiSurfaces) {
+      if (remember.get(LXMidiSurface.KEY_NAME).getAsString().equals(surface.getName())) {
+        unremember = remember;
+        surface.enabled.setValue(true);
+        break;
+      }
+    }
+    if (unremember != null) {
+      this.rememberMidiSurfaces.remove(unremember);
     }
   }
 
@@ -549,7 +571,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         try {
           this.initializationLock.wait();
         } catch (InterruptedException ix) {
-          error(ix, "MIDI intiialization lock was interrupted??");
+          error(ix, "MIDI initialization lock was interrupted??");
         }
       }
     }
@@ -607,9 +629,17 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public LXMidiSurface findSurface(String name) {
+    return findSurface(name, 0);
+  }
+
+  public LXMidiSurface findSurface(String name, int index) {
+    int i = 0;
     for (LXMidiSurface surface : this.mutableSurfaces) {
       if (surface.getName().equals(name)) {
-        return surface;
+        if (i >= index) {
+          return surface;
+        }
+        ++i;
       }
     }
     return null;
@@ -628,21 +658,55 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   private LXMidiOutput findOutput(LXMidiInput input) {
-    return findDevice(this.mutableOutputs, input.getName());
+    int index = 0;
+    String inputName = input.getName();
+    for (LXMidiInput that : this.mutableInputs) {
+      if (that == input) {
+        break;
+      } else if (that.getName().equals(inputName)) {
+        ++index;
+      }
+    }
+    return findDevice(this.mutableOutputs, inputName, index);
   }
 
   public LXMidiOutput findOutput(String name) {
     return findDevice(this.mutableOutputs, name);
   }
 
+  public LXMidiOutput findOutput(MidiDevice device) {
+    return findDevice(this.mutableOutputs, device);
+  }
+
   public LXMidiInput findInput(String name) {
     return findDevice(this.mutableInputs, name);
   }
 
+  public LXMidiInput findInput(MidiDevice device) {
+    return findDevice(this.mutableInputs, device);
+  }
+
+  private <T extends LXMidiDevice> T findDevice(List<T> devices, MidiDevice device) {
+    for (T that : devices) {
+      if (that.device == device) {
+        return that;
+      }
+    }
+    return null;
+  }
+
   private <T extends LXMidiDevice> T findDevice(List<T> devices, String name) {
+    return findDevice(devices, name, 0);
+  }
+
+  private <T extends LXMidiDevice> T findDevice(List<T> devices, String name, int index) {
+    int i = 0;
     for (T device : devices) {
       if (device.getName().equals(name)) {
-        return device;
+        if (i >= index) {
+          return device;
+        }
+        ++i;
       }
     }
     return null;
@@ -958,10 +1022,18 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       if (object.has(KEY_SURFACES)) {
         JsonArray surfaces = object.getAsJsonArray(KEY_SURFACES);
         if (surfaces.size() > 0) {
+          Map<String, Integer> surfaceCount = new HashMap<String, Integer>();
           for (JsonElement element : surfaces) {
             JsonObject surfaceObj = element.getAsJsonObject();
             String surfaceName = surfaceObj.get(LXMidiSurface.KEY_NAME).getAsString();
-            LXMidiSurface surface = findSurface(surfaceName);
+
+            // NOTE: there may be *multiple* instances of the same surface type. We need
+            // to keep count of these and call findSurface indicating how many we've already
+            // potentially found.
+            int count = surfaceCount.containsKey(surfaceName) ? surfaceCount.get(surfaceName) : 0;
+            LXMidiSurface surface = findSurface(surfaceName, count);
+            surfaceCount.put(surfaceName, count+1);
+
             if (surface != null) {
               surface.enabled.setValue(true);
             } else {
