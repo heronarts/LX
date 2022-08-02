@@ -27,7 +27,6 @@ import heronarts.lx.midi.LXMidiOutput;
 import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
-import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.parameter.BooleanParameter;
@@ -434,7 +433,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           }
         } else {
           // Set other parameter types to default value on click
-          p.reset();
+          if (isPressed) {
+            p.reset();
+          }
         }
       }
     }
@@ -494,11 +495,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       register();
     } else {
       this.deviceListener.register(null);
-      for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-        if (channel instanceof LXChannel) {
-          ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
-        }
-      }
       if (this.isRegistered) {
         unregister();
       }
@@ -557,6 +553,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
     this.lx.engine.mixer.focusedChannelAux.removeListener(this.focusedChannelAuxListener);
+
+    this.deviceListener.unregisterChannel();
   }
 
   @Override
@@ -620,7 +618,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK2_RIGHT1:
           case BANK3_RIGHT1:
           case BANK4_RIGHT1:
-            this.toggleAux();
+            toggleAux();
             return;
           case BANK1_LEFT2:
           case BANK2_LEFT2:
