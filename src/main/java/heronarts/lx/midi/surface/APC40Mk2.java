@@ -39,7 +39,6 @@ import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
-import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
@@ -201,7 +200,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private final Map<LXAbstractChannel, ChannelListener> channelListeners = new HashMap<LXAbstractChannel, ChannelListener>();
 
-  private final DeviceListener deviceListener = new DeviceListener();
+  private final DeviceListener deviceListener;
 
   private enum GridMode {
     PATTERN,
@@ -262,19 +261,19 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     return null;
   }
 
-  private void updateBankLeftRightLights() {
+  private void sendBankLeftRightLights() {
     sendNoteOn(0, BANK_LEFT, this.bankLeftOn ? LED_ON : LED_OFF);
     sendNoteOn(0, BANK_RIGHT, this.bankRightOn ? LED_ON : LED_OFF);
   }
 
-  private void updatePerformanceLights() {
+  private void sendPerformanceLights() {
     boolean performanceMode = this.lx.engine.performanceMode.isOn();
     sendNoteOn(0, PLAY, performanceMode && !this.isAux ? LED_ON : LED_OFF);
     sendNoteOn(0, RECORD, performanceMode && this.isAux ? LED_ON : LED_OFF);
     sendNoteOn(0, SESSION, performanceMode ? LED_ON : LED_OFF);
   }
 
-  private void updateCueLights() {
+  private void sendCueLights() {
     if (isAuxActive()) {
       sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.auxA.isOn() ? 1 : 0);
       sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.auxB.isOn() ? 1 : 0);
@@ -286,26 +285,30 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private void setAux(boolean isAux) {
     this.isAux = isAux;
+    this.deviceListener.focusedDevice.setAux(isAux);
     this.lx.engine.performanceMode.setValue(true);
-    updatePerformanceLights();
-    updateCueLights();
+    sendPerformanceLights();
+    sendCueLights();
     sendChannelFocus();
-    this.deviceListener.registerFocusedChannel();
     sendChannelCues();
   }
 
-  private class DeviceListener implements LXParameterListener {
+  private class DeviceListener implements FocusedDevice.Listener, LXParameterListener {
 
+    private final FocusedDevice focusedDevice;
     private LXDeviceComponent device = null;
-    private LXEffect effect = null;
-    private LXPattern pattern = null;
-    private LXBus channel = null;
 
     private final LXListenableParameter[] knobs =
       new LXListenableParameter[DEVICE_KNOB_NUM];
 
-    private DeviceListener() {
+    private DeviceListener(LX lx) {
       Arrays.fill(this.knobs, null);
+      this.focusedDevice = new FocusedDevice(lx, this);
+    }
+
+    @Override
+    public void onDeviceFocused(LXDeviceComponent device) {
+      registerDevice(device);
     }
 
     private void resend() {
@@ -324,56 +327,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         }
       }
       boolean isEnabled = false;
-      if (this.effect != null) {
-        isEnabled = this.effect.enabled.isOn();
-      } else if (this.pattern != null) {
-        isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
+      if (this.device instanceof LXEffect) {
+        LXEffect effect = (LXEffect) this.device;
+        isEnabled = effect.enabled.isOn();
+      } else if (this.device instanceof LXPattern) {
+        LXPattern pattern = (LXPattern) this.device;
+        isEnabled = (pattern == pattern.getChannel().getTargetPattern());
       }
       sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
-    }
-
-    private void registerFocusedChannel() {
-      LXBus channel = isAuxActive() ? lx.engine.mixer.getFocusedChannelAux() : lx.engine.mixer.getFocusedChannel();
-      if (channel != this.channel) {
-        registerChannel(channel);
-      }
-    }
-
-    private void registerChannel(LXBus channel) {
-      unregisterChannel();
-      this.channel = channel;
-      if (channel instanceof LXChannel) {
-        ((LXChannel) channel).focusedPattern.addListener(this);
-        register(((LXChannel) channel).getFocusedPattern());
-      } else if (channel.effects.size() > 0) {
-        register(channel.getEffect(0));
-      } else {
-        register(null);
-      }
-    }
-
-    private void registerPrevious() {
-      if (this.effect != null) {
-        int effectIndex = this.effect.getIndex();
-        if (effectIndex > 0) {
-          register(this.effect.getBus().getEffect(effectIndex - 1));
-        } else if (this.channel instanceof LXChannel) {
-          register(((LXChannel) this.channel).getFocusedPattern());
-        }
-      }
-    }
-
-    private void registerNext() {
-      if (this.effect != null) {
-        int effectIndex = this.effect.getIndex();
-        if (effectIndex < this.effect.getBus().effects.size() - 1) {
-          register(this.effect.getBus().getEffect(effectIndex + 1));
-        }
-      } else if (this.pattern != null) {
-        if (channel.effects.size() > 0) {
-          register(channel.getEffect(0));
-        }
-      }
     }
 
     private void clearKnobsAfter(int i) {
@@ -383,21 +344,21 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    private void register(LXDeviceComponent device) {
+    private void registerDevice(LXDeviceComponent device) {
       if (this.device == device) {
         return;
       }
-      unregister();
+      unregisterDevice();
       this.device = device;
 
       boolean isEnabled = false;
       if (this.device instanceof LXEffect) {
-        this.effect = (LXEffect) this.device;
-        this.effect.enabled.addListener(this);
-        isEnabled = this.effect.isEnabled();
+        LXEffect effect = (LXEffect) this.device;
+        effect.enabled.addListener(this);
+        isEnabled = effect.isEnabled();
       } else if (this.device instanceof LXPattern) {
-        this.pattern = (LXPattern) this.device;
-        isEnabled = this.pattern == ((LXChannel) this.channel).getActivePattern();
+        LXPattern pattern = (LXPattern) this.device;
+        isEnabled = (pattern == pattern.getChannel().getTargetPattern());
       }
 
       sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
@@ -405,8 +366,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         clearKnobsAfter(0);
         return;
       }
-
-      this.device.controlSurfaceSemaphore.increment();
 
       int i = 0;
       Set<AggregateParameter> knownParents = new HashSet<>();
@@ -458,14 +417,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     @Override
     public void onParameterChanged(LXParameter parameter) {
-      if ((this.channel != null) &&
-          (this.channel instanceof LXChannel) &&
-          (parameter == ((LXChannel)this.channel).focusedPattern)) {
-        if ((this.device == null) || (this.device instanceof LXPattern)) {
-          register(((LXChannel) this.channel).getFocusedPattern());
-        }
-      } else if ((this.effect != null) && (parameter == this.effect.enabled)) {
-        sendNoteOn(0, DEVICE_ON_OFF, this.effect.enabled.isOn() ? LED_ON : LED_OFF);
+      LXEffect effect = (this.device instanceof LXEffect) ? (LXEffect) this.device : null;
+      if ((effect != null) && (parameter == effect.enabled)) {
+        sendNoteOn(0, DEVICE_ON_OFF, effect.enabled.isOn() ? LED_ON : LED_OFF);
       } else {
         for (int i = 0; i < this.knobs.length; ++i) {
           LXListenableNormalizedParameter knobParam = parameterForKnob(this.knobs[i]);
@@ -498,11 +452,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     private void onDeviceOnOff() {
-      if (this.pattern != null) {
-        this.pattern.getChannel().goPatternIndex(this.pattern.getIndex());
+      if (this.device instanceof LXPattern) {
+        LXPattern pattern = (LXPattern) this.device;
+        pattern.getChannel().goPatternIndex(pattern.getIndex());
         sendNoteOn(0, DEVICE_ON_OFF, 1);
-      } else if (this.effect != null) {
-        this.effect.enabled.toggle();
+      } else if (this.device instanceof LXEffect) {
+        LXEffect effect = (LXEffect) this.device;
+        effect.enabled.toggle();
       }
     }
 
@@ -564,11 +520,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       knobParam.setNormalized(normalized);
     }
 
-    private void unregister() {
-      if (this.effect != null) {
-        this.effect.enabled.removeListener(this);
-      }
+    private void unregisterDevice() {
       if (this.device != null) {
+        if (this.device instanceof LXEffect) {
+          LXEffect effect = (LXEffect) this.device;
+          effect.enabled.removeListener(this);
+        }
+
         Set<AggregateParameter> knownParents = new HashSet<>();
         for (int i = 0; i < this.knobs.length; ++i) {
           if (this.knobs[i] == null) {
@@ -588,25 +546,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           sendControlChange(0, DEVICE_KNOB + i, 0);
           sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
         }
-        this.device.controlSurfaceSemaphore.decrement();
       }
-      this.pattern = null;
-      this.effect = null;
       this.device = null;
     }
 
-    private void unregisterChannel() {
-      if (this.channel != null) {
-        if (this.channel instanceof LXChannel) {
-          ((LXChannel) this.channel).focusedPattern.removeListener(this);
-        }
-      }
-      this.channel = null;
-    }
-
     private void dispose() {
-      unregister();
-      unregisterChannel();
+      unregisterDevice();
     }
 
   }
@@ -710,29 +655,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     @Override
-    public void effectAdded(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectRemoved(LXBus channel, LXEffect effect) {
-    }
-
-    @Override
-    public void effectMoved(LXBus channel, LXEffect effect) {
-      // TODO(mcslee): update device focus??
-    }
-
-    @Override
-    public void indexChanged(LXAbstractChannel channel) {
-      // Handled by the engine channelMoved listener.
-    }
-
-    @Override
-    public void groupChanged(LXChannel channel, LXGroup group) {
-
-    }
-
-    @Override
     public void patternAdded(LXChannel channel, LXPattern pattern) {
       sendChannelPatterns(channel.getIndex(), channel);
     }
@@ -775,6 +697,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   public APC40Mk2(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
+    this.deviceListener = new DeviceListener(lx);
   }
 
   @Override
@@ -784,7 +707,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       initialize(false);
       register();
     } else {
-      this.deviceListener.register(null);
+      this.deviceListener.registerDevice(null);
       for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
         if (channel instanceof LXChannel) {
           ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
@@ -833,8 +756,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       this.bankRightOn = false;
     }
 
-    updatePerformanceLights();
-    updateBankLeftRightLights();
+    sendPerformanceLights();
+    sendBankLeftRightLights();
 
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
       sendControlChange(0, DEVICE_KNOB_STYLE+i, LED_STYLE_OFF);
@@ -1140,20 +1063,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
   };
 
-  private final LXParameterListener focusedChannelListener = (p) -> {
-    sendChannelFocus();
-    if (!isAuxActive()) {
-      this.deviceListener.registerFocusedChannel();
-    }
-  };
-
-  private final LXParameterListener focusedChannelAuxListener = (p) -> {
-    sendChannelFocus();
-    if (isAuxActive()) {
-      this.deviceListener.registerFocusedChannel();
-    }
-  };
-
   private boolean isAuxActive() {
     return this.lx.engine.performanceMode.isOn() && this.isAux;
   }
@@ -1187,17 +1096,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   };
 
   private final LXParameterListener performanceModeListener = (p) -> {
-    updatePerformanceLights();
-    updateCueLights();
+    sendPerformanceLights();
+    sendCueLights();
     sendChannelFocus();
     sendChannelCues();
-    this.deviceListener.registerFocusedChannel();
   };
 
   private boolean isRegistered = false;
 
   private void register() {
     this.isRegistered = true;
+
+    this.deviceListener.focusedDevice.register();
 
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       registerChannel(channel);
@@ -1206,11 +1116,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     this.lx.engine.performanceMode.addListener(this.performanceModeListener, true);
 
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
-    this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
-    this.lx.engine.mixer.focusedChannelAux.addListener(this.focusedChannelAuxListener);
-
-    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
-
     this.lx.engine.mixer.cueA.addListener(this.cueAListener, true);
     this.lx.engine.mixer.cueB.addListener(this.cueBListener, true);
     this.lx.engine.mixer.auxA.addListener(this.auxAListener, true);
@@ -1221,14 +1126,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   private void unregister() {
     this.isRegistered = false;
 
+    this.deviceListener.focusedDevice.unregister();
+
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       unregisterChannel(channel);
     }
 
     this.lx.engine.performanceMode.removeListener(this.performanceModeListener);
     this.lx.engine.mixer.removeListener(this.mixerEngineListener);
-    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
-    this.lx.engine.mixer.focusedChannelAux.removeListener(this.focusedChannelAuxListener);
     this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
     this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
     this.lx.engine.mixer.auxA.removeListener(this.auxAListener);
@@ -1239,8 +1144,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void registerChannel(LXAbstractChannel channel) {
-    ChannelListener channelListener = new ChannelListener(channel);
-    this.channelListeners.put(channel, channelListener);
+    this.channelListeners.put(channel, new ChannelListener(channel));
   }
 
   private void unregisterChannel(LXAbstractChannel channel) {
@@ -1441,13 +1345,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       case BANK_LEFT:
         this.bankLeftOn = !this.bankLeftOn;
         this.bankRightOn = false;
-        updateBankLeftRightLights();
+        sendBankLeftRightLights();
         updateColorKnobs();
         return;
       case BANK_RIGHT:
         this.bankRightOn = !this.bankRightOn;
         this.bankLeftOn = false;
-        updateBankLeftRightLights();
+        sendBankLeftRightLights();
         updateColorKnobs();
         return;
       }
@@ -1622,10 +1526,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       this.deviceListener.onDeviceOnOff();
       break;
     case DEVICE_LEFT:
-      this.deviceListener.registerPrevious();
+      this.deviceListener.focusedDevice.previous();
       break;
     case DEVICE_RIGHT:
-      this.deviceListener.registerNext();
+      this.deviceListener.focusedDevice.next();
       break;
 
     default:
@@ -1752,6 +1656,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   public void dispose() {
     if (this.isRegistered) {
       unregister();
+    }
+    if (this.enabled.isOn()) {
+      setApcMode(GENERIC_MODE);
     }
     this.deviceListener.dispose();
     super.dispose();
