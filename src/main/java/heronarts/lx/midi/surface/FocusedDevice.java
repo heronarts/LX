@@ -76,7 +76,6 @@ public class FocusedDevice {
 
   public FocusedDevice setAuxSticky(boolean isAuxSticky) {
     this.isAuxSticky = isAuxSticky;
-    onChannelFocusChange();
     return this;
   }
 
