@@ -144,8 +144,12 @@ public class FocusedDevice {
     return lx.engine.mixer.channels.get(channel);
   }
 
-  private DiscreteParameter getFocusedChannelTarget() {
-    if (this.isAux && (this.isAuxSticky || this.lx.engine.performanceMode.isOn())) {
+  public boolean isAuxActive() {
+    return this.isAux && (this.isAuxSticky || this.lx.engine.performanceMode.isOn());
+  }
+
+  public DiscreteParameter getFocusedChannelTarget() {
+    if (isAuxActive()) {
       return this.lx.engine.mixer.focusedChannelAux;
     } else {
       return this.lx.engine.mixer.focusedChannel;
@@ -226,10 +230,18 @@ public class FocusedDevice {
     }
   };
 
+  public void previousChannel() {
+    getFocusedChannelTarget().decrement();
+  }
+
+  public void nextChannel() {
+    getFocusedChannelTarget().increment();
+  }
+
   /**
    * Shift focus to the previous device on the channel, if there is one
    */
-  public void previous() {
+  public void previousDevice() {
     if (this.bus == null) {
       return;
     }
@@ -251,7 +263,7 @@ public class FocusedDevice {
   /**
    * Shift focus to the next device on the channel, if there is one
    */
-  public void next() {
+  public void nextDevice() {
     if (this.bus == null) {
       return;
     }
