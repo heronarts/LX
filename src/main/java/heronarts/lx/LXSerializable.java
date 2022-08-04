@@ -28,6 +28,7 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.color.ColorParameter;
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -61,6 +62,17 @@ public interface LXSerializable {
    * Static container for utility methods
    */
   public static class Utils {
+
+    public static void saveParameters(JsonObject obj, Map<String, LXParameter> parameters) {
+      for (String path : parameters.keySet()) {
+        LXParameter parameter = parameters.get(path);
+        if (parameter instanceof AggregateParameter) {
+          // Let this store/restore from the underlying parameter values
+          continue;
+        }
+        LXSerializable.Utils.saveParameter(parameter, obj, path);
+      }
+    }
 
     public static void saveParameter(LXParameter parameter, JsonObject obj) {
       saveParameter(parameter, obj, parameter.getPath());

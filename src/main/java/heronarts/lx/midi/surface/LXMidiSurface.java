@@ -18,6 +18,11 @@
 
 package heronarts.lx.midi.surface;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -32,8 +37,11 @@ import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.midi.MidiPitchBend;
 import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXListenableParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.LXParameterListener;
 
-public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
+public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, LXParameterListener {
 
   /**
    * Marker interface for Midi Surface implementations which require an output
@@ -60,6 +68,9 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     new BooleanParameter("Enabled")
     .setMappable(false)
     .setDescription("Whether the control surface is enabled");
+
+  protected final Map<String, LXParameter> mutableSettings = new LinkedHashMap<String, LXParameter>();
+  public final Map<String, LXParameter> settings = Collections.unmodifiableMap(this.mutableSettings);
 
   // Internal flag for enabled state, pre/post-teardown
   private boolean _enabled = false;
@@ -106,6 +117,16 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
     });
   }
 
+  public void onParameterChanged(LXParameter p) {}
+
+  protected void addSetting(String key, LXListenableParameter setting) {
+    if (this.mutableSettings.containsKey(key)) {
+      throw new IllegalStateException("Cannot add setting twice:" + key);
+    }
+    this.mutableSettings.put(key, setting);
+    setting.addListener(this);
+  }
+
   public String getName() {
     return this.input.getName();
   }
@@ -144,15 +165,27 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
   }
 
   public static final String KEY_NAME = "name";
+  public static final String KEY_SETTINGS = "settings";
 
   @Override
-  public void load(LX lx, JsonObject object) {
-
+  public void load(LX lx, JsonObject obj) {
+    if (obj.has(KEY_SETTINGS)) {
+      JsonElement settingsElem = obj.get(KEY_SETTINGS);
+      if (settingsElem.isJsonObject()) {
+        JsonObject settingsObj = settingsElem.getAsJsonObject();
+        for (String path : this.settings.keySet()) {
+          LXSerializable.Utils.loadParameter(settings.get(path), settingsObj, path);
+        }
+      }
+    }
   }
 
   @Override
-  public void save(LX lx, JsonObject object) {
-    object.addProperty(KEY_NAME, this.input.getName());
+  public void save(LX lx, JsonObject obj) {
+    obj.addProperty(KEY_NAME, this.input.getName());
+    JsonObject settings = new JsonObject();
+    LXSerializable.Utils.saveParameters(settings, this.settings);
+    obj.add(KEY_SETTINGS, settings);
   }
 
   @Override
@@ -180,6 +213,11 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable {
   }
 
   public void dispose() {
+    for (LXParameter setting : this.settings.values()) {
+      ((LXListenableParameter) setting).removeListener(this);
+      setting.dispose();
+    }
+    this.mutableSettings.clear();
   }
 
 }

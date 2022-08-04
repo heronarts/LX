@@ -1143,14 +1143,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @param parameters Map of parameters to serialize
    */
   protected static void saveParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
-    for (String path : parameters.keySet()) {
-      LXParameter parameter = parameters.get(path);
-      if (parameter instanceof AggregateParameter) {
-        // Let this store/restore from the underlying parameter values
-        continue;
-      }
-      LXSerializable.Utils.saveParameter(parameter, obj, path);
-    }
+    LXSerializable.Utils.saveParameters(obj, parameters);
   }
 
   /**
@@ -1170,7 +1163,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         // Let this store/restore from the underlying parameter values
         continue;
       }
-      LXSerializable.Utils.loadParameter(parameters.get(path), obj, path);
+      LXSerializable.Utils.loadParameter(parameter, obj, path);
     }
   }
 
