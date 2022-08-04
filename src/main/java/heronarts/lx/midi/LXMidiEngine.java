@@ -531,6 +531,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     for (JsonObject remember : this.rememberMidiSurfaces) {
       if (remember.get(LXMidiSurface.KEY_NAME).getAsString().equals(surface.getName())) {
         unremember = remember;
+        surface.load(this.lx, remember);
         surface.enabled.setValue(true);
         break;
       }
@@ -1035,6 +1036,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             surfaceCount.put(surfaceName, count+1);
 
             if (surface != null) {
+              surface.load(lx, surfaceObj);
               surface.enabled.setValue(true);
             } else {
               this.rememberMidiSurfaces.add(surfaceObj);
