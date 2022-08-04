@@ -303,10 +303,10 @@ public class FocusedDevice {
     if (this.device != device) {
       unregisterDevice();
       this.device = device;
+      this.listener.onDeviceFocused(device);
       if (this.device != null && this.surface != null) {
         this.device.addControlSurface(this.surface);
       }
-      this.listener.onDeviceFocused(device);
     }
   }
 
