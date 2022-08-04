@@ -1212,7 +1212,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     case BANK:
       if (on) {
         if (this.shiftOn) {
-          this.lx.engine.mixer.clipViewExpanded.toggle();
+          this.lx.engine.clips.clipViewExpanded.toggle();
         } else if (this.deviceLockOn) {
           this.deviceLockOn = false;
           sendNoteOn(note.getChannel(), DEVICE_LOCK, LED_OFF);
@@ -1332,7 +1332,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           this.colorClipboard = null;
           this.focusColor = null;
         } else if (this.gridMode == GridMode.CLIP) {
-          this.lx.engine.mixer.stopClips();
+          this.lx.engine.clips.stopClips();
         } else if (this.gridMode == GridMode.PATTERN) {
           if (this.lx.engine.performanceMode.isOn()) {
             getFocusedChannelAltTarget().setValue(lx.engine.mixer.channels.size());
@@ -1377,7 +1377,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             sendSwatch(MASTER_SWATCH);
           }
         } else {
-          this.lx.engine.mixer.launchScene(index);
+          this.lx.engine.clips.launchScene(index);
         }
         return;
       }

@@ -119,17 +119,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private final ModelBuffer blendBufferLeft;
   private final ModelBuffer blendBufferRight;
 
-  private static final int MAX_SCENES = 5;
-
-  private final BooleanParameter[] scenes = new BooleanParameter[MAX_SCENES];
-
   public final BooleanParameter viewCondensed =
     new BooleanParameter("Condensed", false)
     .setDescription("Whether the mixer view should be condensed");
-
-  public final BooleanParameter clipViewExpanded =
-    new BooleanParameter("Clip View", false)
-    .setDescription("Whether the clip grid view is expanded");
 
   public LXMixerEngine(LX lx) {
     super(lx, "Mixer");
@@ -155,12 +147,6 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Master channel
     addChild("master", this.masterBus = new LXMasterBus(lx));
     LX.initProfiler.log("Engine: Mixer: Master Channel");
-
-    // Scenes
-    for (int i = 0; i < this.scenes.length; ++i) {
-      this.scenes[i] = new BooleanParameter("Scene-" + (i+1)).setMode(BooleanParameter.Mode.MOMENTARY);
-      addParameter("scene-" + (i+1), this.scenes[i]);
-    }
 
     // LX top level model listener
     lx.addListener(new LX.Listener() {
@@ -209,7 +195,6 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("auxA", this.auxA);
     addParameter("auxB", this.auxB);
     addParameter("viewCondensed", this.viewCondensed);
-    addParameter("clipViewExpanded", this.clipViewExpanded);
   }
 
   @Override
@@ -252,69 +237,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       if (clip != null && clip.bus != getFocusedChannel()) {
         this.lx.engine.clips.setFocusedClip(null);
       }
-    } else {
-      for (int i = 0; i < this.scenes.length; ++i) {
-        if (this.scenes[i] == p) {
-          if (this.scenes[i].isOn()) {
-            launchScene(i);
-            this.scenes[i].setValue(false);
-          }
-        }
-      }
     }
-  }
-
-
-  /**
-   * Get the boolean parameter that launches a scene
-   *
-   * @param index Index of scene
-   * @return Scene at index
-   */
-  public BooleanParameter getScene(int index) {
-    return this.scenes[index];
-  }
-
-  /**
-   * Launches the scene at given index
-   *
-   * @param index Scene index
-   * @return this
-   */
-  public LXMixerEngine launchScene(int index) {
-    LXClip clip;
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      clip = channel.getClip(index);
-      if (clip != null) {
-        clip.trigger();
-      }
-    }
-    clip = this.masterBus.getClip(index);
-    if (clip != null) {
-      clip.trigger();
-    }
-    return this;
-  }
-
-  /**
-   * Stops all running clips
-   *
-   * @return this
-   */
-  public LXMixerEngine stopClips() {
-    for (LXAbstractChannel channel : this.channels) {
-      for (LXClip clip : channel.clips) {
-        if (clip != null) {
-          clip.stop();
-        }
-      }
-    }
-    for (LXClip clip : this.masterBus.clips) {
-      if (clip != null) {
-        clip.stop();
-      }
-    }
-    return this;
   }
 
   public static final String PATH_CHANNEL = "channel";

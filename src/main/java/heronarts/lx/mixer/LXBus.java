@@ -23,6 +23,7 @@ import heronarts.lx.LXModelComponent;
 import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscComponent;
@@ -356,6 +357,9 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   public LXClip addClip(JsonObject clipObj, int index) {
+    if (index >= LXClipEngine.MAX_SCENES) {
+      throw new IllegalArgumentException("Cannot add clip at index >= " + LXClipEngine.MAX_SCENES);
+    }
     if (getClip(index) != null) {
       throw new IllegalStateException("Cannot add clip at index " + index + " which already holds a clip: " + this);
     }

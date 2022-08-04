@@ -927,7 +927,7 @@ public class APCmini extends LXMidiSurface implements LXMidiSurface.Bidirectiona
             // Not implemented
             return;
           case STOP_ALL_CLIPS:
-            this.lx.engine.mixer.stopClips();
+            this.lx.engine.clips.stopClips();
             return;
         }
       }
@@ -953,7 +953,7 @@ public class APCmini extends LXMidiSurface implements LXMidiSurface.Bidirectiona
         }
 
         if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
-          this.lx.engine.mixer.launchScene(pitch - SCENE_LAUNCH);
+          this.lx.engine.clips.launchScene(pitch - SCENE_LAUNCH);
           return;
         }
 

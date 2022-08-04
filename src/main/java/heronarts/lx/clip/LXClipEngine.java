@@ -20,7 +20,11 @@ package heronarts.lx.clip;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 
 public class LXClipEngine extends LXComponent implements LXOscComponent {
@@ -47,11 +51,57 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     }
   };
 
+  public static final int MIN_SCENES = 5;
+  public static final int MAX_SCENES = 128;
+
+  private final BooleanParameter[] scenes = new BooleanParameter[MAX_SCENES];
+
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
+
+  public final BooleanParameter clipViewExpanded =
+    new BooleanParameter("Clip View", false)
+    .setDescription("Whether the clip grid view is expanded");
+
+  public final DiscreteParameter clipViewGridOffset =
+    new DiscreteParameter("Clip View Grid Offset", 0, 1)
+    .setDescription("Offset of the clip grid view");
+
+  public final DiscreteParameter numScenes =
+    new DiscreteParameter("Num Scenes", MIN_SCENES, MAX_SCENES + 1)
+    .setDescription("Number of active scenes");
 
   public LXClipEngine(LX lx) {
     super(lx);
     addParameter("focusedClip", this.focusedClip);
+    addParameter("numScenes", this.numScenes);
+    addParameter("clipViewGridOffset", this.clipViewGridOffset);
+    addParameter("clipViewExpanded", this.clipViewExpanded);
+
+    // Scenes
+    for (int i = 0; i < this.scenes.length; ++i) {
+      this.scenes[i] =
+        new BooleanParameter("Scene-" + (i+1))
+        .setMode(BooleanParameter.Mode.MOMENTARY)
+        .setDescription("Launches scene " + (i+1));
+      addParameter("scene-" + (i+1), this.scenes[i]);
+    }
+
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    if (this.numScenes == p) {
+      this.clipViewGridOffset.setRange(this.numScenes.getValuei() - MIN_SCENES + 1);
+    } else {
+      for (int i = 0; i < this.scenes.length; ++i) {
+        if (this.scenes[i] == p) {
+          if (this.scenes[i].isOn()) {
+            launchScene(i);
+            this.scenes[i].setValue(false);
+          }
+        }
+      }
+    }
   }
 
   public LXClip getFocusedClip() {
@@ -60,6 +110,58 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
 
   public LXClipEngine setFocusedClip(LXClip clip) {
     this.focusedClip.setClip(clip);
+    return this;
+  }
+
+  /**
+   * Get the boolean parameter that launches a scene
+   *
+   * @param index Index of scene
+   * @return Scene at index
+   */
+  public BooleanParameter getScene(int index) {
+    return this.scenes[index];
+  }
+
+  /**
+   * Launches the scene at given index
+   *
+   * @param index Scene index
+   * @return this
+   */
+  public LXClipEngine launchScene(int index) {
+    LXClip clip;
+    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+      clip = channel.getClip(index);
+      if (clip != null) {
+        clip.trigger();
+      }
+    }
+    clip = this.lx.engine.mixer.masterBus.getClip(index);
+    if (clip != null) {
+      clip.trigger();
+    }
+    return this;
+  }
+
+  /**
+   * Stops all running clips
+   *
+   * @return this
+   */
+  public LXClipEngine stopClips() {
+    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+      for (LXClip clip : channel.clips) {
+        if (clip != null) {
+          clip.stop();
+        }
+      }
+    }
+    for (LXClip clip : this.lx.engine.mixer.masterBus.clips) {
+      if (clip != null) {
+        clip.stop();
+      }
+    }
     return this;
   }
 

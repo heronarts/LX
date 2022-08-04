@@ -776,12 +776,12 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         this.lx.engine.mixer.cueB.toggle();
         return;
       case STOP_ALL_CLIPS:
-        this.lx.engine.mixer.stopClips();
+        this.lx.engine.clips.stopClips();
         return;
       }
 
       if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
-        this.lx.engine.mixer.launchScene(pitch - SCENE_LAUNCH);
+        this.lx.engine.clips.launchScene(pitch - SCENE_LAUNCH);
         return;
       }
 
