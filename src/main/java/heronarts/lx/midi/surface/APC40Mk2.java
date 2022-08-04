@@ -180,10 +180,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   private boolean bankOn = true;
   // DEV. LOCK: Toggle, lit when on. Repurposes much of the hardware for color control.
   private boolean deviceLockOn = false;
-  // "<-- BANK (3)": Toggle, lit when on. Makes LinkedColor knobs affect Saturation instead of Hue
-  private boolean bankLeftOn = false;
-  // "BANK --> (4)": Toggle, lit when on. Makes LinkedColor knobs affect Brightness instead of Hue
-  private boolean bankRightOn = false;
 
   // "Copies" a color for pasting into the main swatch
   private Integer colorClipboard = null;
@@ -243,15 +239,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       // we add more later, we'll have to add custom code here to handle them.
       ColorParameter colorParameter = (ColorParameter) agg;
       if (this.shiftOn) {
-        if (this.bankLeftOn || this.bankRightOn) {
-          return colorParameter.hue;
-        } else {
-          return colorParameter.saturation;
-        }
-      } else if (this.bankLeftOn) {
         return colorParameter.saturation;
-      } else if (this.bankRightOn) {
-        return colorParameter.brightness;
       } else {
         return colorParameter.hue;
       }
@@ -259,11 +247,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     LX.error("APC40Mk2 found AggregateParameter type with no subparameter: " + agg.getClass().getName());
     return null;
-  }
-
-  private void sendBankLeftRightLights() {
-    sendNoteOn(0, BANK_LEFT, this.bankLeftOn ? LED_ON : LED_OFF);
-    sendNoteOn(0, BANK_RIGHT, this.bankRightOn ? LED_ON : LED_OFF);
   }
 
   private void sendPerformanceLights() {
@@ -297,6 +280,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     private final FocusedDevice focusedDevice;
     private LXDeviceComponent device = null;
+    private int bankNumber = 0;
 
     private final LXListenableParameter[] knobs =
       new LXListenableParameter[DEVICE_KNOB_NUM];
@@ -350,6 +334,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       unregisterDevice();
       this.device = device;
+      this.bankNumber = 0;
 
       boolean isEnabled = false;
       if (this.device instanceof LXEffect) {
@@ -367,9 +352,30 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         return;
       }
 
+      registerDeviceKnobs();
+    }
+
+    private void incrementBank(int amt) {
+      if (this.device != null) {
+        int test = this.bankNumber + amt;
+        if ((test >= 0) && (test * DEVICE_KNOB_NUM < this.device.getRemoteControls().length)) {
+          this.bankNumber = test;
+          unregisterDeviceKnobs();
+          registerDeviceKnobs();
+          this.focusedDevice.updateRemoteControlFocus();
+        }
+      }
+    }
+
+    private void registerDeviceKnobs() {
       int i = 0;
+      int skip = this.bankNumber * DEVICE_KNOB_NUM;
+      int s = 0;
       Set<AggregateParameter> knownParents = new HashSet<>();
       for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
+        if (s++ < skip) {
+          continue;
+        }
         if (i >= this.knobs.length) {
           break;
         }
@@ -526,7 +532,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           LXEffect effect = (LXEffect) this.device;
           effect.enabled.removeListener(this);
         }
+        unregisterDeviceKnobs();
+        this.device = null;
+      }
+    }
 
+    private void unregisterDeviceKnobs() {
+      if (this.device != null) {
         Set<AggregateParameter> knownParents = new HashSet<>();
         for (int i = 0; i < this.knobs.length; ++i) {
           if (this.knobs[i] == null) {
@@ -547,7 +559,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
         }
       }
-      this.device = null;
     }
 
     private void dispose() {
@@ -752,12 +763,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     if (!reconnect) {
       resetPaletteVars();
-      this.bankLeftOn = false;
-      this.bankRightOn = false;
     }
 
     sendPerformanceLights();
-    sendBankLeftRightLights();
 
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
       sendControlChange(0, DEVICE_KNOB_STYLE+i, LED_STYLE_OFF);
@@ -1284,6 +1292,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
       }
       break;
+    case BANK_LEFT:
+    case BANK_RIGHT:
+    case DEVICE_LEFT:
+    case DEVICE_RIGHT:
+      sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
+      break;
     }
     if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX && this.gridMode != GridMode.PALETTE) {
       sendNoteOn(note.getChannel(), pitch, on ? LED_GREEN : LED_OFF);
@@ -1365,18 +1379,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           }
         }
         return;
-      case BANK_LEFT:
-        this.bankLeftOn = !this.bankLeftOn;
-        this.bankRightOn = false;
-        sendBankLeftRightLights();
-        updateColorKnobs();
-        return;
-      case BANK_RIGHT:
-        this.bankRightOn = !this.bankRightOn;
-        this.bankLeftOn = false;
-        sendBankLeftRightLights();
-        updateColorKnobs();
-        return;
+
       }
 
       if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
@@ -1555,6 +1558,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     case DEVICE_RIGHT:
       this.deviceListener.focusedDevice.nextDevice();
       break;
+    case BANK_LEFT:
+    case BANK_RIGHT:
+      this.deviceListener.incrementBank((pitch == BANK_LEFT) ? -1 : 1);
+      break;
 
     default:
       LXMidiEngine.error("APC40mk2 received unmapped note: " + note);
@@ -1678,7 +1685,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   @Override
   public int getRemoteControlStart() {
-    return 0;
+    return DEVICE_KNOB_NUM * this.deviceListener.bankNumber;
   }
 
   @Override
