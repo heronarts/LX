@@ -169,7 +169,11 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     this.minValue = minValue;
     this.maxValue = maxValue - 1;
     this.range = maxValue - minValue;
-    setValue(updateValue(this.getValue()));
+    int value = getValuei();
+    if (value > this.maxValue) {
+      value = this.maxValue;
+    }
+    setValue(updateValue(value));
     return this;
   }
 
