@@ -33,6 +33,7 @@ import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.DiscreteParameter.IncrementMode;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.utils.LXUtils;
 
 public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.Bidirectional {
@@ -176,6 +177,47 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   // MIDI Notes on System Channel
   public static final int BANK_OFF = 0;
   public static final int BANK_ON = 127;
+
+  public enum KnobClickMode {
+    RESET("Reset"),
+    TEMPORARY("Temporary Edit");
+
+    private final String label;
+
+    private KnobClickMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public enum FocusMode {
+    DEVICE("Device"),
+    CHANNEL("Channel");
+
+    private final String label;
+
+    private FocusMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public final EnumParameter<KnobClickMode> knobClickMode =
+    new EnumParameter<KnobClickMode>("Knob Click", KnobClickMode.RESET)
+    .setDescription("How to edit parameters when a knob is pressed");
+
+
+  public final EnumParameter<FocusMode> focusMode =
+    new EnumParameter<FocusMode>("Focus Buttons", FocusMode.DEVICE)
+    .setDescription("How to change focus on bottom side button press");
 
   public final DiscreteParameter currentBank = new DiscreteParameter("Bank", BANK1, BANK1, BANK4 + 1);
 
@@ -355,6 +397,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
+    private double[] tempValues = new double[DEVICE_KNOB_NUM];
+
     private void onSwitch(int index, boolean isPressed) {
       if (this.knobs[index] != null) {
         LXListenableNormalizedParameter p = this.knobs[index];
@@ -376,7 +420,22 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         } else {
           // Set other parameter types to default value on click
           if (isPressed) {
-            p.reset();
+            switch (knobClickMode.getEnum()) {
+            case RESET:
+              p.reset();
+              break;
+            case TEMPORARY:
+              this.tempValues[index] = p.getNormalized();
+              break;
+            }
+          } else {
+            switch (knobClickMode.getEnum()) {
+            case RESET:
+              break;
+            case TEMPORARY:
+              p.setNormalized(this.tempValues[index]);
+              break;
+            }
           }
         }
       }
@@ -430,6 +489,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   public MidiFighterTwister(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
     this.deviceListener = new DeviceListener(lx);
+    addSetting("knobClickMode", this.knobClickMode);
+    addSetting("focusMode", this.focusMode);
   }
 
   @Override
@@ -520,7 +581,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK2_LEFT1:
           case BANK3_LEFT1:
           case BANK4_LEFT1:
-            // Save for future function
+            // Change scroll mode
+            this.focusMode.increment();
             return;
           case BANK1_RIGHT1:
           case BANK2_RIGHT1:
@@ -544,13 +606,21 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK2_LEFT3:
           case BANK3_LEFT3:
           case BANK4_LEFT3:
-            this.deviceListener.focusedDevice.previous();
+            if (this.focusMode.getEnum() == FocusMode.CHANNEL) {
+              this.deviceListener.focusedDevice.previousChannel();
+            } else {
+              this.deviceListener.focusedDevice.previousDevice();
+            }
             return;
           case BANK1_RIGHT3:
           case BANK2_RIGHT3:
           case BANK3_RIGHT3:
           case BANK4_RIGHT3:
-            this.deviceListener.focusedDevice.next();
+            if (this.focusMode.getEnum() == FocusMode.CHANNEL) {
+              this.deviceListener.focusedDevice.nextChannel();
+            } else {
+              this.deviceListener.focusedDevice.nextDevice();
+            }
             return;
           default:
             LXMidiEngine.error("Unrecognized midi number " + number + " on system channel from MFT. Check your configuration with Midifighter Utility.");
