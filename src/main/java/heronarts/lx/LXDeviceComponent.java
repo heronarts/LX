@@ -27,6 +27,8 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -36,6 +38,7 @@ import com.google.gson.stream.JsonWriter;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -43,6 +46,7 @@ import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
 
@@ -99,6 +103,19 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   public final StringParameter presetFile =
     new StringParameter("Preset", null)
     .setDescription("Name of last preset file that has been loaded/saved");
+
+  /**
+   * A semaphore used to keep count of how many remote control surfaces may be
+   * controlling this component. This may be used by UI implementations to indicate
+   * to the user that this component is under remote control.
+   */
+  public final MutableParameter controlSurfaceSemaphore = (MutableParameter)
+    new MutableParameter("Control-Surfaces", 0)
+    .setDescription("How many control surfaces are controlling this component");
+
+  // Must use a thread-safe set here because it's also accessed from the UI thread!
+  private final CopyOnWriteArraySet<LXMidiSurface> controlSurfaces =
+    new CopyOnWriteArraySet<LXMidiSurface>();
 
   protected LXDeviceComponent(LX lx) {
     this(lx, null);
@@ -159,6 +176,28 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
       this.remoteControls = remoteControls.toArray(new LXListenableNormalizedParameter[0]);
     }
     return this.remoteControls;
+  }
+
+  public LXComponent addControlSurface(LXMidiSurface surface) {
+    if (this.controlSurfaces.contains(surface)) {
+      throw new IllegalStateException("Cannot add same control surface to device twice: " + surface);
+    }
+    this.controlSurfaces.add(surface);
+    this.controlSurfaceSemaphore.increment();
+    return this;
+  }
+
+  public LXComponent removeControlSurface(LXMidiSurface surface) {
+    if (!this.controlSurfaces.contains(surface)) {
+      throw new IllegalStateException("Cannot remove control surface that is not added: " + surface);
+    }
+    this.controlSurfaces.remove(surface);
+    this.controlSurfaceSemaphore.decrement();
+    return this;
+  }
+
+  public Set<LXMidiSurface> getControlSurfaces() {
+    return this.controlSurfaces;
   }
 
   /**

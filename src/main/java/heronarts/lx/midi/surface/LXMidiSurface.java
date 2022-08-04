@@ -164,6 +164,18 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     }
   }
 
+  public int getRemoteControlStart() {
+    return 0;
+  }
+
+  public int getRemoteControlLength() {
+    return 0;
+  }
+
+  public boolean isRemoteControlAux() {
+    return false;
+  }
+
   public static final String KEY_NAME = "name";
   public static final String KEY_SETTINGS = "settings";
 

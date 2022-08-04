@@ -44,6 +44,7 @@ public class FocusedDevice {
   }
 
   private final LX lx;
+  private final LXMidiSurface surface;
   private final Listener listener;
 
   private LXBus bus = null;
@@ -56,7 +57,12 @@ public class FocusedDevice {
   private boolean isAuxSticky = false;
 
   public FocusedDevice(LX lx, Listener listener) {
+    this(lx, null, listener);
+  }
+
+  public FocusedDevice(LX lx, LXMidiSurface surface, Listener listener) {
     this.lx = lx;
+    this.surface = surface;
     this.listener = listener;
   }
 
@@ -71,6 +77,7 @@ public class FocusedDevice {
   public FocusedDevice setAux(boolean isAux) {
     this.isAux = isAux;
     onChannelFocusChange();
+    updateRemoteControlFocus();
     return this;
   }
 
@@ -286,12 +293,18 @@ public class FocusedDevice {
     return this.device;
   }
 
+  public void updateRemoteControlFocus() {
+    if (this.device != null && this.surface != null) {
+      this.device.controlSurfaceSemaphore.bang();
+    }
+  }
+
   private void registerDevice(LXDeviceComponent device) {
     if (this.device != device) {
       unregisterDevice();
       this.device = device;
-      if (this.device != null) {
-        this.device.controlSurfaceSemaphore.increment();
+      if (this.device != null && this.surface != null) {
+        this.device.addControlSurface(this.surface);
       }
       this.listener.onDeviceFocused(device);
     }
@@ -299,7 +312,9 @@ public class FocusedDevice {
 
   private void unregisterDevice() {
     if (this.device != null) {
-      this.device.controlSurfaceSemaphore.decrement();
+      if (this.surface != null) {
+        this.device.removeControlSurface(this.surface);
+      }
       this.device = null;
       this.listener.onDeviceFocused(null);
     }

@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import heronarts.lx.color.ColorParameter;
@@ -44,7 +43,6 @@ import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
-import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 
 /**
@@ -125,15 +123,6 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final DiscreteColorParameter modulationColor = (DiscreteColorParameter)
     new DiscreteColorParameter("Modulation Color")
     .setDescription("The color used to indicate this modulation source");
-
-  /**
-   * A semaphore used to keep count of how many remote control surfaces may be
-   * controlling this component. This may be used by UI implementations to indicate
-   * to the user that this component is under remote control.
-   */
-  public final MutableParameter controlSurfaceSemaphore = (MutableParameter)
-    new MutableParameter("Control-Surfaces", 0)
-    .setDescription("How many control surfaces are controlling this component");
 
   // Prefix for internal implementation-only parameters
   private static final String INTERNAL_PREFIX = "internal/";

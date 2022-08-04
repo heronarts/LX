@@ -74,6 +74,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   // MIDI ControlChanges on knob-related channels
   public static final int DEVICE_KNOB = 0;
+  public static final int DEVICE_KNOB_PER_BANK = 16;
   public static final int DEVICE_KNOB_NUM = 64;
   public static final int DEVICE_KNOB_MAX = DEVICE_KNOB + DEVICE_KNOB_NUM;
   public static final int KNOB_DECREMENT_VERYFAST = 61;
@@ -241,7 +242,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         this.knobIncrementSize[i] = 1;
       }
 
-      this.focusedDevice = new FocusedDevice(lx, this);
+      this.focusedDevice = new FocusedDevice(lx, MidiFighterTwister.this, this);
       this.focusedDevice.setAuxSticky(true);
     }
 
@@ -360,7 +361,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       LXListenableNormalizedParameter knob = this.knobs[index];
       if (knob != null) {
         if (knob instanceof DiscreteParameter) {
-          if (((DiscreteParameter)knob).getIncrementMode() ==  IncrementMode.NORMALIZED) {
+          if (((DiscreteParameter)knob).getIncrementMode() == IncrementMode.NORMALIZED) {
             int value = this.knobTicks[index] + (isUp ? 1 : -1);
             if (knob.isWrappable()) {
               // Make the length of the wrap space the same as the length between other values on this parameter
@@ -425,7 +426,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               p.reset();
               break;
             case TEMPORARY:
-              this.tempValues[index] = p.getNormalized();
+              this.tempValues[index] = (p instanceof CompoundParameter) ?
+                ((CompoundParameter) p).getBaseNormalized() :
+                p.getNormalized();
               break;
             }
           } else {
@@ -475,10 +478,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   private void updateBank(int bank) {
     this.currentBank.setValue(bank);
-  }
-
-  private boolean isAux() {
-    return this.deviceListener.focusedDevice.isAux();
+    this.deviceListener.focusedDevice.updateRemoteControlFocus();
   }
 
   private void toggleAux() {
@@ -634,6 +634,25 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   private void noteReceived(MidiNote note, boolean on) {
     LXMidiEngine.error("MFT UNMAPPED Note: " + note + " " + on);
+  }
+
+  private boolean isAux() {
+    return this.deviceListener.focusedDevice.isAux();
+  }
+
+  @Override
+  public int getRemoteControlStart() {
+    return this.currentBank.getValuei() * DEVICE_KNOB_PER_BANK;
+  }
+
+  @Override
+  public int getRemoteControlLength() {
+    return DEVICE_KNOB_PER_BANK;
+  }
+
+  @Override
+  public boolean isRemoteControlAux() {
+    return isAux();
   }
 
   @Override

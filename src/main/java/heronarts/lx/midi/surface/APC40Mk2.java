@@ -303,7 +303,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     private DeviceListener(LX lx) {
       Arrays.fill(this.knobs, null);
-      this.focusedDevice = new FocusedDevice(lx, this);
+      this.focusedDevice = new FocusedDevice(lx, APC40Mk2.this, this);
     }
 
     @Override
@@ -1674,6 +1674,21 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     // LXMidiEngine.error("APC40mk2 UNMAPPED: " + cc);
+  }
+
+  @Override
+  public int getRemoteControlStart() {
+    return 0;
+  }
+
+  @Override
+  public int getRemoteControlLength() {
+    return DEVICE_KNOB_NUM;
+  }
+
+  @Override
+  public boolean isRemoteControlAux() {
+    return isAuxActive();
   }
 
   @Override
