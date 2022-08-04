@@ -73,7 +73,10 @@ public abstract class LXListenableNormalizedParameter extends
   }
 
   public LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap) {
-    double normalized = this.getNormalized() + amount;
+    double normalized = (this instanceof CompoundParameter) ?
+      ((CompoundParameter) this).getBaseNormalized() :
+      getNormalized();
+    normalized += amount;
     if (wrap) {
       if (normalized > 1) {
         normalized = normalized % 1;
