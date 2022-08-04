@@ -339,6 +339,9 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   public LXClip getClip(int index, boolean create) {
+    if (index >= lx.engine.clips.numScenes.getValuei()) {
+      return null;
+    }
     if (index < this.clips.size()) {
       return this.clips.get(index);
     }

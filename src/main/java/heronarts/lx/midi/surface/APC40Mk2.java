@@ -38,7 +38,6 @@ import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
-import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.AggregateParameter;
@@ -637,7 +636,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         }
         sendChannelClips(this.channel.getIndex(), this.channel);
       } else if (p.getParent() instanceof LXClip) {
-        LXClip clip = (LXClip)p.getParent();
+        LXClip clip = (LXClip) p.getParent();
         sendClip(index, this.channel, clip.getIndex(), clip);
       }
       if (this.channel instanceof LXChannel) {
@@ -888,23 +887,26 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendChannelClips(int index, LXAbstractChannel channel) {
+    int clipOffset = lx.engine.clips.clipViewGridOffset.getValuei();
     for (int i = 0; i < CLIP_LAUNCH_ROWS; ++i) {
       LXClip clip = null;
+      int clipIndex = clipOffset + i;
       if (channel != null) {
-        clip = channel.getClip(i);
+        clip = channel.getClip(clipIndex);
       }
-      sendClip(index, channel, i, clip);
+      sendClip(index, channel, clipIndex, clip);
     }
   }
 
   private void sendClip(int channelIndex, LXAbstractChannel channel, int clipIndex, LXClip clip) {
+    int slotIndex = clipIndex - lx.engine.clips.clipViewGridOffset.getValuei();
     if (this.gridMode != GridMode.CLIP ||
-            channelIndex >= CLIP_LAUNCH_COLUMNS || clipIndex >= CLIP_LAUNCH_ROWS) {
+            channelIndex >= CLIP_LAUNCH_COLUMNS || slotIndex >= CLIP_LAUNCH_ROWS) {
       return;
     }
     int color = LED_OFF;
     int mode = LED_MODE_PRIMARY;
-    int pitch = CLIP_LAUNCH + channelIndex + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - clipIndex);
+    int pitch = CLIP_LAUNCH + channelIndex + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - slotIndex);
     if (channel != null && clip != null) {
       color = channel.arm.isOn() ? LED_RED_HALF :
               clip.loop.isOn() ? LED_CYAN : LED_GRAY;
@@ -1107,6 +1109,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendChannelFocus();
   };
 
+  private final LXParameterListener clipGridListener = (p) -> {
+    sendChannelGrid();
+  };
+
   private boolean isRegistered = false;
 
   private void register() {
@@ -1120,6 +1126,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     this.lx.engine.performanceMode.addListener(this.performanceModeListener, true);
 
+    this.lx.engine.clips.clipViewGridOffset.addListener(this.clipGridListener);
+    this.lx.engine.clips.numScenes.addListener(this.clipGridListener);
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
     this.lx.engine.mixer.focusedChannelAux.addListener(this.focusedChannelListener);
@@ -1140,6 +1148,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     this.lx.engine.performanceMode.removeListener(this.performanceModeListener);
+    this.lx.engine.clips.clipViewGridOffset.removeListener(this.clipGridListener);
+    this.lx.engine.clips.numScenes.removeListener(this.clipGridListener);
     this.lx.engine.mixer.removeListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
     this.lx.engine.mixer.focusedChannelAux.removeListener(this.focusedChannelListener);
@@ -1312,18 +1322,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         return;
       case BANK_SELECT_UP:
         bus = getFocusedChannel();
-        if (bus instanceof LXChannel) {
-          ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
-        } else if (bus instanceof LXMasterBus) {
+        if (this.shiftOn) {
           lx.engine.clips.clipViewGridOffset.decrement();
+        } else if (bus instanceof LXChannel) {
+          ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
         return;
       case BANK_SELECT_DOWN:
         bus = getFocusedChannel();
-        if (bus instanceof LXChannel) {
-          ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
-        } else if (bus instanceof LXMasterBus) {
+        if (this.shiftOn) {
           lx.engine.clips.clipViewGridOffset.increment();
+        } else  if (bus instanceof LXChannel) {
+          ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
         return;
       case CLIP_DEVICE_VIEW:
@@ -1390,7 +1400,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             sendSwatch(MASTER_SWATCH);
           }
         } else {
-          this.lx.engine.clips.launchScene(index);
+          this.lx.engine.clips.launchScene(index + lx.engine.clips.clipViewGridOffset.getValuei());
         }
         return;
       }
@@ -1438,9 +1448,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               }
             }
           } else {
-            LXClip clip = channel.getClip(index);
+            int clipIndex = index + lx.engine.clips.clipViewGridOffset.getValuei();
+            LXClip clip = channel.getClip(clipIndex);
             if (clip == null) {
-              clip = channel.addClip(index);
+              clip = channel.addClip(clipIndex);
               clip.loop.setValue(this.shiftOn);
             } else if (this.shiftOn) {
               clip.loop.toggle();
