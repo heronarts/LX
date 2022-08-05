@@ -407,13 +407,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           // Weird situation, AggregateParameter has no control surface subs...
           sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
         } else {
-          sendControlChange(0, DEVICE_KNOB_STYLE + i,
-            parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ?
-                    LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
-          double normalized = (knobParam instanceof CompoundParameter) ?
-            ((CompoundParameter) knobParam).getBaseNormalized() :
-              knobParam.getNormalized();
-          sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+          int ledStyle = (parameter.getPolarity() == LXParameter.Polarity.BIPOLAR) ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR;
+          sendControlChange(0, DEVICE_KNOB_STYLE + i, ledStyle);
+          sendKnobValue(knobParam, i);
         }
 
         ++i;
@@ -430,14 +426,24 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         for (int i = 0; i < this.knobs.length; ++i) {
           LXListenableNormalizedParameter knobParam = parameterForKnob(this.knobs[i]);
           if (parameter == knobParam) {
-            double normalized = (parameter instanceof CompoundParameter) ?
-              ((CompoundParameter) parameter).getBaseNormalized() :
-                    knobParam.getNormalized();
-            sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
+            sendKnobValue(knobParam, i);
             break;
           }
         }
       }
+    }
+
+    private void sendKnobValue(LXListenableNormalizedParameter knobParam, int i) {
+      double normalized = (knobParam instanceof CompoundParameter) ?
+        ((CompoundParameter) knobParam).getBaseNormalized() :
+        knobParam.getNormalized();
+
+      // Wrappable discrete parameters need to inset the values a bit to avoid fiddly jumping at 0/1
+      if ((knobParam instanceof DiscreteParameter) && knobParam.isWrappable()) {
+        DiscreteParameter discrete = (DiscreteParameter) knobParam;
+        normalized = (discrete.getValuei() - discrete.getMinValue() + 0.5f) / discrete.getRange();
+      }
+      sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
     }
 
     // Returns what parameter should be changed when a physical knob is turned. This
@@ -522,7 +528,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           normalized = 0.0;
         }
       }
-
       knobParam.setNormalized(normalized);
     }
 
