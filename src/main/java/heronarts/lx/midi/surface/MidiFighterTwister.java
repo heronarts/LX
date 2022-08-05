@@ -608,6 +608,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK4_LEFT3:
             if (this.focusMode.getEnum() == FocusMode.CHANNEL) {
               this.deviceListener.focusedDevice.previousChannel();
+              if (!isAux()) {
+                lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+              }
             } else {
               this.deviceListener.focusedDevice.previousDevice();
             }
@@ -618,6 +621,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK4_RIGHT3:
             if (this.focusMode.getEnum() == FocusMode.CHANNEL) {
               this.deviceListener.focusedDevice.nextChannel();
+              if (!isAux()) {
+                lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+              }
             } else {
               this.deviceListener.focusedDevice.nextDevice();
             }
