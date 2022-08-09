@@ -125,15 +125,15 @@ public class GradientPattern extends LXPattern implements GradientFunction {
 
   public final EnumParameter<CoordinateMode> xMode =
     new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
-    .setDescription("Which coorindate mode the X-dimension uses");
+    .setDescription("Which coordinate mode the X-dimension uses");
 
   public final EnumParameter<CoordinateMode> yMode =
     new EnumParameter<CoordinateMode>("Y Mode", CoordinateMode.NORMAL)
-    .setDescription("Which coorindate mode the Y-dimension uses");
+    .setDescription("Which coordinate mode the Y-dimension uses");
 
   public final EnumParameter<CoordinateMode> zMode =
     new EnumParameter<CoordinateMode>("Z Mode", CoordinateMode.NORMAL)
-    .setDescription("Which coorindate mode the Z-dimension uses");
+    .setDescription("Which coordinate mode the Z-dimension uses");
 
   public final CompoundParameter xAmount =
     new CompoundParameter("X-Amt", 0, -1, 1)
