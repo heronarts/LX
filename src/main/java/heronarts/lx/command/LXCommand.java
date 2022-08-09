@@ -907,13 +907,17 @@ public abstract class LXCommand {
       }
     }
 
-    public static class LoadDevicePreset extends LXCommand {
+  }
+
+  public static class Device {
+    
+    public static class LoadPreset extends LXCommand {
 
       private final ComponentReference<LXDeviceComponent> device;
       private final JsonObject deviceObj;
       private final File file;
 
-      public LoadDevicePreset(LXDeviceComponent device, File file) {
+      public LoadPreset(LXDeviceComponent device, File file) {
         this.device = new ComponentReference<LXDeviceComponent>(device);
         this.deviceObj = LXSerializable.Utils.toObject(device);
         this.file = file;
@@ -934,9 +938,6 @@ public abstract class LXCommand {
         this.device.get().load(lx, this.deviceObj);
       }
     }
-  }
-
-  public static class Device {
 
     private static abstract class RemoteControls extends LXCommand {
       protected final ComponentReference<LXDeviceComponent> device;
