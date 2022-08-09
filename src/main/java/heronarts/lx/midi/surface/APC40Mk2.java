@@ -345,6 +345,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         LXPattern pattern = (LXPattern) this.device;
         isEnabled = (pattern == pattern.getChannel().getTargetPattern());
       }
+      if (this.device != null) {
+        this.device.remoteControlsChanged.addListener(this);
+      }
 
       sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
       if (this.device == null) {
@@ -371,7 +374,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       int i = 0;
       int skip = this.bankNumber * DEVICE_KNOB_NUM;
       int s = 0;
-      Set<AggregateParameter> knownParents = new HashSet<>();
+      final List<LXParameter> uniqueParameters = new ArrayList<LXParameter>();
       for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
         if (s++ < skip) {
           continue;
@@ -382,6 +385,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         if (parameter == null) {
           this.knobs[i] = null;
           sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
+          ++i;
           continue;
         }
 
@@ -391,15 +395,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           // add listeners for all of its children, and remember that we've seen
           // the parent so we can skip this process when we encounter its other subs.
           this.knobs[i] = parent;
-          if (!knownParents.contains(parent)) {
+          if (!uniqueParameters.contains(parent)) {
+            uniqueParameters.add(parent);
             for (LXListenableParameter subParam : parent.subparameters.values()) {
               subParam.addListener(this);
             }
-            knownParents.add(parent);
           }
         } else {
           this.knobs[i] = parameter;
-          parameter.addListener(this);
+          if (!uniqueParameters.contains(parameter)) {
+            uniqueParameters.add(parameter);
+            parameter.addListener(this);
+          }
         }
 
         LXListenableNormalizedParameter knobParam = parameterForKnob(this.knobs[i]);
@@ -420,14 +427,16 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     @Override
     public void onParameterChanged(LXParameter parameter) {
       LXEffect effect = (this.device instanceof LXEffect) ? (LXEffect) this.device : null;
-      if ((effect != null) && (parameter == effect.enabled)) {
+      if (parameter == this.device.remoteControlsChanged) {
+        unregisterDeviceKnobs();
+        registerDeviceKnobs();
+      } else if ((effect != null) && (parameter == effect.enabled)) {
         sendNoteOn(0, DEVICE_ON_OFF, effect.enabled.isOn() ? LED_ON : LED_OFF);
       } else {
         for (int i = 0; i < this.knobs.length; ++i) {
           LXListenableNormalizedParameter knobParam = parameterForKnob(this.knobs[i]);
           if (parameter == knobParam) {
             sendKnobValue(knobParam, i);
-            break;
           }
         }
       }
@@ -537,6 +546,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           LXEffect effect = (LXEffect) this.device;
           effect.enabled.removeListener(this);
         }
+        this.device.remoteControlsChanged.removeListener(this);
         unregisterDeviceKnobs();
         this.device = null;
       }
@@ -544,20 +554,23 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     private void unregisterDeviceKnobs() {
       if (this.device != null) {
-        Set<AggregateParameter> knownParents = new HashSet<>();
+        final List<LXParameter> uniqueParameters = new ArrayList<LXParameter>();
         for (int i = 0; i < this.knobs.length; ++i) {
           if (this.knobs[i] == null) {
             continue;
           } else if (this.knobs[i] instanceof AggregateParameter) {
             AggregateParameter ap = (AggregateParameter) this.knobs[i];
-            if (!knownParents.contains(ap)) {
+            if (!uniqueParameters.contains(ap)) {
+              uniqueParameters.add(ap);
               for (LXListenableParameter sub : ap.subparameters.values()) {
                 sub.removeListener(this);
               }
-              knownParents.add(ap);
             }
           } else {
-            this.knobs[i].removeListener(this);
+            if (!uniqueParameters.contains(this.knobs[i])) {
+              uniqueParameters.add(this.knobs[i]);
+              this.knobs[i].removeListener(this);
+            }
           }
           this.knobs[i] = null;
           sendControlChange(0, DEVICE_KNOB + i, 0);

@@ -52,6 +52,7 @@ import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
@@ -933,7 +934,90 @@ public abstract class LXCommand {
         this.device.get().load(lx, this.deviceObj);
       }
     }
+  }
 
+  public static class Device {
+
+    private static abstract class RemoteControls extends LXCommand {
+      protected final ComponentReference<LXDeviceComponent> device;
+      protected final String[] oldCustomControls;
+
+      protected String[] toPaths(LXListenableNormalizedParameter[] remoteControls) {
+        if (remoteControls == null) {
+          return null;
+        }
+        String[] paths = new String[remoteControls.length];
+        for (int i = 0; i < remoteControls.length; ++i) {
+          paths[i] = remoteControls[i] == null ? null : remoteControls[i].getPath();
+        }
+        return paths;
+      }
+
+      protected LXListenableNormalizedParameter[] toControls(String[] paths) {
+        LXDeviceComponent device = this.device.get();
+        LXListenableNormalizedParameter[] remoteControls = new LXListenableNormalizedParameter[paths.length];
+        for (int i = 0; i < paths.length; ++i) {
+          remoteControls[i] = paths[i] == null ? null : (LXListenableNormalizedParameter) device.getParameter(paths[i]);
+        }
+        return remoteControls;
+      }
+
+      protected RemoteControls(LXDeviceComponent device) {
+        this.device = new ComponentReference<LXDeviceComponent>(device);
+        this.oldCustomControls = toPaths(device.getCustomRemoteControls());
+      }
+    }
+
+    public static class SetRemoteControls extends RemoteControls {
+
+      private final String[] newCustomControls;
+
+      public SetRemoteControls(LXDeviceComponent device, LXListenableNormalizedParameter[] remoteControls) {
+        super(device);
+        this.newCustomControls = toPaths(remoteControls);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Update Remote Controls";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.device.get().setCustomRemoteControls(toControls(this.newCustomControls));
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        if (this.oldCustomControls == null) {
+          this.device.get().clearCustomRemoteControls();
+        } else {
+          this.device.get().setCustomRemoteControls(toControls(this.oldCustomControls));
+        }
+      }
+    }
+
+    public static class ClearRemoteControls extends RemoteControls {
+
+      public ClearRemoteControls(LXDeviceComponent device) {
+        super(device);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Clear Remote Controls";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.device.get().clearCustomRemoteControls();
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.device.get().setCustomRemoteControls(toControls(this.oldCustomControls));
+      }
+    }
   }
 
   public static class Mixer {

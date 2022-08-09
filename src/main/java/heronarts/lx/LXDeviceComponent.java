@@ -32,6 +32,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
@@ -76,7 +78,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
   public final LXModulationEngine modulation;
 
-  private LXListenableNormalizedParameter[] remoteControls = null;
+  private LXListenableNormalizedParameter[] defaultRemoteControls = null;
+  private LXListenableNormalizedParameter[] customRemoteControls = null;
+
+  public MutableParameter remoteControlsChanged = new MutableParameter("Remote Control Monitor");
 
   private Throwable crash = null;
 
@@ -136,8 +141,34 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     return (annotation != null) ? annotation.value() : LXCategory.OTHER;
   }
 
+  private void validateRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
+    for (LXListenableNormalizedParameter control : remoteControls) {
+      if ((control != null) && (control.getParent() != this)) {
+        throw new IllegalArgumentException("Cannot add remote control that does not belong to this component: " + control);
+      }
+    }
+  }
+
   protected void setRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
-    this.remoteControls = remoteControls;
+    validateRemoteControls(remoteControls);
+    this.defaultRemoteControls = remoteControls;
+  }
+
+  public void clearCustomRemoteControls() {
+    if (this.customRemoteControls != null) {
+      this.customRemoteControls = null;
+      this.remoteControlsChanged.bang();
+    }
+  }
+
+  public void setCustomRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
+    validateRemoteControls(remoteControls);
+    this.customRemoteControls = remoteControls;
+    this.remoteControlsChanged.bang();
+  }
+
+  public LXListenableNormalizedParameter[] getCustomRemoteControls() {
+    return this.customRemoteControls;
   }
 
   /**
@@ -147,7 +178,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @return Array of parameters for a remote control surface to address
    */
   public LXListenableNormalizedParameter[] getRemoteControls() {
-    if (this.remoteControls == null) {
+    if (this.customRemoteControls != null) {
+      return this.customRemoteControls;
+    }
+    if (this.defaultRemoteControls == null) {
       List<LXListenableNormalizedParameter> remoteControls = new ArrayList<LXListenableNormalizedParameter>();
       for (LXParameter parameter : getParameters()) {
         // Do not include subparams of AggregateParameter
@@ -173,9 +207,9 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
           }
         }
       }
-      this.remoteControls = remoteControls.toArray(new LXListenableNormalizedParameter[0]);
+      this.defaultRemoteControls = remoteControls.toArray(new LXListenableNormalizedParameter[0]);
     }
-    return this.remoteControls;
+    return this.defaultRemoteControls;
   }
 
   public LXComponent addControlSurface(LXMidiSurface surface) {
@@ -295,10 +329,38 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     }
   }
 
+  private static final String KEY_REMOTE_CONTROLS = "remoteControls";
+
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     obj.addProperty(KEY_DEVICE_VERSION, getDeviceVersion());
+    if (this.customRemoteControls != null) {
+      JsonArray remoteControls = new JsonArray();
+      for (LXListenableNormalizedParameter control : this.customRemoteControls) {
+        remoteControls.add((control != null) ? control.getPath() : null);
+      }
+      obj.add(KEY_REMOTE_CONTROLS, remoteControls);
+    }
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    if (obj.has(KEY_REMOTE_CONTROLS)) {
+      JsonArray remoteControls = obj.get(KEY_REMOTE_CONTROLS).getAsJsonArray();
+      LXListenableNormalizedParameter[] customRemoteControls = new LXListenableNormalizedParameter[remoteControls.size()];
+      for (int i = 0; i < remoteControls.size(); ++i) {
+        JsonElement elem = remoteControls.get(i);
+        if (!elem.isJsonNull()) {
+          LXParameter parameter = this.parameters.get(remoteControls.get(i).getAsString());
+          if (parameter instanceof LXListenableNormalizedParameter) {
+            customRemoteControls[i] = (LXListenableNormalizedParameter) parameter;
+          }
+        }
+      }
+      setCustomRemoteControls(customRemoteControls);
+    }
   }
 
 }

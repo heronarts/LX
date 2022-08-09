@@ -18,6 +18,9 @@
 
 package heronarts.lx.midi.surface;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.midi.LXMidiEngine;
@@ -279,60 +282,74 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       if (this.device != device) {
         unregisterDevice();
         this.device = device;
-
-        int i = 0;
         if (this.device != null) {
-          final boolean isAux = isAux();
-          for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
-            if (i >= this.knobs.length) {
-              break;
+          this.device.remoteControlsChanged.addListener(this);
+        }
+        registerDeviceKnobs();
+      }
+    }
+
+    private void registerDeviceKnobs() {
+      int i = 0;
+      if (this.device != null) {
+        final boolean isAux = isAux();
+        final List<LXParameter> uniqueParameters = new ArrayList<LXParameter>();
+        for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
+          if (i >= this.knobs.length) {
+            break;
+          }
+          this.knobs[i] = parameter;
+          this.knobTicks[i] = 0;
+          if (parameter != null) {
+            // We will track an absolute knob value for Normalized DiscreteParameters even though MFT sends relative CCs.
+            if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
+              this.knobTicks[i] = (int) (parameter.getNormalized() * 127);
+              this.knobIncrementSize[i] = LXUtils.max(1, 128/((DiscreteParameter)parameter).getRange());
             }
-            this.knobs[i] = parameter;
-            this.knobTicks[i] = 0;
-            if (parameter != null) {
-              // We will track an absolute knob value for Normalized DiscreteParameters even though MFT sends relative CCs.
-              if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
-                this.knobTicks[i] = (int) (parameter.getNormalized() * 127);
-                this.knobIncrementSize[i] = LXUtils.max(1, 128/((DiscreteParameter)parameter).getRange());
-              }
+            if (!uniqueParameters.contains(parameter)) {
               parameter.addListener(this);
-              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
-              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
-              double normalized = (parameter instanceof CompoundParameter) ?
-                ((CompoundParameter) parameter).getBaseNormalized() :
-                parameter.getNormalized();
-              sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
-              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
-              if (parameter instanceof CompoundParameter && ((CompoundParameter)parameter).modulations.size()>0) {
-                sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_PULSE_EVERY_2_BEATS);
-              } else {
-                sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
-              }
+              uniqueParameters.add(parameter);
+            }
+            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
+            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
+            double normalized = (parameter instanceof CompoundParameter) ?
+              ((CompoundParameter) parameter).getBaseNormalized() :
+              parameter.getNormalized();
+            sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
+            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
+            if (parameter instanceof CompoundParameter && ((CompoundParameter)parameter).modulations.size()>0) {
+              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_PULSE_EVERY_2_BEATS);
             } else {
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
-              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
-              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_25);
-              sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 0);
-              sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
             }
-            sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, isAux ? RGB_AUX : RGB_PRIMARY);
-            ++i;
+          } else {
+            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
+            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
+            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_25);
+            sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 0);
+            sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
           }
-        }
-        while (i < this.knobs.length) {
-          sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
-          sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
-          sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_25);
-          sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 0);
-          sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
+          sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, isAux ? RGB_AUX : RGB_PRIMARY);
           ++i;
         }
-
+      }
+      while (i < this.knobs.length) {
+        sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
+        sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
+        sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_25);
+        sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 0);
+        sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_OFF);
+        ++i;
       }
     }
 
     @Override
     public void onParameterChanged(LXParameter parameter) {
+      if (parameter == this.device.remoteControlsChanged) {
+        unregisterDeviceKnobs();
+        registerDeviceKnobs();
+        return;
+      }
       for (int i = 0; i < this.knobs.length; ++i) {
         if (parameter == this.knobs[i]) {
           double normalized = (parameter instanceof CompoundParameter) ?
@@ -344,7 +361,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             this.knobTicks[i] = (int) (normalized * 127);
           }
           sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
-          break;
         }
       }
     }
@@ -446,16 +462,25 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
     private void unregisterDevice() {
       if (this.device != null) {
-        for (int i = 0; i < this.knobs.length; ++i) {
-          if (this.knobs[i] != null) {
-            this.knobs[i].removeListener(this);
-            this.knobs[i] = null;
-            this.knobTicks[i] = 0;
-            this.knobIncrementSize[i] = 1;
-          }
-        }
+        this.device.remoteControlsChanged.removeListener(this);
+        unregisterDeviceKnobs();
       }
       this.device = null;
+    }
+
+    private void unregisterDeviceKnobs() {
+      final List<LXParameter> uniqueParameters = new ArrayList<LXParameter>();
+      for (int i = 0; i < this.knobs.length; ++i) {
+        if (this.knobs[i] != null) {
+          if (!uniqueParameters.contains(this.knobs[i])) {
+            uniqueParameters.add(this.knobs[i]);
+            this.knobs[i].removeListener(this);
+          }
+          this.knobs[i] = null;
+          this.knobTicks[i] = 0;
+          this.knobIncrementSize[i] = 1;
+        }
+      }
     }
 
     private boolean isRegistered = false;
