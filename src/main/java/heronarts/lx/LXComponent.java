@@ -640,7 +640,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         ((DiscreteParameter) parameter).setNormalized(arg.toFloat());
       }
     } else if (parameter instanceof LXNormalizedParameter) {
-      ((LXNormalizedParameter) parameter).setNormalized(message.getFloat());
+      LXNormalizedParameter normalizedParameter = (LXNormalizedParameter) parameter;
+      if (normalizedParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
+        normalizedParameter.setValue(message.getFloat());
+      } else {
+        normalizedParameter.setNormalized(message.getFloat());
+      }
     } else {
       parameter.setValue(message.getFloat());
     }

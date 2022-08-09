@@ -26,6 +26,11 @@ package heronarts.lx.parameter;
  */
 public interface LXNormalizedParameter extends LXParameter {
 
+  public enum OscMode {
+    NORMALIZED,
+    ABSOLUTE;
+  }
+
   /**
    * Sets the value or the parameter in normalized space from 0 to 1
    *
@@ -68,6 +73,10 @@ public interface LXNormalizedParameter extends LXParameter {
    */
   default public boolean isWrappable() {
     return false;
+  }
+
+  default public OscMode getOscMode() {
+    return OscMode.NORMALIZED;
   }
 
 }

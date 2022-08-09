@@ -134,8 +134,9 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
   public final DiscreteParameter beatsPerMeasure = new DiscreteParameter("Beats", 4, 1, 9)
     .setDescription("Beats per measure");
 
-  public final BoundedParameter bpm =
+  public final BoundedParameter bpm = (BoundedParameter)
     new BoundedParameter("BPM", DEFAULT_BPM, this.minOscBpm, this.maxOscBpm)
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Beats per minute of the master tempo object");
 
   public final BooleanParameter trigger =
@@ -198,7 +199,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
 
   private static final String PATH_BEAT = "beat";
   private static final String PATH_SET_BPM = "setBPM";
-  
+
   public Tempo setOscBpmRange(double min, double max) {
     if (min <= 0.0 || min >= max) {
       // do not set to invalid range of BPMs

@@ -30,6 +30,7 @@ public abstract class LXListenableNormalizedParameter extends
   private double exponent = 1;
   private boolean mappable = true;
   private boolean wrappable = false;
+  private OscMode oscMode = OscMode.NORMALIZED;
 
   protected LXListenableNormalizedParameter(String label, double value) {
     super(label, value);
@@ -56,6 +57,16 @@ public abstract class LXListenableNormalizedParameter extends
   @Override
   public boolean isMappable() {
     return this.mappable;
+  }
+
+  public LXListenableNormalizedParameter setOscMode(OscMode oscMode) {
+    this.oscMode = oscMode;
+    return this;
+  }
+
+  @Override
+  public OscMode getOscMode() {
+    return this.oscMode;
   }
 
   public LXListenableNormalizedParameter setWrappable(boolean wrappable) {
