@@ -910,7 +910,7 @@ public abstract class LXCommand {
   }
 
   public static class Device {
-    
+
     public static class LoadPreset extends LXCommand {
 
       private final ComponentReference<LXDeviceComponent> device;
@@ -1366,15 +1366,13 @@ public abstract class LXCommand {
           if (this.modulationColor >= 0) {
             instance.modulationColor.setValue(this.modulationColor);
           }
-          if (this.modulatorObj != null) {
-            instance.load(lx, this.modulatorObj);
-          } else {
+          if (this.modulatorObj == null) {
             int count = this.modulation.get().getModulatorCount(this.modulatorClass);
             if (count > 0) {
               instance.label.setValue(instance.getLabel() + " " + (count + 1));
             }
           }
-          this.modulation.get().addModulator(instance);
+          this.modulation.get().addModulator(instance, this.modulatorObj);
           if (this.modulatorObj == null) {
             this.modulatorObj = LXSerializable.Utils.toObject(instance);
           }

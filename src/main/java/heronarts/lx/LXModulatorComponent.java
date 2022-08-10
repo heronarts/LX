@@ -23,6 +23,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.modulator.LXModulator;
 
 public abstract class LXModulatorComponent extends LXComponent implements LXLoopTask {
@@ -85,13 +87,23 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
   }
 
   public final <T extends LXModulator> T addModulator(T modulator) {
-    addModulator(modulator, -1);
-    return modulator;
+    return addModulator(modulator, -1);
   }
 
-  public <T extends LXModulator> T addModulator(T modulator, int index) {
+  public final <T extends LXModulator> T addModulator(T modulator, JsonObject modulatorObj) {
+    return addModulator(modulator, -1, modulatorObj);
+  }
+
+  public final <T extends LXModulator> T addModulator(T modulator, int index) {
+    return addModulator(modulator, index, null);
+  }
+
+  public <T extends LXModulator> T addModulator(T modulator, int index, JsonObject modulatorObj) {
     _addModulator(modulator, index);
     modulator.setParent(this);
+    if (modulatorObj != null) {
+      modulator.load(this.lx, modulatorObj);
+    }
     return modulator;
   }
 

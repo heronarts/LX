@@ -206,8 +206,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   }
 
   @Override
-  public <T extends LXModulator> T addModulator(T modulator, int index) {
-    super.addModulator(modulator, index);
+  public <T extends LXModulator> T addModulator(T modulator, int index, JsonObject modulatorObj) {
+    super.addModulator(modulator, index, modulatorObj);
     for (Listener listener : this.listeners) {
       listener.modulatorAdded(this, modulator);
     }
