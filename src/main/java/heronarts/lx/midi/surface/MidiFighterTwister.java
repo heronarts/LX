@@ -745,7 +745,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         } else {
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
-          sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_OFF);
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_25);
           if (i <= lxConfig.encoders.length && lxConfig.encoders[i].has_detent.value == CFG_TRUE) {
             sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB+i, 63);
