@@ -283,8 +283,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
    * @return Serialized swatch
    */
   private JsonObject toJsonSwatch(LXSwatch swatch) {
-    JsonObject obj = LXSerializable.Utils.toObject(this.lx, swatch);
-    LXSerializable.Utils.stripIds(obj);
+    JsonObject obj = LXSerializable.Utils.toObject(this.lx, swatch, true);
     LXSerializable.Utils.stripParameter(obj, "recall");
     return obj;
   }

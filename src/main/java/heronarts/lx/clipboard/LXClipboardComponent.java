@@ -99,12 +99,11 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
   protected LXClipboardComponent(Class<T> cls, T component) {
     this.componentClass = cls;
     this.instanceClass = component.getClass().asSubclass(cls);
-    this.componentObj = LXSerializable.Utils.toObject(component);
 
-    // TODO(mcslee): is this the best way to handle this? alternate solution would be
+    // TODO(mcslee): is stripping IDs the best way to handle this? alternate solution would be
     // having flags or state for the load() methods to know about restoring from a
     // file vs duplicating things...
-    LXSerializable.Utils.stripIds(this.componentObj);
+    this.componentObj = LXSerializable.Utils.toObject(component, true);
   }
 
   @Override

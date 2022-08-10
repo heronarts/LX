@@ -1894,9 +1894,7 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        this.originalSwatch =
-          LXSerializable.Utils.stripIds(
-            LXSerializable.Utils.toObject(lx.engine.palette.swatch));
+        this.originalSwatch = LXSerializable.Utils.toObject(lx.engine.palette.swatch, true);
         this.set = lx.engine.palette.setSwatch(this.swatch.get());
       }
 

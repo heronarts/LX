@@ -253,7 +253,18 @@ public interface LXSerializable {
      * @return JsonObject representation of the component
      */
     public static JsonObject toObject(LXComponent component) {
-      return toObject(component.getLX(), component);
+      return toObject(component, false);
+    }
+
+    /**
+     * Serializes an LXComponent to a JsonObject
+     *
+     * @param component Component to serialize
+     * @param stripIds Whether to strip ids from the result
+     * @return JsonObject representation of the component
+     */
+    public static JsonObject toObject(LXComponent component, boolean stripIds) {
+      return toObject(component.getLX(), component, stripIds);
     }
 
     /**
@@ -264,8 +275,23 @@ public interface LXSerializable {
      * @return JsonObject representation of the object
      */
     public static JsonObject toObject(LX lx, LXSerializable serializable) {
+      return toObject(lx, serializable, false);
+    }
+
+    /**
+     * Serializes any LXSerializable to a JsonObject
+     *
+     * @param lx LX instance
+     * @param serializable Serializable object
+     * @param stripIds Whether to strip ids from the result
+     * @return JsonObject representation of the object
+     */
+    public static JsonObject toObject(LX lx, LXSerializable serializable, boolean stripIds) {
       JsonObject obj = new JsonObject();
       serializable.save(lx,  obj);
+      if (stripIds) {
+        stripIds(obj);
+      }
       return obj;
     }
 
