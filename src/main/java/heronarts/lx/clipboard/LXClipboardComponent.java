@@ -26,8 +26,10 @@ import com.google.gson.stream.JsonWriter;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.LXClip;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
@@ -77,6 +79,16 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
   public static class Swatch extends LXClipboardComponent<LXSwatch> {
     public Swatch(LXSwatch swatch) {
       super(LXSwatch.class, swatch);
+    }
+  }
+
+  public static class Clip extends LXClipboardComponent<LXClip> {
+
+    public final LXBus bus;
+
+    public Clip(LXClip clip) {
+      super(LXClip.class, clip);
+      this.bus = clip.bus;
     }
   }
 
