@@ -177,7 +177,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    *
    * @return Array of parameters for a remote control surface to address
    */
-  public LXListenableNormalizedParameter[] getRemoteControls() {
+  public final LXListenableNormalizedParameter[] getRemoteControls() {
     if (this.customRemoteControls != null) {
       return this.customRemoteControls;
     }
