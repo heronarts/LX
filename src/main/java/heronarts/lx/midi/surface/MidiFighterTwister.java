@@ -267,142 +267,85 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   public static final byte CFG_ENC_INDICATORTYPE_BLENDEDBAR = 0x02;
   public static final byte CFG_ENC_INDICATORTYPE_BLENDEDDOT = 0x03;
 
-  private class MFTconfig {
+  private class Config {
+
+    private static final int PART_SIZE_BYTES = 24;
+
+    @SuppressWarnings("unused")
+    private boolean versionOK = true;       // TODO: Confirm compatible firmware version (>2016) before sending sysex commands
 
     private boolean initialized = false;
-    private boolean versionOK = true;       // TODO: Confirm compatible firmware version (>2016) before sending sysex commands
-    private Map<Byte, Byte> global = new LinkedHashMap<Byte, Byte>();
-    private final EncoderConfig[] encoders = new EncoderConfig[DEVICE_KNOB_NUM];
+    private final Map<Byte, Byte> global = new LinkedHashMap<Byte, Byte>();
+    private final Encoder[] encoders = new Encoder[DEVICE_KNOB_NUM];
 
-    private class MFTconfigSetting {
+    private class Encoder {
 
-      MFTconfigSetting() {
-        this.value = (byte)0x0;
-        this.isModified = false;
-      }
-      private byte value;
-      private boolean isModified;
+      private class Setting {
 
-      private boolean setValue(byte value) {
-        if (this.value != value) {
-          this.value = value;
-          this.isModified = true;
+        private final byte address;
+        private byte value;
+        private boolean isModified;
+
+        private Setting(byte address) {
+          this.address = address;
+          this.value = (byte) 0x0;
+          this.isModified = false;
         }
-        return this.isModified;
+
+        private boolean setValue(byte value) {
+          if (this.value != value) {
+            this.value = value;
+            this.isModified = true;
+          }
+          return this.isModified;
+        }
       }
-    }
 
-    private class EncoderConfig {
-
-      private int encoderIndex;
-      private byte sysexTag;
+      private final int encoderIndex;
+      private final byte sysexTag;
 
       private boolean isModified = false;
 
-      private MFTconfigSetting has_detent;
-      private MFTconfigSetting movement;
-      private MFTconfigSetting switch_action_type;
-      private MFTconfigSetting switch_midi_channel;
-      private MFTconfigSetting switch_midi_number;
-      private MFTconfigSetting switch_midi_type;
-      private MFTconfigSetting encoder_midi_channel;
-      private MFTconfigSetting encoder_midi_number;
-      private MFTconfigSetting encoder_midi_type;
-      private MFTconfigSetting active_color;
-      private MFTconfigSetting inactive_color;
-      private MFTconfigSetting detent_color;
-      private MFTconfigSetting indicator_display_type;
-      private MFTconfigSetting is_super_knob;
-      private MFTconfigSetting encoder_shift_midi_channel;
+      // Keep list of all settings
+      private final Map<String, Setting> settings =
+        new LinkedHashMap<String, Setting>();
 
-      private EncoderConfig(int encoderIndex) {
+      private final Setting has_detent;
+
+      private Setting addSetting(String name, int address) {
+        Setting setting = new Setting((byte) address);
+        this.settings.put(name, setting);
+        return setting;
+      }
+
+      private Encoder(int encoderIndex) {
         this.encoderIndex = encoderIndex;
         this.sysexTag = (byte)(encoderIndex+1);
 
-        this.has_detent = new MFTconfigSetting();
-        this.movement = new MFTconfigSetting();
-        this.switch_action_type = new MFTconfigSetting();
-        this.switch_midi_channel = new MFTconfigSetting();
-        this.switch_midi_number = new MFTconfigSetting();
-        this.switch_midi_type = new MFTconfigSetting();
-        this.encoder_midi_channel = new MFTconfigSetting();
-        this.encoder_midi_number = new MFTconfigSetting();
-        this.encoder_midi_type = new MFTconfigSetting();
-        this.active_color = new MFTconfigSetting();
-        this.inactive_color = new MFTconfigSetting();
-        this.detent_color = new MFTconfigSetting();
-        this.indicator_display_type = new MFTconfigSetting();
-        this.is_super_knob = new MFTconfigSetting();
-        this.encoder_shift_midi_channel = new MFTconfigSetting();
+        this.has_detent = addSetting("has_detent", 10);
+        addSetting("movement", 11);
+        addSetting("switch_action_type", 12);
+        addSetting("switch_midi_channel", 13);
+        addSetting("switch_midi_number", 14);
+        addSetting("switch_midi_type", 15);
+        addSetting("encoder_midi_channel", 16);
+        addSetting("encoder_midi_number", 17);
+        addSetting("encoder_midi_type", 18);
+        addSetting("active_color", 19);
+        addSetting("inactive_color", 20);
+        addSetting("detent_color", 21);
+        addSetting("indicator_display_type", 22);
+        addSetting("is_super_knob", 23);
+        addSetting("encoder_shift_midi_channel", 24);
       }
 
       private void setDetent(boolean value) {
-        setDetent(value ? CFG_TRUE : CFG_FALSE);
+        set("has_detent", value ? CFG_TRUE : CFG_FALSE);
       }
 
-      private void setDetent(byte value) {
-        setEncSetting(this.has_detent, value);
-      }
-
-      private void setMovement(byte value) {
-        setEncSetting(this.movement, value);
-      }
-
-      private void setSwitchActionType(byte value) {
-        setEncSetting(this.switch_action_type, value);
-      }
-
-      private void setSwitchMidiChannel(byte value) {
-        setEncSetting(this.switch_midi_channel, value);
-      }
-
-      private void setSwitchMidiNumber(byte value) {
-        setEncSetting(this.switch_midi_number, value);
-      }
-
-      private void setSwitchMidiType(byte value) {
-        setEncSetting(this.switch_midi_type, value);
-      }
-
-      private void setEncoderMidiChannel(byte value) {
-        setEncSetting(this.encoder_midi_channel, value);
-      }
-
-      private void setEncoderMidiNumber(byte value) {
-        setEncSetting(this.encoder_midi_number, value);
-      }
-
-      private void setEncoderMidiType(byte value) {
-        setEncSetting(this.encoder_midi_type, value);
-      }
-
-      private void setActiveColor(byte value) {
-        setEncSetting(this.active_color, value);
-      }
-
-      private void setInactiveColor(byte value) {
-        setEncSetting(this.inactive_color, value);
-      }
-
-      private void setDetentColor(byte value) {
-        setEncSetting(this.detent_color, value);
-      }
-
-      private void setIndicatorDisplayType(byte value) {
-        setEncSetting(this.indicator_display_type, value);
-      }
-
-      private void setIsSuperKnob(byte value) {
-        setEncSetting(this.is_super_knob, value);
-      }
-
-      private void setEncoderShiftMidiChannel(byte value) {
-        setEncSetting(this.encoder_shift_midi_channel, value);
-      }
-
-      // setEncSetting method is for internal use
-      private void setEncSetting(MFTconfigSetting setting, byte value) {
-        this.isModified = setting.setValue(value) || this.isModified;
+      // set method is for internal use
+      private void set(String setting, byte value) {
+        this.isModified = this.settings.get(setting).setValue(value) || this.isModified;
       }
 
       private void send(boolean forceAll) {
@@ -411,81 +354,27 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         }
 
         ArrayList<Byte> configData = new ArrayList<Byte>();
-        if (this.has_detent.isModified || forceAll) {
-          configData.add((byte)10);
-          configData.add(this.has_detent.value);
-        }
-        if (this.movement.isModified || forceAll) {
-          configData.add((byte)11);
-          configData.add(this.movement.value);
-        }
-        if (this.switch_action_type.isModified || forceAll) {
-          configData.add((byte)12);
-          configData.add(this.switch_action_type.value);
-        }
-        if (this.switch_midi_channel.isModified || forceAll) {
-          configData.add((byte)13);
-          configData.add(this.switch_midi_channel.value);
-        }
-        if (this.switch_midi_number.isModified || forceAll) {
-          configData.add((byte)14);
-          configData.add(this.switch_midi_number.value);
-        }
-        if (this.switch_midi_type.isModified || forceAll) {
-          configData.add((byte)15);
-          configData.add(this.switch_midi_type.value);
-        }
-        if (this.encoder_midi_channel.isModified || forceAll) {
-          configData.add((byte)16);
-          configData.add(this.encoder_midi_channel.value);
-        }
-        if (this.encoder_midi_number.isModified || forceAll) {
-          configData.add((byte)17);
-          configData.add(this.encoder_midi_number.value);
-        }
-        if (this.encoder_midi_type.isModified || forceAll) {
-          configData.add((byte)18);
-          configData.add(this.encoder_midi_type.value);
-        }
-        if (this.active_color.isModified || forceAll) {
-          configData.add((byte)19);
-          configData.add(this.active_color.value);
-        }
-        if (this.inactive_color.isModified || forceAll) {
-          configData.add((byte)20);
-          configData.add(this.inactive_color.value);
-        }
-        if (this.detent_color.isModified || forceAll) {
-          configData.add((byte)21);
-          configData.add(this.detent_color.value);
-        }
-        if (this.indicator_display_type.isModified || forceAll) {
-          configData.add((byte)22);
-          configData.add(this.indicator_display_type.value);
-        }
-        if (this.is_super_knob.isModified || forceAll) {
-          configData.add((byte)23);
-          configData.add(this.is_super_knob.value);
-        }
-        if (this.encoder_shift_midi_channel.isModified || forceAll) {
-          configData.add((byte)24);
-          configData.add(this.encoder_shift_midi_channel.value);
+        for (Setting setting : this.settings.values()) {
+          if (setting.isModified || forceAll) {
+            configData.add(setting.address);
+            configData.add(setting.value);
+          }
         }
 
-        if (configData.size() > 0) {
+        if (!configData.isEmpty()) {
           // Use MFT sysex Bulk Transfer protocol
 
           // Total number of bytes to transfer
           int bytesRemaining = configData.size();
 
-          // Total number of parts in transfer
-          int total = (bytesRemaining / 24)+1;
-          int iConfig=0;
+          // Total number of parts in transfer - round up
+          int total = (bytesRemaining + PART_SIZE_BYTES - 1) / PART_SIZE_BYTES;
+          int iConfig = 0;
 
           for (int part=1; part<=total; part++) {
             // Size, in bytes, of current part
-            int size = bytesRemaining > 24 ? 24 : bytesRemaining;
-            bytesRemaining -= 24;
+            int size = bytesRemaining > PART_SIZE_BYTES ? PART_SIZE_BYTES : bytesRemaining;
+            bytesRemaining -= PART_SIZE_BYTES;
 
             byte[] payload = new byte[size+11];
             payload[0] = (byte)0xf0;                    // Start sysex
@@ -512,23 +401,12 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
         // If successfully sent, mark as not modified for next round
         this.isModified = false;
-        this.has_detent.isModified = false;
-        this.movement.isModified = false;
-        this.switch_action_type.isModified = false;
-        this.switch_midi_channel.isModified = false;
-        this.switch_midi_number.isModified = false;
-        this.switch_midi_type.isModified = false;
-        this.encoder_midi_channel.isModified = false;
-        this.encoder_midi_number.isModified = false;
-        this.encoder_midi_type.isModified = false;
-        this.active_color.isModified = false;
-        this.inactive_color.isModified = false;
-        this.detent_color.isModified = false;
-        this.indicator_display_type.isModified = false;
-        this.is_super_knob.isModified = false;
-        this.encoder_shift_midi_channel.isModified = false;
+        for (Setting setting : this.settings.values()) {
+          setting.isModified = false;
+        }
       }
 
+      @SuppressWarnings("unused")
       private void pull() {
         // Send Pull command for this encoder only
         byte[] payload = new byte[8];
@@ -549,9 +427,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
     }
 
-    private MFTconfig() {
+    private Config() {
       for (int i=0; i<DEVICE_KNOB_NUM; i++) {
-        this.encoders[i] = new EncoderConfig(i);
+        this.encoders[i] = new Encoder(i);
       }
     }
 
@@ -571,8 +449,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     private void sendModified() {
-      if (sendEncoders(false))
+      if (sendEncoders(false)) {
         sendGlobal();
+      }
     }
 
     private boolean sendEncoders(boolean forceAll) {
@@ -584,7 +463,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       boolean modified = false;
 
       // Encoders
-      for (int i=0; i<this.encoders.length; i++) {
+      for (int i = 0; i < this.encoders.length; ++i) {
         if (this.encoders[i].isModified || forceAll) {
           this.encoders[i].send(forceAll);
           modified = true;
@@ -617,7 +496,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       output.sendSysex(sysex);
     }
 
-    private void initializeLXdefaults() {
+    private void initializeLXDefaults() {
 
       this.global.clear();
       this.global.put((byte)0, (byte)4);                            // System MIDI channel
@@ -649,29 +528,30 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       this.global.put((byte)31, (byte)127);                         // 1f  RGB LED Brightness
       this.global.put((byte)32, (byte)127);                         // 20  Indicator Global Brightness
 
-      for (int i=0; i<this.encoders.length; i++) {
-        EncoderConfig enc = this.encoders[i];
+      for (int i = 0; i < this.encoders.length; ++i) {
+        Encoder enc = this.encoders[i];
         enc.setDetent(false);
-        enc.setMovement(CFG_ENC_MOVEMENTTYPE_DIRECT_HIGHRESOLUTION);
-        enc.setSwitchActionType(CFG_ENC_SWACTION_CCHOLD);
-        enc.setSwitchMidiChannel((byte)2);
-        enc.setSwitchMidiNumber((byte)enc.encoderIndex);
-        enc.setSwitchMidiType((byte)0);                             // Appears no longer in use
-        enc.setEncoderMidiChannel((byte)1);
-        enc.setEncoderMidiNumber((byte)enc.encoderIndex);
-        enc.setEncoderMidiType(CFG_ENC_MIDITYPE_SENDRELENC);        // Important! must be relative type
-        enc.setActiveColor((byte)51);                               // MFT default 51
-        enc.setInactiveColor((byte)1);                              // MFT default 1
-        enc.setDetentColor((byte)63);                               // MFT default 63
-        enc.setIndicatorDisplayType(CFG_ENC_INDICATORTYPE_BLENDEDBAR);
-        enc.setIsSuperKnob(CFG_FALSE);
-        enc.setEncoderShiftMidiChannel((byte)0);
+        enc.set("movement", CFG_ENC_MOVEMENTTYPE_DIRECT_HIGHRESOLUTION);
+        enc.set("switch_action_type", CFG_ENC_SWACTION_CCHOLD);
+        enc.set("switch_midi_channel", (byte)2);
+        enc.set("switch_midi_number", (byte)enc.encoderIndex);
+        enc.set("switch_midi_type", (byte)0);             // Appears no longer in use
+        enc.set("encoder_midi_channel", (byte)1);
+        enc.set("encoder_midi_number", (byte)enc.encoderIndex);
+        enc.set("encoder_midi_type", CFG_ENC_MIDITYPE_SENDRELENC);        // Important! must be relative type
+        enc.set("active_color", (byte)51);                               // MFT default 51
+        enc.set("inactive_color", (byte)1);                              // MFT default 1
+        enc.set("detent_color", (byte)63);                               // MFT default 63
+        enc.set("indicator_display_type", CFG_ENC_INDICATORTYPE_BLENDEDBAR);
+        enc.set("is_super_knob", CFG_FALSE);
+        enc.set("encoder_shift_midi_channel", (byte)0);
       }
 
       this.initialized = true;
     }
 
     // Helper for debugging
+    @SuppressWarnings("unused")
     private String bytesToString(byte[] bytes) {
       String s = new String();
       for (int i=0; i<bytes.length; i++) {
@@ -682,8 +562,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   };
 
-  private final MFTconfig userConfig = new MFTconfig();
-  private final MFTconfig lxConfig = new MFTconfig();
+  private final Config userConfig = new Config();
+  private final Config lxConfig = new Config();
 
   private final DeviceListener deviceListener;
 
@@ -720,7 +600,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       // Sysex config changes require reboot therefore must happen before MIDI commands
       for (int i = 0; i < this.knobs.length; ++i) {
         LXListenableNormalizedParameter parameter = this.knobs[i];
-        MFTconfig.EncoderConfig enc = i < lxConfig.encoders.length ? lxConfig.encoders[i] : null;
+        Config.Encoder enc = i < lxConfig.encoders.length ? lxConfig.encoders[i] : null;
         if (parameter != null && enc != null) {
           enc.setDetent(parameter.getPolarity() == Polarity.BIPOLAR);
         } else if (enc != null) {
@@ -776,7 +656,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           if (e >= this.knobs.length || e >= lxConfig.encoders.length) {
             break;
           }
-          MFTconfig.EncoderConfig enc = lxConfig.encoders[e];
+          Config.Encoder enc = lxConfig.encoders[e];
           if (parameter != null) {
             enc.setDetent(parameter.getPolarity() == Polarity.BIPOLAR);
           } else {
@@ -1069,10 +949,11 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     this.userConfig.pull();
 
     // Apply LX-friendly config
-    this.lxConfig.initializeLXdefaults();
+    this.lxConfig.initializeLXDefaults();
     this.lxConfig.sendAll();
   }
 
+  @SuppressWarnings("unused")
   private void restoreConfig() {
     //this.userConfig.sendAll();  // Uncomment after pull is working
   }
