@@ -172,7 +172,7 @@ public class NoisePattern extends LXPattern {
     .setDescription("Amount of scaling applied to the Z-axis");
 
   public final BooleanParameter motion =
-    new BooleanParameter("Motion", false)
+    new BooleanParameter("Motion", true)
     .setDescription("Whether motion is applied to the noise");
 
   public final CompoundParameter motionSpeed =
