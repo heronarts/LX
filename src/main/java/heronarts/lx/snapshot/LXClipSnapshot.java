@@ -25,6 +25,8 @@ import heronarts.lx.LXLoopTask;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.utils.LXUtils;
 
 public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoopTask {
@@ -59,8 +61,22 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
     }
   }
 
+  public BooleanParameter getSnapshotTransitionEnabledParameter() {
+    final LXClip clip = getClip();
+    return clip.customSnapshotTransition.isOn() ?
+      clip.snapshotTransitionEnabled :
+      lx.engine.clips.snapshotTransitionEnabled;
+  }
+
+  public BoundedParameter getSnapshotTransitionTimeParameter() {
+    final LXClip clip = getClip();
+    return clip.customSnapshotTransition.isOn() ?
+      clip.snapshot.transitionTimeSecs :
+      lx.engine.clips.snapshotTransitionTimeSecs;
+  }
+
   public void recall() {
-    boolean transitionEnabled = getClip().snapshotTransitionEnabled.isOn();
+    boolean transitionEnabled = getSnapshotTransitionEnabledParameter().isOn();
     for (View view : this.views) {
       if (transitionEnabled) {
         view.startTransition();
@@ -76,7 +92,13 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
 
   public void loop(double deltaMs) {
     if (this.inTransition) {
-      double increment = deltaMs / (1000 * getClip().snapshot.transitionTimeSecs.getValue());
+      LXClip clip = getClip();
+      BoundedParameter transitionTimeSecs =
+        clip.customSnapshotTransition.isOn() ?
+        clip.snapshot.transitionTimeSecs :
+        lx.engine.clips.snapshotTransitionTimeSecs;
+
+      double increment = deltaMs / (1000 * transitionTimeSecs.getValue());
       this.transitionProgress = LXUtils.min(1., this.transitionProgress + increment);
       if (this.transitionProgress == 1.) {
         for (View view : this.views) {

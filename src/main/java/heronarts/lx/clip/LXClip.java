@@ -80,6 +80,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new BooleanParameter("Automation", false)
     .setDescription("Whether automation playback is enabled for this clip");
 
+  public final BooleanParameter customSnapshotTransition =
+    new BooleanParameter("Custom Snapshot Transition")
+    .setDescription("Whether to use custom snapshot transition settings for this clip");
+
   public final LXBus bus;
   public final LXClipSnapshot snapshot;
 
@@ -112,6 +116,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("snapshotEnabled", this.snapshotEnabled);
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("automationEnabled", this.automationEnabled);
+    addParameter("customSnapshotTransition", this.customSnapshotTransition);
 
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx));
 

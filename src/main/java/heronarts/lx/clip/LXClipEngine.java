@@ -23,6 +23,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
@@ -70,10 +71,24 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new DiscreteParameter("Num Scenes", MIN_SCENES, MAX_SCENES + 1)
     .setDescription("Number of active scenes");
 
+  /**
+   * Amount of time taken in seconds to transition into a new snapshot view
+   */
+  public final BoundedParameter snapshotTransitionTimeSecs = (BoundedParameter)
+    new BoundedParameter("Snapshot Transition Time", 5, .1, 180)
+    .setDescription("Sets the duration of interpolated transitions between clip snapshots")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter snapshotTransitionEnabled =
+    new BooleanParameter("Snapshot Transitions", false)
+    .setDescription("When enabled, transitions between clip snapshots use interpolation");
+
   public LXClipEngine(LX lx) {
     super(lx);
     addParameter("focusedClip", this.focusedClip);
     addParameter("numScenes", this.numScenes);
+    addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
+    addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
     addParameter("clipViewGridOffset", this.clipViewGridOffset);
     addParameter("clipViewExpanded", this.clipViewExpanded);
 
