@@ -65,6 +65,7 @@ public class LXModel implements LXSerializable {
     public final static String POINT = "point";
     public final static String POINTS = "points";
     public final static String ARC = "arc";
+    public final static String SPIRAL = "spiral";
 
     public final static String VALID_TAG_REGEX = "[A-Za-z0-9_\\.\\-/]+";
 
