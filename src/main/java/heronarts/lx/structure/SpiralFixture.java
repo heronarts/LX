@@ -34,7 +34,7 @@ public class SpiralFixture extends LXBasicFixture {
   public static final int MAX_POINTS = 4096;
 
   public final DiscreteParameter numPoints = (DiscreteParameter)
-    new DiscreteParameter("Num", 100, 1, MAX_POINTS + 1)
+    new DiscreteParameter("Num", 170, 1, MAX_POINTS + 1)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of points in the spiral");
 
@@ -47,11 +47,11 @@ public class SpiralFixture extends LXBasicFixture {
     .setDescription("Radius of the spiral");
 
   public final BoundedParameter length =
-    new BoundedParameter("Length", 1000, 0, 1000000)
+    new BoundedParameter("Length", 800, 0, 1000000)
     .setDescription("Length of the spiral");
 
   public SpiralFixture(LX lx) {
-    super(lx, "Arc");
+    super(lx, "Spiral");
     addMetricsParameter("numPoints", this.numPoints);
     addMetricsParameter("numTurns", this.numTurns);
     addGeometryParameter("radius", this.radius);
