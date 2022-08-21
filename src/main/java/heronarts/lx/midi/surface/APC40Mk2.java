@@ -724,9 +724,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   }
 
+  public final BooleanParameter disableXF =
+    new BooleanParameter("Disable Crossfader", false)
+    .setDescription("Prevents interference with crossfader control from another device");
+
   public APC40Mk2(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
     this.deviceListener = new DeviceListener(lx);
+    addSetting("disableXF", this.disableXF);
   }
 
   @Override
@@ -1684,7 +1689,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       this.lx.engine.output.brightness.setNormalized(cc.getNormalized());
       return;
     case CROSSFADER:
-      this.lx.engine.mixer.crossfader.setNormalized(cc.getNormalized());
+      if (!this.disableXF.isOn()) {
+        this.lx.engine.mixer.crossfader.setNormalized(cc.getNormalized());
+      }
       return;
     }
 
