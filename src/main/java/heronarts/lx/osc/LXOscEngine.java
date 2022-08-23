@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
@@ -447,6 +448,8 @@ public class LXOscEngine extends LXComponent {
     private final byte[] buffer;
     private final ReceiverThread thread;
 
+    private final AtomicBoolean hasMessages = new AtomicBoolean(false);
+
     private final List<OscMessage> threadSafeEventQueue = Collections
       .synchronizedList(new ArrayList<OscMessage>());
 
@@ -509,10 +512,12 @@ public class LXOscEngine extends LXComponent {
               // Add all messages in the packet to the queue
               if (oscPacket instanceof OscMessage) {
                 threadSafeEventQueue.add((OscMessage) oscPacket);
+                hasMessages.set(true);
               } else if (oscPacket instanceof OscBundle) {
                 for (OscMessage message : (OscBundle) oscPacket) {
                   threadSafeEventQueue.add(message);
                 }
+                hasMessages.set(true);
               }
             } catch (OscException oscx) {
               error(oscx, "Error handling OscPacket in receiver");
@@ -530,20 +535,22 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void dispatch() {
-      this.engineThreadEventQueue.clear();
-      synchronized (this.threadSafeEventQueue) {
-        this.engineThreadEventQueue.addAll(this.threadSafeEventQueue);
-        this.threadSafeEventQueue.clear();
-      }
-      // TODO(mcslee): do we want to handle NTP timetags?
+      if (this.hasMessages.compareAndSet(true, false)) {
+        this.engineThreadEventQueue.clear();
+        synchronized (this.threadSafeEventQueue) {
+          this.engineThreadEventQueue.addAll(this.threadSafeEventQueue);
+          this.threadSafeEventQueue.clear();
+        }
+        // TODO(mcslee): do we want to handle NTP timetags?
 
-      // NOTE(mcslee): we iterate this way so that listeners can modify the
-      // listener list
-      this.listenerSnapshot.clear();
-      this.listenerSnapshot.addAll(this.listeners);
-      for (OscMessage message : this.engineThreadEventQueue) {
-        for (LXOscListener listener : this.listenerSnapshot) {
-          listener.oscMessage(message);
+        // NOTE(mcslee): we iterate this way so that listeners can modify the
+        // listener list
+        this.listenerSnapshot.clear();
+        this.listenerSnapshot.addAll(this.listeners);
+        for (OscMessage message : this.engineThreadEventQueue) {
+          for (LXOscListener listener : this.listenerSnapshot) {
+            listener.oscMessage(message);
+          }
         }
       }
     }

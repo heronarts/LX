@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.MidiDevice;
@@ -107,6 +108,8 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   private final List<LXMidiListener> listeners = new ArrayList<LXMidiListener>();
   private final List<DeviceListener> deviceListeners = new ArrayList<DeviceListener>();
   private final List<MappingListener> mappingListeners = new ArrayList<MappingListener>();
+
+  private final AtomicBoolean hasInputMessage = new AtomicBoolean(false);
 
   private final List<LXShortMessage> threadSafeInputQueue =
     Collections.synchronizedList(new ArrayList<LXShortMessage>());
@@ -766,6 +769,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   void queueInputMessage(LXShortMessage message) {
     this.threadSafeInputQueue.add(message);
+    this.hasInputMessage.set(true);
   }
 
   private static final String PATH_NOTE = "note";
@@ -894,16 +898,18 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
    * input queue.
    */
   public void dispatch() {
-    this.engineThreadInputQueue.clear();
-    synchronized (this.threadSafeInputQueue) {
-      this.engineThreadInputQueue.addAll(this.threadSafeInputQueue);
-      this.threadSafeInputQueue.clear();
-    }
-    for (LXShortMessage message : this.engineThreadInputQueue) {
-      LXMidiInput input = message.getInput();
-      input.dispatch(message);
-      if (input.enabled.isOn()) {
-        dispatch(message);
+    if (this.hasInputMessage.compareAndSet(true, false)) {
+      this.engineThreadInputQueue.clear();
+      synchronized (this.threadSafeInputQueue) {
+        this.engineThreadInputQueue.addAll(this.threadSafeInputQueue);
+        this.threadSafeInputQueue.clear();
+      }
+      for (LXShortMessage message : this.engineThreadInputQueue) {
+        LXMidiInput input = message.getInput();
+        input.dispatch(message);
+        if (input.enabled.isOn()) {
+          dispatch(message);
+        }
       }
     }
   }

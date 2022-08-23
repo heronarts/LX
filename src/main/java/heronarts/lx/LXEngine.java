@@ -49,6 +49,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.google.gson.JsonObject;
 
@@ -85,6 +86,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   private Dispatch inputDispatch = null;
 
   private final List<LXLoopTask> loopTasks = new ArrayList<LXLoopTask>();
+
+  private final AtomicBoolean hasTask = new AtomicBoolean(false);
   private final List<Runnable> threadSafeTaskQueue = Collections.synchronizedList(new ArrayList<Runnable>());
   private final List<Runnable> engineThreadTaskQueue = new ArrayList<Runnable>();
 
@@ -878,6 +881,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    */
   public LXEngine addTask(Runnable runnable) {
     this.threadSafeTaskQueue.add(runnable);
+    this.hasTask.set(true);
     return this;
   }
 
@@ -1026,7 +1030,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     }
 
     // Run-once scheduled tasks
-    if (this.threadSafeTaskQueue.size() > 0) {
+    if (this.hasTask.compareAndSet(true, false)) {
       this.engineThreadTaskQueue.clear();
       synchronized (this.threadSafeTaskQueue) {
         this.engineThreadTaskQueue.addAll(this.threadSafeTaskQueue);
