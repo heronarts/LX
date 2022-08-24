@@ -128,6 +128,10 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     new EnumParameter<TransitionMode>("Transition Mode", TransitionMode.RGB)
     .setDescription("Which color blending mode transitions should use.");
 
+  public final BooleanParameter expandedPerformance =
+    new BooleanParameter("Enabled", true)
+    .setDescription("Whether the palette pane is expanded in performance mode");
+
   private LXSwatch inTransition = null;
   private LXSwatch transitionFrom = null;
   private LXSwatch transitionTo = null;
@@ -168,6 +172,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
     addParameter("autoCycleCursor", this.autoCycleCursor);
     addParameter("triggerSwatchCycle", this.triggerSwatchCycle);
+    addParameter("expandedPerformance", this.expandedPerformance);
     this.color = swatch.colors.get(0);
   }
 

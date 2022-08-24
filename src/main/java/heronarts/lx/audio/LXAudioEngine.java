@@ -29,9 +29,13 @@ import heronarts.lx.parameter.LXParameter;
 
 public class LXAudioEngine extends LXModulatorComponent implements LXOscComponent {
 
-  public BooleanParameter enabled =
+  public final BooleanParameter enabled =
     new BooleanParameter("Enabled", false)
     .setDescription("Sets whether the audio engine is active");
+
+  public final BooleanParameter expandedPerformance =
+    new BooleanParameter("Enabled", true)
+    .setDescription("Whether the audio pane is expanded in performance mode");
 
   /**
    * Audio input object
@@ -53,6 +57,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     super(lx, "Audio");
     addParameter("enabled", this.enabled);
     addParameter("mode", this.mode);
+    addParameter("expandedPerformance", this.expandedPerformance);
 
     this.mode.setOptions(new String[] { "Input", "Output" });
 
