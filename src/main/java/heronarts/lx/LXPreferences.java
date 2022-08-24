@@ -215,11 +215,9 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
     JsonObject obj = new JsonObject();
     save(this.lx, obj);
-    try {
-      JsonWriter writer = new JsonWriter(new FileWriter(this.file));
+    try (JsonWriter writer = new JsonWriter(new FileWriter(this.file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
-      writer.close();
     } catch (IOException iox) {
       LX.error(iox, "Exception writing the preferences file: " + this.file);
     }
@@ -228,13 +226,9 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   public void load() {
     this.inLoad = true;
     if (this.file.exists()) {
-      try {
-        FileReader fr = new FileReader(this.file);
-        JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
-
+      try (FileReader fr = new FileReader(this.file)) {
         // Load parameters and settings from file
-        load(this.lx, obj);
-
+        load(this.lx, new Gson().fromJson(fr, JsonObject.class));
       } catch (Exception x) {
         LX.error(x, "Exception loading preferences file: " + this.file);
       }
