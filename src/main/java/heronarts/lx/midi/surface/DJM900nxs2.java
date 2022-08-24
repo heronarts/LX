@@ -29,6 +29,7 @@ import heronarts.lx.midi.MidiPitchBend;
 import heronarts.lx.midi.MidiProgramChange;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.LXParameter.Polarity;
 import heronarts.lx.utils.LXUtils;
 
@@ -43,14 +44,16 @@ public class DJM900nxs2 extends LXMidiSurface {
     FOUR(3);
 
     private final int index;
+    private final String label;
 
     private Channel(int index) {
       this.index = index;
+      this.label = Integer.toString(this.index + 1);
     }
 
     @Override
     public String toString() {
-      return Integer.toString(this.index + 1);
+      return this.label;
     }
 
     public int getIndex() {
@@ -196,16 +199,13 @@ public class DJM900nxs2 extends LXMidiSurface {
   public final BoundedParameter boothMonitor = new BoundedParameter("boothMonitor");
   public final BoundedParameter crossfader = new BoundedParameter("crossFader");
 
-  public final BoundedParameter color1raw = (BoundedParameter)new BoundedParameter("color1raw").setPolarity(Polarity.BIPOLAR);
-  public final BoundedParameter color2raw = (BoundedParameter)new BoundedParameter("color2raw").setPolarity(Polarity.BIPOLAR);
-  public final BoundedParameter color3raw = (BoundedParameter)new BoundedParameter("color3raw").setPolarity(Polarity.BIPOLAR);
-  public final BoundedParameter color4raw = (BoundedParameter)new BoundedParameter("color4raw").setPolarity(Polarity.BIPOLAR);
+  public final BoundedParameter color1raw = new BoundedParameter("color1raw").setPolarity(Polarity.BIPOLAR);
+  public final BoundedParameter color2raw = new BoundedParameter("color2raw").setPolarity(Polarity.BIPOLAR);
+  public final BoundedParameter color3raw = new BoundedParameter("color3raw").setPolarity(Polarity.BIPOLAR);
+  public final BoundedParameter color4raw = new BoundedParameter("color4raw").setPolarity(Polarity.BIPOLAR);
   public final BoundedParameter colorParameter = new BoundedParameter("colorParam", 0.55, 0.1, 1);
-  public final BoundedParameter colorSensitivity = (BoundedParameter) new BoundedParameter("ColorSensitivity", 2, 1, 3)
-    .setDescription("Color knob sensitivity. Adjust per DJ.")
-    .addListener((p) -> {
-      recalculateAllColors();
-    });
+  public final BoundedParameter colorSensitivity = new BoundedParameter("ColorSensitivity", 2, 1, 3)
+    .setDescription("Color knob sensitivity. Adjust per DJ.");
 
   // Normalized EQ values
   public final BoundedParameter low1 = new BoundedParameter("low1");
@@ -221,11 +221,8 @@ public class DJM900nxs2 extends LXMidiSurface {
   public final BoundedParameter high3 = new BoundedParameter("high3");
   public final BoundedParameter high4 = new BoundedParameter("high4");
 
-  public final BoundedParameter eqRangeMax = (BoundedParameter) new BoundedParameter("EQmax", 0.5)
-    .setDescription("Equalizer knob value that will act as a maximum position. Adjust per DJ. Defaults to center.")
-    .addListener((p) -> {
-      recalculateAllEq();
-    });
+  public final BoundedParameter eqRangeMax = new BoundedParameter("EQmax", 0.5)
+    .setDescription("Equalizer knob value that will act as a maximum position. Adjust per DJ. Defaults to center.");
 
   // Normalized EQ values multiplied by faders
   public final BoundedParameter low1net = new BoundedParameter("low1net");
@@ -270,23 +267,8 @@ public class DJM900nxs2 extends LXMidiSurface {
   private BoundedParameter[] color = { color1, color2, color3, color4 };
 
   // A/B channel abstraction for retaining mappings when target channels are changed
-  public final EnumParameter<Channel> aChannel = new EnumParameter<Channel>("AChan", Channel.ONE)
-    .addListener((p) -> {
-      updateAeq();
-      updateAcolor();
-      updateLowNet();
-      updateMidNet();
-      updateHighNet();
-    });
-
-  public final EnumParameter<Channel> bChannel = new EnumParameter<Channel>("BChan", Channel.TWO)
-    .addListener((p) -> {
-      updateBeq();
-      updateBcolor();
-      updateLowNet();
-      updateMidNet();
-      updateHighNet();
-    });
+  public final EnumParameter<Channel> aChannel = new EnumParameter<Channel>("A channel", Channel.TWO);
+  public final EnumParameter<Channel> bChannel = new EnumParameter<Channel>("B channel", Channel.THREE);
 
   public final BoundedParameter lowA = new BoundedParameter("lowA");
   public final BoundedParameter lowB = new BoundedParameter("lowB");
@@ -315,8 +297,39 @@ public class DJM900nxs2 extends LXMidiSurface {
   public final BoundedParameter smartXF = new BoundedParameter("SmartXF")
     .setDescription("Crossfader position calculated using relative levels of A vs B");
 
+  public enum XFMode {
+    OFF("Off"),
+    DIRECT("Direct"),
+    SMART("Smart");
+
+    private final String label;
+
+    private XFMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public final EnumParameter<XFMode> xfMode =
+    new EnumParameter<XFMode>("Crossfader Sync", XFMode.OFF)
+    .setDescription("Mode for following DJM900nxs2 crossfader with LX");
+
   public DJM900nxs2(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
+    addSetting("aChannel", this.aChannel);
+    addSetting("bChannel", this.bChannel);
+    addSetting("xfMode", this.xfMode);
+
+    this.aChannel.addListener(this.aChannelListener);
+    this.bChannel.addListener(this.bChannelListener);
+    this.colorSensitivity.addListener(colorSensitivityListener);
+    this.eqRangeMax.addListener(this.eqRangeMaxListener);
+    this.smartXF.addListener(this.smartXFListener);
+    this.xfMode.addListener(this.xfModeListener);
   }
 
   @Override
@@ -338,6 +351,47 @@ public class DJM900nxs2 extends LXMidiSurface {
       updateColor(channel, .5);
     }
   }
+
+  private final LXParameterListener aChannelListener = (p) -> {
+    updateAeq();
+    updateAcolor();
+    updateLowNet();
+    updateMidNet();
+    updateHighNet();
+  };
+
+  private final LXParameterListener bChannelListener = (p) -> {
+    updateBeq();
+    updateBcolor();
+    updateLowNet();
+    updateMidNet();
+    updateHighNet();
+  };
+
+  private final LXParameterListener colorSensitivityListener = (p) -> {
+    recalculateAllColors();
+  };
+
+  private final LXParameterListener eqRangeMaxListener = (p) -> {
+    recalculateAllEq();
+  };
+
+  private final LXParameterListener smartXFListener = (p) -> {
+    if (this.xfMode.getEnum() == XFMode.SMART) {
+      this.lx.engine.mixer.crossfader.setNormalized(this.smartXF.getNormalized());
+    }
+  };
+
+  private final LXParameterListener xfModeListener = (p) -> {
+    // Promote compatible XF settings with APC40mkII
+    if (this.xfMode.getEnum() != XFMode.OFF) {
+      LXMidiSurface surface = lx.engine.midi.findSurface(APC40Mk2.DEVICE_NAME);
+      if (surface instanceof APC40Mk2) {
+        APC40Mk2 apc = (APC40Mk2)surface;
+        apc.disableXF.setValue(true);
+      }
+    }
+  };
 
   protected void recalculateAllEq() {
     for (Channel channel : ALL_CHANNELS) {
@@ -574,6 +628,9 @@ public class DJM900nxs2 extends LXMidiSurface {
       return;
     case CROSSFADER:
       this.crossfader.setNormalized(cc.getNormalized());
+      if (this.xfMode.getEnum() == XFMode.DIRECT) {
+        this.lx.engine.mixer.crossfader.setNormalized(cc.getNormalized());
+      }
       return;
     case COLOR1:
       updateColor(Channel.ONE, cc.getNormalized());
@@ -629,4 +686,14 @@ public class DJM900nxs2 extends LXMidiSurface {
   public void aftertouchReceived(MidiAftertouch aftertouch) {
   }
 
+  @Override
+  public void dispose() {
+    this.aChannel.removeListener(this.aChannelListener);
+    this.bChannel.removeListener(this.bChannelListener);
+    this.colorSensitivity.removeListener(colorSensitivityListener);
+    this.eqRangeMax.removeListener(this.eqRangeMaxListener);
+    this.smartXF.removeListener(smartXFListener);
+    this.xfMode.removeListener(this.xfModeListener);
+    super.dispose();
+  }
 }
