@@ -72,6 +72,9 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
   protected final Map<String, LXParameter> mutableSettings = new LinkedHashMap<String, LXParameter>();
   public final Map<String, LXParameter> settings = Collections.unmodifiableMap(this.mutableSettings);
 
+  protected final Map<String, LXParameter> mutableState = new LinkedHashMap<String, LXParameter>();
+  public final Map<String, LXParameter> state = Collections.unmodifiableMap(this.mutableState);
+
   // Internal flag for enabled state, pre/post-teardown
   private boolean _enabled = false;
 
@@ -127,6 +130,14 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     setting.addListener(this);
   }
 
+  protected void addState(String key, LXListenableParameter state) {
+    if (this.mutableState.containsKey(key)) {
+      throw new IllegalStateException("Cannot add saved state twice:" + key);
+    }
+    this.mutableState.put(key, state);
+    state.addListener(this);
+  }
+
   public String getName() {
     return this.input.getName();
   }
@@ -178,6 +189,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
 
   public static final String KEY_NAME = "name";
   public static final String KEY_SETTINGS = "settings";
+  public static final String KEY_STATE = "state";
 
   @Override
   public void load(LX lx, JsonObject obj) {
@@ -190,14 +202,30 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
         }
       }
     }
+    if (obj.has(KEY_STATE)) {
+      JsonElement stateElem = obj.get(KEY_STATE);
+      if (stateElem.isJsonObject()) {
+        JsonObject stateObj = stateElem.getAsJsonObject();
+        for (String path : this.state.keySet()) {
+          LXSerializable.Utils.loadParameter(state.get(path), stateObj, path);
+        }
+      }
+    }
   }
 
   @Override
   public void save(LX lx, JsonObject obj) {
     obj.addProperty(KEY_NAME, this.input.getName());
-    JsonObject settings = new JsonObject();
-    LXSerializable.Utils.saveParameters(settings, this.settings);
-    obj.add(KEY_SETTINGS, settings);
+    if (!this.settings.isEmpty()) {
+      JsonObject settings = new JsonObject();
+      LXSerializable.Utils.saveParameters(settings, this.settings);
+      obj.add(KEY_SETTINGS, settings);
+    }
+    if (!this.state.isEmpty()) {
+      JsonObject state = new JsonObject();
+      LXSerializable.Utils.saveParameters(state, this.state);
+      obj.add(KEY_STATE, state);
+    }
   }
 
   @Override
@@ -228,6 +256,10 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     for (LXParameter setting : this.settings.values()) {
       ((LXListenableParameter) setting).removeListener(this);
       setting.dispose();
+    }
+    for (LXParameter state : this.state.values()) {
+      ((LXListenableParameter) state).removeListener(this);
+      state.dispose();
     }
     this.mutableSettings.clear();
   }

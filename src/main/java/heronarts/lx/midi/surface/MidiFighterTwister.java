@@ -203,7 +203,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     new EnumParameter<FocusMode>("Focus Buttons", FocusMode.DEVICE)
     .setDescription("How to change focus on bottom side button press");
 
-  public final DiscreteParameter currentBank = new DiscreteParameter("Bank", BANK1, BANK1, BANK4 + 1);
+  public final DiscreteParameter currentBank =
+    new DiscreteParameter("Bank", BANK1, BANK1, BANK4 + 1)
+    .setDescription("Which bank is selected on the MFT");
+
+  public final BooleanParameter isAux =
+    new BooleanParameter("Aux", false)
+    .setDescription("Whether this MFT controls the primary or aux channel");
 
   // SYSEX Definitions
 
@@ -595,7 +601,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     private void resend() {
-      boolean isAux = isAux();
+      final boolean isAux = isAux();
 
       // Sysex config changes require reboot therefore must happen before MIDI commands
       for (int i = 0; i < this.knobs.length; ++i) {
@@ -893,21 +899,44 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   }
 
-  private void updateBank(int bank) {
-    this.currentBank.setValue(bank);
-    this.deviceListener.focusedDevice.updateRemoteControlFocus();
-  }
-
-  private void toggleAux() {
-    this.deviceListener.focusedDevice.toggleAux();
-    this.deviceListener.resend();
-  }
-
   public MidiFighterTwister(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
     this.deviceListener = new DeviceListener(lx);
     addSetting("knobClickMode", this.knobClickMode);
     addSetting("focusMode", this.focusMode);
+    addState("currentBank", this.currentBank);
+    addState("isAux", this.isAux);
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (this.isAux == p) {
+      this.deviceListener.focusedDevice.setAux(this.isAux.isOn());
+      this.deviceListener.resend();
+    } else if (this.currentBank == p) {
+      updateBank(this.currentBank.getValuei(), false);
+    }
+  }
+
+  private boolean inUpdateBank = false;
+
+  private void updateBank(int bank, boolean fromHardware) {
+    if (this.inUpdateBank) {
+      return;
+    }
+
+    this.inUpdateBank = true;
+    if (fromHardware) {
+      // Update internal value if this came from hardware
+      this.currentBank.setValue(bank);
+    } else {
+      // Tell the hardware the new state if this change was internal
+      sendControlChange(CHANNEL_SYSTEM, bank, BANK_ON);
+    }
+    this.inUpdateBank = false;
+
+    this.deviceListener.focusedDevice.updateRemoteControlFocus();
   }
 
   @Override
@@ -931,8 +960,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   private void initialize() {
     initializeConfig();
-    // Move MFT to first bank
-    sendControlChange(CHANNEL_SYSTEM, BANK1, BANK_ON);
+
+    // Move MFT to current bank
+    sendControlChange(CHANNEL_SYSTEM, this.currentBank.getValuei(), BANK_ON);
 
     for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
       sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
@@ -1006,7 +1036,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK3:
           case BANK4:
             if (value == BANK_ON) {
-              updateBank(number);
+              updateBank(number, true);
             }
             return;
           case BANK1_LEFT1:
@@ -1020,7 +1050,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK2_RIGHT1:
           case BANK3_RIGHT1:
           case BANK4_RIGHT1:
-            toggleAux();
+            this.isAux.toggle();
             return;
           case BANK1_LEFT2:
           case BANK2_LEFT2:
@@ -1075,7 +1105,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   }
 
   private boolean isAux() {
-    return this.deviceListener.focusedDevice.isAux();
+    return this.isAux.isOn();
   }
 
   @Override
