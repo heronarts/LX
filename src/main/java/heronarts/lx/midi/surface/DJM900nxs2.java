@@ -267,8 +267,8 @@ public class DJM900nxs2 extends LXMidiSurface {
   private BoundedParameter[] color = { color1, color2, color3, color4 };
 
   // A/B channel abstraction for retaining mappings when target channels are changed
-  public final EnumParameter<Channel> aChannel = new EnumParameter<Channel>("A channel", Channel.TWO);
-  public final EnumParameter<Channel> bChannel = new EnumParameter<Channel>("B channel", Channel.THREE);
+  public final EnumParameter<Channel> aChannel = new EnumParameter<Channel>("A Channel", Channel.TWO);
+  public final EnumParameter<Channel> bChannel = new EnumParameter<Channel>("B Channel", Channel.THREE);
 
   public final BoundedParameter lowA = new BoundedParameter("lowA");
   public final BoundedParameter lowB = new BoundedParameter("lowB");
@@ -320,16 +320,15 @@ public class DJM900nxs2 extends LXMidiSurface {
 
   public DJM900nxs2(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
+    addSetting("xfMode", this.xfMode);
     addSetting("aChannel", this.aChannel);
     addSetting("bChannel", this.bChannel);
-    addSetting("xfMode", this.xfMode);
 
     this.aChannel.addListener(this.aChannelListener);
     this.bChannel.addListener(this.bChannelListener);
     this.colorSensitivity.addListener(colorSensitivityListener);
     this.eqRangeMax.addListener(this.eqRangeMaxListener);
     this.smartXF.addListener(this.smartXFListener);
-    this.xfMode.addListener(this.xfModeListener);
   }
 
   @Override
@@ -379,17 +378,6 @@ public class DJM900nxs2 extends LXMidiSurface {
   private final LXParameterListener smartXFListener = (p) -> {
     if (this.xfMode.getEnum() == XFMode.SMART) {
       this.lx.engine.mixer.crossfader.setNormalized(this.smartXF.getNormalized());
-    }
-  };
-
-  private final LXParameterListener xfModeListener = (p) -> {
-    // Promote compatible XF settings with APC40mkII
-    if (this.xfMode.getEnum() != XFMode.OFF) {
-      LXMidiSurface surface = lx.engine.midi.findSurface(APC40Mk2.DEVICE_NAME);
-      if (surface instanceof APC40Mk2) {
-        APC40Mk2 apc = (APC40Mk2)surface;
-        apc.disableXF.setValue(true);
-      }
     }
   };
 
@@ -693,7 +681,6 @@ public class DJM900nxs2 extends LXMidiSurface {
     this.colorSensitivity.removeListener(colorSensitivityListener);
     this.eqRangeMax.removeListener(this.eqRangeMaxListener);
     this.smartXF.removeListener(smartXFListener);
-    this.xfMode.removeListener(this.xfModeListener);
     super.dispose();
   }
 }
