@@ -395,7 +395,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
     return this.basis;
   }
 
-  public double basisf() {
+  public float basisf() {
     return (float) this.basis;
   }
 
