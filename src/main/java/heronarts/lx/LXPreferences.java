@@ -32,6 +32,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.StringParameter;
 
 public class LXPreferences implements LXSerializable, LXParameterListener {
 
@@ -72,6 +73,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BooleanParameter("Show CPU Load %")
     .setDescription("Whether CPU load percentage is shown in toolbar");
 
+  public final StringParameter uiTheme =
+    new StringParameter("UI Theme", null)
+    .setDescription("Which UI theme is used");
+
   private String projectFileName = null;
   private String scheduleFileName = null;
 
@@ -87,6 +92,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.focusActivePattern.addListener(this);
     this.sendCueToOutput.addListener(this);
     this.uiZoom.addListener(this);
+    this.uiTheme.addListener(this);
     this.showHelpBar.addListener(this);
     this.schedulerEnabled.addListener(this);
     this.showCpuLoad.addListener(this);
@@ -147,6 +153,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_WINDOW_WIDTH_LEGACY = "windwWidth";
   private static final String KEY_WINDOW_HEIGHT = "windowHeight";
   private static final String KEY_UI_ZOOM = "uiZoom";
+  private static final String KEY_UI_THEME = "uiTheme";
   private static final String KEY_FOCUS_CHANNEL_ON_CUE = "focusChannelOnCue";
   private static final String KEY_FOCUS_ACTIVE_PATTERN = "focusActivePattern";
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
@@ -154,6 +161,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_SCHEDULER_ENABLED = "schedulerEnabled";
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
   private static final String KEY_REGISTRY = "registry";
+
 
   @Override
   public void save(LX lx, JsonObject object) {
@@ -167,6 +175,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_WINDOW_WIDTH, this.windowWidth);
     object.addProperty(KEY_WINDOW_HEIGHT, this.windowHeight);
     object.addProperty(KEY_UI_ZOOM, this.uiZoom.getValuei());
+    object.addProperty(KEY_UI_THEME, this.uiTheme.getString());
     object.addProperty(KEY_FOCUS_CHANNEL_ON_CUE, this.focusChannelOnCue.isOn());
     object.addProperty(KEY_FOCUS_ACTIVE_PATTERN, this.focusActivePattern.isOn());
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
@@ -186,6 +195,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.schedulerEnabled, object, KEY_SCHEDULER_ENABLED);
     LXSerializable.Utils.loadBoolean(this.showCpuLoad, object, KEY_SHOW_CPU_LOAD);
     LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
+    LXSerializable.Utils.loadString(this.uiTheme, object, KEY_UI_THEME);
     if (object.has(KEY_WINDOW_WIDTH)) {
       this.windowWidth = object.get(KEY_WINDOW_WIDTH).getAsInt();
     } else if (object.has(KEY_WINDOW_WIDTH_LEGACY)) {
