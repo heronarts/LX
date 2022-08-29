@@ -945,7 +945,12 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     long nanoLimit = (long) (1000000000 / this.lx.engine.framesPerSecond.getValuef() * .5);
     for (LXAbstractChannel channel : this.channels) {
       long renderNanos = channel.profiler.renderNanos();
-      channel.performanceWarning.setValue(renderNanos > nanoLimit);
+      if (renderNanos > nanoLimit) {
+        ++channel.performanceWarningFrameCount;
+      } else {
+        channel.performanceWarningFrameCount = 0;
+      }
+      channel.performanceWarning.setValue(channel.performanceWarningFrameCount >= 5);
     }
 
     // Step 3: blend the channel buffers down

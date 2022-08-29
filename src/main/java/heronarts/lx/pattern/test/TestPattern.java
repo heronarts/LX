@@ -23,6 +23,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.LX;
 import heronarts.lx.modulator.Click;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -41,7 +42,7 @@ public class TestPattern extends LXPattern {
   public enum Mode {
     ITERATE("Iterate Points"),
     FIXED("Fixed Index"),
-    SUBKEY("Model Key");
+    TAG("Tag");
 
     private final String string;
 
@@ -68,9 +69,13 @@ public class TestPattern extends LXPattern {
   public final DiscreteParameter fixedIndex = new DiscreteParameter("Fixed", 0, LXUtils.max(1, model.size))
   .setDescription("Fixed LED point to turn on");
 
-  public final StringParameter subkey =
-    new StringParameter("Subkey", LXModel.Tag.STRIP)
-    .setDescription("Sets the type of model object to query for");
+  public final StringParameter tag =
+    new StringParameter("Tag", LXModel.Tag.STRIP)
+    .setDescription("Sets the fixture tag to query for");
+
+  public final BoundedParameter cpuTest =
+    new BoundedParameter("CPU Test", 0, 1000)
+    .setDescription("How many thousands of extra multiplications to perform per frame");
 
   private final Click increment = new Click(rate);
 
@@ -81,7 +86,8 @@ public class TestPattern extends LXPattern {
     addParameter("mode", this.mode);
     addParameter("rate", this.rate);
     addParameter("fixedIndex", this.fixedIndex);
-    addParameter("subkey", this.subkey);
+    addParameter("tag", this.tag);
+    addParameter("cpuTest", this.cpuTest);
     startModulator(this.increment);
     setAutoCycleEligible(false);
   }
@@ -109,11 +115,19 @@ public class TestPattern extends LXPattern {
     case FIXED:
       this.colors[this.fixedIndex.getValuei()] = LXColor.WHITE;
       break;
-    case SUBKEY:
-      for (LXModel sub : model.sub(this.subkey.getString())) {
+    case TAG:
+      for (LXModel sub : model.sub(this.tag.getString())) {
         setColor(sub, LXColor.WHITE);
       }
       break;
+    }
+
+    final int cpuTest = 1000 * (int) (this.cpuTest.getValue());
+    for (int i = 0; i < cpuTest; ++i) {
+      double d1 = Math.random();
+      double d2 = Math.random();
+      double d3 = Math.random();
+      LXUtils.lerp(d1, d2, d3);
     }
   }
 }

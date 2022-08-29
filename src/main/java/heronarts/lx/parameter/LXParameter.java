@@ -58,6 +58,7 @@ public interface LXParameter extends LXPath {
     DEGREES,
     RADIANS,
     PERCENT,
+    PERCENT_NORMALIZED,
     CLOCK;
 
     @Override
@@ -72,6 +73,8 @@ public interface LXParameter extends LXPath {
         return String.format("%d", (int) value);
       case PERCENT:
         return String.format("%d%%", (int) value);
+      case PERCENT_NORMALIZED:
+        return String.format("%d%%", (int) (100*value));
       case SECONDS:
         value *= 1000;
         // pass through!
