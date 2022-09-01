@@ -18,6 +18,7 @@
 
 package heronarts.lx.transform;
 
+import heronarts.lx.LX;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -242,6 +243,60 @@ public class LXMatrix {
         0,    0,  1,  0,
         0,    0,  0,  1
     );
+  }
+
+  public LXMatrix shearXY(float rz) {
+    final float c = 1 / LXUtils.tanf(LX.HALF_PI + rz);
+    return multiply(
+      1, c, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1);
+  }
+
+  public LXMatrix shearYX(float rz) {
+    final float c = 1 / LXUtils.tanf(LX.HALF_PI + rz);
+    return multiply(
+      1, 0, 0, 0,
+      c, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1);
+  }
+
+  public LXMatrix shearYZ(float rx) {
+    final float c = 1 / LXUtils.tanf(LX.HALF_PI + rx);
+    return multiply(
+      1, 0, 0, 0,
+      0, 1, c, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1);
+  }
+
+  public LXMatrix shearZY(float rx) {
+    final float c = 1 / LXUtils.tanf(LX.HALF_PI + rx);
+    return multiply(
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, c, 1, 0,
+      0, 0, 0, 1);
+  }
+
+  public LXMatrix shearZX(float ry) {
+    final float c = 1 / LXUtils.tanf(LX.HALF_PI + ry);
+    return multiply(
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      c, 0, 1, 0,
+      0, 0, 0, 1);
+  }
+
+  public LXMatrix shearXZ(float ry) {
+    final float c = 1 / LXUtils.tanf(LX.HALF_PI + ry);
+    return multiply(
+      1, 0, c, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1);
   }
 
   public LXMatrix set(LXMatrix that) {
