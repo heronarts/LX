@@ -143,7 +143,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
   private void validateRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
     for (LXListenableNormalizedParameter control : remoteControls) {
-      if ((control != null) && (control.getParent() != this)) {
+      if ((control != null) && !control.isDescendant(this)) {
         throw new IllegalArgumentException("Cannot add remote control that does not belong to this component: " + control);
       }
     }
@@ -338,7 +338,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     if (this.customRemoteControls != null) {
       JsonArray remoteControls = new JsonArray();
       for (LXListenableNormalizedParameter control : this.customRemoteControls) {
-        remoteControls.add((control != null) ? control.getPath() : null);
+        remoteControls.add((control != null) ? control.getCanonicalPath(this) : null);
       }
       obj.add(KEY_REMOTE_CONTROLS, remoteControls);
     }
@@ -353,7 +353,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
       for (int i = 0; i < remoteControls.size(); ++i) {
         JsonElement elem = remoteControls.get(i);
         if (!elem.isJsonNull()) {
-          LXParameter parameter = this.parameters.get(remoteControls.get(i).getAsString());
+          LXParameter parameter = LXPath.getParameter(this, remoteControls.get(i).getAsString());
           if (parameter instanceof LXListenableNormalizedParameter) {
             customRemoteControls[i] = (LXListenableNormalizedParameter) parameter;
           }

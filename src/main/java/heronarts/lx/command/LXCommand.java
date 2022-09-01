@@ -29,6 +29,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
+import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clipboard.LXNormalizedValue;
@@ -943,13 +944,13 @@ public abstract class LXCommand {
       protected final ComponentReference<LXDeviceComponent> device;
       protected final String[] oldCustomControls;
 
-      protected String[] toPaths(LXListenableNormalizedParameter[] remoteControls) {
+      protected String[] toPaths(LXDeviceComponent device, LXListenableNormalizedParameter[] remoteControls) {
         if (remoteControls == null) {
           return null;
         }
         String[] paths = new String[remoteControls.length];
         for (int i = 0; i < remoteControls.length; ++i) {
-          paths[i] = remoteControls[i] == null ? null : remoteControls[i].getPath();
+          paths[i] = remoteControls[i] == null ? null : remoteControls[i].getCanonicalPath(device);
         }
         return paths;
       }
@@ -958,14 +959,14 @@ public abstract class LXCommand {
         LXDeviceComponent device = this.device.get();
         LXListenableNormalizedParameter[] remoteControls = new LXListenableNormalizedParameter[paths.length];
         for (int i = 0; i < paths.length; ++i) {
-          remoteControls[i] = paths[i] == null ? null : (LXListenableNormalizedParameter) device.getParameter(paths[i]);
+          remoteControls[i] = (paths[i] == null) ? null : (LXListenableNormalizedParameter) LXPath.getParameter(device, paths[i]);
         }
         return remoteControls;
       }
 
       protected RemoteControls(LXDeviceComponent device) {
         this.device = new ComponentReference<LXDeviceComponent>(device);
-        this.oldCustomControls = toPaths(device.getCustomRemoteControls());
+        this.oldCustomControls = toPaths(device, device.getCustomRemoteControls());
       }
     }
 
@@ -975,7 +976,7 @@ public abstract class LXCommand {
 
       public SetRemoteControls(LXDeviceComponent device, LXListenableNormalizedParameter[] remoteControls) {
         super(device);
-        this.newCustomControls = toPaths(remoteControls);
+        this.newCustomControls = toPaths(device, remoteControls);
       }
 
       @Override
