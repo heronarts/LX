@@ -18,9 +18,53 @@
 
 package heronarts.lx.color;
 
+import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
 
 public class GradientUtils {
+
+  public static class GrayTable {
+
+    private final static int SIZE = 256;
+
+    private final LXNormalizedParameter invert;
+    private double previousValue = -1;
+    private boolean dirty = true;
+
+    /**
+     * Lookup table of gray values
+     */
+    public final int[] lut = new int[SIZE];
+
+    public GrayTable(LXNormalizedParameter invert) {
+      this.invert = invert;
+    }
+
+    public void update() {
+      double invert = this.invert.getValue();
+      if (invert != this.previousValue) {
+        this.dirty = true;
+        this.previousValue = invert;
+      }
+      if (this.dirty) {
+        for (int i = 0; i < SIZE; ++i) {
+          int b = (int) LXUtils.lerp(i, 255.9 - i, invert);
+          this.lut[i] = 0xff000000 | (b << 16) | (b << 8) | b;
+        }
+        this.dirty = false;
+      }
+    }
+
+    /**
+     * Gets the LUT grayscale color for this brightness value
+     *
+     * @param b Brightness from 0-100
+     * @return Invert table color
+     */
+    public int get(float b) {
+      return this.lut[(int) (2.559f * b)];
+    }
+  }
 
   public interface GradientFunction {
     public int getGradientColor(float lerp);
