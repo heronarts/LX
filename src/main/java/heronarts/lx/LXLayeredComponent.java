@@ -45,7 +45,8 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   protected int[] colors = null;
 
   private final List<LXLayer> mutableLayers = new ArrayList<LXLayer>();
-  protected final List<LXLayer> layers = Collections.unmodifiableList(mutableLayers);
+
+  public final List<LXLayer> layers = Collections.unmodifiableList(mutableLayers);
 
   protected final LXPalette palette;
 
