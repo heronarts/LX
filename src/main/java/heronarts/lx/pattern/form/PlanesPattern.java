@@ -162,27 +162,31 @@ public class PlanesPattern extends LXPattern {
       new BoundedParameter("Max Width", 1)
       .setDescription("Maximum width of the plane");
 
-    public final CompoundParameter fade =
-      new CompoundParameter("Fade", 0.1)
-      .setDescription("Fade from the plane edge");
+    public final CompoundParameter contrast =
+      new CompoundParameter("Contrast", 0.75)
+      .setDescription("Contrast on the plane edge");
 
     public final CompoundParameter tiltPosition =
       new CompoundParameter("Tilt Pos", 0, -1, 1)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Tilt position");
 
-    public final CompoundParameter tilt =
-      new CompoundParameter("Tilt", 0, -1, 1)
+    public final CompoundParameter tilt = (CompoundParameter)
+      new CompoundParameter("Tilt", 0, -180, 180)
+      .setWrappable(true)
+      .setUnits(CompoundParameter.Units.DEGREES)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Tilt of the plane");
 
-    public final CompoundParameter rollPosition =
-      new CompoundParameter("Roll Pos", 0, -1, 1)
+    public final CompoundParameter spinPosition =
+      new CompoundParameter("Spin Pos", 0, -1, 1)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
-      .setDescription("Roll position");
+      .setDescription("Spin position");
 
-    public final CompoundParameter roll =
-      new CompoundParameter("Roll", 0, -1, 1)
+    public final CompoundParameter spin = (CompoundParameter)
+      new CompoundParameter("Spin", 0, -180, 180)
+      .setWrappable(true)
+      .setUnits(CompoundParameter.Units.DEGREES)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Roll of the plane");
 
@@ -214,11 +218,12 @@ public class PlanesPattern extends LXPattern {
       addParameter("level", this.level);
       addParameter("position", this.position);
       addParameter("width", this.width);
-      addParameter("fade", this.fade);
+      addParameter("contrast", this.contrast);
+      addParameter("axis", this.axis);
       addParameter("tilt", this.tilt);
-      addParameter("roll", this.roll);
+      addParameter("spin", this.spin);
       addParameter("tiltPosition", this.tiltPosition);
-      addParameter("rollPosition", this.rollPosition);
+      addParameter("spinPosition", this.spinPosition);
 
       addParameter("active", this.active);
 
@@ -242,11 +247,17 @@ public class PlanesPattern extends LXPattern {
         return;
       }
 
-      Axis axis = this.axis.getEnum();
-      AxisFunction function = axis.function;
-      float position = LXUtils.lerpf(this.positionMin.getValuef(), this.positionMax.getValuef(), .5f * (1 + this.position.getValuef()));
-      float width = .5f * LXUtils.lerpf(this.widthMin.getValuef(), this.widthMax.getValuef(), this.width.getValuef());
-      float fade = 1 / width / this.fade.getValuef();
+      final Axis axis = this.axis.getEnum();
+      final AxisFunction function = axis.function;
+      final float position = LXUtils.lerpf(this.positionMin.getValuef(), this.positionMax.getValuef(), .5f * (1 + this.position.getValuef()));
+      final float width = .5f * LXUtils.lerpf(this.widthMin.getValuef(), this.widthMax.getValuef(), this.width.getValuef());
+      final float fade = 1 / width / (1-this.contrast.getValuef());
+      final double tilt = -Math.toRadians(this.tilt.getValue());
+      final double spin = Math.toRadians(this.spin.getValue());
+      final double cosTilt = Math.cos(tilt);
+      final double sinTilt = Math.sin(tilt);
+      final double cosSpin = Math.cos(spin);
+      final double sinSpin = Math.sin(spin);
 
       switch (axis) {
       case X:
@@ -254,11 +265,11 @@ public class PlanesPattern extends LXPattern {
       case Z:
         args.ap = position;
         args.bp = .5f * (1 + this.tiltPosition.getValuef());
-        args.cp = .5f * (1 + this.rollPosition.getValuef());
+        args.cp = .5f * (1 + this.spinPosition.getValuef());
 
-        args.a = (float) (Math.cos(-Math.PI * this.tilt.getValuef()) * Math.cos(-Math.PI * this.roll.getValuef()));
-        args.b = (float) (Math.sin(-Math.PI * this.tilt.getValuef()) * Math.cos(-Math.PI * this.roll.getValuef()));
-        args.c = (float) (Math.sin(-Math.PI * this.roll.getValuef()) * Math.cos(-Math.PI * this.tilt.getValuef()));
+        args.a = (float) (cosTilt * cosSpin);
+        args.b = (float) (sinTilt * cosSpin);
+        args.c = (float) (sinSpin * cosTilt);
         args.invSqrt = (float) (1 / Math.sqrt(args.a * args.a + args.b * args.b + args.c * args.c));
         break;
 
@@ -300,6 +311,23 @@ public class PlanesPattern extends LXPattern {
       mutablePlanes.add(plane);
     }
     this.planes = Collections.unmodifiableList(mutablePlanes);
+
+    final Plane plane = this.planes.get(0);
+    setRemoteControls(
+      plane.level,
+      plane.position,
+      plane.width,
+      plane.contrast,
+      plane.tilt,
+      plane.tiltPosition,
+      plane.spin,
+      plane.spinPosition,
+      plane.positionMin,
+      plane.positionMax,
+      plane.widthMin,
+      plane.widthMax,
+      plane.axis
+    );
   }
 
   private static final String KEY_PLANES = "planes";
