@@ -40,6 +40,10 @@ public class LXUtils {
     return a < b ? b : a;
   }
 
+  public static int max(int a, int b, int c) {
+    return (a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c);
+  }
+
   public static float minf(float a, float b) {
     return a < b ? a : b;
   }
@@ -48,12 +52,20 @@ public class LXUtils {
     return a < b ? b : a;
   }
 
+  public static float maxf(float a, float b, float c) {
+    return (a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c);
+  }
+
   public static double min(double a, double b) {
     return a < b ? a : b;
   }
 
   public static double max(double a, double b) {
     return a < b ? b : a;
+  }
+
+  public static double max(double a, double b, double c) {
+    return (a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c);
   }
 
   public static double clamp(double value, double min, double max) {
@@ -233,6 +245,17 @@ public class LXUtils {
   }
 
   /**
+   * Returns a floating-point rounded value of the tan function to 8 decimal places.
+   * This is often useful because Math.sin(Math.PI) is NOT actually 0.
+   *
+   * @param radians Radians to take cos of
+   * @return Result rounded to 8 decimal places
+   */
+  public static float tanf(double radians) {
+    return Float.valueOf(String.format("%8f", Math.tan(radians)));
+  }
+
+  /**
    * This function computes a random value at the coordinate (x,y,z).
    * Adjacent random values are continuous but the noise fluctuates
    * its randomness with period 1, i.e. takes on wholly unrelated values
@@ -324,25 +347,21 @@ public class LXUtils {
   public static class LookupTable {
 
     public interface Function {
-      static Function SIN = new Function() {
-        public float compute(int i, int tableSize) {
-          return (float) Math.sin(i * LX.TWO_PI / tableSize);
-        }
-      };
-
-      static Function COS = new Function() {
-        public float compute(int i, int tableSize) {
-          return (float) Math.cos(i * LX.TWO_PI / tableSize);
-        }
-      };
-
-      static Function TAN = new Function() {
-        public float compute(int i, int tableSize) {
-          return (float) Math.tan(i * LX.TWO_PI / tableSize);
-        }
-      };
 
       public float compute(int i, int tableSize);
+
+      public static Function SIN = (i, tableSize) -> {
+        return (float) Math.sin(i * LX.TWO_PI / tableSize);
+      };
+
+      static Function COS = (i, tableSize) -> {
+        return (float) Math.cos(i * LX.TWO_PI / tableSize);
+      };
+
+      static Function TAN = (i, tableSize) -> {
+        return (float) Math.tan(i * LX.TWO_PI / tableSize);
+      };
+
     }
 
     public static class Sin extends LookupTable {
