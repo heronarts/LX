@@ -89,8 +89,14 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   /**
    * An ordered map of direct descendants of this component.
    */
-  private final LinkedHashMap<String, LXComponent> children =
+  private final LinkedHashMap<String, LXComponent> mutableChildren =
     new LinkedHashMap<String, LXComponent>();
+
+  /**
+   * An immutable view of the map of child components.
+   */
+  public final Map<String, LXComponent> children =
+    Collections.unmodifiableMap(this.mutableChildren);
 
   /**
    * An ordered map of array descendants of this component. Rather than a single
@@ -403,7 +409,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       throw new IllegalStateException("Cannot add " + type + " at path " + path
         + ", parameter already exists");
     }
-    if (this.children.containsKey(path)) {
+    if (this.mutableChildren.containsKey(path)) {
       throw new IllegalStateException(
         "Cannot add " + type + " at path " + path + ", child already exists");
     }
@@ -444,7 +450,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
     _checkPath(path, "child");
     child.setParent(this, path);
-    this.children.put(path, child);
+    this.mutableChildren.put(path, child);
     return this;
   }
 
@@ -456,7 +462,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @return Child object if exists, or <code>null</code> if not found
    */
   public LXComponent getChild(String path) {
-    return this.children.get(path);
+    return this.mutableChildren.get(path);
   }
 
   /**
@@ -658,7 +664,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       for (LXParameter p : this.parameters.values()) {
         this.lx.engine.osc.sendParameter(p);
       }
-      for (LXComponent child : this.children.values()) {
+      for (LXComponent child : this.mutableChildren.values()) {
         child.oscQuery();
       }
       for (List<? extends LXComponent> array : this.childArrays.values()) {
@@ -687,7 +693,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       }
       contents.add(parameterEntry.getKey(), toOscQuery(parameter));
     }
-    for (Map.Entry<String, LXComponent> childEntry : this.children.entrySet()) {
+    for (Map.Entry<String, LXComponent> childEntry : this.mutableChildren.entrySet()) {
       LXComponent child = childEntry.getValue();
       if (child instanceof LXOscComponent) {
         contents.add(childEntry.getKey(), child.toOscQuery());
@@ -773,11 +779,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @param index Index to start looking at
    * @return Child parameter, subcomponent, or subcomponent array member
    */
-  LXPath path(String[] parts, int index) {
+  final LXPath path(String[] parts, int index) {
     if (index < 0 || index >= parts.length) {
       throw new IllegalArgumentException("Illegal index to path method: " + index + " parts.length=" + parts.length);
     }
-    String key = parts[index];
+    final String key = parts[index];
     LXParameter parameter = this.parameters.get(key);
     if (parameter != null) {
       if (parameter instanceof AggregateParameter) {
@@ -788,7 +794,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       }
       return parameter;
     }
-    LXComponent child = this.children.get(key);
+    LXComponent child = this.mutableChildren.get(key);
     if (child != null) {
       if (index == parts.length - 1) {
         return child;
@@ -1177,7 +1183,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     saveParameters(this, parameters, this.parameters);
 
     // Serialize children
-    JsonObject children = LXSerializable.Utils.toObject(lx, this.children);
+    JsonObject children = LXSerializable.Utils.toObject(lx, this.mutableChildren);
     obj.addProperty(KEY_ID, this.id);
     obj.addProperty(KEY_CLASS, getClass().getName());
     obj.add(KEY_INTERNAL, internal);
@@ -1211,8 +1217,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
 
     // Load child components
     JsonObject children = obj.has(KEY_CHILDREN) ? obj.getAsJsonObject(KEY_CHILDREN) : new JsonObject();
-    for (String path : this.children.keySet()) {
-      LXComponent child = this.children.get(path);
+    for (String path : this.mutableChildren.keySet()) {
+      LXComponent child = this.mutableChildren.get(path);
       if (children.has(path)) {
         child.load(lx, children.getAsJsonObject(path));
       } else {
