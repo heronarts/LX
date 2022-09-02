@@ -36,6 +36,10 @@ public class LXUtils {
     return a < b ? a : b;
   }
 
+  public static int min(int a, int b, int c) {
+    return (a < b) ? ((a < c) ? a : c) : ((b < c) ? b : c);
+  }
+
   public static int max(int a, int b) {
     return a < b ? b : a;
   }
@@ -48,6 +52,10 @@ public class LXUtils {
     return a < b ? a : b;
   }
 
+  public static float minf(float a, float b, float c) {
+    return (a < b) ? ((a < c) ? a : c) : ((b < c) ? b : c);
+  }
+
   public static float maxf(float a, float b) {
     return a < b ? b : a;
   }
@@ -58,6 +66,10 @@ public class LXUtils {
 
   public static double min(double a, double b) {
     return a < b ? a : b;
+  }
+
+  public static double min(double a, double b, double c) {
+    return (a < b) ? ((a < c) ? a : c) : ((b < c) ? b : c);
   }
 
   public static double max(double a, double b) {
