@@ -16,7 +16,7 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx.pattern.texture;
+package heronarts.lx.pattern.strip;
 
 import com.google.gson.JsonObject;
 
@@ -37,8 +37,8 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
-@LXCategory(LXCategory.TEXTURE)
-public class SwarmPattern extends LXPattern {
+@LXCategory(LXCategory.STRIP)
+public class ChasePattern extends LXPattern {
 
   public interface DistanceFunction {
     public double compute(double pos, double motion, double chunkSize);
@@ -164,7 +164,7 @@ public class SwarmPattern extends LXPattern {
 
   public final VariableLFO motion = new VariableLFO("Motion", WAVESHAPES);
 
-  public SwarmPattern(LX lx) {
+  public ChasePattern(LX lx) {
     super(lx);
 
     // Motion controls

@@ -37,6 +37,7 @@ public @interface LXCategory {
   public static final String FORM = "Form";
   public static final String COLOR = "Color";
   public static final String MIDI = "MIDI";
+  public static final String STRIP = "Strip";
   public static final String TEXTURE = "Texture";
   public static final String TEST = "Test";
   public static final String OTHER = "Other";
