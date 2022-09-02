@@ -273,15 +273,18 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     return this.curve;
   }
 
+  @Override
+  public BoundedParameter incrementValue(double amount) {
+    return incrementValue(amount, isWrappable());
+  }
+
   public BoundedParameter incrementValue(double amount, boolean wrap) {
     double newValue = getValue() + amount;
     if (wrap) {
       if (newValue > this.range.max) {
         newValue = this.range.min + ((newValue - this.range.max) % this.range.range);
       } else if (newValue < this.range.min) {
-        while (newValue < this.range.min) {
-          newValue += this.range.range;
-        }
+        newValue = this.range.max + ((newValue - this.range.min) % this.range.range);
       }
     }
     return (BoundedParameter) setValue(newValue);

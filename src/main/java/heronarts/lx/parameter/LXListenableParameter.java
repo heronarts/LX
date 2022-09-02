@@ -194,7 +194,7 @@ public abstract class LXListenableParameter implements LXParameter {
     return setValue(this.defaultValue);
   }
 
-  public final LXParameter incrementValue(double amount) {
+  public LXParameter incrementValue(double amount) {
     return setValue(this.value + amount);
   }
 
