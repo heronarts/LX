@@ -29,11 +29,13 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.transform.LXParameterizedMatrix;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.COLOR)
@@ -165,6 +167,30 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     .setDescription("Sets the offset of the hue spread point on the Z axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
+  public final BooleanParameter rotate =
+    new BooleanParameter("Rotate", false)
+    .setDescription("Whether to rotate the geometry");
+
+  public final CompoundParameter yaw = (CompoundParameter)
+    new CompoundParameter("Yaw", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Yaw rotation");
+
+  public final CompoundParameter pitch = (CompoundParameter)
+    new CompoundParameter("Pitch", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Pitch rotation");
+
+  public final CompoundParameter roll = (CompoundParameter)
+    new CompoundParameter("Roll", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Roll rotation");
+
+  private final LXParameterizedMatrix transform = new LXParameterizedMatrix();
+
   private final ColorStops colorStops = new ColorStops();
 
   public GradientPattern(LX lx) {
@@ -185,6 +211,15 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     addParameter("paletteIndex", this.paletteIndex);
     addParameter("paletteStops", this.paletteStops);
     addParameter("gradientRange", this.gradientRange);
+    addTransformParameter("rotate", this.rotate);
+    addTransformParameter("yaw", this.yaw);
+    addTransformParameter("pitch", this.pitch);
+    addTransformParameter("roll", this.roll);
+  }
+
+  private void addTransformParameter(String key, LXParameter parameter) {
+    addParameter(key, parameter);
+    this.transform.addParameter(parameter);
   }
 
   @Override
@@ -287,15 +322,55 @@ public class GradientPattern extends LXPattern implements GradientFunction {
 
     final GradientUtils.BlendFunction blendFunction = this.blendMode.getEnum().function;
 
-    for (LXPoint p : model.points) {
-      float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
-        xAmount * xFunction.getCoordinate(p, p.xn, xOffset) +
-        yAmount * yFunction.getCoordinate(p, p.yn, yOffset) +
-        zAmount * zFunction.getCoordinate(p, p.zn, zOffset),
-        0, 1
-      );
-      int stop = (int) Math.floor(lerp);
-      colors[p.index] = blendFunction.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
+    if (this.rotate.isOn()) {
+      this.transform.update(matrix -> {
+        matrix
+          .translate(.5f, .5f, .5f)
+          .rotateZ((float) Math.toRadians(-this.roll.getValue()))
+          .rotateX((float) Math.toRadians(-this.pitch.getValue()))
+          .rotateY((float) Math.toRadians(-this.yaw.getValue()))
+          .translate(-.5f, -.5f, -.5f);
+      });
+
+      for (LXPoint p : model.points) {
+        final float xn =
+          p.xn * this.transform.m11 +
+          p.yn * this.transform.m12 +
+          p.zn * this.transform.m13 +
+          this.transform.m14;
+
+        final float yn =
+          p.xn * this.transform.m21 +
+          p.yn * this.transform.m22 +
+          p.zn * this.transform.m23 +
+          this.transform.m24;
+
+        final float zn =
+          p.xn * this.transform.m31 +
+          p.yn * this.transform.m32 +
+          p.zn * this.transform.m33 +
+          this.transform.m34;
+
+        float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
+          xAmount * xFunction.getCoordinate(p, xn, xOffset) +
+          yAmount * yFunction.getCoordinate(p, yn, yOffset) +
+          zAmount * zFunction.getCoordinate(p, zn, zOffset),
+          0, 1
+        );
+        int stop = (int) Math.floor(lerp);
+        colors[p.index] = blendFunction.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
+      }
+    } else {
+      for (LXPoint p : model.points) {
+        float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
+          xAmount * xFunction.getCoordinate(p, p.xn, xOffset) +
+          yAmount * yFunction.getCoordinate(p, p.yn, yOffset) +
+          zAmount * zFunction.getCoordinate(p, p.zn, zOffset),
+          0, 1
+        );
+        int stop = (int) Math.floor(lerp);
+        colors[p.index] = blendFunction.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
+      }
     }
   }
 }
