@@ -94,7 +94,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
 
   protected LXLayeredComponent setBuffer(LXDeviceComponent component) {
     if (this instanceof Buffered) {
-      throw new UnsupportedOperationException("Cannot setBuffer on LXLayerdComponent.Buffered, owns its own buffer");
+      throw new UnsupportedOperationException("Cannot setBuffer on LXLayeredComponent.Buffered, owns its own buffer");
     }
     return setBuffer(component.getBuffer());
   }
