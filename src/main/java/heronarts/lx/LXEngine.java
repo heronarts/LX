@@ -112,8 +112,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private boolean logProfiler = false;
 
-  private boolean hasFailed = false;
-
   private float actualFrameRate = 0;
   private float cpuLoad = 0;
 
@@ -937,25 +935,27 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     run(false);
   }
 
+  private boolean runFailed = false;
+
   private void run(boolean fromEngineThread) {
-    if (this.hasFailed) {
+    if (this.runFailed) {
       return;
     }
     try {
       _run(fromEngineThread);
-    } catch (Exception x) {
-      this.hasFailed = true;
-      LX.error(x, "FATAL TOP-LEVEL EXCEPTION IN ENGINE: " + x.getLocalizedMessage());
-      setThreaded(false);
-      lx.fail(x);
+    } catch (Throwable x) {
+      this.runFailed = true;
+      LX.error(x, "FATAL ERROR IN LXEngine.run(): " + x.getLocalizedMessage());
+      this.lx.fail(x);
     }
   }
 
   private void processInputEvents() {
     try {
       _processInputEvents();
-    } catch (Exception x) {
-      LX.error(x, "FATAL EXCEPTION INPUT EVENT: " + x.getLocalizedMessage());
+    } catch (Throwable x) {
+      LX.error(x, "FATAL ERROR IN LXEngine.processInputEvents(): " + x.getLocalizedMessage());
+      this.lx.fail(x);
     }
   }
 

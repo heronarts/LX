@@ -400,7 +400,7 @@ public class LX {
     this.registry.initializePlugins();
   }
 
-  protected void fail(Exception x) {
+  protected void fail(Throwable x) {
     String logLocation = "the console output.";
     if (LX.EXPLICIT_LOG_FILE != null) {
       logLocation = LX.EXPLICIT_LOG_FILE.getAbsolutePath();
@@ -428,11 +428,11 @@ public class LX {
     return this.permissions;
   }
 
-  public LX pushError(Exception exception) {
+  public LX pushError(Throwable exception) {
     return pushError(new Error(exception));
   }
 
-  public LX pushError(Exception exception, String message) {
+  public LX pushError(Throwable exception, String message) {
     return pushError(new Error(exception, message));
   }
 
