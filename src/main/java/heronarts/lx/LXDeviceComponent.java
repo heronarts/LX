@@ -250,10 +250,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   public void loop(double deltaMs) {
     if (!this.crashed.isOn()) {
       try {
-        super.loop(deltaMs);
         this.modulation.loop(deltaMs);
-      } catch (Exception x) {
-        LX.error(x, "Unexpected exception in device loop " + getClass().getName() + ": " + x.getLocalizedMessage());
+        super.loop(deltaMs);
+      } catch (Throwable x) {
+        LX.error(x, "Unexpected error in device loop " + getClass().getName() + ": " + x.getLocalizedMessage());
         this.lx.pushError(x, "Device " + LXComponent.getComponentName(getClass()) + " crashed due to an unexpected error.\n" + x.getLocalizedMessage());
         this.crash = x;
         this.crashed.setValue(true);
