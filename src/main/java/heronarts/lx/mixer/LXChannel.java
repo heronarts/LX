@@ -23,12 +23,14 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -72,20 +74,37 @@ public class LXChannel extends LXAbstractChannel {
   private final List<Listener> listenerSnapshot = new ArrayList<Listener>();
 
   public enum AutoCycleMode {
-    NEXT,
-    RANDOM;
+    NEXT("Next"),
+    RANDOM("Random");
+
+    public final String label;
+
+    private AutoCycleMode(String label) {
+      this.label = label;
+    }
 
     @Override
     public String toString() {
-      switch (this) {
-      case NEXT:
-        return "Next";
-      default:
-      case RANDOM:
-        return "Random";
-      }
+      return this.label;
     }
   };
+
+  public enum CompositeMode {
+    PLAYLIST("Playlist"),
+    BLEND("Blend");
+
+    public final String label;
+
+    private CompositeMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+
+  }
 
   /**
    * Which pattern is focused in the channel
@@ -98,6 +117,28 @@ public class LXChannel extends LXAbstractChannel {
   public final BooleanParameter controlsExpanded =
     new BooleanParameter("Expanded", true)
     .setDescription("Whether the control elements for the channel device are expanded");
+
+  /**
+   * Auto-cycle to a random pattern, not the next one
+   */
+  public final EnumParameter<CompositeMode> compositeMode =
+    new EnumParameter<CompositeMode>("Composite Mode", CompositeMode.PLAYLIST)
+    .setDescription("Pattern compositing mode, patterns either act as an ordered playlist or are all blended together");
+
+  /**
+   * Whether damping is enabled on pattern composite blending
+   */
+  public final BooleanParameter compositeDampingEnabled =
+    new BooleanParameter("Damping", true)
+    .setDescription("Whether damping is enabled when a pattern is enabled or disabled");
+
+  /**
+   * Damping time when a pattern is enabled or disabled in blending mode
+   */
+  public final CompoundParameter compositeDampingTimeSecs = (CompoundParameter)
+    new CompoundParameter("Damping Time", .1, .05, 5)
+    .setUnits(CompoundParameter.Units.SECONDS)
+    .setDescription("Damping time when a pattern is enabled/disabled in blend mode");
 
   /**
    * Whether auto pattern transition is enabled on this channel
@@ -122,7 +163,7 @@ public class LXChannel extends LXAbstractChannel {
     .setUnits(LXParameter.Units.SECONDS);
 
   public final BoundedParameter transitionTimeSecs = (BoundedParameter)
-    new BoundedParameter("Transition Time", 5, .1, 180)
+    new BoundedParameter("Transition Time", 5, .05, 180)
     .setDescription("Sets the duration of blending transitions between patterns")
     .setUnits(LXParameter.Units.SECONDS);
 
@@ -187,6 +228,10 @@ public class LXChannel extends LXAbstractChannel {
     addArray("pattern", this.patterns);
 
     addInternalParameter("controlsExpanded", this.controlsExpanded);
+
+    addParameter("compositeMode", this.compositeMode);
+    addParameter("compositeDampingEnabled", this.compositeDampingEnabled);
+    addParameter("compositeDampingTimeSecs", this.compositeDampingTimeSecs);
     addParameter("autoCycleEnabled", this.autoCycleEnabled);
     addParameter("autoCycleMode", this.autoCycleMode);
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
@@ -207,6 +252,16 @@ public class LXChannel extends LXAbstractChannel {
   }
 
   @Override
+  void updateChannelBlendOptions() {
+    super.updateChannelBlendOptions();
+    if (this.patterns != null) {
+      for (LXPattern pattern : this.patterns) {
+        pattern.updateCompositeBlendOptions();
+      }
+    }
+  }
+
+  @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.autoCycleEnabled) {
@@ -220,6 +275,29 @@ public class LXChannel extends LXAbstractChannel {
           finishTransition();
         } else {
           doPatternCycle();
+        }
+      }
+    } else if (p == this.compositeMode) {
+      // Get out of any pending transition no matter the direction of change
+      if (this.transition != null) {
+        finishTransition();
+      }
+      final LXPattern activePattern = getActivePattern();
+      if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
+        // If moving into blend mode, initialize composite state for all pattern
+        for (LXPattern pattern : this.patterns) {
+          pattern.initCompositeDamping(pattern == activePattern);
+        }
+      } else {
+        // Inactivate all but the active pattern
+        for (LXPattern pattern : this.patterns) {
+          if ((pattern != activePattern) && (pattern.getCompositeDampingLevel() > 0)) {
+            pattern.onInactive();
+          }
+        }
+        // The active pattern was not enabled? It is now!
+        if (!activePattern.enabled.isOn()) {
+          activePattern.onActive();
         }
       }
     }
@@ -300,11 +378,22 @@ public class LXChannel extends LXAbstractChannel {
 
   @Override
   public void midiDispatch(LXShortMessage message) {
-    LXPattern activePattern = getActivePattern();
-    activePattern.midiDispatch(message);
-    LXPattern nextPattern = getNextPattern();
-    if (nextPattern != null && nextPattern != activePattern) {
-      nextPattern.midiDispatch(message);
+    switch (this.compositeMode.getEnum()) {
+    case PLAYLIST:
+      LXPattern activePattern = getActivePattern();
+      activePattern.midiDispatch(message);
+      LXPattern nextPattern = getNextPattern();
+      if (nextPattern != null && nextPattern != activePattern) {
+        nextPattern.midiDispatch(message);
+      }
+      break;
+    case BLEND:
+      for (LXPattern pattern : this.patterns) {
+        if (pattern.enabled.isOn()) {
+          pattern.midiDispatch(message);
+        }
+      }
+      break;
     }
     super.midiDispatch(message);
   }
@@ -392,7 +481,7 @@ public class LXChannel extends LXAbstractChannel {
     pattern.setModel(getModelView());
 
     // Make sure focused pattern doesn't change
-    LXPattern focusedPattern = getFocusedPattern();
+    final LXPattern focusedPattern = getFocusedPattern();
 
     if (index < 0) {
       pattern.setIndex(this.mutablePatterns.size());
@@ -400,8 +489,8 @@ public class LXChannel extends LXAbstractChannel {
     } else {
       pattern.setIndex(index);
 
-      LXPattern activePattern = getActivePattern();
-      LXPattern nextPattern = getNextPattern();
+      final LXPattern activePattern = getActivePattern();
+      final LXPattern nextPattern = getNextPattern();
 
       this.mutablePatterns.add(index, pattern);
       for (int i = index + 1; i < this.mutablePatterns.size(); ++i) {
@@ -436,10 +525,15 @@ public class LXChannel extends LXAbstractChannel {
     if (this.mutablePatterns.size() == 1) {
       this.activePatternIndex = this.nextPatternIndex = 0;
       this.focusedPattern.bang();
-      LXPattern activePattern = getActivePattern();
+      final LXPattern activePattern = getActivePattern();
       activePattern.onActive();
       for (Listener listener : this.listeners) {
         listener.patternDidChange(this, activePattern);
+      }
+    } else if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
+      // We're in blend mode! This pattern is active if it's enabled
+      if (pattern.enabled.isOn()) {
+        pattern.onActive();
       }
     }
     return this;
@@ -450,8 +544,8 @@ public class LXChannel extends LXAbstractChannel {
     if (index < 0) {
       return this;
     }
-    boolean wasActive = (this.activePatternIndex == index);
-    boolean wasNext = (this.transition != null) && (this.nextPatternIndex == index);
+    final boolean wasActive = (this.activePatternIndex == index);
+    final boolean wasNext = (this.transition != null) && (this.nextPatternIndex == index);
     boolean activateNext = false;
     int focusedPatternIndex = this.focusedPattern.getValuei();
     if (this.transition != null) {
@@ -708,17 +802,21 @@ public class LXChannel extends LXAbstractChannel {
    * Activates the pattern at the given index, if it is within the
    * bounds of this channel's pattern list.
    *
-   * @param i Pattern index
+   * @param index Pattern index
    * @return this
    */
-  public final LXChannel goPatternIndex(int i) {
-    if (i < 0 || i >= this.patterns.size()) {
+  public final LXChannel goPatternIndex(int index) {
+    if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
+      return this;
+    }
+    if (index < 0 || index >= this.patterns.size()) {
+      LX.error(new Exception(), "Illegal pattern index " + index + " passed to LXChannel.goPatternIndex() ");
       return this;
     }
     if (this.transition != null) {
       finishTransition();
     }
-    this.nextPatternIndex = i;
+    this.nextPatternIndex = index;
     startTransition();
     return this;
   }
@@ -841,68 +939,100 @@ public class LXChannel extends LXAbstractChannel {
       return;
     }
 
-    // Check for transition completion
-    if (this.transition != null) {
-      double transitionMs = this.lx.engine.nowMillis - this.transitionMillis;
-      double transitionDone = 1000 * this.transitionTimeSecs.getValue();
-      if (transitionMs >= transitionDone) {
-        finishTransition();
-      }
-    }
+    // Initialize colors to the blend buffer...
+    final int[] blendArray = this.blendBuffer.getArray();
+    int[] colors = blendArray;
 
-    // Auto-cycle if appropriate
-    if (this.transition == null) {
-      this.autoCycleProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.autoCycleTimeSecs.getValue());
-      if (this.autoCycleProgress >= 1) {
-        this.autoCycleProgress = 1;
-        if (this.autoCycleEnabled.isOn()) {
-          doPatternCycle();
+    if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
+
+      // Blend mode, this channel is like a mini-mixer
+      final LXModel modelView = getModelView();
+      for (int i = 0; i < colors.length; ++i) {
+        colors[i] = LXColor.BLACK;
+      }
+
+      // Damping mode
+      final boolean dampingEnabled = this.compositeDampingEnabled.isOn();
+      final double dampingTimeSecs = this.compositeDampingTimeSecs.getValue();
+
+      for (LXPattern pattern : this.patterns) {
+        pattern.updateCompositeDamping(deltaMs, dampingEnabled, dampingTimeSecs);
+        final double patternDamping = pattern.getCompositeDampingLevel();
+        if (patternDamping == 0) {
+          continue;
+        }
+        pattern.loop(deltaMs);
+        pattern.compositeMode.getObject().blend(
+          colors,
+          pattern.getColors(),
+          patternDamping * pattern.compositeLevel.getValue(),
+          colors,
+          modelView
+        );
+      }
+
+    } else {
+
+      // Check for transition completion
+      if (this.transition != null) {
+        double transitionMs = this.lx.engine.nowMillis - this.transitionMillis;
+        double transitionDone = 1000 * this.transitionTimeSecs.getValue();
+        if (transitionMs >= transitionDone) {
+          finishTransition();
         }
       }
-    }
 
-    // Initialize colors...
-    int[] colors = this.blendBuffer.getArray();
+      // Auto-cycle if appropriate
+      if (this.transition == null) {
+        this.autoCycleProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.autoCycleTimeSecs.getValue());
+        if (this.autoCycleProgress >= 1) {
+          this.autoCycleProgress = 1;
+          if (this.autoCycleEnabled.isOn()) {
+            doPatternCycle();
+          }
+        }
+      }
 
-    // Run active pattern
-    LXPattern activePattern = getActivePattern();
-    if (activePattern != null) {
-      activePattern.loop(deltaMs);
-      colors = activePattern.getColors();
-    } else {
-      // No patterns here, blank the channel.
-      for (int i = 0; i < colors.length; ++i) {
-        colors[i] = 0xff000000;
+      // Run active pattern
+      LXPattern activePattern = getActivePattern();
+      if (activePattern != null) {
+        activePattern.loop(deltaMs);
+        colors = activePattern.getColors();
+      } else {
+        // No patterns here, blank the channel.
+        for (int i = 0; i < colors.length; ++i) {
+          colors[i] = LXColor.BLACK;
+        }
+      }
+
+      // Run transition!
+      if (this.transition != null) {
+        this.autoCycleProgress = 1.;
+        this.transitionProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.transitionTimeSecs.getValue());
+        getNextPattern().loop(deltaMs);
+        this.transition.loop(deltaMs);
+        colors = this.blendBuffer.getArray();
+        this.transition.lerp(
+          getActivePattern().getColors(),
+          getNextPattern().getColors(),
+          this.transitionProgress,
+          colors,
+          getModelView()
+        );
+      } else {
+        this.transitionProgress = 0;
       }
     }
 
-    // Run transition!
-    if (this.transition != null) {
-      this.autoCycleProgress = 1.;
-      this.transitionProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.transitionTimeSecs.getValue());
-      getNextPattern().loop(deltaMs);
-      this.transition.loop(deltaMs);
-      colors = this.blendBuffer.getArray();
-      this.transition.lerp(
-        getActivePattern().getColors(),
-        getNextPattern().getColors(),
-        this.transitionProgress,
-        colors,
-        getModelView()
-      );
-    } else {
-      this.transitionProgress = 0;
-    }
     this.profiler.loopNanos = System.nanoTime() - loopStart;
 
     // Apply effects
     long effectStart = System.nanoTime();
     if (this.mutableEffects.size() > 0) {
-      int[] array = this.blendBuffer.getArray();
-      if (colors != array) {
-        System.arraycopy(colors, 0, array, 0, colors.length);
+      if (colors != blendArray) {
+        System.arraycopy(colors, 0, blendArray, 0, colors.length);
+        colors = blendArray;
       }
-      colors = array;
       for (LXEffect effect : this.mutableEffects) {
         effect.setBuffer(this.blendBuffer);
         effect.loop(deltaMs);

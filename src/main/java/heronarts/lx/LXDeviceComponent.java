@@ -37,7 +37,6 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
-import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.surface.LXMidiSurface;
@@ -50,7 +49,6 @@ import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
-import heronarts.lx.pattern.LXPattern;
 
 /**
  * A component which may have its own scoped user-level modulators. The concrete subclasses
@@ -172,6 +170,15 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   }
 
   /**
+   * Returns whether this parameter is visible in default remote control
+   * or device control UIs
+   *
+   * @param parameter Parameter to check
+   * @return true if this should be hidden by default
+   */
+  public abstract boolean isHiddenControl(LXParameter parameter);
+
+  /**
    * Subclasses may override this. The method returns an array of parameters in order
    * that can be addressed by a remote control surface
    *
@@ -196,13 +203,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
           }
         } else if (parameter instanceof LXListenableNormalizedParameter) {
           // Otherwise include any parameter of a knob-able type
-          boolean valid = true;
-          if (this instanceof LXPattern) {
-            valid = parameter != ((LXPattern) this).recall;
-          } else if (this instanceof LXEffect) {
-            valid = parameter != ((LXEffect) this).enabled;
-          }
-          if (valid) {
+          if (!isHiddenControl(parameter)) {
             remoteControls.add((LXListenableNormalizedParameter) parameter);
           }
         }

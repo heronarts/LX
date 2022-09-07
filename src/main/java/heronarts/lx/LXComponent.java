@@ -933,6 +933,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
 
   protected final Map<String, LXParameter> legacyParameters = new LinkedHashMap<String, LXParameter>();
 
+  protected final Map<String, LXParameter> legacyInternalParameters = new LinkedHashMap<String, LXParameter>();
+
   /**
    * Adds a parameter to this component, using its label as the path by default. This method
    * is deprecated and heavily discouraged, it is best always to provide a specific path
@@ -1015,6 +1017,22 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       throw new IllegalStateException("Cannot register duplicate parameter to legacy path: " + legacyPath);
     }
     this.legacyParameters.put(legacyPath, parameter);
+    return this;
+  }
+
+  /**
+   * Adds a redundant internal legacy parameter path. If a stored file refers to this path which is
+   * no longer active, it will load to the new parameter position.
+   *
+   * @param legacyPath Legacy internal parameter path, not used anymore
+   * @param parameter Parameter that should be loaded
+   * @return this
+   */
+  protected LXComponent addLegacyInternalParameter(String legacyPath, LXParameter parameter) {
+    if (this.legacyInternalParameters.containsKey(legacyPath)) {
+      throw new IllegalStateException("Cannot register duplicate parameter to internal legacy path: " + legacyPath);
+    }
+    this.legacyInternalParameters.put(legacyPath, parameter);
     return this;
   }
 
@@ -1129,8 +1147,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final static String KEY_CLASS = "class";
 
   public final static String KEY_PARAMETERS = "parameters";
-  private final static String KEY_INTERNAL = "internal";
-  private final static String KEY_CHILDREN = "children";
+  public final static String KEY_INTERNAL = "internal";
+  public final static String KEY_CHILDREN = "children";
   public static final String KEY_COMPONENT_ID = "componentId";
   public static final String KEY_PARAMETER_PATH = "parameterPath";
   public static final String KEY_PATH = "path";
@@ -1207,10 +1225,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
 
     // Load parameters
     if (obj.has(KEY_INTERNAL)) {
-      loadParameters(this, obj.getAsJsonObject(KEY_INTERNAL), this.internalParameters);
+      final JsonObject parametersObj = obj.getAsJsonObject(KEY_INTERNAL);
+      loadParameters(this, parametersObj, this.legacyInternalParameters);
+      loadParameters(this, parametersObj, this.internalParameters);
     }
     if (obj.has(KEY_PARAMETERS)) {
-      JsonObject parametersObj = obj.getAsJsonObject(KEY_PARAMETERS);
+      final JsonObject parametersObj = obj.getAsJsonObject(KEY_PARAMETERS);
       loadParameters(this, parametersObj, this.legacyParameters);
       loadParameters(this, parametersObj, this.parameters);
     }

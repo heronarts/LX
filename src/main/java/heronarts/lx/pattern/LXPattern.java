@@ -28,10 +28,15 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXTime;
+import heronarts.lx.blend.LXBlend;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * A pattern is the core object that the animation engine uses to generate
@@ -92,19 +97,41 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private int intervalEnd = -1;
 
-  public final BooleanParameter autoCycleEligible =
-    new BooleanParameter("Cycle", true)
-    .setDescription("Whether the pattern is eligible for auto-cycle");
+  private double compositeDampingLevel = 1;
+
+  public final BooleanParameter enabled =
+    new BooleanParameter("Enabled", true)
+    .setDescription("Whether the pattern is eligible for playlist cycling or compositing");
 
   public final BooleanParameter recall =
     new BooleanParameter("Recall", false)
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Recalls this pattern to become active on the channel");
 
-  private final LXParameterListener onRecall = (p) -> {
+  public final ObjectParameter<LXBlend> compositeMode;
+
+  public final CompoundParameter compositeLevel =
+    new CompoundParameter("Composite Level", 1)
+    .setDescription("Alpha level to composite pattern at when in channel blend mode");
+
+  private final LXParameterListener onRecall = p -> {
     if (this.recall.isOn()) {
       this.recall.setValue(false);
       getChannel().goPattern(this);
+    }
+  };
+
+  private final LXParameterListener onEnabled = p -> {
+    final boolean isEnabled = this.enabled.isOn();
+    final LXChannel channel = getChannel();
+    if ((channel != null) &&
+        (channel.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND) &&
+        !channel.compositeDampingEnabled.isOn()) {
+      if (isEnabled) {
+        onActive();
+      } else {
+        onInactive();
+      }
     }
   };
 
@@ -119,14 +146,44 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   protected LXPattern(LX lx) {
     super(lx);
     this.label.setDescription("The name of this pattern");
-    addInternalParameter("autoCycleEligible", this.autoCycleEligible);
+
+    this.compositeMode = new ObjectParameter<LXBlend>("Composite Blend", new LXBlend[1])
+      .setDescription("Specifies the blending function used for blending of patterns on the channel");
+    updateCompositeBlendOptions();
+
+    // NOTE: this used to be internal, but it's not anymore...
+    addLegacyInternalParameter("autoCycleEligible", this.enabled);
+    addParameter("enabled", this.enabled);
+
     addParameter("recall", this.recall);
+    addParameter("compositeMode", this.compositeMode);
+    addParameter("compositeLevel", this.compositeLevel);
+
     this.recall.addListener(this.onRecall);
+    this.enabled.addListener(this.onEnabled);
+  }
+
+  @Override
+  public boolean isHiddenControl(LXParameter parameter) {
+    return
+      parameter == this.recall ||
+      parameter == this.compositeMode ||
+      parameter == this.compositeLevel ||
+      parameter == this.enabled;
   }
 
   @Override
   public String getPath() {
     return LXChannel.PATH_PATTERN + "/" + (this.index + 1);
+  }
+
+  public void updateCompositeBlendOptions() {
+    for (LXBlend blend : this.compositeMode.getObjects()) {
+      if (blend != null) {
+        blend.dispose();
+      }
+    }
+    this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends());
   }
 
   public void setIndex(int index) {
@@ -219,7 +276,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * @return this
    */
   public final LXPattern setAutoCycleEligible(boolean eligible) {
-    this.autoCycleEligible.setValue(eligible);
+    this.enabled.setValue(eligible);
     return this;
   }
 
@@ -229,7 +286,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * @return this
    */
   public final LXPattern toggleAutoCycleEligible() {
-    this.autoCycleEligible.toggle();
+    this.enabled.toggle();
     return this;
   }
 
@@ -241,7 +298,42 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * @return True if pattern is eligible to run now
    */
   public final boolean isAutoCycleEligible() {
-    return this.autoCycleEligible.isOn() && (!this.hasInterval() || this.isInInterval());
+    return this.enabled.isOn() && (!this.hasInterval() || this.isInInterval());
+  }
+
+  public void initCompositeDamping(boolean wasActivePattern) {
+    final boolean isEnabled = this.enabled.isOn();
+    this.compositeDampingLevel = isEnabled ? 1 : 0;
+    if (isEnabled && !wasActivePattern) {
+      onActive();
+    } else if (!isEnabled && wasActivePattern) {
+      onInactive();
+    }
+  }
+
+  public void updateCompositeDamping(double deltaMs, boolean dampingOn, double dampingTimeSecs) {
+    final boolean isEnabled = this.enabled.isOn();
+    if (!dampingOn) {
+      this.compositeDampingLevel = isEnabled ? 1 : 0;
+    } else if (isEnabled) {
+      if (this.compositeDampingLevel < 1) {
+        if (this.compositeDampingLevel == 0) {
+          onActive();
+        }
+        this.compositeDampingLevel = LXUtils.min(1, this.compositeDampingLevel + deltaMs / (dampingTimeSecs * 1000));
+      }
+    } else {
+      if (this.compositeDampingLevel > 0) {
+        this.compositeDampingLevel = LXUtils.max(0, this.compositeDampingLevel - deltaMs / (dampingTimeSecs * 1000));
+        if (this.compositeDampingLevel == 0) {
+          onInactive();
+        }
+      }
+    }
+  }
+
+  public double getCompositeDampingLevel() {
+    return this.compositeDampingLevel;
   }
 
   @Override
@@ -292,8 +384,15 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    this.compositeDampingLevel = this.enabled.isOn() ? 1 : 0;
+  }
+
+  @Override
   public void dispose() {
     this.recall.removeListener(this.onRecall);
+    this.enabled.removeListener(this.onEnabled);
     super.dispose();
   }
 

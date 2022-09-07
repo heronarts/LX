@@ -290,7 +290,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return blends.toArray(new LXBlend[0]);
   }
 
-  protected LXBlend[] instantiateChannelBlends() {
+  public LXBlend[] instantiateChannelBlends() {
     return instantiateBlends(this.lx.registry.channelBlends);
   }
 
