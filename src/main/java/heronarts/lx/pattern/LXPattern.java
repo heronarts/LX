@@ -110,6 +110,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   public final ObjectParameter<LXBlend> compositeMode;
 
+  private LXBlend activeCompositeBlend;
+
   public final CompoundParameter compositeLevel =
     new CompoundParameter("Composite Level", 1)
     .setDescription("Alpha level to composite pattern at when in channel blend mode");
@@ -134,6 +136,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       }
     }
   };
+
+  private final LXParameterListener onCompositeMode = p -> {
+    this.activeCompositeBlend.onInactive();
+    this.activeCompositeBlend = this.compositeMode.getObject();
+    this.activeCompositeBlend.onActive();
+  });
 
   protected double runMs = 0;
 
@@ -161,6 +169,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
     this.recall.addListener(this.onRecall);
     this.enabled.addListener(this.onEnabled);
+    this.compositeMode.addListener(this.onCompositeMode);
   }
 
   @Override
@@ -184,6 +193,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       }
     }
     this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends());
+    this.activeCompositeBlend = this.compositeMode.getObject();
+    this.activeCompositeBlend.onActive();
   }
 
   public void setIndex(int index) {
@@ -393,6 +404,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   public void dispose() {
     this.recall.removeListener(this.onRecall);
     this.enabled.removeListener(this.onEnabled);
+    this.compositeMode.removeListener(this.onCompositeMode);
     super.dispose();
   }
 
