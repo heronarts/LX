@@ -108,7 +108,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Recalls this pattern to become active on the channel");
 
-  public final ObjectParameter<LXBlend> compositeMode;
+  public final ObjectParameter<LXBlend> compositeMode =
+    new ObjectParameter<LXBlend>("Composite Blend", new LXBlend[1])
+    .setDescription("Specifies the blending function used for blending of patterns on the channel");
 
   private LXBlend activeCompositeBlend;
 
@@ -141,7 +143,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.activeCompositeBlend.onInactive();
     this.activeCompositeBlend = this.compositeMode.getObject();
     this.activeCompositeBlend.onActive();
-  });
+  };
 
   protected double runMs = 0;
 
@@ -155,10 +157,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     super(lx);
     this.label.setDescription("The name of this pattern");
 
-    this.compositeMode = new ObjectParameter<LXBlend>("Composite Blend", new LXBlend[1])
-      .setDescription("Specifies the blending function used for blending of patterns on the channel");
-    updateCompositeBlendOptions();
-
     // NOTE: this used to be internal, but it's not anymore...
     addLegacyInternalParameter("autoCycleEligible", this.enabled);
     addParameter("enabled", this.enabled);
@@ -167,9 +165,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     addParameter("compositeMode", this.compositeMode);
     addParameter("compositeLevel", this.compositeLevel);
 
+    updateCompositeBlendOptions();
+    this.compositeMode.addListener(this.onCompositeMode);
+
     this.recall.addListener(this.onRecall);
     this.enabled.addListener(this.onEnabled);
-    this.compositeMode.addListener(this.onCompositeMode);
+
   }
 
   @Override
