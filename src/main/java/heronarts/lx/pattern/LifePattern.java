@@ -26,6 +26,7 @@ import heronarts.lx.utils.LXUtils;
 
 import java.util.HashMap;
 
+@Deprecated
 @LXCategory(LXCategory.FORM)
 public class LifePattern extends LXModelPattern<GridModel> {
 

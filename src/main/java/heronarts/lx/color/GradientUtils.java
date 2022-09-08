@@ -34,10 +34,15 @@ public class GradientUtils {
     /**
      * Lookup table of gray values
      */
-    public final int[] lut = new int[SIZE];
+    public final int[] lut;
 
     public GrayTable(LXNormalizedParameter invert) {
+      this(invert, 0);
+    }
+
+    public GrayTable(LXNormalizedParameter invert, int padding) {
       this.invert = invert;
+      this.lut = new int[SIZE + padding];
     }
 
     public void update() {
@@ -50,6 +55,9 @@ public class GradientUtils {
         for (int i = 0; i < SIZE; ++i) {
           int b = (int) LXUtils.lerp(i, 255.9 - i, invert);
           this.lut[i] = 0xff000000 | (b << 16) | (b << 8) | b;
+        }
+        for (int i = SIZE; i < this.lut.length; ++i) {
+          this.lut[i] = this.lut[SIZE-1];
         }
         this.dirty = false;
       }
