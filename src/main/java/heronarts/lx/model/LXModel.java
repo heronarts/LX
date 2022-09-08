@@ -348,7 +348,7 @@ public class LXModel implements LXSerializable {
    * @param metaData Metadata map
    * @param tags Tag identifier for this model
    */
-  public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String > tags) {
+  public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String> tags) {
     this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
     addChildren(children);
@@ -448,7 +448,7 @@ public class LXModel implements LXSerializable {
     builder.model = this;
   }
 
-  private static List<String> validateTags(List<String> tags) {
+  public static List<String> validateTags(List<String> tags) {
     Objects.requireNonNull(tags, "May not construct LXModel with null tags");
     List<String> _tags = new ArrayList<String>(tags.size());
     for (String tag : tags) {

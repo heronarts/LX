@@ -342,6 +342,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   private final Set<LXParameter> outputParameters = new HashSet<LXParameter>();
 
+  private final Set<LXParameter> tagParameters = new HashSet<LXParameter>();
+
   private int index = 0;
 
   private int firstPointIndex = -1;
@@ -374,7 +376,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     addParameter("solo", this.solo);
 
     // Tags
-    addParameter("tags", this.tags);
+    addTagParameter("tags", this.tags);
 
     this.brightness.setMappable(true);
     this.enabled.setMappable(true);
@@ -557,6 +559,20 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     return this;
   }
 
+  /**
+   * Adds a parameter which impacts the tags of the fixture. Whenever
+   * one is changed, the model will be regenerated with new tags.
+   *
+   * @param path Path to parameter
+   * @param parameter Parameter
+   * @return this
+   */
+  protected LXFixture addTagParameter(String path, LXParameter parameter) {
+    addParameter(path, parameter);
+    this.tagParameters.add(parameter);
+    return this;
+  }
+
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
@@ -580,7 +596,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         }
       } else if (this.deactivate == p) {
         this.container.fixtureGenerationChanged(this);
-      } else if (p == this.tags) {
+      } else if (this.tagParameters.contains(p)) {
         this.container.fixtureTagsChanged(this);
       }
     }

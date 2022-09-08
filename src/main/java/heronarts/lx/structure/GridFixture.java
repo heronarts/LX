@@ -18,6 +18,7 @@
 
 package heronarts.lx.structure;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
@@ -109,6 +111,14 @@ public class GridFixture extends LXBasicFixture {
     new EnumParameter<Wiring>("Wiring", Wiring.ROWS_L2R_B2T)
     .setDescription("How the strips in the grid are sequentially wired");
 
+  public final StringParameter rowTags =
+    new StringParameter("Row Tags", LXModel.Tag.ROW)
+    .setDescription("Tags to be applied to rows in model");
+
+  public final StringParameter columnTags =
+    new StringParameter("Column Tags", LXModel.Tag.COLUMN)
+    .setDescription("Tags to be applied to columns in model");
+
   public GridFixture(LX lx) {
     super(lx, "Grid");
     addMetricsParameter("numRows", this.numRows);
@@ -117,22 +127,42 @@ public class GridFixture extends LXBasicFixture {
     addGeometryParameter("columnSpacing", this.columnSpacing);
     addGeometryParameter("positionMode", this.positionMode);
     addOutputParameter("wiring", this.wiring);
+    addTagParameter("rowTags", this.rowTags);
+    addTagParameter("columnTags", this.columnTags);
+  }
+
+  private String[] tagArray(StringParameter parameter) {
+    List<String> validTags = new ArrayList<String>();
+    String tagString = parameter.getString();
+    if ((tagString != null) && !tagString.isEmpty()) {
+      for (String tag : tagString.trim().split("\\s+")) {
+        tag = tag.trim();
+        if (!tag.isEmpty() && LXModel.Tag.isValid(tag)) {
+          validTags.add(tag);
+        }
+      }
+    }
+    return validTags.toArray(new String[0]);
   }
 
   @Override
   public Submodel[] toSubmodels() {
-    int numRows = this.numRows.getValuei();
-    int numColumns = this.numColumns.getValuei();
+    final int numRows = this.numRows.getValuei();
+    final int numColumns = this.numColumns.getValuei();
 
     int i = 0;
-    Submodel[] submodels = new Submodel[numRows + numColumns];
+    final Submodel[] submodels = new Submodel[numRows + numColumns];
 
-    Map<String, String> metaData = new HashMap<String, String>();
+    final Map<String, String> metaData = new HashMap<String, String>();
     metaData.put("numPoints", String.valueOf(numColumns));
     metaData.put("spacing", String.valueOf(this.columnSpacing.getValue()));
+
+    final String[] rowTags = tagArray(this.rowTags);
+    final String[] columnTags = tagArray(this.columnTags);
+
     for (int r = 0; r < numRows; ++r) {
       metaData.put("rowIndex", String.valueOf(r));
-      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, metaData, LXModel.Tag.STRIP, LXModel.Tag.ROW);
+      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, metaData, rowTags);
     }
 
     metaData.clear();
@@ -140,7 +170,7 @@ public class GridFixture extends LXBasicFixture {
     metaData.put("spacing", String.valueOf(this.rowSpacing.getValue()));
     for (int c = 0; c < numColumns; ++c) {
       metaData.put("columnIndex", String.valueOf(c));
-      submodels[i++] = new Submodel(c, numRows, numColumns, metaData, LXModel.Tag.STRIP, LXModel.Tag.COLUMN);
+      submodels[i++] = new Submodel(c, numRows, numColumns, metaData, columnTags);
     }
 
     return submodels;
