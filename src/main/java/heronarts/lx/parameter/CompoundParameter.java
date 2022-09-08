@@ -203,6 +203,15 @@ public class CompoundParameter extends BoundedParameter {
         }
       }
     }
+    if (isWrappable()) {
+      if (normalized < 0) {
+        return 1. + (normalized % 1.);
+      } else if (normalized > 1) {
+        return normalized % 1.;
+      }
+      // NOTE: don't want to mod exactly 1. to 0, leave it at 1.
+      return normalized;
+    }
     return LXUtils.constrain(normalized, 0, 1);
   }
 
