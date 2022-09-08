@@ -21,10 +21,12 @@ package heronarts.lx.structure;
 import java.util.List;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.transform.LXMatrix;
 
+@LXCategory(LXCategory.CORE)
 public class PointFixture extends LXBasicFixture {
 
   public PointFixture(LX lx) {

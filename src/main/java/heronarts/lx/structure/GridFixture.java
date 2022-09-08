@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
@@ -34,6 +35,7 @@ import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 
+@LXCategory(LXCategory.CORE)
 public class GridFixture extends LXBasicFixture {
 
   public enum PositionMode {

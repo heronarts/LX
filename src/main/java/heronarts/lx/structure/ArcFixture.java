@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BoundedParameter;
@@ -30,6 +31,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.transform.LXMatrix;
 
+@LXCategory(LXCategory.CORE)
 public class ArcFixture extends LXBasicFixture {
 
   public static final int MAX_POINTS = 4096;

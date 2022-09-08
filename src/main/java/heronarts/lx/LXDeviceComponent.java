@@ -134,11 +134,6 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     addInternalParameter("presetFile", this.presetFile);
   }
 
-  public static String getCategory(Class<? extends LXDeviceComponent> clazz) {
-    LXCategory annotation = clazz.getAnnotation(LXCategory.class);
-    return (annotation != null) ? annotation.value() : LXCategory.OTHER;
-  }
-
   private void validateRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
     for (LXListenableNormalizedParameter control : remoteControls) {
       if ((control != null) && !control.isDescendant(this)) {

@@ -402,6 +402,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     return this.lx;
   }
 
+  public static String getCategory(Class<? extends LXComponent> clazz) {
+    LXCategory annotation = clazz.getAnnotation(LXCategory.class);
+    return (annotation != null) ? annotation.value() : LXCategory.OTHER;
+  }
+
   // Helper to check that a path is valid, no collisions allowed between parameters,
   // children, and child arrays, otherwise we'll have OSC conflicts.
   private void _checkPath(String path, String type) {
