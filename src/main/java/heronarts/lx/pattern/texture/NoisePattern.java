@@ -175,28 +175,32 @@ public class NoisePattern extends LXPattern {
     new BooleanParameter("Motion", true)
     .setDescription("Whether motion is applied to the noise");
 
-  public final CompoundParameter motionSpeed =
+  public final CompoundParameter motionSpeed = (CompoundParameter)
     new CompoundParameter("Speed", 0, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Maximum motion speed");
 
   public final BoundedParameter motionSpeedRange =
     new BoundedParameter("Speed Range", 128, 1, 256)
     .setDescription("Range of the speed control");
 
-  public final CompoundParameter xMotion =
+  public final CompoundParameter xMotion = (CompoundParameter)
     new CompoundParameter("X-Motion", 0, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Rate of motion on the X-axis");
 
-  public final CompoundParameter yMotion =
+  public final CompoundParameter yMotion = (CompoundParameter)
     new CompoundParameter("Y-Motion", 0, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Rate of motion on the Y-axis");
 
-  public final CompoundParameter zMotion =
+  public final CompoundParameter zMotion = (CompoundParameter)
     new CompoundParameter("Z-Motion", 1, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Rate of motion on the Z-axis");
 
   private final LinearEnvelope motionDamped = addModulator(new LinearEnvelope(motion.isOn() ? 1 : 0, 1, 250));
