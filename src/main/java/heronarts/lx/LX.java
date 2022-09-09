@@ -811,8 +811,8 @@ public class LX {
 
   private final Map<String, LXSerializable> externals = new HashMap<String, LXSerializable>();
 
-  private final static String KEY_VERSION = "version";
-  private final static String KEY_TIMESTAMP = "timestamp";
+  public final static String KEY_VERSION = "version";
+  public final static String KEY_TIMESTAMP = "timestamp";
   private final static String KEY_MODEL = "model";
   private final static String KEY_ENGINE = "engine";
   private final static String KEY_EXTERNALS = "externals";

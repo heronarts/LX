@@ -1098,7 +1098,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   public LXStructure exportModel(File file) {
     JsonObject obj = new JsonObject();
-    this.saveFixtures(this.lx, obj);
+    obj.addProperty(LX.KEY_VERSION, LX.VERSION);
+    obj.addProperty(LX.KEY_TIMESTAMP, System.currentTimeMillis());
+    saveFixtures(this.lx, obj);
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
