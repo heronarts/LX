@@ -46,6 +46,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -53,7 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Stack;
+import java.util.Queue;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -271,7 +272,7 @@ public class LX {
   /**
    * Error stack
    */
-  private final Stack<Error> errorStack = new Stack<Error>();
+  private final Queue<Error> errorQueue = new ArrayDeque<Error>();
 
   /**
    * Parameter that is bang()-ed every time errors change
@@ -441,24 +442,21 @@ public class LX {
   }
 
   public LX pushError(Error error) {
-    this.errorStack.push(error);
+    this.errorQueue.add(error);
     this.errorChanged.bang();
     return this;
   }
 
   public LX popError() {
-    if (!this.errorStack.isEmpty()) {
-      this.errorStack.pop();
+    if (!this.errorQueue.isEmpty()) {
+      this.errorQueue.remove();
       this.errorChanged.bang();
     }
     return this;
   }
 
   public LX.Error getError() {
-    if (!this.errorStack.isEmpty()) {
-      return this.errorStack.peek();
-    }
-    return null;
+    return this.errorQueue.peek();
   }
 
   public LX pushStatusMessage(String message) {
@@ -1166,7 +1164,7 @@ public class LX {
     bootstrapMediaPath(flags, "LXStudio");
   }
 
-  protected static void bootstrapMediaPath(Flags flags, String dirName) {
+  protected static File bootstrapMediaPath(Flags flags, String dirName) {
     File studioDir = new File(System.getProperty("user.home"), dirName);
     if (!studioDir.exists()) {
       LX.log("Creating directory: " + studioDir);
@@ -1186,6 +1184,7 @@ public class LX {
     } else {
       LX.error("~/" + dirName + " already exists but is not a directory, this will not go well.");
     }
+    return studioDir;
   }
 
   public static void log(String message) {
