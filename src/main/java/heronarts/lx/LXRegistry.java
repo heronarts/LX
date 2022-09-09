@@ -260,7 +260,7 @@ public class LXRegistry implements LXSerializable {
 
     private static final String KEY_IS_VISIBLE = "isVisible";
 
-    public JsonFixture(File file, String prefix) {
+    private JsonFixture(File file, String prefix) {
       String fileName = prefix + file.getName();
       boolean isVisible = false;
 
@@ -271,8 +271,8 @@ public class LXRegistry implements LXSerializable {
         LX.error(jpx, "JSON fixture file is not valid JSON: " + file.getAbsolutePath());
       } catch (FileNotFoundException fnfx) {
         LX.error(fnfx, "JSON fixture file does not exist: " + file.getAbsolutePath());
-      } catch (IOException iox) {
-        LX.error(iox, "Error reading JSON fixture file: " + file.getAbsolutePath());
+      } catch (Exception x) {
+        LX.error(x, "Error reading JSON fixture file: " + file.getAbsolutePath());
       }
 
       this.type = fileName.substring(0, fileName.length() - ".lxf".length());
@@ -397,10 +397,7 @@ public class LXRegistry implements LXSerializable {
   protected void initialize() {
     this.contentReloading = true;
     this.classLoader.load();
-
-    // TODO(mcslee): should get fixtures in the reload cycle as well?
     addJsonFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
-
     this.contentReloading = false;
   }
 
@@ -423,6 +420,10 @@ public class LXRegistry implements LXSerializable {
     // objects defined by a new instance of the LXClassLoader.
     this.classLoader = new LXClassLoader(this.lx);
     this.classLoader.load();
+
+    // Reload the available JSON fixture list
+    this.mutableJsonFixtures.clear();
+    addJsonFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
 
     // We are done reloading
     this.contentReloading = false;
@@ -759,7 +760,7 @@ public class LXRegistry implements LXSerializable {
     if (fixtureDir.exists() && fixtureDir.isDirectory()) {
       for (File fixture : fixtureDir.listFiles()) {
         if (fixture.isDirectory()) {
-          addJsonFixtures(fixture, prefix + fixture.getName() + "/");
+          addJsonFixtures(fixture, prefix + fixture.getName() + heronarts.lx.structure.JsonFixture.PATH_SEPARATOR);
         } else if (fixture.getName().endsWith(".lxf")) {
           addJsonFixture(fixture, prefix);
         }
