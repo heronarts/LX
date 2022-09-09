@@ -460,6 +460,7 @@ public class LX {
   }
 
   public LX pushStatusMessage(String message) {
+    log(message);
     this.statusMessage.setValue(message);
     return this;
   }
