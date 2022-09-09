@@ -62,6 +62,9 @@ import heronarts.lx.utils.LXUtils;
 
 public class JsonFixture extends LXFixture {
 
+  public static final String PATH_SEPARATOR = "/";
+  public static final char PATH_SEPARATOR_CHAR = '/';
+
   // Label
   private static final String KEY_LABEL = "label";
 
@@ -452,7 +455,7 @@ public class JsonFixture extends LXFixture {
    */
   private final StringParameter fixtureType =
     new StringParameter("Fixture File")
-    .setDescription("Fixture definition file name");
+    .setDescription("Fixture definition path");
 
   public final BooleanParameter error =
     new BooleanParameter("Error", false)
@@ -582,6 +585,10 @@ public class JsonFixture extends LXFixture {
 
   }
 
+  private File getFixtureFile(String fixtureType) {
+    return this.lx.getMediaFile(LX.Media.FIXTURES, fixtureType.replace(PATH_SEPARATOR, File.separator) + ".lxf", false);
+  }
+
   private void loadFixture(boolean loadParameters) {
     if (this.isLoaded) {
       LX.error(new Exception(), "Trying to load JsonFixture twice, why?");
@@ -589,7 +596,7 @@ public class JsonFixture extends LXFixture {
     }
     this.isLoaded = true;
 
-    File fixtureFile = this.lx.getMediaFile(LX.Media.FIXTURES, this.fixtureType.getString().replace("/", File.separator) + ".lxf", false);
+    File fixtureFile = getFixtureFile(this.fixtureType.getString());
     if (!fixtureFile.exists()) {
       setError("Invalid fixture type, could not find file: " + fixtureFile);
       return;
@@ -1473,6 +1480,18 @@ public class JsonFixture extends LXFixture {
     }
   }
 
+  private String getChildPrefix() {
+    String fixtureType = this.fixtureType.getString();
+    if (fixtureType == null || fixtureType.isEmpty()) {
+      return null;
+    }
+    int pathIndex = fixtureType.lastIndexOf(PATH_SEPARATOR_CHAR);
+    if (pathIndex > 0) {
+      return fixtureType.substring(0, pathIndex);
+    }
+    return null;
+  }
+
   private void loadChild(JsonObject childObj, ChildType type, String jsonType) {
     LXFixture child = null;
     switch (type) {
@@ -1489,8 +1508,22 @@ public class JsonFixture extends LXFixture {
       child = loadArc(childObj);
       break;
     case JSON:
-      if (jsonType == null) {
-        throw new IllegalArgumentException("May not create JsonFixture with null type");
+      if ((jsonType == null) || jsonType.isEmpty() || jsonType.equals(PATH_SEPARATOR)) {
+        throw new IllegalArgumentException("May not create JsonFixture with null or empty type");
+      }
+      if (jsonType.charAt(0) == PATH_SEPARATOR_CHAR) {
+        // If the provided fixture type is absolute, always go absolute
+        jsonType = jsonType.substring(0);
+      } else {
+        // Otherwise, check first relative to the folder that we are currently in
+        final String prefix = getChildPrefix();
+        if (prefix != null) {
+          String prefixedType = prefix + PATH_SEPARATOR + jsonType;
+          File file = getFixtureFile(prefixedType);
+          if (file.exists()) {
+            jsonType = prefixedType;
+          }
+        }
       }
       JsonFixture jsonChild = new JsonFixture(this.lx, this, childObj, jsonType);
       child = jsonChild;
