@@ -881,6 +881,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     return getClass().getSimpleName() + "[#" + this.id + "][" + getCanonicalPath(root) + "]";
   }
 
+  private boolean disposed = false;
+
   /**
    * Invoked when a component is being removed from the system and will no longer be used at all.
    * This unregisters the component and should free up any resources and parameter listeners.
@@ -893,8 +895,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    */
   public void dispose() {
     if (this.lx == null) {
-      throw new IllegalStateException("LXComponent never had lx reference set: " + this);
+      throw new IllegalStateException("LXComponent cannot dispose(), never had lx reference set: " + this);
     }
+    if (this.disposed) {
+      throw new IllegalStateException("Cannot dispose LXComponent twice: " + this);
+    }
+    this.disposed = true;
 
     // NOTE: we do not dispose of all children or child arrays automatically here. It is better
     // to leave this to explicit subclass implementations. Ordering can matter and child
