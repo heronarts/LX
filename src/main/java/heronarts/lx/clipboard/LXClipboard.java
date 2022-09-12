@@ -30,8 +30,12 @@ public class LXClipboard {
   }
 
   public LXClipboard setItem(LXClipboardItem item) {
+    return setItem(item, true);
+  }
+
+  public LXClipboard setItem(LXClipboardItem item, boolean pushToSystem) {
     this.item = item;
-    if (this.item != null) {
+    if ((this.item != null) && pushToSystem) {
       String clipboardString = item.getSystemClipboardString();
       if (clipboardString != null) {
         lx.setSystemClipboardString(clipboardString);
