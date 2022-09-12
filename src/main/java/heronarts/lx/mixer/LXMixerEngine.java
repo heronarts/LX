@@ -489,6 +489,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       index = this.mutableChannels.size();
     }
     LXChannel channel = new LXChannel(this.lx, index, patterns);
+    channel.fader.setValue(this.channels.isEmpty() ? 1 : 0);
     if (channelObj != null) {
       channel.load(this.lx, channelObj);
     }
