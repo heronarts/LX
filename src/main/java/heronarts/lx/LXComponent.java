@@ -130,6 +130,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     new DiscreteColorParameter("Modulation Color")
     .setDescription("The color used to indicate this modulation source");
 
+  public final BooleanParameter modulationControlsExpanded =
+    new BooleanParameter("Expanded", true)
+    .setDescription("Whether the modulation controls are expanded");
+
   // Prefix for internal implementation-only parameters
   private static final String INTERNAL_PREFIX = "internal/";
 
@@ -390,6 +394,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     this.label.setValue((label != null) ? label : LXComponent.getComponentName(getClass()));
     addParameter("label", this.label);
     addInternalParameter("modulationColor", this.modulationColor);
+    addInternalParameter("modulationControlsExpanded", this.modulationControlsExpanded);
   }
 
   /**
