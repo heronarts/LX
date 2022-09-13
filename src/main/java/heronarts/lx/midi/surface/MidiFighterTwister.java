@@ -25,6 +25,7 @@ import java.util.Map;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
@@ -929,7 +930,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     this.inUpdateBank = true;
     if (fromHardware) {
       // Update internal value if this came from hardware
-      this.currentBank.setValue(bank);
+      this.lx.command.perform(new LXCommand.Parameter.SetValue(this.currentBank, bank));
     } else {
       // Tell the hardware the new state if this change was internal
       sendControlChange(CHANNEL_SYSTEM, bank, BANK_ON);
@@ -1044,13 +1045,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           case BANK3_LEFT1:
           case BANK4_LEFT1:
             // Change scroll mode
-            this.focusMode.increment();
+            this.lx.command.perform(new LXCommand.Parameter.Increment(this.focusMode));
             return;
           case BANK1_RIGHT1:
           case BANK2_RIGHT1:
           case BANK3_RIGHT1:
           case BANK4_RIGHT1:
-            this.isAux.toggle();
+            this.lx.command.perform(new LXCommand.Parameter.Toggle(this.isAux));
             return;
           case BANK1_LEFT2:
           case BANK2_LEFT2:
