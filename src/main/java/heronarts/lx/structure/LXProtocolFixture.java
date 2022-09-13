@@ -74,6 +74,10 @@ public abstract class LXProtocolFixture extends LXFixture {
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which ArtNet universe is used");
 
+  public final BooleanParameter artNetSequenceEnabled =
+    new BooleanParameter("ArtNet Sequence", false)
+    .setDescription("Whether ArtNet sequence numbers are used");
+
   public final DiscreteParameter opcChannel = (DiscreteParameter)
     new DiscreteParameter("OPC Channel", 0, 0, 256)
     .setUnits(LXParameter.Units.INTEGER)
@@ -169,6 +173,15 @@ public abstract class LXProtocolFixture extends LXFixture {
     case NONE:
     default:
       return 0;
+    }
+  }
+
+  protected boolean getProtocolSequenceEnabled() {
+    switch (this.protocol.getEnum()) {
+    case ARTNET:
+      return this.artNetSequenceEnabled.isOn();
+    default:
+      return false;
     }
   }
 }

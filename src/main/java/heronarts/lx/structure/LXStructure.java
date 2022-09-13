@@ -79,16 +79,18 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       private final InetAddress address;
       private final int port;
       private final int universe;
+      private boolean sequenceEnabled;
       private float fps = 0f;
 
       private final List<IndexBuffer.Segment> segments = new ArrayList<IndexBuffer.Segment>();
 
-      private Packet(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe) {
+      private Packet(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe, boolean sequenceEnabled) {
         this.protocol = protocol;
         this.transport = transport;
         this.address = address;
         this.port = port;
         this.universe = universe;
+        this.sequenceEnabled = sequenceEnabled;
       }
 
       private boolean checkOverflow() {
@@ -177,7 +179,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         LXOutput output = null;
         switch (this.protocol) {
         case ARTNET:
-          output = new ArtNetDatagram(lx, toIndexBuffer(), this.universe);
+          output =
+            new ArtNetDatagram(lx, toIndexBuffer(), this.universe)
+            .setSequenceEnabled(this.sequenceEnabled);
           break;
         case SACN:
           output = new StreamingACNDatagram(lx, toIndexBuffer(), this.universe);
@@ -208,7 +212,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
     }
 
-    private Packet findPacket(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe) {
+    private Packet findPacket(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe, boolean sequenceEnabled) {
       // Check if there's an existing packet for this address space
       for (Packet packet : this.packets) {
         if ((packet.protocol == protocol)
@@ -216,12 +220,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
           && (packet.address.equals(address))
           && (packet.port == port)
           && (packet.universe == universe)) {
+
+          // Sequences enabled if any segment demands it
+          packet.sequenceEnabled = packet.sequenceEnabled || sequenceEnabled;
           return packet;
         }
       }
 
       // Create a new packet for this address space
-      Packet packet = new Packet(protocol, transport, address, port, universe);
+      Packet packet = new Packet(protocol, transport, address, port, universe, sequenceEnabled);
       this.packets.add(packet);
       return packet;
     }
@@ -281,17 +288,18 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
 
     private void rebuildFixtureOutput(LXFixture fixture, LXFixture.OutputDefinition output) {
-      LXFixture.Protocol protocol = output.protocol;
-      LXFixture.Transport transport = output.transport;
-      InetAddress address = output.address;
-      int port = output.port;
+      final LXFixture.Protocol protocol = output.protocol;
+      final LXFixture.Transport transport = output.transport;
+      final InetAddress address = output.address;
+      final int port = output.port;
       int universe = output.universe;
       int channel = output.channel;
-      float fps = output.fps;
+      final boolean sequenceEnabled = output.sequenceEnabled;
+      final float fps = output.fps;
       boolean overflow = false;
 
       // Find the starting packet for this output definition
-      Packet packet = findPacket(protocol, transport, address, port, universe);
+      Packet packet = findPacket(protocol, transport, address, port, universe, sequenceEnabled);
       for (LXFixture.Segment segment : output.segments) {
         if (overflow) {
           // Is it okay for this type to overlow?
@@ -302,7 +310,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
           overflow = false;
           ++universe;
           channel = 0;
-          packet = findPacket(protocol, transport, address, port, universe);
+          packet = findPacket(protocol, transport, address, port, universe, sequenceEnabled);
         }
 
         int chunkStart = 0;
@@ -326,7 +334,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
             chunkLength -= chunkLimit;
           }
 
-          // Is it okay for this type to overlow?
+          // Is it okay for this type to overflow?
           if (!packet.checkOverflow()) {
             return;
           }
@@ -335,7 +343,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
           ++universe;
           channel = 0;
           availableBytes = protocol.maxChannels;
-          packet = findPacket(protocol, transport, address, port, universe);
+          packet = findPacket(protocol, transport, address, port, universe, sequenceEnabled);
         }
 
         // Add the final chunk (the whole segment in the common case)

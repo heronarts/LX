@@ -245,6 +245,9 @@ public class ArtNetDatagram extends LXDatagram {
    */
   public ArtNetDatagram setSequenceEnabled(boolean sequenceEnabled) {
     this.sequenceEnabled = sequenceEnabled;
+    if (!this.sequenceEnabled) {
+      this.buffer[SEQUENCE_INDEX] = 0;
+    }
     return this;
   }
 
@@ -256,6 +259,8 @@ public class ArtNetDatagram extends LXDatagram {
   @Override
   protected void updateSequenceNumber() {
     if (this.sequenceEnabled) {
+      // NOTE: ++ will overflow byte and wrap-around, but 0
+      // means sequence disabled, so push 0 to 1
       if (++this.sequence == 0) {
         ++this.sequence;
       }

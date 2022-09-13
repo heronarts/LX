@@ -136,6 +136,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_KINET_PORT = "kinetPort";
   private static final String KEY_OPC_CHANNEL = "channel";
   private static final String KEY_CHANNEL = "channel";
+  private static final String KEY_SEQUENCE_ENABLED = "sequenceEnabled";
   private static final String KEY_OFFSET = "offset";
   private static final String KEY_START = "start";
   private static final String KEY_COMPONENT_INDEX = "componentIndex";
@@ -414,10 +415,11 @@ public class JsonFixture extends LXFixture {
     private final int port;
     private final int universe;
     private final int channel;
+    private final boolean sequenceEnabled;
     private final float fps;
     private final List<JsonSegmentDefinition> segments;
 
-    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int channel, float fps, List<JsonSegmentDefinition> segments) {
+    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int channel, boolean sequenceEnabled, float fps, List<JsonSegmentDefinition> segments) {
       this.fixture = fixture;
       this.protocol = protocol;
       this.transport = transport;
@@ -426,6 +428,7 @@ public class JsonFixture extends LXFixture {
       this.port = port;
       this.universe = universe;
       this.channel = channel;
+      this.sequenceEnabled = sequenceEnabled;
       this.fps = fps;
       this.segments = segments;
     }
@@ -1663,6 +1666,8 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
+    final boolean sequenceEnabled = loadBoolean(outputObj, KEY_SEQUENCE_ENABLED, true, "Output " + KEY_SEQUENCE_ENABLED + " must be a valid boolean");
+
     // Top level output byte-order
     JsonByteOrderDefinition byteOrder = loadByteOrder(outputObj, JsonByteOrderDefinition.RGB);
 
@@ -1670,7 +1675,7 @@ public class JsonFixture extends LXFixture {
     List<JsonSegmentDefinition> segments = new ArrayList<JsonSegmentDefinition>();
     loadSegments(fixture, segments, outputObj, byteOrder);
 
-    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, fps, segments));
+    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, sequenceEnabled, fps, segments));
   }
 
   private void loadMetaData(JsonObject obj, Map<String, String> metaData) {
@@ -1850,6 +1855,7 @@ public class JsonFixture extends LXFixture {
       (output.port == JsonOutputDefinition.DEFAULT_PORT) ? output.protocol.protocol.defaultPort : output.port,
       output.universe,
       output.channel,
+      output.sequenceEnabled,
       output.fps,
       segments.toArray(new Segment[0])
     ));

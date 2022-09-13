@@ -37,6 +37,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
     addOutputParameter("port", this.port);
     addOutputParameter("dmxChannel", this.dmxChannel);
     addOutputParameter("artNetUniverse", this.artNetUniverse);
+    addOutputParameter("artNetSequenceEnabled", this.artNetSequenceEnabled);
     addOutputParameter("opcChannel", this.opcChannel);
     addOutputParameter("opcOffset", this.opcOffset);
     addOutputParameter("ddpDataOffset", this.ddpDataOffset);
@@ -62,6 +63,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       getProtocolPort(),
       getProtocolUniverse(),
       getProtocolChannel(),
+      getProtocolSequenceEnabled(),
       OutputDefinition.FPS_UNSPECIFIED,
       buildSegment()
     ));

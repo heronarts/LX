@@ -215,16 +215,18 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     protected final int port;
     protected final int universe;
     protected final int channel;
+    protected final boolean sequenceEnabled;
     protected final float fps;
     protected final Segment[] segments;
 
-    public OutputDefinition(Protocol protocol, Transport transport, InetAddress address, int port, int universe, int channel, float fps, Segment ... segments) {
+    public OutputDefinition(Protocol protocol, Transport transport, InetAddress address, int port, int universe, int channel, boolean sequenceEnabled, float fps, Segment ... segments) {
       this.protocol = protocol;
       this.transport = transport;
       this.address = address;
       this.port = port;
       this.universe = universe;
       this.channel = channel;
+      this.sequenceEnabled = sequenceEnabled;
       this.fps = fps;
       this.segments = segments;
     }
