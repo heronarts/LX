@@ -56,7 +56,7 @@ public class LXOscQueryServer {
         this.serverSocket.setReuseAddress(true);
         start();
       } catch (IOException iox) {
-        LX.error("Could not create LXOscQueryServer server socket", iox);
+        LX.error(iox, "Could not create LXOscQueryServer server socket");
         this.serverSocket = null;
       }
     }

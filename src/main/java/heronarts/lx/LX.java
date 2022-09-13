@@ -1204,11 +1204,7 @@ public class LX {
     _log(System.err, message);
   }
 
-  public static void error(Exception x) {
-    error(x, x.getCause().getClass().getName() + ":" + x.getLocalizedMessage());
-  }
-
-  public static void error(String prefix, Throwable x) {
+  public static void error(Throwable x) {
     error(x, x.getCause().getClass().getName() + ":" + x.getLocalizedMessage());
   }
 
