@@ -892,6 +892,10 @@ public class LX {
     return max;
   }
 
+  public boolean isLoading() {
+    return this.componentRegistry.projectLoading;
+  }
+
   public void newProject() {
     confirmChangesSaved("create a new project", () -> {
       closeProject();
