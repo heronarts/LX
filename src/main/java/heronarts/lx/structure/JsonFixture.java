@@ -25,6 +25,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -106,6 +107,11 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_COMPONENTS = "components";
   private static final String KEY_CHILDREN = "children";
   private static final String KEY_TYPE = "type";
+  private static final String KEY_ID = "id";
+  private static final String KEY_INSTANCES = "instances";
+  private static final String KEY_INSTANCE = "instance";
+  private static final int MAX_INSTANCES = 4096;
+
   private static final String TYPE_POINT = "point";
   private static final String TYPE_POINTS = "points";
   private static final String TYPE_STRIP = "strip";
@@ -140,6 +146,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_OFFSET = "offset";
   private static final String KEY_START = "start";
   private static final String KEY_COMPONENT_INDEX = "componentIndex";
+  private static final String KEY_COMPONENT_ID = "componentId";
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
   private static final String KEY_REVERSE = "reverse";
@@ -352,23 +359,23 @@ public class JsonFixture extends LXFixture {
     }
 
     private ParameterDefinition(String name, String label, String description, String defaultStr) {
-      this(name, label, description, ParameterType.STRING, new StringParameter(name, defaultStr));
+      this(name, label, description, ParameterType.STRING, new StringParameter(label, defaultStr));
     }
 
     private ParameterDefinition(String name, String label, String description, int defaultInt, int minInt, int maxInt) {
-      this(name, label, description, ParameterType.INT, new DiscreteParameter(name, defaultInt, minInt, maxInt + 1));
+      this(name, label, description, ParameterType.INT, new DiscreteParameter(label, defaultInt, minInt, maxInt + 1));
     }
 
     private ParameterDefinition(String name, String label, String description, float defaultFloat) {
-      this(name, label, description, ParameterType.FLOAT, new BoundedParameter(name, defaultFloat, -Float.MAX_VALUE, Float.MAX_VALUE));
+      this(name, label, description, ParameterType.FLOAT, new BoundedParameter(label, defaultFloat, -Float.MAX_VALUE, Float.MAX_VALUE));
     }
 
     private ParameterDefinition(String name, String label, String description, boolean defaultBoolean) {
-      this(name, label, description, ParameterType.BOOLEAN, new BooleanParameter(name, defaultBoolean));
+      this(name, label, description, ParameterType.BOOLEAN, new BooleanParameter(label, defaultBoolean));
     }
 
     private ParameterDefinition(String name, String label, String description, String defaultStr, List<String> stringOptions) {
-      this(name, label, description, ParameterType.STRING_SELECT, new ObjectParameter<String>(name, stringOptions.toArray(new String[0]), defaultStr));
+      this(name, label, description, ParameterType.STRING_SELECT, new ObjectParameter<String>(label, stringOptions.toArray(new String[0]), defaultStr));
     }
 
     private void dispose() {
@@ -480,6 +487,8 @@ public class JsonFixture extends LXFixture {
 
   private final List<JsonOutputDefinition> definedOutputs = new ArrayList<JsonOutputDefinition>();
 
+  private final Map<String, LXFixture> childrenById = new HashMap<String, LXFixture>();
+
   private final LinkedHashMap<String, ParameterDefinition> definedParameters = new LinkedHashMap<String, ParameterDefinition>();
   private final LinkedHashMap<String, ParameterDefinition> reloadParameterValues = new LinkedHashMap<String, ParameterDefinition>();
 
@@ -487,11 +496,13 @@ public class JsonFixture extends LXFixture {
   // a sub-fixture, parameter values may come from our parent
   private final JsonFixture jsonParameterContext;
 
-  // Flaa to indicate if this is a subfixture of a parent JSON fixture
+  // Flag to indicate if this is a subfixture of a parent JSON fixture
   private final boolean isJsonSubfixture;
 
   // Dictionary of values for local parameters (not the parent)
   private JsonObject jsonParameterValues = new JsonObject();
+
+  private int currentChildInstance = -1;
 
   public JsonFixture(LX lx) {
     this(lx, null);
@@ -581,6 +592,7 @@ public class JsonFixture extends LXFixture {
       child.dispose();
     }
     this.mutableChildren.clear();
+    this.childrenById.clear();
 
     this.isLoaded = false;
     loadFixture(reloadParameters);
@@ -686,42 +698,54 @@ public class JsonFixture extends LXFixture {
     Matcher matcher = parameterPattern.matcher(expression);
     while (matcher.find()) {
       String parameterName = matcher.group(1);
-      ParameterDefinition parameter = this.definedParameters.get(parameterName);
-      if (parameter == null) {
-        addWarning("Illegal reference in " + key + ", there is no parameter: " + parameterName);
-        return null;
-      }
-      parameter.isReferenced = true;
       String parameterValue = "";
-      switch (returnType) {
-      case FLOAT:
-        if (parameter.type == ParameterType.FLOAT || parameter.type == ParameterType.INT) {
-          parameterValue = String.valueOf(parameter.parameter.getValue());
-        } else {
-          addWarning("Cannot load non-numeric parameter ${" + parameterName + "} into a float type: " + key);
-          return null;
-        }
-        break;
-      case INT:
-        if (parameter.type == ParameterType.INT) {
-          parameterValue = String.valueOf(parameter.intParameter.getValuei());
-        } else {
-          addWarning("Cannot load non-integer parameter ${" + parameterName + "} into an integer type: " + key);
-          return null;
-        }
-        break;
-      case STRING:
-      case STRING_SELECT:
-        parameterValue = parameter.getValueAsString();
-        break;
-      case BOOLEAN:
-        if (parameter.type == ParameterType.BOOLEAN) {
-          parameterValue = String.valueOf(parameter.booleanParameter.isOn());
-        } else {
+
+      if (KEY_INSTANCE.equals(parameterName)) {
+
+        parameterValue = String.valueOf(this.currentChildInstance);
+        if (returnType == ParameterType.BOOLEAN) {
           addWarning("Cannot load non-boolean parameter ${" + parameterName + "} into a boolean type: " + key);
           return null;
         }
-        break;
+
+      } else {
+        ParameterDefinition parameter = this.definedParameters.get(parameterName);
+        if (parameter == null) {
+          addWarning("Illegal reference in " + key + ", there is no parameter: " + parameterName);
+          return null;
+        }
+        parameter.isReferenced = true;
+
+        switch (returnType) {
+        case FLOAT:
+          if (parameter.type == ParameterType.FLOAT || parameter.type == ParameterType.INT) {
+            parameterValue = String.valueOf(parameter.parameter.getValue());
+          } else {
+            addWarning("Cannot load non-numeric parameter ${" + parameterName + "} into a float type: " + key);
+            return null;
+          }
+          break;
+        case INT:
+          if (parameter.type == ParameterType.INT) {
+            parameterValue = String.valueOf(parameter.intParameter.getValuei());
+          } else {
+            addWarning("Cannot load non-integer parameter ${" + parameterName + "} into an integer type: " + key);
+            return null;
+          }
+          break;
+        case STRING:
+        case STRING_SELECT:
+          parameterValue = parameter.getValueAsString();
+          break;
+        case BOOLEAN:
+          if (parameter.type == ParameterType.BOOLEAN) {
+            parameterValue = String.valueOf(parameter.booleanParameter.isOn());
+          } else {
+            addWarning("Cannot load non-boolean parameter ${" + parameterName + "} into a boolean type: " + key);
+            return null;
+          }
+          break;
+        }
       }
       result.append(expression, index, matcher.start());
       result.append(parameterValue);
@@ -1093,6 +1117,10 @@ public class JsonFixture extends LXFixture {
         addWarning("Invalid parameter name, must be non-empty only containing ASCII alphanumerics: " + parameterName);
         continue;
       }
+      if (parameterName.equals(KEY_INSTANCES) || parameterName.equals(KEY_INSTANCE)) {
+        addWarning("Invalid parameter name, keyword is reserved: " + parameterName);
+        continue;
+      }
       String parameterLabel = parameterName;
       if (this.definedParameters.containsKey(parameterName)) {
         addWarning("Parameter cannot be defined twice: " + parameterName);
@@ -1461,6 +1489,7 @@ public class JsonFixture extends LXFixture {
   }
 
   private void loadChild(JsonObject childObj) {
+
     if (!childObj.has(KEY_TYPE)) {
       addWarning("Child object must specify type");
       return;
@@ -1470,16 +1499,48 @@ public class JsonFixture extends LXFixture {
       addWarning("Child object must specify valid non-empty type: " + type);
       return;
     }
-    if (TYPE_POINT.equals(type)) {
-      loadChild(childObj, ChildType.POINT, null);
-    } else if (TYPE_POINTS.equals(type)) {
-      loadChild(childObj, ChildType.POINTS, null);
-    } else if (TYPE_STRIP.equals(type)) {
-      loadChild(childObj, ChildType.STRIP, null);
-    } else if (TYPE_ARC.equals(type)) {
-      loadChild(childObj, ChildType.ARC, null);
+
+    if (childObj.has(KEY_ENABLED)) {
+      boolean enabled = loadBoolean(childObj, KEY_ENABLED, true, "Child object must specify boolean expression for " + KEY_ENABLED);
+      if (!enabled) {
+        return;
+      }
+    }
+
+    if (childObj.has(KEY_INSTANCES)) {
+
+      int numInstances = loadInt(childObj, KEY_INSTANCES, true, "Child object must specify positive number of instances");
+      if (numInstances <= 0) {
+        addWarning("Child object specifies illegal number of instances: " + numInstances);
+        return;
+      }
+      if (numInstances >= MAX_INSTANCES) {
+        addWarning("Child object specifies too many instances: " + numInstances + " >= " + MAX_INSTANCES);
+        return;
+      }
+
+      // Load this child N times with an instance variable set
+      for (int i = 0; i < numInstances; ++i) {
+        this.currentChildInstance = i;
+        JsonObject instanceObj = childObj.deepCopy();
+        instanceObj.remove(KEY_INSTANCES);
+        loadChild(instanceObj);
+      }
+      this.currentChildInstance = -1;
+
     } else {
-      loadChild(childObj, ChildType.JSON, type);
+
+      if (TYPE_POINT.equals(type)) {
+        loadChild(childObj, ChildType.POINT, null);
+      } else if (TYPE_POINTS.equals(type)) {
+        loadChild(childObj, ChildType.POINTS, null);
+      } else if (TYPE_STRIP.equals(type)) {
+        loadChild(childObj, ChildType.STRIP, null);
+      } else if (TYPE_ARC.equals(type)) {
+        loadChild(childObj, ChildType.ARC, null);
+      } else {
+        loadChild(childObj, ChildType.JSON, type);
+      }
     }
   }
 
@@ -1562,6 +1623,17 @@ public class JsonFixture extends LXFixture {
 
       // Set child enabled
       child.enabled.setValue(this.enabled.isOn());
+
+      // Check for an ID by which outputs can reference this
+      String childId = loadString(childObj, KEY_ID, true, "Component ID must be a valid string");
+      if (childId != null) {
+        if (this.currentChildInstance <= 0) {
+          this.childrenById.put(childId, child);
+        }
+        if (this.currentChildInstance >= 0) {
+          this.childrenById.put(childId + "[" + this.currentChildInstance + "]", child);
+        }
+      }
 
       // Add child to the tree
       addChild(child, true);
@@ -1693,7 +1765,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_STRIDE, KEY_REVERSE };
+  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_COMPONENT_ID, KEY_STRIDE, KEY_REVERSE };
 
   private void loadSegments(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject outputObj, JsonByteOrderDefinition defaultByteOrder) {
     if (outputObj.has(KEY_SEGMENTS)) {
@@ -1722,7 +1794,28 @@ public class JsonFixture extends LXFixture {
 
   private void loadSegment(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject segmentObj, JsonByteOrderDefinition outputByteOrder, boolean isOutput) {
     int start = 0, num = JsonOutputDefinition.ALL_POINTS;
-    if (segmentObj.has(KEY_COMPONENT_INDEX)) {
+    if (segmentObj.has(KEY_COMPONENT_ID)) {
+      if (segmentObj.has(KEY_START)) {
+        addWarning("Output specifies " + KEY_COMPONENT_ID + ", ignoring " + KEY_START);
+      }
+      if (!(fixture instanceof JsonFixture)) {
+        addWarning("Output " + KEY_COMPONENT_INDEX + " may only be used on custom fixtures");
+        return;
+      }
+      String componentId = loadString(segmentObj, KEY_COMPONENT_ID, true, "Output " + KEY_COMPONENT_ID + " must be a valid string");
+      if (componentId == null) {
+        addWarning("Output " + KEY_COMPONENT_ID + " may not be empty");
+        return;
+      }
+      LXFixture childComponent = ((JsonFixture) fixture).childrenById.get(componentId);
+      if (childComponent == null) {
+        addWarning("Output " + KEY_COMPONENT_ID + " does not exist: " + componentId);
+        return;
+      }
+      start = ((JsonFixture) fixture).getFixtureOffset(childComponent);
+      num = childComponent.totalSize();
+
+    } else if (segmentObj.has(KEY_COMPONENT_INDEX)) {
       if (segmentObj.has(KEY_START)) {
         addWarning("Output specifies " + KEY_COMPONENT_INDEX + ", ignoring " + KEY_START);
       }
