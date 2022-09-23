@@ -1628,10 +1628,14 @@ public class JsonFixture extends LXFixture {
       String childId = loadString(childObj, KEY_ID, true, "Component ID must be a valid string");
       if (childId != null) {
         if (this.currentChildInstance <= 0) {
-          this.childrenById.put(childId, child);
+          if (childrenById.containsKey(childId)) {
+            addWarning("Cannot duplicate component ID already in use: " + childId);
+          } else {
+            this.childrenById.put(childId, child);
+          }
         }
         if (this.currentChildInstance >= 0) {
-          this.childrenById.put(childId + "[" + this.currentChildInstance + "]", child);
+          this.childrenById.putIfAbsent(childId + "[" + this.currentChildInstance + "]", child);
         }
       }
 
