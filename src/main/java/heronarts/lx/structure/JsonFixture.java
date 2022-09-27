@@ -773,7 +773,9 @@ public class JsonFixture extends LXFixture {
 
   private final static char[] SIMPLE_EXPRESSION_OPERATORS = { '+', '-', '*', '/' };
 
-  // Super-trivial implementation of *very* basic math expressions
+  // Super-trivial hacked up implementation of *very* basic math expressions, which has now
+  // got some functions tacked on. If this slippery slope keeps sliding will need to get a
+  // real expression parsing + evaluation library involved at some point...
   private float _evaluateSimpleExpression(JsonObject obj, String key, String expression) {
     char[] chars = expression.toCharArray();
 
@@ -829,6 +831,29 @@ public class JsonFixture extends LXFixture {
       }
     }
 
+    // Unary function operators!
+    if (chars[0] == '-') {
+      // Float.parseFloat() would handle one of these fine, but it won't handle
+      // them potentially stacking up at the front, so do it manually
+      return -_evaluateSimpleExpression(obj, key, expression.substring(1));
+    }
+    if (expression.startsWith("sin")) {
+      return (float) Math.sin(Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3))));
+    }
+    if (expression.startsWith("cos")) {
+      return (float) Math.cos(Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3))));
+    }
+    if (expression.startsWith("tan")) {
+      return (float) Math.tan(Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3))));
+    }
+    if (expression.startsWith("rad")) {
+      return (float) Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3)));
+    }
+    if (expression.startsWith("deg")) {
+      return (float) Math.toDegrees(_evaluateSimpleExpression(obj, key, expression.substring(3)));
+    }
+
+    // All clear this should just be a number now
     return Float.parseFloat(expression);
   }
 
