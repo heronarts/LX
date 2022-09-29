@@ -48,6 +48,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * Encapsulation of all the LX channel blending and mixer
@@ -424,36 +425,22 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   }
 
   public LXMixerEngine selectChannelRange(LXBus destination) {
-    LXGroup selectedGroup = null;
-    int minIndex = -1, maxIndex = -1;
-    int selectIndex = destination.getIndex();
+    final int focusIndex = this.focusedChannel.getValuei();
+    final int selectIndex = destination.getIndex();
+    final LXGroup selectedGroup = getFocusedChannel().getGroup();
+
+    final int minIndex = LXUtils.min(focusIndex, selectIndex);
+    final int maxIndex = LXUtils.max(focusIndex, selectIndex);
 
     for (LXAbstractChannel bus : this.channels) {
-      if (bus.selected.isOn()) {
-        selectedGroup = bus.getGroup();
-        if (minIndex == -1) {
-          minIndex = bus.getIndex();
-        }
-        maxIndex = bus.getIndex();
-      }
+      final int busIndex = bus.getIndex();
+      bus.selected.setValue(
+        (bus.getGroup() == selectedGroup) &&
+        (busIndex >= minIndex) &&
+        (busIndex <= maxIndex)
+      );
     }
-
-    if (selectIndex < minIndex) {
-      maxIndex = minIndex;
-      minIndex = selectIndex;
-    } else {
-      minIndex = maxIndex;
-      maxIndex = selectIndex;
-    }
-
-    for (LXAbstractChannel bus : this.channels) {
-      int busIndex = bus.getIndex();
-      boolean selected = (bus.getGroup() == selectedGroup) && (busIndex >= minIndex) && (busIndex <= maxIndex);
-      bus.selected.setValue(selected);
-    }
-
     this.masterBus.selected.setValue(false);
-
     return this;
   }
 
