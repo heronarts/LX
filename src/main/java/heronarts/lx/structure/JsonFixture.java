@@ -23,6 +23,7 @@ import java.io.FileReader;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -487,7 +488,8 @@ public class JsonFixture extends LXFixture {
 
   private final List<JsonOutputDefinition> definedOutputs = new ArrayList<JsonOutputDefinition>();
 
-  private final Map<String, LXFixture> childrenById = new HashMap<String, LXFixture>();
+  private final Map<String, List<LXFixture>> componentsById = new HashMap<String, List<LXFixture>>();
+  private final List<List<LXFixture>> componentsByIndex = new ArrayList<List<LXFixture>>();
 
   private final LinkedHashMap<String, ParameterDefinition> definedParameters = new LinkedHashMap<String, ParameterDefinition>();
   private final LinkedHashMap<String, ParameterDefinition> reloadParameterValues = new LinkedHashMap<String, ParameterDefinition>();
@@ -592,7 +594,8 @@ public class JsonFixture extends LXFixture {
       child.dispose();
     }
     this.mutableChildren.clear();
-    this.childrenById.clear();
+    this.componentsById.clear();
+    this.componentsByIndex.clear();
 
     this.isLoaded = false;
     loadFixture(reloadParameters);
@@ -1506,6 +1509,8 @@ public class JsonFixture extends LXFixture {
     }
     for (JsonElement componentElem : componentsArr) {
       if (componentElem.isJsonObject()) {
+        // Push an element onto the index array
+        this.componentsByIndex.add(null);
         loadChild(componentElem.getAsJsonObject());
       } else if (!componentElem.isJsonNull()) {
         addWarning(KEY_COMPONENTS + " should only contain child elements in JSON object format, found invalid: " + componentElem);
@@ -1514,7 +1519,6 @@ public class JsonFixture extends LXFixture {
   }
 
   private void loadChild(JsonObject childObj) {
-
     if (!childObj.has(KEY_TYPE)) {
       addWarning("Child object must specify type");
       return;
@@ -1652,17 +1656,36 @@ public class JsonFixture extends LXFixture {
       // Check for an ID by which outputs can reference this
       String childId = loadString(childObj, KEY_ID, true, "Component ID must be a valid string");
       if (childId != null) {
+        boolean duplicated = false;
         if (this.currentChildInstance <= 0) {
-          if (childrenById.containsKey(childId)) {
+          if (this.componentsById.containsKey(childId)) {
             addWarning("Cannot duplicate component ID already in use: " + childId);
+            duplicated = true;
           } else {
-            this.childrenById.put(childId, child);
+            // Non-instanced children are tracked here, as well as master instance 0
+            List<LXFixture> children = new ArrayList<LXFixture>();
+            children.add(child);
+            this.componentsById.put(childId, children);
           }
         }
-        if (this.currentChildInstance >= 0) {
-          this.childrenById.putIfAbsent(childId + "[" + this.currentChildInstance + "]", child);
+        // This is an instanced child, add to the list of children
+        if (!duplicated && this.currentChildInstance >= 0) {
+          // NB: instance 0 was added above to prime the list, only add later instances here
+          if (this.currentChildInstance > 0) {
+            this.componentsById.get(childId).add(child);
+          }
+          // Also add tracking to individual child instances
+          this.componentsById.putIfAbsent(childId + "[" + this.currentChildInstance + "]", Arrays.asList(new LXFixture[] { child }));
         }
       }
+
+      // Keep track of fixture in component list
+      List<LXFixture> list = this.componentsByIndex.get(this.componentsByIndex.size() - 1);
+      if (list == null) {
+        list = new ArrayList<LXFixture>();
+        this.componentsByIndex.set(this.componentsByIndex.size() - 1, list);
+      }
+      list.add(child);
 
       // Add child to the tree
       addChild(child, true);
@@ -1828,7 +1851,7 @@ public class JsonFixture extends LXFixture {
         addWarning("Output specifies " + KEY_COMPONENT_ID + ", ignoring " + KEY_START);
       }
       if (!(fixture instanceof JsonFixture)) {
-        addWarning("Output " + KEY_COMPONENT_INDEX + " may only be used on custom fixtures");
+        addWarning("Output " + KEY_COMPONENT_ID + " may only be used on custom fixtures");
         return;
       }
       String componentId = loadString(segmentObj, KEY_COMPONENT_ID, true, "Output " + KEY_COMPONENT_ID + " must be a valid string");
@@ -1836,14 +1859,16 @@ public class JsonFixture extends LXFixture {
         addWarning("Output " + KEY_COMPONENT_ID + " may not be empty");
         return;
       }
-      LXFixture childComponent = ((JsonFixture) fixture).childrenById.get(componentId);
-      if (childComponent == null) {
+      List<LXFixture> childComponents = ((JsonFixture) fixture).componentsById.get(componentId);
+      if (childComponents == null) {
         addWarning("Output " + KEY_COMPONENT_ID + " does not exist: " + componentId);
         return;
       }
-      start = ((JsonFixture) fixture).getFixtureOffset(childComponent);
-      num = childComponent.totalSize();
-
+      start = ((JsonFixture) fixture).getFixtureOffset(childComponents.get(0));
+      num = 0;
+      for (LXFixture childFixture : childComponents) {
+        num += childFixture.totalSize();
+      }
     } else if (segmentObj.has(KEY_COMPONENT_INDEX)) {
       if (segmentObj.has(KEY_START)) {
         addWarning("Output specifies " + KEY_COMPONENT_INDEX + ", ignoring " + KEY_START);
@@ -1854,16 +1879,23 @@ public class JsonFixture extends LXFixture {
       }
       int componentIndex = loadInt(segmentObj, KEY_COMPONENT_INDEX, true, "Output " + KEY_COMPONENT_INDEX + " must be a valid integer");
       if (componentIndex < 0) {
-        addWarning("Output " + KEY_COMPONENT_INDEX + " may not be negative");
+        addWarning("Output " + KEY_COMPONENT_INDEX + " may not be negative (" + componentIndex + ")");
         return;
       }
-      if (componentIndex >= fixture.children.size()) {
+      if (componentIndex >= ((JsonFixture) fixture).componentsByIndex.size()) {
         addWarning("Output " + KEY_COMPONENT_INDEX + " is out of fixture range (" + componentIndex + ")");
         return;
       }
-      LXFixture childComponent = fixture.children.get(componentIndex);
-      start = ((JsonFixture) fixture).getFixtureOffset(childComponent);
-      num = childComponent.totalSize();
+      List<LXFixture> childComponents = ((JsonFixture) fixture).componentsByIndex.get(componentIndex);
+      if (childComponents == null) {
+        addWarning("Output " + KEY_COMPONENT_INDEX + " in invalid or disabled (" + componentIndex + ")");
+        return;
+      }
+      start = ((JsonFixture) fixture).getFixtureOffset(childComponents.get(0));
+      num = 0;
+      for (LXFixture childFixture : childComponents) {
+        num += childFixture.totalSize();
+      }
     } else {
       start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
       if (start < 0) {
