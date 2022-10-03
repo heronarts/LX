@@ -64,6 +64,8 @@ public abstract class LXPeriodicModulator extends LXModulator {
 
   private boolean needsReset = false;
 
+  private boolean disableAutoReset = false;
+
   /**
    * Whether the modulator looped on this cycle.
    */
@@ -111,7 +113,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     if (p == this.running) {
       if (this.running.isOn()) {
         this.restarted = true;
-        if (this.needsReset) {
+        if (this.needsReset && !this.disableAutoReset) {
           this.setBasis(0);
         }
       }
@@ -131,6 +133,11 @@ public abstract class LXPeriodicModulator extends LXModulator {
    */
   public LXPeriodicModulator setLooping(boolean looping) {
     this.looping.setValue(looping);
+    return this;
+  }
+
+  public LXPeriodicModulator disableAutoReset() {
+    this.disableAutoReset = true;
     return this;
   }
 
