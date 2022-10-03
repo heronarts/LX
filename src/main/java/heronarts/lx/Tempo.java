@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -47,7 +48,7 @@ import heronarts.lx.parameter.MutableParameter;
  *   - {@link #measure()} can be polled to check measure beats, respectively.
  *   - {@link Listener}'s can be added to trigger on beats or measures without polling the Tempo object.
  */
-public class Tempo extends LXModulatorComponent implements LXOscComponent {
+public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTriggerSource {
 
   public final static double DEFAULT_MIN_BPM = 20;
   public final static double DEFAULT_MAX_BPM = 240;
@@ -578,4 +579,9 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent {
       }
     }
   }
+  @Override
+  public BooleanParameter getTriggerSource() {
+    return this.trigger;
+  }
+
 }
