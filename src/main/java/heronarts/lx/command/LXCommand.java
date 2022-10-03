@@ -1377,7 +1377,7 @@ public abstract class LXCommand {
           if (this.modulatorObj == null) {
             this.modulatorObj = LXSerializable.Utils.toObject(instance);
           }
-          instance.start();
+          instance.autostart();
           this.modulator = new ComponentReference<LXModulator>(instance);
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);

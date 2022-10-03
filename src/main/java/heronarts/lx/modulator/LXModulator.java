@@ -66,6 +66,8 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
 
   private int index = 0;
 
+  private boolean autoStart = true;
+
   /**
    * The current computed value of this modulator.
    */
@@ -78,6 +80,11 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    */
   protected LXModulator(String label) {
     super(label);
+  }
+
+  protected LXModulator disableAutoStart() {
+    this.autoStart = false;
+    return this;
   }
 
   /**
@@ -224,6 +231,15 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
   protected final LXModulator updateValue(double value) {
     this.value = value;
     return this;
+  }
+
+  /**
+   * Auto start a newly created modulator. Can be overriden by subclasses
+   */
+  public void autostart() {
+    if (this.autoStart) {
+      start();
+    }
   }
 
   /**
