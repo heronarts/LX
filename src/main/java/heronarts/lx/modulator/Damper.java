@@ -18,29 +18,25 @@
 
 package heronarts.lx.modulator;
 
+import java.util.Calendar;
+
 import heronarts.lx.LX;
+import heronarts.lx.Tempo;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TimeParameter;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * Modulator that provides randomization within normalized value range.
  */
 @LXModulator.Global("Damper")
 @LXModulator.Device("Damper")
-public class Damper extends LXPeriodicModulator implements LXNormalizedParameter, LXOscComponent {
-
-  public final CompoundParameter periodMs = (CompoundParameter)
-    new CompoundParameter("Interval", 1000, 10, 1000*60*5)
-    .setExponent(3)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Base interval for random target value updates");
-
-  public final BooleanParameter sinShaping =
-    new BooleanParameter("Ease")
-    .setDescription("Whether to apply sinusoidal easing");
+public class Damper extends LXModulator implements LXNormalizedParameter, LXOscComponent {
 
   public final BooleanParameter toggle =
     new BooleanParameter("Toggle", false)
@@ -56,24 +52,67 @@ public class Damper extends LXPeriodicModulator implements LXNormalizedParameter
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Trigger the damper to release");
 
+  public final CompoundParameter periodMs = (CompoundParameter)
+    new CompoundParameter("Interval", 1000, 10, 1000*60*5)
+    .setExponent(3)
+    .setUnits(CompoundParameter.Units.MILLISECONDS)
+    .setDescription("Base interval for random target value updates");
+
+  public final BooleanParameter tempoSync =
+    new BooleanParameter("Sync", false)
+    .setDescription("Whether this modulator syncs to a tempo");
+
+  public final EnumParameter<Tempo.Division> tempoDivision =
+    new EnumParameter<Tempo.Division>("Division", Tempo.Division.QUARTER)
+    .setDescription("Tempo division when in sync mode");
+
+  public final BooleanParameter sinShaping =
+    new BooleanParameter("Ease", false)
+    .setDescription("Whether to apply sinusoidal easing");
+
+  public final BooleanParameter timing =
+    new BooleanParameter("Timing", false)
+    .setDescription("Whether to apply automatic timing");
+
+  public final TimeParameter engageTime =
+    new TimeParameter("Engage Time")
+    .setDescription("What time of day the timer engages");
+
+  public final TimeParameter releaseTime =
+    new TimeParameter("Release Time")
+    .setDescription("What time of day the timer releases");
+
+  public final BooleanParameter engageTimerOut =
+    new BooleanParameter("Engage Timer")
+    .setDescription("Indicates when the engage timer fires")
+    .setMode(BooleanParameter.Mode.MOMENTARY);
+
+  public final BooleanParameter releaseTimerOut =
+    new BooleanParameter("Release Timer")
+    .setDescription("Indicates when the release timer fires")
+    .setMode(BooleanParameter.Mode.MOMENTARY);
+
+  private double basis = 0;
+
   public Damper() {
     this("Damper");
   }
 
   private Damper(String label) {
-    super(label, null);
-    disableAutoStart();
-    disableAutoReset();
-    this.looping.setValue(false);
-    this.tempoLock.setValue(false);
-    setPeriod(this.periodMs);
-    setBasis(1);
-
-    addParameter("periodMs", this.periodMs);
-    addParameter("sinShaping", this.sinShaping);
+    super(label);
     addParameter("toggle", this.toggle);
     addParameter("triggerEngage", this.triggerEngage);
     addParameter("triggerRelease", this.triggerRelease);
+    addParameter("periodMs", this.periodMs);
+    addParameter("tempoSync", this.tempoSync);
+    addParameter("tempoDivision", this.tempoDivision);
+    addParameter("sinShaping", this.sinShaping);
+
+    addParameter("timing", this.timing);
+    addParameter("engageTime", this.engageTime);
+    addParameter("releaseTime", this.releaseTime);
+    addParameter("engageTimerOut", this.engageTimerOut);
+    addParameter("releaseTimerOut", this.releaseTimerOut);
 
     setDescription("Damped value that moves from 0 to 1 with multiple triggers");
   }
@@ -82,8 +121,15 @@ public class Damper extends LXPeriodicModulator implements LXNormalizedParameter
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.toggle) {
-      setBasis(1 - getBasis());
       start();
+    } else if (p == this.engageTimerOut) {
+      if (this.engageTimerOut.isOn()) {
+        this.triggerEngage.setValue(true);
+      }
+    } else if (p == this.releaseTimerOut) {
+      if (this.releaseTimerOut.isOn()) {
+        this.triggerRelease.setValue(true);
+      }
     } else if (p == this.triggerEngage) {
       if (this.triggerEngage.isOn()) {
         this.triggerEngage.setValue(false);
@@ -99,34 +145,46 @@ public class Damper extends LXPeriodicModulator implements LXNormalizedParameter
     }
   }
 
+  private final Calendar calendar = Calendar.getInstance();
+
   @Override
-  protected double computeValue(double deltaMs, double basis) {
-    basis = this.toggle.isOn() ? basis : (1-basis);
-    if (this.sinShaping.isOn() ) {
-      return .5 + .5 * Math.sin(-LX.HALF_PI + Math.PI * basis);
+  protected double computeValue(double deltaMs) {
+    if (this.timing.isOn()) {
+      this.calendar.setTimeInMillis(System.currentTimeMillis());
+      final int thisSeconds = TimeParameter.getSecondsOfDay(this.calendar);
+      final int engageSeconds = this.engageTime.getSecondsOfDay();
+      final int releaseSeconds = this.releaseTime.getSecondsOfDay();
+      this.engageTimerOut.setValue(engageSeconds == thisSeconds);
+      this.releaseTimerOut.setValue(releaseSeconds == thisSeconds);
     }
-    return basis;
+
+    final double periodMs = this.tempoSync.isOn() ?
+      this.lx.engine.tempo.period.getValue() * this.tempoDivision.getEnum().multiplier :
+      this.periodMs.getValue();
+    final double sign = this.toggle.isOn() ? 1 : -1;
+
+    this.basis = LXUtils.clamp(this.basis + sign * deltaMs / periodMs, 0., 1.);
+
+    if (this.sinShaping.isOn() ) {
+      return .5 + .5 * Math.sin(-LX.HALF_PI + Math.PI * this.basis);
+    }
+    return this.basis;
   }
 
   @Override
   public LXNormalizedParameter setNormalized(double value) {
-    setBasis(computeBasis(getBasis(), value));
+    if (this.sinShaping.isOn()) {
+      final double radians = Math.asin(2 * (value - .5));
+      this.basis = (radians + LX.HALF_PI) / Math.PI;
+    } else {
+      this.basis = value;
+    }
     return this;
   }
 
   @Override
   public double getNormalized() {
     return getValue();
-  }
-
-  @Override
-  protected double computeBasis(double basis, double value) {
-    if (this.sinShaping.isOn()) {
-      final double radians = Math.asin(2 * (value - .5));
-      return (radians + LX.HALF_PI) / Math.PI;
-    } else {
-      return this.toggle.isOn() ? value : (1-value);
-    }
   }
 
 }

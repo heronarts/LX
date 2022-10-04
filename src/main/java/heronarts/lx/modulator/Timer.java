@@ -66,7 +66,7 @@ public class Timer extends LXModulator implements LXNormalizedParameter, LXTrigg
 
   public final BooleanParameter triggerOut =
     new BooleanParameter("Trigger Out")
-    .setDescription("Engages when the timer fires")
+    .setDescription("Indicates when the timer fires")
     .setMode(BooleanParameter.Mode.MOMENTARY);
 
   public Timer() {
