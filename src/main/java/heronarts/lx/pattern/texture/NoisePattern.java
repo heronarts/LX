@@ -306,6 +306,7 @@ public class NoisePattern extends LXPattern {
       this.yMotion,
       this.zMotion,
       this.motionSpeedRange,
+      this.invert,
       this.minLevel,
       this.maxLevel,
       this.xOffset,
