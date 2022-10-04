@@ -67,6 +67,7 @@ public class Damper extends LXPeriodicModulator implements LXNormalizedParameter
     this.looping.setValue(false);
     this.tempoLock.setValue(false);
     setPeriod(this.periodMs);
+    setBasis(1);
 
     addParameter("periodMs", this.periodMs);
     addParameter("sinShaping", this.sinShaping);
