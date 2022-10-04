@@ -19,7 +19,7 @@
 package heronarts.lx.pattern.texture;
 
 import heronarts.lx.LXCategory;
-import heronarts.lx.color.LXColor;
+import heronarts.lx.color.GradientUtils;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.modulator.LinearEnvelope;
@@ -109,14 +109,31 @@ public class NoisePattern extends LXPattern {
     new DiscreteParameter("Seed", 0, 256)
     .setDescription("Seed value supplied to the noise function");
 
-  public final CompoundParameter level =
+  public final CompoundParameter level = (CompoundParameter)
     new CompoundParameter("Level", 50, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Midpoint brightness level for the noise generation");
 
-  public final CompoundParameter contrast =
+  public final CompoundParameter contrast = (CompoundParameter)
     new CompoundParameter("Contrast", 100, 0, 500)
     .setExponent(2)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Dynamic contrast of noise generation");
+
+  public final CompoundParameter minLevel = (CompoundParameter)
+    new CompoundParameter("Min", 0, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Minimum output level");
+
+  public final CompoundParameter maxLevel = (CompoundParameter)
+    new CompoundParameter("Max", 100, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Maximum output level");
+
+  public final CompoundParameter invert = (CompoundParameter)
+    new CompoundParameter("Invert", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("How much to invert the brightness output");
 
   public final EnumParameter<CoordinateMode> xMode =
     new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
@@ -239,11 +256,17 @@ public class NoisePattern extends LXPattern {
     new BoundedParameter("Ridge", .9, 0, 2)
     .setDescription("Used to invert the feedback ridges");
 
+  private final GradientUtils.GrayTable invertLUT = new GradientUtils.GrayTable(this.invert, 256);
+
   public NoisePattern(LX lx) {
     super(lx);
 
     addParameter("midpoint", this.level);
     addParameter("contrast", this.contrast);
+    addParameter("minLevel", this.minLevel);
+    addParameter("maxLevel", this.maxLevel);
+    addParameter("invert", this.invert);
+
     addParameter("xOffset", this.xOffset);
     addParameter("yOffset", this.yOffset);
     addParameter("zOffset", this.zOffset);
@@ -282,7 +305,12 @@ public class NoisePattern extends LXPattern {
       this.xMotion,
       this.yMotion,
       this.zMotion,
-      this.motionSpeedRange
+      this.motionSpeedRange,
+      this.minLevel,
+      this.maxLevel,
+      this.xOffset,
+      this.yOffset,
+      this.zOffset
     );
   }
 
@@ -300,6 +328,8 @@ public class NoisePattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
+    this.invertLUT.update();
+
     switch (this.algorithm.getEnum()) {
     case PERLIN:
     case FBM:
@@ -314,28 +344,30 @@ public class NoisePattern extends LXPattern {
   }
 
   private void runPerlin(double deltaMs, Algorithm algorithm) {
-    int seed = this.seed.getValuei();
+    final int seed = this.seed.getValuei();
 
-    float scale = LXUtils.lerpf(this.minScale.getValuef(), this.maxScale.getValuef(), this.scale.getValuef());
+    final float scale = LXUtils.lerpf(this.minScale.getValuef(), this.maxScale.getValuef(), this.scale.getValuef());
 
-    float xa = this.xModulation.getValuef();
-    float ya = this.yModulation.getValuef();
-    float za = this.zModulation.getValuef();
+    final float xa = this.xModulation.getValuef();
+    final float ya = this.yModulation.getValuef();
+    final float za = this.zModulation.getValuef();
 
-    float xo = this.xOffset.getValuef();
-    float yo = this.yOffset.getValuef();
-    float zo = this.zOffset.getValuef();
+    final float xo = this.xOffset.getValuef();
+    final float yo = this.yOffset.getValuef();
+    final float zo = this.zOffset.getValuef();
 
-    float xs = scale * this.xScale.getValuef();
-    float ys = scale * this.yScale.getValuef();
-    float zs = scale * this.zScale.getValuef();
+    final float xs = scale * this.xScale.getValuef();
+    final float ys = scale * this.yScale.getValuef();
+    final float zs = scale * this.zScale.getValuef();
 
-    float contrast = this.contrast.getValuef();
-    float level = this.level.getValuef() - contrast / 4;;
+    final float contrast = this.contrast.getValuef();
+    final float minLevel = this.minLevel.getValuef();
+    final float maxLevel = this.maxLevel.getValuef();
+    final float level = LXUtils.lerpf(minLevel, maxLevel, (this.level.getValuef() - contrast / 4) * .01f);
 
-    CoordinateFunction xMode = this.xMode.getEnum().function;
-    CoordinateFunction yMode = this.yMode.getEnum().function;
-    CoordinateFunction zMode = this.zMode.getEnum().function;
+    final CoordinateFunction xMode = this.xMode.getEnum().function;
+    final CoordinateFunction yMode = this.yMode.getEnum().function;
+    final CoordinateFunction zMode = this.zMode.getEnum().function;
 
     if (algorithm.equals(Algorithm.PERLIN)) {
       for (LXPoint p : model.points) {
@@ -344,12 +376,12 @@ public class NoisePattern extends LXPattern {
         float zd = zMode.getCoordinate(p, p.zn, zo);
 
         float b = level + contrast * stb_perlin_noise3_seed(xa + xs * xd, ya + ys * yd, za + zs * zd, 0, 0, 0, seed);
-        this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
+        this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
       }
     } else {
-      int octaves = this.octaves.getValuei();
-      float lacunarity = this.lacunarity.getValuef();
-      float gain = this.gain.getValuef();
+      final int octaves = this.octaves.getValuei();
+      final float lacunarity = this.lacunarity.getValuef();
+      final float gain = this.gain.getValuef();
 
       if (algorithm.equals(Algorithm.RIDGE)) {
         float ridgeOffset = this.ridgeOffset.getValuef();
@@ -358,7 +390,7 @@ public class NoisePattern extends LXPattern {
           float yd = yMode.getCoordinate(p, p.yn, yo);
           float zd = zMode.getCoordinate(p, p.zn, zo);
           float b = level + contrast * stb_perlin_ridge_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, ridgeOffset, octaves);
-          this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
+          this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
         }
       } else if (algorithm.equals(Algorithm.FBM)) {
         for (LXPoint p : model.points) {
@@ -366,7 +398,7 @@ public class NoisePattern extends LXPattern {
           float yd = yMode.getCoordinate(p, p.yn, yo);
           float zd = zMode.getCoordinate(p, p.zn, zo);
           float b = level + contrast * stb_perlin_fbm_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
-          this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
+          this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
         }
       } else if (algorithm.equals(Algorithm.TURBULENCE)) {
         for (LXPoint p : model.points) {
@@ -374,18 +406,20 @@ public class NoisePattern extends LXPattern {
           float yd = yMode.getCoordinate(p, p.yn, yo);
           float zd = zMode.getCoordinate(p, p.zn, zo);
           float b = level + contrast * stb_perlin_turbulence_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
-          this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
+          this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
         }
       }
     }
   }
 
   private void runStatic(double deltaMs) {
-    float level = this.level.getValuef();
-    float contrast = this.contrast.getValuef();
+    final float minLevel = this.minLevel.getValuef();
+    final float maxLevel = this.maxLevel.getValuef();
+    final float level = LXUtils.lerpf(minLevel, maxLevel, this.level.getValuef() * .01f);
+    final float contrast = this.contrast.getValuef();
     for (LXPoint p : model.points) {
       float b = level + contrast * (-1 + 2 * (float) Math.random());
-      this.colors[p.index] = LXColor.gray(clamp(b, 0, 100));
+      this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
     }
   }
 
