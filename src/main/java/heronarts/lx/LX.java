@@ -82,8 +82,31 @@ public class LX {
 
   public interface Permissions {
     public boolean canSave();
-
     public int getMaxPoints();
+    public boolean canRunPlugins();
+    public boolean hasPackage(String packageName);
+
+    public static Permissions UNRESTRICTED = new Permissions() {
+      @Override
+      public boolean canSave() {
+        return true;
+      }
+
+      @Override
+      public int getMaxPoints() {
+        return -1;
+      }
+
+      @Override
+      public boolean canRunPlugins() {
+        return true;
+      }
+
+      @Override
+      public boolean hasPackage(String packageName) {
+        return false;
+      }
+    };
   }
 
   public static class Flags {
@@ -259,15 +282,11 @@ public class LX {
   /**
    * Permissions
    */
-  protected Permissions permissions = new Permissions() {
-    public boolean canSave() {
-      return true;
-    }
+  public final Permissions permissions = getPermissions();
 
-    public int getMaxPoints() {
-      return -1;
-    }
-  };
+  protected Permissions getPermissions() {
+    return Permissions.UNRESTRICTED;
+  }
 
   /**
    * Error stack
@@ -423,10 +442,6 @@ public class LX {
     }
 
     this.failure.setValue(message);
-  }
-
-  public Permissions getPermissions() {
-    return this.permissions;
   }
 
   public LX pushError(Throwable exception) {

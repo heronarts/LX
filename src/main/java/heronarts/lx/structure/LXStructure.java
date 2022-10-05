@@ -1105,6 +1105,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   public LXStructure exportModel(File file) {
+    if (!this.lx.permissions.canSave()) {
+      return this;
+    }
     JsonObject obj = new JsonObject();
     obj.addProperty(LX.KEY_VERSION, LX.VERSION);
     obj.addProperty(LX.KEY_TIMESTAMP, System.currentTimeMillis());

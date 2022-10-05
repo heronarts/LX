@@ -373,7 +373,7 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
   }
 
   public void saveSchedule(File file) {
-    if (!this.lx.getPermissions().canSave()) {
+    if (!this.lx.permissions.canSave()) {
       return;
     }
 

@@ -921,8 +921,10 @@ public class LXRegistry implements LXSerializable {
   }
 
   protected void initializePlugins() {
-    for (Plugin plugin : this.plugins) {
-      plugin.initialize(this.lx);
+    if (this.lx.permissions.canRunPlugins()) {
+      for (Plugin plugin : this.plugins) {
+        plugin.initialize(this.lx);
+      }
     }
   }
 

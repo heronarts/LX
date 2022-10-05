@@ -167,8 +167,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       super(lx);
       this.restricted.addListener((p) -> {
         if (this.restricted.isOn()) {
-          int myPoints = lx.model.size;
-          int limitPoints = lx.permissions.getMaxPoints();
+          final int myPoints = lx.model.size;
+          final int limitPoints = lx.permissions.getMaxPoints();
           lx.pushError(null, "You have exceeded the maximum number of points allowed by your license (" + myPoints + " > " + limitPoints + "). Output will be disabled.");
         }
       });
@@ -1122,8 +1122,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.buffer.flip();
     }
 
-    int maxPoints = this.lx.permissions.getMaxPoints();
-    this.output.restricted.setValue(maxPoints >= 0 && this.buffer.copy.main.length > maxPoints);
+    final int maxPoints = this.lx.permissions.getMaxPoints();
+    this.output.restricted.setValue((maxPoints >= 0) && (this.buffer.copy.main.length > maxPoints));
 
     if (!this.output.restricted.isOn()) {
       if (isNetworkMultithreaded) {
