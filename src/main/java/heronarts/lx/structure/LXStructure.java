@@ -302,7 +302,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       Packet packet = findPacket(protocol, transport, address, port, universe, sequenceEnabled);
       for (LXFixture.Segment segment : output.segments) {
         if (overflow) {
-          // Is it okay for this type to overlow?
+          // Is it okay for this type to overflow?
           if (!packet.checkOverflow()) {
             return;
           }
