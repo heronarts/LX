@@ -18,15 +18,20 @@
 
 package heronarts.lx.modulator;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXRunnableComponent;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 
 /**
@@ -73,6 +78,12 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    */
   private double value = 0;
 
+  private Throwable crash = null;
+
+  public final BooleanParameter crashed =
+    new BooleanParameter("Crashed", false)
+    .setDescription("Set to true by the engine if this component fails in an unexpected way");
+
   /**
    * Utility default constructor
    *
@@ -80,6 +91,20 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    */
   protected LXModulator(String label) {
     super(label);
+  }
+
+  public Throwable getCrash() {
+    return this.crash;
+  }
+
+  public String getCrashStackTrace() {
+    try (StringWriter sw = new StringWriter()){
+      this.crash.printStackTrace(new PrintWriter(sw));
+      return sw.toString();
+    } catch (IOException iox) {
+      // This is fucked
+      return null;
+    }
   }
 
   protected LXModulator disableAutoStart() {
@@ -239,6 +264,20 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
   public void autostart() {
     if (this.autoStart) {
       start();
+    }
+  }
+
+  @Override
+  public void loop(double deltaMs) {
+    if (!this.crashed.isOn()) {
+      try {
+        super.loop(deltaMs);
+      } catch (Throwable x) {
+        LX.error(x, "Unexpected error in modulator loop " + getClass().getName() + ": " + x.getLocalizedMessage());
+        this.lx.pushError(x, "Modulator " + LXComponent.getComponentName(getClass()) + " crashed due to an unexpected error.\n" + x.getLocalizedMessage());
+        this.crash = x;
+        this.crashed.setValue(true);
+      }
     }
   }
 
