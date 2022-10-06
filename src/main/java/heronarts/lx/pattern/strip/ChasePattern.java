@@ -18,22 +18,19 @@
 
 package heronarts.lx.pattern.strip;
 
-import com.google.gson.JsonObject;
-
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
-import heronarts.lx.LXSerializable;
+import heronarts.lx.Tempo;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
-import heronarts.lx.modulator.LXVariablePeriodModulator.ClockMode;
 import heronarts.lx.modulator.LXWaveshape;
-import heronarts.lx.modulator.VariableLFO;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
@@ -90,6 +87,18 @@ public class ChasePattern extends LXPattern {
     LXWaveshape.DOWN
   };
 
+  public final ObjectParameter<LXWaveshape> waveshape =
+    new ObjectParameter<LXWaveshape>("Waveshape", WAVESHAPES)
+    .setDescription("What waveshape to use");
+
+  public final CompoundParameter skew = new CompoundParameter("Skew", 0, -1, 1)
+    .setDescription("Sets a skew coefficient for the waveshape")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter exp = new CompoundParameter("Exp", 0, -1, 1)
+    .setDescription("Applies exponential scaling to the waveshape")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
   public final DiscreteParameter minChunk =
     new DiscreteParameter("Min Chunk", 2, 2, 100)
     .setDescription("Minimum swarm chunk size");
@@ -98,40 +107,65 @@ public class ChasePattern extends LXPattern {
     new DiscreteParameter("Max Chunk", 100, 10, 1000)
     .setDescription("Maximum swarm chunk size");
 
-  public final CompoundParameter chunkSize =
-    new CompoundParameter("Chunk Size", .5)
+  public final CompoundParameter chunkSize = (CompoundParameter)
+    new CompoundParameter("Chunk Size", 50, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Chunk size within range");
 
-  public final CompoundParameter shift =
-    new CompoundParameter("Shift", 0)
+  public final CompoundParameter shift = (CompoundParameter)
+    new CompoundParameter("Shift", 0, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount the position of motion is shifted on each chunk");
 
-  public final BoundedParameter shiftRange =
-    new BoundedParameter("Shift Range", 1)
+  public final BoundedParameter shiftRange = (BoundedParameter)
+    new BoundedParameter("Shift Range", 100, 0, 100)
+    .setUnits(BoundedParameter.Units.PERCENT)
     .setDescription("Maximum range of the shift knob");
 
   public final BooleanParameter alternate =
     new BooleanParameter("Alternate", false)
     .setDescription("Whether to alternate swarm motion every other chunk");
 
-  public final BooleanParameter sync =
-    new BooleanParameter("Sync", false)
-    .setDescription("Whether to tempo sync the motion");
-
   public final EnumParameter<WrapMode> wrap =
     new EnumParameter<WrapMode>("Wrap", WrapMode.ABS)
     .setDescription("Whether to wrap distance calculations within chunk");
 
-  public final CompoundParameter size =
-    new CompoundParameter("Size", .5)
+  public final CompoundParameter speed = (CompoundParameter)
+    new CompoundParameter("Speed", 50, -100, 100)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Speed of chase motion");
+
+  public final BoundedParameter speedRange = (BoundedParameter)
+    new BoundedParameter("Range", 1, 0, 10)
+    .setUnits(BoundedParameter.Units.HERTZ)
+    .setDescription("Maximum range of the speed control in Hz");
+
+  public final BooleanParameter tempoSync =
+    new BooleanParameter("Sync", false)
+    .setDescription("Whether this modulator syncs to a tempo");
+
+  public final EnumParameter<Tempo.Division> tempoDivision =
+    new EnumParameter<Tempo.Division>("Division", Tempo.Division.QUARTER)
+    .setDescription("Tempo division when in sync mode");
+
+  public final BooleanParameter reverse =
+    new BooleanParameter("Reverse", false)
+    .setDescription("Whether to reverse the direction of motion");
+
+  public final CompoundParameter size = (CompoundParameter)
+    new CompoundParameter("Size", 50, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Size of core motion");
 
-  public final CompoundParameter fade =
-    new CompoundParameter("Fade", .5)
+  public final CompoundParameter fade = (CompoundParameter)
+    new CompoundParameter("Fade", 50, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Fade size of motion");
 
-  public final CompoundParameter invert =
-    new CompoundParameter("Invert", 0)
+  public final CompoundParameter invert = (CompoundParameter)
+    new CompoundParameter("Invert", 0, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Invert the levels");
 
   public final BooleanParameter swarmOn =
@@ -140,29 +174,31 @@ public class ChasePattern extends LXPattern {
 
   public final CompoundParameter swarmX =
     new CompoundParameter("X", 0.5)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Swarm center X position");
 
   public final CompoundParameter swarmY =
     new CompoundParameter("Y", 0.5)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Swarm center Y position");
 
   public final CompoundParameter swarmSize =
     new CompoundParameter("Size", 0.5)
     .setDescription("Swarm strength");
 
-  public final CompoundParameter swarmFade =
-    new CompoundParameter(">Fade", 0.5)
+  public final CompoundParameter swarmFade = (CompoundParameter)
+    new CompoundParameter(">Fade", 50, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("How much the swarm affects the fade shape");
 
-  public final CompoundParameter swarmBrightness =
-    new CompoundParameter(">Brt", 0.5, -1, 1)
+  public final CompoundParameter swarmBrightness = (CompoundParameter)
+    new CompoundParameter(">Brt", 50, -100, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("How much the swarm affects the brightness");
 
   public final CompoundParameter swarmPolarity =
     new CompoundParameter("Polarity", 0)
     .setDescription("Swarm polarity");
-
-  public final VariableLFO motion = new VariableLFO("Motion", WAVESHAPES);
 
   public ChasePattern(LX lx) {
     super(lx);
@@ -174,8 +210,16 @@ public class ChasePattern extends LXPattern {
     addParameter("shift", this.shift);
     addParameter("shiftRange", this.shiftRange);
     addParameter("alternate", this.alternate);
+    addParameter("waveshape", this.waveshape);
+    addParameter("skew", this.skew);
+    addParameter("exp", this.exp);
 
-    addParameter("sync", this.sync);
+    // Speed controls
+    addParameter("speed", this.speed);
+    addParameter("speedRange", this.speedRange);
+    addParameter("tempoSync", this.tempoSync);
+    addParameter("tempoDivision", this.tempoDivision);
+    addParameter("reverse", this.reverse);
 
     // Levels
     addParameter("wrap", this.wrap);
@@ -192,8 +236,6 @@ public class ChasePattern extends LXPattern {
     addParameter("swarmBrightness", this.swarmBrightness);
     addParameter("swarmPolarity", this.swarmPolarity);
 
-    startModulator(this.motion);
-
     setRemoteControls(
       this.chunkSize,
       this.shift,
@@ -209,39 +251,60 @@ public class ChasePattern extends LXPattern {
     );
   }
 
-  @Override
-  public void onParameterChanged(LXParameter p) {
-    super.onParameterChanged(p);
-    if (this.sync == p) {
-      this.motion.clockMode.setValue(this.sync.isOn() ? ClockMode.SYNC : ClockMode.FAST);
-    }
-  }
+  private double basis = 0;
 
   @Override
   protected void run(double deltaMs) {
-    double chunkSize = LXUtils.lerp(this.minChunk.getValue(), this.maxChunk.getValue(), this.chunkSize.getValue());
-    int chunkSizei = (int) chunkSize;
-    double motion = this.motion.getValue() * chunkSize;
+    if (this.tempoSync.isOn() ) {
+      this.basis = lx.engine.tempo.getBasis(this.tempoDivision.getEnum());
+    } else {
+      this.basis += deltaMs * .001 * this.speed.getValue() * this.speedRange.getValue() * .01;
+    }
+    double basis = (float) (this.basis - Math.floor(this.basis));
+    if (this.reverse.isOn()) {
+      basis = (1f - basis) % 1f;
+    }
 
-    double size = this.size.getValue();
-    double fade = this.fade.getValue();
-    double invert = this.invert.getValue();
+    // Skew the thing
+    final double skew = this.skew.getValue();
+    double skewPower = (skew >= 0) ? (1 + 3*skew) : (1 / (1-3*skew));
+    if (skewPower != 1) {
+      basis = Math.pow(basis, skewPower);
+    }
 
-    double sizePixels = chunkSize * size;
-    double fadePixels = chunkSize * fade;
+    double wave = this.waveshape.getObject().compute(basis);
 
-    boolean alternate = this.alternate.isOn();
-    WrapMode wrap = this.wrap.getEnum();
+    // Apply scaling
+    final double exp = this.exp.getValue();
+    double expPower = (exp >= 0) ? (1 + 3*exp) : (1 / (1 - 3*exp));
+    if (expPower != 1) {
+      wave = Math.pow(wave, expPower);
+    }
+
+    // Now work on the chase chunks
+    final double chunkSize = LXUtils.lerp(this.minChunk.getValue(), this.maxChunk.getValue(), this.chunkSize.getValue() * .01);
+    final int chunkSizei = (int) chunkSize;
+    final double motion = wave * chunkSize;
+
+    final double size = this.size.getValue() * .01;
+    final double fade = this.fade.getValue() * .01;
+    final double invert = this.invert.getValue() * .01;
+
+    final double sizePixels = chunkSize * size;
+    final double fadePixels = chunkSize * fade;
+
+    final boolean alternate = this.alternate.isOn();
+    final WrapMode wrap = this.wrap.getEnum();
 
     boolean swarmOn = this.swarmOn.isOn();
     double swarmSize = .01 + this.swarmSize.getValue();
     double swarmX = this.swarmX.getValue();
     double swarmY = this.swarmY.getValue();
-    double swarmFade = this.swarmFade.getValue();
+    double swarmFade = this.swarmFade.getValue() * .01;
     double swarmFadeAbs = Math.abs(swarmFade);
-    double swarmBrightness = this.swarmBrightness.getValue();
+    double swarmBrightness = this.swarmBrightness.getValue() * .01;
     double swarmBrightnessAbs = Math.abs(swarmBrightness);
-    double shift = this.shift.getValue() * this.shiftRange.getValue() * chunkSize;
+    double shift = this.shift.getValue() * .01 * this.shiftRange.getValue() * .01 * chunkSize;
 
     double minSizePixels = LXUtils.lerp(0, chunkSize + sizePixels, invert);
     double minFadePixels = LXUtils.lerp(0, chunkSize + sizePixels, invert);
@@ -293,20 +356,6 @@ public class ChasePattern extends LXPattern {
       ++i;
       even = !even;
     }
-  }
-
-  private static final String KEY_MOTION = "motion";
-
-  @Override
-  public void save(LX lx, JsonObject obj) {
-    super.save(lx, obj);
-    obj.add(KEY_MOTION, LXSerializable.Utils.toObject(this.motion));
-  }
-
-  @Override
-  public void load(LX lx, JsonObject obj) {
-    super.load(lx, obj);
-    LXSerializable.Utils.loadObject(lx, this.motion, obj, KEY_MOTION);
   }
 
 }
