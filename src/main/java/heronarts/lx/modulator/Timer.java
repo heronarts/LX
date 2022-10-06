@@ -20,12 +20,14 @@ package heronarts.lx.modulator;
 
 import java.util.Calendar;
 
+import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.TimeParameter;
 
 @LXModulator.Global("Timer")
+@LXCategory(LXCategory.CORE)
 public class Timer extends LXModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
 
   public final TimeParameter time =

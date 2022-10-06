@@ -27,6 +27,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -34,6 +35,7 @@ import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
+@LXCategory(LXCategory.CORE)
 @LXModulator.Global("Envelope")
 @LXModulator.Device("Envelope")
 public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXTriggerTarget, LXWaveshape, LXOscComponent {

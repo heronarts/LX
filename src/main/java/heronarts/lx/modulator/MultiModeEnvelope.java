@@ -18,6 +18,7 @@
 
 package heronarts.lx.modulator;
 
+import heronarts.lx.LXCategory;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
@@ -33,6 +34,7 @@ import heronarts.lx.utils.LXUtils;
 
 @LXModulator.Global("AHDSR")
 @LXModulator.Device("AHDSR")
+@LXCategory(LXCategory.CORE)
 public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, LXNormalizedParameter, LXTriggerSource, LXTriggerTarget, LXMidiListener {
 
   private final static CompoundParameter initial() {

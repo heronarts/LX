@@ -41,6 +41,7 @@ public @interface LXCategory {
   public static final String TEXTURE = "Texture";
   public static final String TEST = "Test";
   public static final String OTHER = "Other";
+  public static final String AUDIO = "Audio";
 
   String value();
 

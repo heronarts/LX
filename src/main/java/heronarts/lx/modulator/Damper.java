@@ -21,6 +21,7 @@ package heronarts.lx.modulator;
 import java.util.Calendar;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.Tempo;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -36,6 +37,7 @@ import heronarts.lx.utils.LXUtils;
  */
 @LXModulator.Global("Damper")
 @LXModulator.Device("Damper")
+@LXCategory(LXCategory.CORE)
 public class Damper extends LXModulator implements LXNormalizedParameter, LXOscComponent {
 
   public final BooleanParameter toggle =

@@ -18,6 +18,7 @@
 
 package heronarts.lx.modulator;
 
+import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -29,6 +30,7 @@ import heronarts.lx.parameter.ObjectParameter;
  * A sawtooth LFO oscillates from one extreme value to another. When the later
  * value is hit, the oscillator rests to its initial value.
  */
+@LXCategory(LXCategory.CORE)
 @LXModulator.Global("LFO")
 @LXModulator.Device("LFO")
 public class VariableLFO extends LXVariablePeriodModulator implements LXTriggerTarget, LXWaveshape, LXOscComponent {

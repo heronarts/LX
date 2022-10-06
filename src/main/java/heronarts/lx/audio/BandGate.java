@@ -19,6 +19,7 @@
 package heronarts.lx.audio;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.osc.LXOscComponent;
@@ -35,6 +36,7 @@ import heronarts.lx.utils.LXUtils;
  * does *not* respect the attack and release settings of the underlying meter, it
  * merely shares the raw values. The BeatDetect applies its own time-band filtering.
  */
+@LXCategory(LXCategory.AUDIO)
 @LXModulator.Global("Beat Detect")
 @LXModulator.Device("Beat Detect")
 public class BandGate extends LXModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
