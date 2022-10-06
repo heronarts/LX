@@ -45,9 +45,13 @@ public class ColorParameter extends AggregateParameter {
     this.hue = new CompoundParameter("Hue", Double.isNaN(h) ? 0 : h, 0, 359)
       .setDescription("Hue component of the color");
     this.hue.setWrappable(true);
-    this.saturation = new CompoundParameter("Saturation", LXColor.s(color), 0, 100)
+    this.saturation = (CompoundParameter)
+      new CompoundParameter("Saturation", LXColor.s(color), 0, 100)
+      .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Saturation component of the color");
-    this.brightness = new CompoundParameter("Brightness", LXColor.b(color), 0, 100)
+    this.brightness = (CompoundParameter)
+      new CompoundParameter("Brightness", LXColor.b(color), 0, 100)
+      .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Brightness component of the color");
 
     // NOTE: register brightness and saturation first for load/save, otherwise if they
