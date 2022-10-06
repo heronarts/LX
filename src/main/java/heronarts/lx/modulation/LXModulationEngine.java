@@ -308,13 +308,16 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
       for (JsonElement modulatorElement : modulatorArr) {
         JsonObject modulatorObj = modulatorElement.getAsJsonObject();
         String modulatorClass = modulatorObj.get(KEY_CLASS).getAsString();
+        LXModulator modulator;
         try {
-          LXModulator modulator = this.lx.instantiateModulator(modulatorClass);
-          addModulator(modulator);
-          modulator.load(lx, modulatorObj);
+          modulator = this.lx.instantiateModulator(modulatorClass);
         } catch (LX.InstantiationException x) {
-          LX.error(x, "Could not instantiate modulator: " + modulatorObj.toString());
+          LX.error("Using placeholder class for missing modulator: " + modulatorClass);
+          modulator = new LXModulator.Placeholder(this.lx, x, modulatorObj);
+          this.lx.pushError(x, modulatorClass + " could not be loaded. " + x.getMessage());
         }
+        addModulator(modulator);
+        modulator.load(lx, modulatorObj);
       }
     }
     if (obj.has(KEY_MODULATIONS)) {

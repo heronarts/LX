@@ -68,6 +68,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public interface Placeholder {
     public String getPlaceholderTypeName();
     public String getPlaceholderClassName();
+    public LX.InstantiationException getInstantiationException();
   }
 
   /**

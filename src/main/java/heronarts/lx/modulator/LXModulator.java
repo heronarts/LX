@@ -26,6 +26,10 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.Map;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
@@ -59,6 +63,61 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
   @Retention(RetentionPolicy.RUNTIME)
   public @interface Device {
     String value();
+  }
+
+  /**
+   * Placeholder pattern for when a class is missing
+   */
+  public static class Placeholder extends LXModulator implements LXComponent.Placeholder {
+
+    private final LX.InstantiationException instantiationException;
+    private String placeholderClassName;
+    private JsonObject modulatorObj;
+
+    public Placeholder(LX lx, LX.InstantiationException instantiationException, JsonObject modulatorObj) {
+      super("Placeholder");
+      this.instantiationException = instantiationException;
+      this.placeholderClassName = modulatorObj.get(LXComponent.KEY_CLASS).getAsString();
+      this.modulatorObj = modulatorObj;
+    }
+
+    @Override
+    public String getPlaceholderTypeName() {
+      return "Modulator";
+    }
+
+    @Override
+    public String getPlaceholderClassName() {
+      return this.placeholderClassName;
+    }
+
+    @Override
+    public LX.InstantiationException getInstantiationException() {
+      return this.instantiationException;
+    }
+
+    @Override
+    public void save(LX lx, JsonObject object) {
+      super.save(lx, object);
+      if (this.modulatorObj != null) {
+        for (Map.Entry<String, JsonElement> entry : this.modulatorObj.entrySet()) {
+          object.add(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+
+    @Override
+    public void load(LX lx, JsonObject object) {
+      super.load(lx, object);
+      this.placeholderClassName = object.get(LXComponent.KEY_CLASS).getAsString();
+      this.modulatorObj = object;
+    }
+
+    @Override
+    protected double computeValue(double deltaMs) {
+      return 0;
+    }
+
   }
 
   private Formatter formatter = null;

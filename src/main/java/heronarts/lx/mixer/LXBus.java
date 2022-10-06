@@ -522,10 +522,10 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
       effect = this.lx.instantiateEffect(effectClass);
     } catch (LX.InstantiationException x) {
       LX.error("Using placeholder class for missing effect: " + effectClass);
-      effect = new LXEffect.Placeholder(lx);
-      lx.pushError(x, "Effect class " + effectClass + " could not be loaded, check that content files were not removed?");
+      effect = new LXEffect.Placeholder(this.lx, x);
+      this.lx.pushError(x, effectClass + " could not be loaded. " + x.getMessage());
     }
-    effect.load(lx, effectObj);
+    effect.load(this.lx, effectObj);
     addEffect(effect, index);
     return effect;
   }

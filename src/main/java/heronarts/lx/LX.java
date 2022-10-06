@@ -72,10 +72,23 @@ public class LX {
 
   public static class InstantiationException extends Exception {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
-    protected InstantiationException(Exception underlying) {
-      super(underlying);
+    public enum Type {
+      EXCEPTION,
+      LICENSE;
+    }
+
+    public final Type type;
+
+    protected InstantiationException(Type type, String message) {
+      super(message);
+      this.type = type;
+    }
+
+    protected InstantiationException(Exception underlying, String message) {
+      super(message, underlying);
+      this.type = Type.EXCEPTION;
     }
 
   }
@@ -1102,27 +1115,41 @@ public class LX {
     return new File(getPresetFolder(device), (name != null) ? name : "default.lxd");
   }
 
+  public boolean canInstantiate(Class<? extends LXComponent> clz) {
+    LXLicense license = clz.getAnnotation(LXLicense.class);
+    return (license == null) || this.permissions.hasPackage(license.value());
+  }
+
   public LXModel instantiateModel(String className) throws InstantiationException {
     try {
       Class<? extends LXModel> cls = Class.forName(className, true, this.registry.classLoader).asSubclass(LXModel.class);
       return cls.getConstructor().newInstance();
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateModel: " + x.getMessage());
-      throw new InstantiationException(x);
+      throw new InstantiationException(x, "This model could not be loaded. Check that all required content files are present.");
     }
   }
 
   public <T extends LXComponent> T instantiateComponent(String className, Class<T> type) throws InstantiationException {
+    Class<? extends T> cls = null;
     try {
-      Class<? extends T> cls = Class.forName(className, true, this.registry.classLoader).asSubclass(type);
-      return instantiateComponent(cls, type);
+      cls = Class.forName(className, true, this.registry.classLoader).asSubclass(type);
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
-      throw new InstantiationException(x);
+      throw new InstantiationException(x, "This class could not be loaded. Check that all required content files are present.");
     }
+    return instantiateComponent(cls, type);
   }
 
   public <T extends LXComponent> T instantiateComponent(Class<? extends T> cls, Class<T> type) throws InstantiationException {
+    LXLicense license = cls.getAnnotation(LXLicense.class);
+    if (license != null) {
+      final String pkg = license.value();
+      if (!this.permissions.hasPackage(pkg)) {
+        throw new InstantiationException(InstantiationException.Type.LICENSE, "Class requires valid license for package: " + pkg);
+      }
+    }
+
     try {
       try {
         return cls.getConstructor(LX.class).newInstance(this);
@@ -1131,7 +1158,7 @@ public class LX {
       }
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
-      throw new InstantiationException(x);
+      throw new InstantiationException(x, "This class could not be loaded. Check that all required content files are present.");
     }
   }
 

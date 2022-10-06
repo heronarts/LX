@@ -46,11 +46,13 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
    */
   public static class Placeholder extends LXEffect implements LXComponent.Placeholder {
 
+    private final LX.InstantiationException instantiationException;
     private String placeholderClassName;
     private JsonObject effectObj = null;
 
-    public Placeholder(LX lx) {
+    public Placeholder(LX lx, LX.InstantiationException instantiationException) {
       super(lx);
+      this.instantiationException = instantiationException;
     }
 
     @Override
@@ -61,6 +63,11 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     @Override
     public String getPlaceholderClassName() {
       return this.placeholderClassName;
+    }
+
+    @Override
+    public LX.InstantiationException getInstantiationException() {
+      return this.instantiationException;
     }
 
     @Override
