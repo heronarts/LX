@@ -367,8 +367,8 @@ public class JsonFixture extends LXFixture {
       this(name, label, description, ParameterType.INT, new DiscreteParameter(label, defaultInt, minInt, maxInt + 1));
     }
 
-    private ParameterDefinition(String name, String label, String description, float defaultFloat) {
-      this(name, label, description, ParameterType.FLOAT, new BoundedParameter(label, defaultFloat, -Float.MAX_VALUE, Float.MAX_VALUE));
+    private ParameterDefinition(String name, String label, String description, float defaultFloat, float minFloat, float maxFloat) {
+      this(name, label, description, ParameterType.FLOAT, new BoundedParameter(label, defaultFloat, minFloat, maxFloat));
     }
 
     private ParameterDefinition(String name, String label, String description, boolean defaultBoolean) {
@@ -1208,7 +1208,19 @@ public class JsonFixture extends LXFixture {
         } else if (reloadDefinition != null) {
           floatValue = reloadDefinition.floatParameter.getValuef();
         }
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, floatValue));
+        float minFloat = -Float.MAX_VALUE;
+        float maxFloat = Float.MAX_VALUE;
+        if (parameterObj.has(KEY_PARAMETER_MIN)) {
+          minFloat = loadFloat (parameterObj, KEY_PARAMETER_MIN, false, "Parameter min value must be a float");
+        }
+        if (parameterObj.has(KEY_PARAMETER_MAX)) {
+          maxFloat = loadFloat(parameterObj, KEY_PARAMETER_MAX, false, "Parameter min value must be a float");
+        }
+        if (minFloat > maxFloat) {
+          addWarning("Parameter minimum may not be greater than maximum: " + minFloat + ">" + maxFloat);
+          break;
+        }
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, floatValue, minFloat, maxFloat));
         break;
       case INT:
         int minInt = 0;
@@ -1409,7 +1421,7 @@ public class JsonFixture extends LXFixture {
     // Explicit spacing specified?
     if (stripObj.has(KEY_SPACING)) {
       float testSpacing = loadFloat(stripObj, KEY_SPACING, true, "Strip must specify a positive " + KEY_SPACING);
-      if (testSpacing > 0) {
+      if (testSpacing >= 0) {
         spacing = testSpacing;
       } else {
         addWarning("Strip may not specify a negative spacing");
@@ -1443,7 +1455,7 @@ public class JsonFixture extends LXFixture {
 
     float degrees = loadFloat(arcObj, KEY_DEGREES, true, "Arc must specify number of degrees to cover");
     if (degrees <= 0) {
-      addWarning("Arc must specify non-negative value for " + KEY_DEGREES);
+      addWarning("Arc must specify positive value for " + KEY_DEGREES);
       return null;
     }
 
