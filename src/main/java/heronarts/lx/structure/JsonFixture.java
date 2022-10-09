@@ -849,6 +849,15 @@ public class JsonFixture extends LXFixture {
     if (expression.startsWith("tan")) {
       return (float) Math.tan(Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3))));
     }
+    if (expression.startsWith("asin")) {
+      return (float) Math.toDegrees(Math.asin(_evaluateSimpleExpression(obj, key, expression.substring(4))));
+    }
+    if (expression.startsWith("acos")) {
+      return (float) Math.toDegrees(Math.acos(_evaluateSimpleExpression(obj, key, expression.substring(4))));
+    }
+    if (expression.startsWith("atan")) {
+      return (float) Math.toDegrees(Math.atan(_evaluateSimpleExpression(obj, key, expression.substring(4))));
+    }
     if (expression.startsWith("rad")) {
       return (float) Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3)));
     }
