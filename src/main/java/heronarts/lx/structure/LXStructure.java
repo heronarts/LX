@@ -964,6 +964,27 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   private static final String KEY_OUTPUT = "output";
 
+  public void reload() {
+    if (this.isImmutable) {
+      return;
+    }
+
+    this.isLoading = true;
+    for (LXFixture fixture : this.fixtures) {
+      if (fixture instanceof JsonFixture) {
+        ((JsonFixture) fixture).reload();
+      }
+    }
+    this.isLoading = false;
+    if (this.staticModel == null) {
+      regenerateModel(true);
+    }
+    // Regenerate any dynamic outputs
+    regenerateOutputs();
+
+    this.lx.pushStatusMessage("Model reloaded");
+  }
+
   @Override
   public void load(LX lx, JsonObject obj) {
     if (this.isImmutable) {
