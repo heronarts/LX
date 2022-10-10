@@ -18,6 +18,8 @@
 
 package heronarts.lx.color;
 
+import heronarts.lx.utils.LXUtils;
+
 /**
  * Various utilities that operate on color values
  */
@@ -33,7 +35,11 @@ public class LXColor {
     MULTIPLY,
     SCREEN,
     LIGHTEST,
-    DARKEST
+    DARKEST,
+    DODGE,
+    BURN,
+    HIGHLIGHT,
+    SPOTLIGHT
   }
 
   public static final int BLACK = 0xff000000;
@@ -393,19 +399,27 @@ public class LXColor {
   public static int blend(int dst, int src, Blend blendMode) {
     switch (blendMode) {
     case ADD:
-      return add(dst, src);
+      return add(dst, src, 0x100);
     case SUBTRACT:
-      return subtract(dst, src);
+      return subtract(dst, src, 0x100);
     case MULTIPLY:
-      return multiply(dst, src);
+      return multiply(dst, src, 0x100);
     case SCREEN:
-      return screen(dst, src);
+      return screen(dst, src, 0x100);
     case LIGHTEST:
-      return lightest(dst, src);
+      return lightest(dst, src, 0x100);
     case DARKEST:
-      return darkest(dst, src);
+      return darkest(dst, src, 0x100);
+    case DODGE:
+      return dodge(dst, src, 0x100);
+    case BURN:
+      return burn(dst, src, 0x100);
+    case HIGHLIGHT:
+      return highlight(dst, src, 0x100);
+    case SPOTLIGHT:
+      return spotlight(dst, src, 0x100);
     case LERP:
-      return lerp(dst, src);
+      return lerp(dst, src, 0x100);
     }
     throw new IllegalArgumentException("Unimplemented blend mode: " + blendMode);
   }
@@ -617,6 +631,95 @@ public class LXColor {
       min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
       ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
       ((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8 & G_MASK;
+  }
+
+  public static int dodge(int dst, int src) {
+    return dodge(dst, src, 0x100);
+  }
+
+  public static int dodge(int dst, int src, double alpha) {
+    return dodge(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int dodge(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+
+    int srcAlpha = a + (a >= 0x7f ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
+    int r = (dst & R_MASK) / (256 - ((src & R_MASK) >> R_SHIFT));
+    int g = ((dst & G_MASK) << 8) / (256 - ((src & G_MASK) >> G_SHIFT));
+    int b = ((dst & B_MASK) << 8) / (256 - (src & B_MASK));
+    int rb =
+      (r > 0xff00 ? R_MASK : ((r << 8) & R_MASK)) |
+      (b > 0x00ff ? B_MASK : b);
+    int gn = (g > 0xff00 ? G_MASK : (g & G_MASK));
+
+    return
+      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
+      ((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8 & G_MASK;
+  }
+
+  public static int burn(int dst, int src) {
+    return burn(dst, src, 0x100);
+  }
+
+  public static int burn(int dst, int src, double alpha) {
+    return burn(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int burn(int dst, int src, int alpha) {
+    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+
+    int srcAlpha = a + (a >= 0x7f ? 1 : 0);
+    int dstAlpha = 0x100 - srcAlpha;
+
+    int r = ((R_MASK - (dst & R_MASK)))  / (1 + (src & R_MASK >> R_SHIFT));
+    int g = ((G_MASK - (dst & G_MASK)) << 8) / (1 + (src & G_MASK >> G_SHIFT));
+    int b = ((B_MASK - (dst & B_MASK)) << 8) / (1 + (src & B_MASK));
+
+    int rb = RB_MASK -
+        (r > 0xff00 ? R_MASK : ((r << 8) & R_MASK)) -
+        (b > 0x00ff ? B_MASK : b);
+    int gn = G_MASK - (g > 0xff00 ? G_MASK : (g & G_MASK));
+
+    return min((dst >>> 24) + a, 0xFF) << 24 |
+        ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
+        ((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8 & G_MASK;
+  }
+
+  public static int highlight(int dst, int src) {
+    return highlight(dst, src, 0x100);
+  }
+
+  public static int highlight(int dst, int src, double alpha) {
+    return highlight(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int highlight(int dst, int src, int alpha) {
+    return add(dst, multiply(dst, src, 0x100), alpha);
+  }
+
+  public static int spotlight(int dst, int src) {
+    return spotlight(dst, src, 0x100);
+  }
+
+  public static int spotlight(int dst, int src, double alpha) {
+    return spotlight(dst, src, (int) (alpha * 0x100));
+  }
+
+  public static int spotlight(int dst, int src, int alpha) {
+    int dstMax = LXUtils.max(
+      dst & B_MASK,
+      (dst & G_MASK) >> G_SHIFT,
+      (dst & R_MASK) >> R_SHIFT
+    );
+    int dstMlt =
+      (dst & ALPHA_MASK) |
+      (dstMax << R_SHIFT) |
+      (dstMax << G_SHIFT) |
+      dstMax;
+    return add(dst, multiply(dstMlt, src, 0x100), alpha);
   }
 
   private static int min(int a, int b) {

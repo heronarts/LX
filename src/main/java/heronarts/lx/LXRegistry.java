@@ -40,13 +40,17 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
 import heronarts.lx.blend.AddBlend;
+import heronarts.lx.blend.BurnBlend;
 import heronarts.lx.blend.DarkestBlend;
 import heronarts.lx.blend.DifferenceBlend;
 import heronarts.lx.blend.DissolveBlend;
+import heronarts.lx.blend.DodgeBlend;
+import heronarts.lx.blend.HighlightBlend;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.blend.LightestBlend;
 import heronarts.lx.blend.MultiplyBlend;
 import heronarts.lx.blend.NormalBlend;
+import heronarts.lx.blend.SpotlightBlend;
 import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.modulator.LXModulator;
@@ -160,6 +164,11 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_CHANNEL_BLENDS.add(SubtractBlend.class);
     DEFAULT_CHANNEL_BLENDS.add(DifferenceBlend.class);
     DEFAULT_CHANNEL_BLENDS.add(NormalBlend.class);
+    DEFAULT_CHANNEL_BLENDS.add(DodgeBlend.class);
+    DEFAULT_CHANNEL_BLENDS.add(BurnBlend.class);
+    DEFAULT_CHANNEL_BLENDS.add(HighlightBlend.class);
+    DEFAULT_CHANNEL_BLENDS.add(SpotlightBlend.class);
+
   }
 
   private static final List<Class<? extends LXBlend>> DEFAULT_TRANSITION_BLENDS;
