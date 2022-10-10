@@ -141,7 +141,7 @@ public class LX {
   }
 
   public static enum Media {
-    CONTENT("Content"),
+    PACKAGES("Packages"),
     FIXTURES("Fixtures"),
     PROJECTS("Projects"),
     MODELS("Models"),
@@ -425,7 +425,7 @@ public class LX {
 
     // Initialize plugins!
     if ((this instanceof LXPlugin) && (flags.initialize != this)) {
-      ((LXPlugin)this).initialize(this);
+      ((LXPlugin) this).initialize(this);
     }
     if (this.flags.initialize != null) {
       this.flags.initialize.initialize(this);

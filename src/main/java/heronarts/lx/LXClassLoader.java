@@ -86,7 +86,7 @@ public class LXClassLoader extends URLClassLoader {
 
   private static List<File> defaultJarFiles(LX lx) {
     List<File> jarFiles = new ArrayList<File>();
-    collectJarFiles(jarFiles, lx.getMediaFolder(LX.Media.CONTENT, false));
+    collectJarFiles(jarFiles, lx.getMediaFolder(LX.Media.PACKAGES, false));
     return jarFiles;
   }
 
@@ -156,13 +156,7 @@ public class LXClassLoader extends URLClassLoader {
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         String fileName = entry.getName();
-        if (fileName.endsWith(".lxf")) {
-          // TODO(mcslee): load fixtures from a JAR!
-        } else if (fileName.endsWith(".lxm")) {
-          // TODO(mcslee): load models from a JAR!
-        } else if (fileName.endsWith(".lxp")) {
-          // TODO(mcslee): load projects from a JAR!
-        } if (fileName.endsWith(".class")) {
+        if (fileName.endsWith(".class")) {
           loadClassEntry(pack, jarFile, className(fileName).replaceAll("/", "\\."));
         }
       }

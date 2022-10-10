@@ -22,11 +22,18 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Objects;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -306,7 +313,7 @@ public class LXRegistry implements LXSerializable {
 
   public class Plugin implements LXSerializable {
     public final Class<? extends LXPlugin> clazz;
-    public LXPlugin instance;
+    public LXPlugin instance = null;
     private boolean hasError = false;
     private boolean isEnabled = false;
     private Exception exception = null;
@@ -336,6 +343,9 @@ public class LXRegistry implements LXSerializable {
     }
 
     private void initialize(LX lx) {
+      if (!lx.permissions.canRunPlugins()) {
+        return;
+      }
       if (!this.isEnabled) {
         return;
       }
@@ -438,31 +448,95 @@ public class LXRegistry implements LXSerializable {
     this.mutablePackages.add(pack);
   }
 
-  public void installPackage(File file) {
+  public boolean installPackage(File file) {
+    return installPackage(file, false);
+  }
+
+  public boolean installPackage(File file, boolean overwrite) {
     if (!file.exists() || file.isDirectory()) {
       this.lx.pushError(null, "Package file does not exist or is a directory: " + file);
-      return;
+      return false;
     }
-    File destinationFile = lx.getMediaFile(LX.Media.CONTENT, file.getName(), true);
-    if (destinationFile.exists()) {
+    File destinationFile = lx.getMediaFile(LX.Media.PACKAGES, file.getName(), true);
+    if (destinationFile.exists() && !overwrite) {
       this.lx.pushError(null, "Package file already exists: " + destinationFile.getName());
-      return;
+      return false;
     }
     try {
-      Files.copy(file.toPath(), destinationFile.toPath());
+      Files.copy(file.toPath(), destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+      installPackageMedia(destinationFile);
       reloadContent();
-    } catch (IOException iox) {
-      this.lx.pushError(iox, "Could not copy package file " + file.getName() + " to the content folder: " + iox.getLocalizedMessage());
+    } catch (Throwable x) {
+      this.lx.pushError(x, "Error installing package file " + file.getName() + ": " + x.getLocalizedMessage());
+      return false;
     }
+    return true;
+  }
+
+  private void installPackageMedia(File file) {
+    try (JarFile jarFile = new JarFile(file)) {
+      JarEntry packageEntry = jarFile.getJarEntry("lx.package");
+      if (packageEntry == null) {
+        this.lx.pushError("Package is missing lx.package entry, cannot install media: " + jarFile.getName());
+        return;
+      }
+      JsonObject obj = new Gson().fromJson(new InputStreamReader(jarFile.getInputStream(packageEntry)), JsonObject.class);
+      String packageDir = obj.get("mediaDir").getAsString();
+
+      Enumeration<JarEntry> entries = jarFile.entries();
+      while (entries.hasMoreElements()) {
+        final JarEntry entry = entries.nextElement();
+        final String fileName = entry.getName();
+        if (fileName.startsWith("fixtures/") && fileName.endsWith(".lxf")) {
+          copyPackageMedia(packageDir, LX.Media.FIXTURES, jarFile, entry);
+        } else if (fileName.startsWith("models/") && fileName.endsWith(".lxm")) {
+          copyPackageMedia(packageDir, LX.Media.MODELS, jarFile, entry);
+        } else if (fileName.startsWith("projects/") && fileName.endsWith(".lxp")) {
+          copyPackageMedia(packageDir, LX.Media.PROJECTS, jarFile, entry);
+        }
+      }
+    } catch (Throwable throwable) {
+      LX.error(throwable, "Error loading JAR file " + file + " - " + throwable.getLocalizedMessage());
+    }
+  }
+
+  private void copyPackageMedia(String packageDirName, LX.Media media, JarFile jarFile, JarEntry entry) throws IOException {
+    // Lop off the first package media folder name
+    String entryName = entry.getName();
+    entryName = entryName.substring(entryName.indexOf('/') + 1);
+
+    // Make a directory for the package media of this type
+    File packageDir = this.lx.getMediaFile(media, packageDirName, true);
+
+    // Are their subdirs within this package's content? Break up if so...
+    int lastSlash = entryName.lastIndexOf('/');
+    if (lastSlash >= 0) {
+      String subdir = entryName.substring(0, lastSlash);
+      packageDir = new File(packageDir, subdir.replaceAll("/", File.separator));
+      entryName = entryName.substring(lastSlash + 1);
+    }
+
+    // Ensure package subdirs exist
+    packageDir.mkdirs();
+
+    // Copy the file over
+    Files.copy(
+      jarFile.getInputStream(entry),
+      new File(packageDir, entryName).toPath(),
+      StandardCopyOption.REPLACE_EXISTING
+    );
   }
 
   public void uninstallPackage(LXClassLoader.Package pack) {
     File destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName(), true);
     try {
       if (destinationFile.exists()) {
-        destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName() + "-" + java.time.Instant.now().getEpochSecond(), true);
+        final String suffix =
+          new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss")
+          .format(Calendar.getInstance().getTime());
+        destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName() + "-" + suffix, true);
       }
-      Files.move(pack.jarFile.toPath(), destinationFile.toPath());
+      Files.move(pack.jarFile.toPath(), destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       reloadContent();
     } catch (IOException iox) {
       this.lx.pushError(iox, "Could not remove package file " + pack.jarFile.getName());
@@ -921,10 +995,8 @@ public class LXRegistry implements LXSerializable {
   }
 
   protected void initializePlugins() {
-    if (this.lx.permissions.canRunPlugins()) {
-      for (Plugin plugin : this.plugins) {
-        plugin.initialize(this.lx);
-      }
+    for (Plugin plugin : this.plugins) {
+      plugin.initialize(this.lx);
     }
   }
 
