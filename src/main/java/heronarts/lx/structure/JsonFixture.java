@@ -776,6 +776,15 @@ public class JsonFixture extends LXFixture {
 
   private final static char[] SIMPLE_EXPRESSION_OPERATORS = { '+', '-', '*', '/' };
 
+  private static boolean isSimpleOperator(char ch) {
+    for (char operator : SIMPLE_EXPRESSION_OPERATORS) {
+      if (ch == operator) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // Super-trivial hacked up implementation of *very* basic math expressions, which has now
   // got some functions tacked on. If this slippery slope keeps sliding will need to get a
   // real expression parsing + evaluation library involved at some point...
@@ -811,13 +820,12 @@ public class JsonFixture extends LXFixture {
 
     // Operator pass - these are prioritized so that * and / take precedence over + and -
     for (char operator : SIMPLE_EXPRESSION_OPERATORS) {
-      for (int index = 1; index < chars.length - 1; ++index) {
+      for (int index = chars.length - 2; index > 0; --index) {
         if (chars[index] == operator) {
 
           // Skip over the tricky unary minus operator! If preceded by another operator,
           // then it's actually just a negative sign which can be handled by parseFloat()
-          if ((operator == '-') && (
-            (chars[index-1] == '*' || chars[index-1] == '/' || chars[index-1] == '+'))) {
+          if ((operator == '-') && isSimpleOperator(chars[index-1])) {
             continue;
           }
 
