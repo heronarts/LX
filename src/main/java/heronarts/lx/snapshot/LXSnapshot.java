@@ -70,7 +70,8 @@ public abstract class LXSnapshot extends LXComponent {
     PATTERNS,
     EFFECTS,
     OUTPUT,
-    MODULATION;
+    MODULATION,
+    GLOBAL;
   }
 
   /**

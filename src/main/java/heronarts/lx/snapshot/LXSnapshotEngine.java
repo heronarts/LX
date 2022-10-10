@@ -118,6 +118,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
 
   private final List<LXGlobalSnapshot> mutableSnapshots = new ArrayList<LXGlobalSnapshot>();
 
+  private final List<LXComponent> mutableGlobalComponents = new ArrayList<LXComponent>();
+
+  final List<LXComponent> globalComponents = Collections.unmodifiableList(this.mutableGlobalComponents);
+
   /**
    * Public read-only view of all the snapshots.
    */
@@ -241,6 +245,17 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addParameter("autoCycleTimeSecs", this.autoCycleTimeSecs);
     addParameter("autoCycleCursor", this.autoCycleCursor);
     addParameter("triggerSnapshotCycle", this.triggerSnapshotCycle);
+  }
+
+  /**
+   * Registers a global component for storage in global snapshots
+   *
+   * @param component Global component
+   * @return this
+   */
+  public LXSnapshotEngine registerGlobal(LXComponent component) {
+    this.mutableGlobalComponents.add(component);
+    return this;
   }
 
   @Override
@@ -430,11 +445,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       return false;
     }
 
-    boolean mixer = this.recallMixer.isOn();
-    boolean pattern = this.recallPattern.isOn();
-    boolean effect = this.recallEffect.isOn();
-    boolean modulation = this.recallModulation.isOn();
-    boolean output = this.recallOutput.isOn();
+    final boolean mixer = this.recallMixer.isOn();
+    final boolean pattern = this.recallPattern.isOn();
+    final boolean effect = this.recallEffect.isOn();
+    final boolean modulation = this.recallModulation.isOn();
+    final boolean output = this.recallOutput.isOn();
 
     boolean transition = false;
     this.autoCycleProgress = 0;
@@ -490,10 +505,12 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       return pattern;
     case OUTPUT:
       return output;
-    default:
     case MIXER:
       return mixer;
+    case GLOBAL:
+      return true;
     }
+    return false;
   }
 
   public double getTransitionProgress() {

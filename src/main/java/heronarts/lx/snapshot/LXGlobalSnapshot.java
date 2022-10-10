@@ -138,6 +138,15 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
         addParameterView(ViewScope.MODULATION, p);
       }
     }
+
+    // Global component settings
+    for (LXComponent global : lx.engine.snapshots.globalComponents) {
+      for (LXParameter p : global.getParameters()) {
+        if (p != global.label) {
+          addParameterView(ViewScope.GLOBAL, p);
+        }
+      }
+    }
   }
 
 
