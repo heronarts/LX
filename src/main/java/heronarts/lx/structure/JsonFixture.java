@@ -480,8 +480,12 @@ public class JsonFixture extends LXFixture {
     new BooleanParameter("Warning", false)
     .setDescription("Whether there are warnings from the loading of the JSON file");
 
-  public final MutableParameter parametersReloaded =
-    (MutableParameter) new MutableParameter("Reload", 0)
+  public final MutableParameter parametersDisposed = (MutableParameter)
+    new MutableParameter("Dispose")
+    .setDescription("Monitor for when fixture parameters are disposed");
+
+  public final MutableParameter parametersReloaded = (MutableParameter)
+    new MutableParameter("Reload")
     .setDescription("Monitor for when fixture parameters are reloaded");
 
   public final List<String> warnings = new CopyOnWriteArrayList<String>();
@@ -555,6 +559,8 @@ public class JsonFixture extends LXFixture {
   }
 
   private void removeJsonParameters() {
+    this.parametersDisposed.bang();
+
     // We're done with these...
     for (ParameterDefinition parameter : this.definedParameters.values()) {
       parameter.dispose();
