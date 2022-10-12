@@ -788,6 +788,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @param geometryMatrix The geometry transformation matrix for this object
    */
   protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
+    geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
+    geometryMatrix.rotateY((float) Math.toRadians(this.yaw.getValue()));
+    geometryMatrix.rotateX((float) Math.toRadians(this.pitch.getValue()));
+    geometryMatrix.rotateZ((float) Math.toRadians(this.roll.getValue()));
+    geometryMatrix.scale(this.scale.getValuef());
     for (Transform transform : this.transforms) {
       switch (transform.type) {
       case TRANSLATE_X: geometryMatrix.translateX(transform.value); break;
@@ -798,11 +803,6 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       case ROTATE_Z: geometryMatrix.rotateZ((float) Math.toRadians(transform.value)); break;
       }
     }
-    geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
-    geometryMatrix.rotateY((float) Math.toRadians(this.yaw.getValue()));
-    geometryMatrix.rotateX((float) Math.toRadians(this.pitch.getValue()));
-    geometryMatrix.rotateZ((float) Math.toRadians(this.roll.getValue()));
-    geometryMatrix.scale(this.scale.getValuef());
   }
 
   private void _regenerateGeometry() {
