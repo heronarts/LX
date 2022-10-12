@@ -70,7 +70,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
   }
 
   protected Segment buildSegment() {
-    return new Segment(0, size(), DEFAULT_STRIDE, DEFAULT_REPEAT, this.reverse.isOn(), this.byteOrder.getEnum());
+    return new Segment(0, size(), DEFAULT_OUTPUT_STRIDE, DEFAULT_OUTPUT_REPEAT, this.reverse.isOn(), this.byteOrder.getEnum());
   }
 
 }

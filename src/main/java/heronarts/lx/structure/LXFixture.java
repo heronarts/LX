@@ -56,8 +56,8 @@ import heronarts.lx.transform.LXMatrix;
  */
 public abstract class LXFixture extends LXComponent implements LXFixtureContainer, LXComponent.Renamable {
 
-  public static final int DEFAULT_STRIDE = 1;
-  public static final int DEFAULT_REPEAT = 1;
+  public static final int DEFAULT_OUTPUT_STRIDE = 1;
+  public static final int DEFAULT_OUTPUT_REPEAT = 1;
 
   /**
    * Output protocols
@@ -146,11 +146,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     };
 
     protected Segment(int start, int num) {
-      this(start, num, DEFAULT_STRIDE);
+      this(start, num, DEFAULT_OUTPUT_STRIDE);
     }
 
     protected Segment(int start, int num, int stride) {
-      this(start, num, stride, DEFAULT_REPEAT);
+      this(start, num, stride, DEFAULT_OUTPUT_REPEAT);
     }
 
     protected Segment(int start, int num, int stride, int repeat) {

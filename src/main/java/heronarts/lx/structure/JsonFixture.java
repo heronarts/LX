@@ -2031,7 +2031,7 @@ public class JsonFixture extends LXFixture {
         return;
       }
     }
-    int stride = DEFAULT_STRIDE;
+    int stride = DEFAULT_OUTPUT_STRIDE;
     if (segmentObj.has(KEY_STRIDE)) {
       stride = loadInt(segmentObj, KEY_STRIDE, true, "Output " + KEY_STRIDE + " must be a valid integer");
       if (stride <= 0) {
@@ -2040,7 +2040,7 @@ public class JsonFixture extends LXFixture {
       }
     }
 
-    int repeat = DEFAULT_REPEAT;
+    int repeat = DEFAULT_OUTPUT_REPEAT;
     if (segmentObj.has(KEY_REPEAT)) {
       repeat = loadInt(segmentObj, KEY_REPEAT, true, "Output " + KEY_REPEAT + " must be a valid integer");
       if (repeat <= 0) {
