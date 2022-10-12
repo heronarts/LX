@@ -232,6 +232,25 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
   }
 
+  public static class Transform {
+    public static enum Type {
+      TRANSLATE_X,
+      TRANSLATE_Y,
+      TRANSLATE_Z,
+      ROTATE_X,
+      ROTATE_Y,
+      ROTATE_Z;
+    }
+
+    public final Type type;
+    public final float value;
+
+    protected Transform(Type type, float value) {
+      this.type = type;
+      this.value = value;
+    }
+  }
+
   private static final double POSITION_RANGE = 1000000;
 
   public final BooleanParameter selected =
@@ -313,6 +332,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   private final List<String> tagList = new ArrayList<String>();
 
   protected final Map<String, String> metaData = new HashMap<String, String>();
+
+  private final List<Transform> transforms = new ArrayList<Transform>();
 
   private final LXMatrix parentTransformMatrix = new LXMatrix();
 
@@ -701,6 +722,14 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     this.mutableOutputsDirect.remove(output);
   }
 
+  protected void clearTransforms() {
+    this.transforms.clear();
+  }
+
+  protected void addTransform(Transform transform) {
+    this.transforms.add(transform);
+  }
+
   /**
    * Invoked when this fixture has been loaded or added to some container. Will
    * rebuild the points and the metrics, and notify container of the change to
@@ -759,6 +788,16 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @param geometryMatrix The geometry transformation matrix for this object
    */
   protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
+    for (Transform transform : this.transforms) {
+      switch (transform.type) {
+      case TRANSLATE_X: geometryMatrix.translateX(transform.value); break;
+      case TRANSLATE_Y: geometryMatrix.translateY(transform.value); break;
+      case TRANSLATE_Z: geometryMatrix.translateZ(transform.value); break;
+      case ROTATE_X: geometryMatrix.rotateX((float) Math.toRadians(transform.value)); break;
+      case ROTATE_Y: geometryMatrix.rotateY((float) Math.toRadians(transform.value)); break;
+      case ROTATE_Z: geometryMatrix.rotateZ((float) Math.toRadians(transform.value)); break;
+      }
+    }
     geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
     geometryMatrix.rotateY((float) Math.toRadians(this.yaw.getValue()));
     geometryMatrix.rotateX((float) Math.toRadians(this.pitch.getValue()));
@@ -1167,6 +1206,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
     this.mutableOutputsDirect.clear();
     this.outputDefinitions.clear();
+    this.transforms.clear();
     super.dispose();
   }
 

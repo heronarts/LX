@@ -83,9 +83,13 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_YAW = "yaw";
   private static final String KEY_PITCH = "pitch";
   private static final String KEY_ROLL = "roll";
+  private static final String KEY_ROTATE_X = "rotateX";
+  private static final String KEY_ROTATE_Y = "rotateY";
+  private static final String KEY_ROTATE_Z = "rotateZ";
   private static final String KEY_SCALE = "scale";
   private static final String KEY_DIRECTION = "direction";
   private static final String KEY_NORMAL = "normal";
+  private static final String KEY_TRANSFORMS = "transforms";
 
   // Points
   private static final String KEY_POINTS = "points";
@@ -603,10 +607,12 @@ public class JsonFixture extends LXFixture {
     this.componentsById.clear();
     this.componentsByIndex.clear();
 
+    // Clear transforms
+    clearTransforms();
+
     this.isLoaded = false;
     loadFixture(reloadParameters);
     regenerate();
-
   }
 
   private File getFixtureFile(String fixtureType) {
@@ -638,6 +644,9 @@ public class JsonFixture extends LXFixture {
         loadParameters(obj);
         this.parametersReloaded.bang();
       }
+
+      // Load transforms
+      loadTransforms(this, obj);
 
       // Keeping around for legacy support, but these should all now be a part of
       // the components loading flow
@@ -699,7 +708,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private static final Pattern parameterPattern = Pattern.compile("\\$\\{([a-zA-Z0-9]+)\\}");
+  private static final Pattern parameterPattern = Pattern.compile("\\$\\{?([a-zA-Z0-9]+)\\}?");
 
   private String replaceVariables(String key, String expression, ParameterType returnType) {
     StringBuilder result = new StringBuilder();
@@ -713,7 +722,7 @@ public class JsonFixture extends LXFixture {
 
         parameterValue = String.valueOf(this.currentChildInstance);
         if (returnType == ParameterType.BOOLEAN) {
-          addWarning("Cannot load non-boolean parameter ${" + parameterName + "} into a boolean type: " + key);
+          addWarning("Cannot load non-boolean parameter $" + parameterName + " into a boolean type: " + key);
           return null;
         }
 
@@ -730,7 +739,7 @@ public class JsonFixture extends LXFixture {
           if (parameter.type == ParameterType.FLOAT || parameter.type == ParameterType.INT) {
             parameterValue = String.valueOf(parameter.parameter.getValue());
           } else {
-            addWarning("Cannot load non-numeric parameter ${" + parameterName + "} into a float type: " + key);
+            addWarning("Cannot load non-numeric parameter $" + parameterName + " into a float type: " + key);
             return null;
           }
           break;
@@ -738,7 +747,7 @@ public class JsonFixture extends LXFixture {
           if (parameter.type == ParameterType.INT) {
             parameterValue = String.valueOf(parameter.intParameter.getValuei());
           } else {
-            addWarning("Cannot load non-integer parameter ${" + parameterName + "} into an integer type: " + key);
+            addWarning("Cannot load non-integer parameter $" + parameterName + " into an integer type: " + key);
             return null;
           }
           break;
@@ -750,7 +759,7 @@ public class JsonFixture extends LXFixture {
           if (parameter.type == ParameterType.BOOLEAN) {
             parameterValue = String.valueOf(parameter.booleanParameter.isOn());
           } else {
-            addWarning("Cannot load non-boolean parameter ${" + parameterName + "} into a boolean type: " + key);
+            addWarning("Cannot load non-boolean parameter $" + parameterName + " into a boolean type: " + key);
             return null;
           }
           break;
@@ -1052,6 +1061,7 @@ public class JsonFixture extends LXFixture {
   }
 
   private void loadGeometry(LXFixture fixture, JsonObject obj) {
+    loadTransforms(fixture, obj);
     if (obj.has(KEY_X)) {
       fixture.x.setValue(loadFloat(obj, KEY_X, true));
     }
@@ -1072,6 +1082,78 @@ public class JsonFixture extends LXFixture {
     }
     if (obj.has(KEY_SCALE)) {
       fixture.scale.setValue(loadFloat(obj, KEY_SCALE, true));
+    }
+  }
+
+  private void loadTransforms(LXFixture fixture, JsonObject obj) {
+    final JsonArray transformsArr = loadArray(obj, KEY_TRANSFORMS, KEY_TRANSFORMS + " must be an array");
+    if (transformsArr == null) {
+      return;
+    }
+    for (JsonElement transformElem : transformsArr) {
+      if (transformElem.isJsonObject()) {
+        loadTransform(fixture, transformElem.getAsJsonObject());
+      } else if (!transformElem.isJsonNull()) {
+        addWarning(KEY_TRANSFORMS + " should only contain transform elements in JSON object format, found invalid: " + transformElem);
+      }
+    }
+  }
+
+  private static final String[] TRANSFORM_ROTATE = { KEY_YAW, KEY_PITCH, KEY_ROLL, KEY_ROTATE_X, KEY_ROTATE_Y, KEY_ROTATE_Z };
+
+  private void loadTransform(LXFixture fixture, JsonObject obj) {
+    if (obj.has(KEY_ENABLED)) {
+      boolean enabled = loadBoolean(obj, KEY_ENABLED, true, "Transform must specify boolean expression for " + KEY_ENABLED);
+      if (!enabled) {
+        return;
+      }
+    }
+
+    // Check there are not multiple rotations specified
+    int rotateCount = 0;
+    for (String key : TRANSFORM_ROTATE) {
+      if (obj.has(key)) {
+        ++rotateCount;
+      }
+    }
+    if (rotateCount > 1) {
+      addWarning("Transform may not contain multiple rotations: " + obj);
+      return;
+    }
+    if (obj.has(KEY_X) || obj.has(KEY_Y) || obj.has(KEY_Z)) {
+      for (String key : TRANSFORM_ROTATE) {
+        if (obj.has(key)) {
+          addWarning("Transform may not contain both translation and rotation: " + obj);
+          return;
+        }
+      }
+      if (obj.has(KEY_X)) {
+        fixture.addTransform(new Transform(Transform.Type.TRANSLATE_X, loadFloat(obj, KEY_X, true)));
+      }
+      if (obj.has(KEY_Y)) {
+        fixture.addTransform(new Transform(Transform.Type.TRANSLATE_Y, loadFloat(obj, KEY_Y, true)));
+      }
+      if (obj.has(KEY_Z)) {
+        fixture.addTransform(new Transform(Transform.Type.TRANSLATE_Z, loadFloat(obj, KEY_Z, true)));
+      }
+    }
+    if (obj.has(KEY_YAW)) {
+      fixture.addTransform(new Transform(Transform.Type.ROTATE_Y, loadFloat(obj, KEY_YAW, true)));
+    }
+    if (obj.has(KEY_PITCH)) {
+      fixture.addTransform(new Transform(Transform.Type.ROTATE_X, loadFloat(obj, KEY_PITCH, true)));
+    }
+    if (obj.has(KEY_ROLL)) {
+      fixture.addTransform(new Transform(Transform.Type.ROTATE_Z, loadFloat(obj, KEY_ROLL, true)));
+    }
+    if (obj.has(KEY_ROTATE_X)) {
+      fixture.addTransform(new Transform(Transform.Type.ROTATE_X, loadFloat(obj, KEY_ROTATE_X, true)));
+    }
+    if (obj.has(KEY_ROTATE_Y)) {
+      fixture.addTransform(new Transform(Transform.Type.ROTATE_Y, loadFloat(obj, KEY_ROTATE_Y, true)));
+    }
+    if (obj.has(KEY_ROTATE_Z)) {
+      fixture.addTransform(new Transform(Transform.Type.ROTATE_Z, loadFloat(obj, KEY_ROTATE_Z, true)));
     }
   }
 
