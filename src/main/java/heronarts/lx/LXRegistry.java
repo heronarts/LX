@@ -39,6 +39,8 @@ import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonSyntaxException;
+
 import heronarts.lx.blend.AddBlend;
 import heronarts.lx.blend.BurnBlend;
 import heronarts.lx.blend.DarkestBlend;
@@ -271,6 +273,18 @@ public class LXRegistry implements LXSerializable {
    */
   public class JsonFixture {
 
+    public class Error {
+      public final String path;
+      public final String type;
+      public final Exception exception;
+
+      Error(String prefix, File file, String type, Exception exception) {
+        this.path = prefix + file.getName();
+        this.type = type;
+        this.exception = exception;
+      }
+    }
+
     public final String type;
     public final boolean isVisible;
 
@@ -283,12 +297,17 @@ public class LXRegistry implements LXSerializable {
       try (FileReader fr = new FileReader(file)) {
         JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
         isVisible = !obj.has(KEY_IS_VISIBLE) || obj.get(KEY_IS_VISIBLE).getAsBoolean();
+      } catch (JsonSyntaxException jsx) {
+        LX.error(jsx, "JSON fixture file has invalid syntax: " + file.getAbsolutePath());
+        mutableJsonFixtureErrors.add(new Error(prefix, file, "Syntax error", jsx));
       } catch (JsonParseException jpx) {
         LX.error(jpx, "JSON fixture file is not valid JSON: " + file.getAbsolutePath());
+        mutableJsonFixtureErrors.add(new Error(prefix, file, "Parse error", jpx));
       } catch (FileNotFoundException fnfx) {
         LX.error(fnfx, "JSON fixture file does not exist: " + file.getAbsolutePath());
       } catch (Exception x) {
         LX.error(x, "Error reading JSON fixture file: " + file.getAbsolutePath());
+        mutableJsonFixtureErrors.add(new Error(prefix, file, "I/O error", x));
       }
 
       this.type = fileName.substring(0, fileName.length() - ".lxf".length());
@@ -303,6 +322,10 @@ public class LXRegistry implements LXSerializable {
    */
   public final List<JsonFixture> jsonFixtures =
    Collections.unmodifiableList(this.mutableJsonFixtures);
+
+  private final List<JsonFixture.Error> mutableJsonFixtureErrors = new ArrayList<JsonFixture.Error>();
+
+  public final List<JsonFixture.Error> jsonFixtureErrors = Collections.unmodifiableList(this.mutableJsonFixtureErrors);
 
   private final List<LXClassLoader.Package> mutablePackages = new ArrayList<LXClassLoader.Package>();
 
@@ -442,6 +465,7 @@ public class LXRegistry implements LXSerializable {
 
     // Reload the available JSON fixture list
     this.mutableJsonFixtures.clear();
+    this.mutableJsonFixtureErrors.clear();
     addJsonFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
 
     // We are done reloading
