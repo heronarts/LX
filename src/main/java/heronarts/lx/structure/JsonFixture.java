@@ -154,6 +154,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_COMPONENT_ID = "componentId";
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
+  private static final String KEY_REPEAT = "repeat";
   private static final String KEY_REVERSE = "reverse";
   private static final String KEY_SEGMENTS = "segments";
 
@@ -451,15 +452,17 @@ public class JsonFixture extends LXFixture {
     private final int start;
     private final int num;
     private final int stride;
+    private final int repeat;
     private final boolean reverse;
 
     // May or may not be specified, if null then the parent output definition is used
     private final JsonByteOrderDefinition byteOrder;
 
-    private JsonSegmentDefinition(int start, int num, int stride, boolean reverse, JsonByteOrderDefinition byteOrder) {
+    private JsonSegmentDefinition(int start, int num, int stride, int repeat, boolean reverse, JsonByteOrderDefinition byteOrder) {
       this.start = start;
       this.num = num;
       this.stride = stride;
+      this.repeat = repeat;
       this.reverse = reverse;
       this.byteOrder = byteOrder;
     }
@@ -2028,7 +2031,7 @@ public class JsonFixture extends LXFixture {
         return;
       }
     }
-    int stride = 1;
+    int stride = DEFAULT_STRIDE;
     if (segmentObj.has(KEY_STRIDE)) {
       stride = loadInt(segmentObj, KEY_STRIDE, true, "Output " + KEY_STRIDE + " must be a valid integer");
       if (stride <= 0) {
@@ -2036,6 +2039,16 @@ public class JsonFixture extends LXFixture {
         return;
       }
     }
+
+    int repeat = DEFAULT_REPEAT;
+    if (segmentObj.has(KEY_REPEAT)) {
+      repeat = loadInt(segmentObj, KEY_REPEAT, true, "Output " + KEY_REPEAT + " must be a valid integer");
+      if (repeat <= 0) {
+        addWarning("Output repeat must be a positive value");
+        return;
+      }
+    }
+
     boolean reverse = loadBoolean(segmentObj, KEY_REVERSE, true, "Output " + KEY_REVERSE + " must be a valid boolean");
 
     JsonByteOrderDefinition segmentByteOrder = null;
@@ -2043,7 +2056,7 @@ public class JsonFixture extends LXFixture {
       segmentByteOrder = loadByteOrder(segmentObj, null);
     }
 
-    segments.add(new JsonSegmentDefinition(start, num, stride, reverse, segmentByteOrder));
+    segments.add(new JsonSegmentDefinition(start, num, stride, repeat, reverse, segmentByteOrder));
   }
 
   private JsonByteOrderDefinition loadByteOrder(JsonObject obj, JsonByteOrderDefinition defaultByteOrder) {
@@ -2113,6 +2126,7 @@ public class JsonFixture extends LXFixture {
         segment.start + fixtureOffset,
         num,
         segment.stride,
+        segment.repeat,
         segment.reverse,
         (segment.byteOrder != null) ? segment.byteOrder.byteOrder : output.byteOrder.byteOrder
        ));

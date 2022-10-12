@@ -56,6 +56,9 @@ import heronarts.lx.transform.LXMatrix;
  */
 public abstract class LXFixture extends LXComponent implements LXFixtureContainer, LXComponent.Renamable {
 
+  public static final int DEFAULT_STRIDE = 1;
+  public static final int DEFAULT_REPEAT = 1;
+
   /**
    * Output protocols
    */
@@ -123,8 +126,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Byte order for this segment
     protected final LXBufferOutput.ByteOrder byteOrder;
 
+    // Length of the index buffer (# of color index values))
     protected final int length;
 
+    // Total number of single-byte channels (# of individual color output bytes)
     protected final int numChannels;
 
     private final FunctionalParameter brightness = new FunctionalParameter() {
@@ -140,26 +145,38 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       }
     };
 
+    protected Segment(int start, int num) {
+      this(start, num, DEFAULT_STRIDE);
+    }
+
     protected Segment(int start, int num, int stride) {
-      this(start, num, stride, false);
+      this(start, num, stride, DEFAULT_REPEAT);
     }
 
-    protected Segment(int start, int num, int stride, boolean reverse) {
-      this(start, num, stride, reverse, LXBufferOutput.ByteOrder.RGB);
+    protected Segment(int start, int num, int stride, int repeat) {
+      this(start, num, stride, repeat, false);
     }
 
-    protected Segment(int start, int num, int stride, boolean reverse, LXBufferOutput.ByteOrder byteOrder) {
-      this.indexBuffer = new int[num];
+    protected Segment(int start, int num, int stride, int repeat, boolean reverse) {
+      this(start, num, stride, repeat, reverse, LXBufferOutput.ByteOrder.RGB);
+    }
+
+    protected Segment(int start, int num, int stride, int repeat, boolean reverse, LXBufferOutput.ByteOrder byteOrder) {
+      this.length = num * repeat;
+      this.indexBuffer = new int[this.length];
       if (reverse) {
         start = start + stride * (num-1);
         stride = -stride;
       }
+      int i = 0;
       for (int s = 0; s < num; ++s) {
-        this.indexBuffer[s] = start + s * stride;
+        final int index = start + s * stride;
+        for (int r = 0; r < repeat; ++r) {
+          this.indexBuffer[i++] = index;
+        }
       }
       this.byteOrder = byteOrder;
-      this.length = num;
-      this.numChannels = num * byteOrder.getNumBytes();
+      this.numChannels = this.length * byteOrder.getNumBytes();
     }
 
     /**
