@@ -20,6 +20,7 @@ package heronarts.lx;
 
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 public abstract class LXRunnableComponent extends LXComponent implements LXLoopTask {
 
@@ -32,9 +33,8 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
     new BooleanParameter("Running", false)
     .setDescription("Sets whether the component is running");
 
-  public final BooleanParameter trigger =
-    new BooleanParameter("Trigger", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter trigger =
+    new TriggerParameter("Trigger", this::_trigger)
     .setDescription("Resets the cycle and starts running");
 
   protected LXRunnableComponent() {
@@ -64,14 +64,13 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
       } else {
         onStop();
       }
-    } else if (parameter == this.trigger) {
-      if (this.trigger.isOn()) {
-        onTrigger();
-        onReset();
-        start();
-        this.trigger.setValue(false);
-      }
     }
+  }
+
+  private void _trigger() {
+    onTrigger();
+    onReset();
+    start();
   }
 
   public final LXRunnableComponent toggle() {
@@ -117,7 +116,7 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
    * @return this
    */
   public final LXRunnableComponent trigger() {
-    this.trigger.setValue(true);
+    this.trigger.trigger();
     return this;
   }
 

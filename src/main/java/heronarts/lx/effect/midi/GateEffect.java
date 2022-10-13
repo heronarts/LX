@@ -32,6 +32,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.MIDI)
@@ -134,9 +135,8 @@ public class GateEffect extends LXEffect {
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Manually engage the gate");
 
-  public final BooleanParameter targetTrigger =
-    new BooleanParameter("Trigger", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter targetTrigger =
+    new TriggerParameter("Trigger")
     .setDescription("Engage the gate from a trigger");
 
   public final BooleanParameter midiEnabled =
@@ -225,7 +225,6 @@ public class GateEffect extends LXEffect {
       this.env.engage.setValue(this.manualTrigger.isOn());
     } else if (p == this.targetTrigger) {
       this.env.engage.setValue(this.targetTrigger.isOn());
-      this.targetTrigger.setValue(false);
     } else if (p == this.midiEnabled) {
       if (!this.midiEnabled.isOn() && !this.manualTrigger.isOn()) {
         this.env.engage.setValue(false);

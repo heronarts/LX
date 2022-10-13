@@ -32,6 +32,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 /**
  * Class to represent a musical tempo at which patterns are operating. This can
@@ -140,10 +141,9 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Beats per minute of the master tempo object");
 
-  public final BooleanParameter trigger =
-    new BooleanParameter("Trigger")
-    .setDescription("Listeable trigger which is set on each beat")
-    .setMode(BooleanParameter.Mode.MOMENTARY);
+  public final TriggerParameter trigger =
+    new TriggerParameter("Trigger")
+    .setDescription("Listeable trigger which is set on each beat");
 
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled")
@@ -268,10 +268,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       updateNudge(this.nudgeUp, this.nudgeDown, .90);
     } else if (p == this.nudgeDown) {
       updateNudge(this.nudgeDown, this.nudgeUp, 1.1);
-    } else if (p == this.trigger) {
-      if (this.trigger.isOn()) {
-        this.trigger.setValue(false);
-      }
     } else if (p == this.clockSource) {
       if (this.clockSource.getEnum().isExternal()) {
         // Reset and stop clock, wait for trigger
@@ -575,7 +571,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
         listener.onBeat(this, beatIndex);
       }
       if (this.enabled.isOn()) {
-        this.trigger.setValue(true);
+        this.trigger.trigger();
       }
     }
   }

@@ -27,6 +27,7 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 /**
  * A snapshot holds a memory of the state of the program at a point in time.
@@ -38,9 +39,8 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
 
   private int index = -1;
 
-  public final BooleanParameter recall =
-    new BooleanParameter("Recall", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter recall =
+    new TriggerParameter("Recall", () -> { this.lx.engine.snapshots.recall(this); })
     .setDescription("Restores the values of this snapshot");
 
   public final BooleanParameter autoCycleEligible =
@@ -69,17 +69,6 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
     addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
     addParameter("cycleTimeSecs", this.cycleTimeSecs);
     addParameter("hasCustomTransitionTime", this.hasCustomTransitionTime);
-  }
-
-  @Override
-  public void onParameterChanged(LXParameter p) {
-    super.onParameterChanged(p);
-    if (this.recall == p) {
-      if (this.recall.isOn()) {
-        this.recall.setValue(false);
-        this.lx.engine.snapshots.recall(this);
-      }
-    }
   }
 
   // Package-only method for LXSnapshotEngine to update indices

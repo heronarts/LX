@@ -40,6 +40,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -107,9 +108,8 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     new DiscreteParameter("Auto-Cycle", NO_SWATCH_INDEX, NO_SWATCH_INDEX, 0)
     .setDescription("Index for the auto-cycle parameter");
 
-  public final BooleanParameter triggerSwatchCycle =
-    new BooleanParameter("Trigger Cycle")
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter triggerSwatchCycle =
+    new TriggerParameter("Trigger Cycle", this::onTriggerSwatchCycle)
     .setDescription("Triggers a swatch change");
 
   /**
@@ -185,15 +185,14 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       if (!this.transitionEnabled.isOn()) {
         finishTransition();
       }
-    } else if (p == this.triggerSwatchCycle) {
-      if (this.triggerSwatchCycle.isOn()) {
-        this.triggerSwatchCycle.setValue(false);
-        if (this.transitionTarget != null) {
-          finishTransition();
-        } else {
-          doSwatchCycle();
-        }
-      }
+    }
+  }
+
+  private void onTriggerSwatchCycle() {
+    if (this.transitionTarget != null) {
+      finishTransition();
+    } else {
+      doSwatchCycle();
     }
   }
 

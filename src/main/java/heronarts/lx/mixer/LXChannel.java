@@ -36,6 +36,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 import heronarts.lx.parameter.BooleanParameter;
@@ -184,9 +185,8 @@ public class LXChannel extends LXAbstractChannel {
     new MutableParameter("SurfaceFocusLength", 0)
     .setDescription("Control surface focus length");
 
-  public final BooleanParameter triggerPatternCycle =
-    new BooleanParameter("Trigger Pattern")
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter triggerPatternCycle =
+    new TriggerParameter("Trigger Pattern", this::onTriggerPatternCycle)
     .setDescription("Triggers a pattern change on the channel");
 
   private double autoCycleProgress = 0;
@@ -268,15 +268,6 @@ public class LXChannel extends LXAbstractChannel {
       if (this.transition == null) {
         this.transitionMillis = this.lx.engine.nowMillis;
       }
-    } else if (p == this.triggerPatternCycle) {
-      if (this.triggerPatternCycle.isOn()) {
-        this.triggerPatternCycle.setValue(false);
-        if (this.transition != null) {
-          finishTransition();
-        } else {
-          doPatternCycle();
-        }
-      }
     } else if (p == this.compositeMode) {
       // Get out of any pending transition no matter the direction of change
       if (this.transition != null) {
@@ -300,6 +291,14 @@ public class LXChannel extends LXAbstractChannel {
           activePattern.onActive();
         }
       }
+    }
+  }
+
+  private void onTriggerPatternCycle() {
+    if (this.transition != null) {
+      finishTransition();
+    } else {
+      doPatternCycle();
     }
   }
 

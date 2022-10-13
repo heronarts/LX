@@ -36,6 +36,7 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -110,9 +111,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     new BooleanParameter("Enabled", true)
     .setDescription("Whether the pattern is eligible for playlist cycling or compositing");
 
-  public final BooleanParameter recall =
-    new BooleanParameter("Recall", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter recall =
+    new TriggerParameter("Recall", () -> { getChannel().goPattern(this); })
     .setDescription("Recalls this pattern to become active on the channel");
 
   public final ObjectParameter<LXBlend> compositeMode =
@@ -124,13 +124,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   public final CompoundParameter compositeLevel =
     new CompoundParameter("Composite Level", 1)
     .setDescription("Alpha level to composite pattern at when in channel blend mode");
-
-  private final LXParameterListener onRecall = p -> {
-    if (this.recall.isOn()) {
-      this.recall.setValue(false);
-      getChannel().goPattern(this);
-    }
-  };
 
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
@@ -175,7 +168,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     updateCompositeBlendOptions();
     this.compositeMode.addListener(this.onCompositeMode);
 
-    this.recall.addListener(this.onRecall);
     this.enabled.addListener(this.onEnabled);
 
   }
@@ -410,7 +402,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   @Override
   public void dispose() {
-    this.recall.removeListener(this.onRecall);
     this.enabled.removeListener(this.onEnabled);
     this.compositeMode.removeListener(this.onCompositeMode);
     super.dispose();

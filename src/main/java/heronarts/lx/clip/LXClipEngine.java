@@ -27,6 +27,7 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 public class LXClipEngine extends LXComponent implements LXOscComponent {
 
@@ -55,7 +56,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   public static final int MIN_SCENES = 5;
   public static final int MAX_SCENES = 128;
 
-  private final BooleanParameter[] scenes = new BooleanParameter[MAX_SCENES];
+  private final TriggerParameter[] scenes = new TriggerParameter[MAX_SCENES];
 
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
@@ -94,9 +95,9 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
 
     // Scenes
     for (int i = 0; i < this.scenes.length; ++i) {
+      final int sceneIndex = i;
       this.scenes[i] =
-        new BooleanParameter("Scene-" + (i+1))
-        .setMode(BooleanParameter.Mode.MOMENTARY)
+        new TriggerParameter("Scene-" + (i+1), () -> { launchScene(sceneIndex); })
         .setDescription("Launches scene " + (i+1));
       addParameter("scene-" + (i+1), this.scenes[i]);
     }
@@ -107,15 +108,6 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   public void onParameterChanged(LXParameter p) {
     if (this.numScenes == p) {
       this.clipViewGridOffset.setRange(this.numScenes.getValuei() - MIN_SCENES + 1);
-    } else {
-      for (int i = 0; i < this.scenes.length; ++i) {
-        if (this.scenes[i] == p) {
-          if (this.scenes[i].isOn()) {
-            launchScene(i);
-            this.scenes[i].setValue(false);
-          }
-        }
-      }
     }
   }
 

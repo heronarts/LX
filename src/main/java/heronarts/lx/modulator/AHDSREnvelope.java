@@ -23,6 +23,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter {
@@ -76,9 +77,8 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Engages the envelope");
 
-  public final BooleanParameter retrig =
-    new BooleanParameter("Retrig", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter retrig =
+    new TriggerParameter("Retrig")
     .setDescription("Retriggers the envelope without resetting it or changing engage status");
 
   public final BooleanParameter resetMode =
@@ -152,7 +152,6 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
         this.stageBasis = 0;
         this.stage = this.stageMode.getEnum().firstStage();
         this.attackFrom = getValue();
-        this.retrig.setValue(false);
       }
     } else if (p == this.engage) {
       if (this.engage.isOn()) {

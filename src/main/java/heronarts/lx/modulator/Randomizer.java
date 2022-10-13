@@ -24,8 +24,8 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
-import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -84,10 +84,9 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     new CompoundParameter("Maximum", 1)
     .setDescription("Maximum output value");
 
-  public final BooleanParameter triggerOut =
-    new BooleanParameter("Trigger Out")
-    .setDescription("Engages when the randomizer triggers")
-    .setMode(BooleanParameter.Mode.MOMENTARY);
+  public final TriggerParameter triggerOut =
+    new TriggerParameter("Trigger Out")
+    .setDescription("Engages when the randomizer triggers");
 
   private final MutableParameter target = new MutableParameter(0.5);
 
@@ -120,21 +119,13 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
   }
 
   @Override
-  public void onParameterChanged(LXParameter p) {
-    super.onParameterChanged(p);
-    if (p == this.triggerOut) {
-      this.triggerOut.setValue(false);
-    }
-  }
-
-  @Override
   protected double computeValue(double deltaMs, double basis) {
     if (loop() || finished()) {
       double d = Math.random();
       if (d*100 < this.chance.getValue()) {
         this.randomInterval = Math.random();
         this.target.setValue(LXUtils.lerp(this.min.getValue(), this.max.getValue(), Math.random()));
-        this.triggerOut.setValue(true);
+        this.triggerOut.trigger();
       }
     }
     this.damper.loop(deltaMs);

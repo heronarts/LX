@@ -30,6 +30,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.TimeParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -44,14 +45,12 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXOscC
     new BooleanParameter("Toggle", false)
     .setDescription("Toggle whether the damper is engaged");
 
-  public final BooleanParameter triggerEngage =
-    new BooleanParameter("Engage", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter triggerEngage =
+    new TriggerParameter("Engage")
     .setDescription("Trigger the damper to engage");
 
-  public final BooleanParameter triggerRelease =
-    new BooleanParameter("Release", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter triggerRelease =
+    new TriggerParameter("Release")
     .setDescription("Trigger the damper to release");
 
   public final CompoundParameter periodMs = (CompoundParameter)
@@ -134,13 +133,11 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXOscC
       }
     } else if (p == this.triggerEngage) {
       if (this.triggerEngage.isOn()) {
-        this.triggerEngage.setValue(false);
         this.toggle.setValue(true);
         start();
       }
     } else if (p == this.triggerRelease) {
       if (this.triggerRelease.isOn()) {
-        this.triggerRelease.setValue(false);
         this.toggle.setValue(false);
         start();
       }

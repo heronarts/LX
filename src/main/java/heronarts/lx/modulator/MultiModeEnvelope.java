@@ -30,6 +30,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXModulator.Global("AHDSR")
@@ -109,9 +110,8 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Manually engage the gate");
 
-  public final BooleanParameter targetTrigger =
-    new BooleanParameter("Trigger", false)
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter targetTrigger =
+    new TriggerParameter("Trigger")
     .setDescription("Engage the gate from a trigger");
 
   public final BooleanParameter midiEnabled =
@@ -191,7 +191,6 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
       this.engage.setValue(this.manualTrigger.isOn());
     } else if (p == this.targetTrigger) {
       this.engage.setValue(this.targetTrigger.isOn());
-      this.targetTrigger.setValue(false);
     } else if (p == this.midiEnabled) {
       if (!this.midiEnabled.isOn() && !this.manualTrigger.isOn()) {
         this.engage.setValue(false);

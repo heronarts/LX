@@ -45,6 +45,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.snapshot.LXSnapshot.View;
 import heronarts.lx.utils.LXUtils;
 
@@ -189,9 +190,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     new BooleanParameter("Transitions", false)
     .setDescription("When enabled, transitions between snapshots use interpolation");
 
-  public final BooleanParameter triggerSnapshotCycle =
-    new BooleanParameter("Trigger Cycle")
-    .setMode(BooleanParameter.Mode.MOMENTARY)
+  public final TriggerParameter triggerSnapshotCycle =
+    new TriggerParameter("Trigger Cycle", this::doSnapshotCycle)
     .setDescription("Triggers a snapshot change");
 
   private LXGlobalSnapshot inTransition = null;
@@ -266,11 +266,6 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     } else if (parameter == this.transitionEnabled) {
       if (!this.transitionEnabled.isOn()) {
         finishTransition();
-      }
-    } else if (parameter == this.triggerSnapshotCycle) {
-      if (this.triggerSnapshotCycle.isOn()) {
-        this.triggerSnapshotCycle.setValue(false);
-        doSnapshotCycle();
       }
     }
   }
