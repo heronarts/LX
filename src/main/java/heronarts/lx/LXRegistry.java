@@ -453,6 +453,8 @@ public class LXRegistry implements LXSerializable {
     LX.log("Reloading custom content folders");
     this.classLoader.dispose();
     this.mutablePackages.clear();
+    this.mutablePlugins.clear();
+
     this.contentReloading = true;
 
     // The previous classLoader is now disposed. Note that the classes it defined
