@@ -20,49 +20,55 @@ package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.BooleanParameter;
 
-@LXModulator.Global("Knobs")
+@LXModulator.Global("Switches")
 @LXCategory(LXCategory.MACRO)
-public class MacroKnobs extends LXModulator implements LXOscComponent {
+public class MacroSwitches extends LXModulator implements LXOscComponent, LXTriggerSource {
 
-  public final CompoundParameter macro1 =
-    new CompoundParameter("K1")
-    .setDescription("Macro control parameter");
+  public final BooleanParameter macro1 =
+    new BooleanParameter("B1")
+    .setDescription("Macro control switch");
 
-  public final CompoundParameter macro2 =
-    new CompoundParameter("K2")
-    .setDescription("Macro control parameter");
+  public final BooleanParameter macro2 =
+    new BooleanParameter("B2")
+    .setDescription("Macro control switch");
 
-  public final CompoundParameter macro3 =
-    new CompoundParameter("K3")
-    .setDescription("Macro control parameter");
+  public final BooleanParameter macro3 =
+    new BooleanParameter("B3")
+    .setDescription("Macro control switch");
 
-  public final CompoundParameter macro4 =
-    new CompoundParameter("K4")
-    .setDescription("Macro control parameter");
+  public final BooleanParameter macro4 =
+    new BooleanParameter("B4")
+    .setDescription("Macro control switch");
 
-  public final CompoundParameter macro5 =
-    new CompoundParameter("K5")
-    .setDescription("Macro control parameter");
+  public final BooleanParameter macro5 =
+    new BooleanParameter("B5")
+    .setDescription("Macro control switch");
 
-  public MacroKnobs() {
-    this("Knobs");
+  public MacroSwitches() {
+    this("Switches");
   }
 
-  public MacroKnobs(String label) {
+  public MacroSwitches(String label) {
     super(label);
     addParameter("macro1", this.macro1);
     addParameter("macro2", this.macro2);
     addParameter("macro3", this.macro3);
     addParameter("macro4", this.macro4);
     addParameter("macro5", this.macro5);
+    setMappingSource(false);
   }
 
   @Override
   protected double computeValue(double deltaMs) {
     // Not relevant
     return 0;
+  }
+
+  @Override
+  public BooleanParameter getTriggerSource() {
+    return null;
   }
 
 }
