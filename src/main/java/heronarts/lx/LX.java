@@ -97,7 +97,7 @@ public class LX {
     public boolean canSave();
     public int getMaxPoints();
     public boolean canRunPlugins();
-    public boolean hasPackage(String packageName);
+    public boolean hasPackageLicense(String packageName);
 
     public static Permissions UNRESTRICTED = new Permissions() {
       @Override
@@ -116,7 +116,7 @@ public class LX {
       }
 
       @Override
-      public boolean hasPackage(String packageName) {
+      public boolean hasPackageLicense(String packageName) {
         return false;
       }
     };
@@ -1113,7 +1113,7 @@ public class LX {
 
   public boolean canInstantiate(Class<? extends LXComponent> clz) {
     LXLicense license = clz.getAnnotation(LXLicense.class);
-    return (license == null) || this.permissions.hasPackage(license.value());
+    return (license == null) || this.permissions.hasPackageLicense(license.value());
   }
 
   public LXModel instantiateModel(String className) throws InstantiationException {
@@ -1141,7 +1141,7 @@ public class LX {
     LXLicense license = cls.getAnnotation(LXLicense.class);
     if (license != null) {
       final String pkg = license.value();
-      if (!this.permissions.hasPackage(pkg)) {
+      if (!this.permissions.hasPackageLicense(pkg)) {
         throw new InstantiationException(InstantiationException.Type.LICENSE, "Class requires valid license for package: " + pkg);
       }
     }
