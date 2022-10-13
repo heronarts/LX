@@ -952,13 +952,9 @@ public class LX {
         LXSerializable.Utils.loadObject(this, this.structure, obj, KEY_MODEL, true);
       }
       this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
-      if (obj.has(KEY_EXTERNALS)) {
-        JsonObject externalsObj = obj.getAsJsonObject(KEY_EXTERNALS);
-        for (String key : this.externals.keySet()) {
-          if (externalsObj.has(key)) {
-            this.externals.get(key).load(this, externalsObj.getAsJsonObject(key));
-          }
-        }
+      JsonObject externalsObj = obj.has(KEY_EXTERNALS) ? obj.getAsJsonObject(KEY_EXTERNALS) : new JsonObject();
+      for (String key : this.externals.keySet()) {
+        this.externals.get(key).load(this, externalsObj.has(key) ? externalsObj.getAsJsonObject(key) : new JsonObject());
       }
       this.componentRegistry.projectLoading = false;
       setProject(file, ProjectListener.Change.OPEN);
