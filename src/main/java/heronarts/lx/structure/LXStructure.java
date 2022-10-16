@@ -1111,10 +1111,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       this.modelFile = file;
       this.modelName.setValue(file.getName());
       this.isStatic.bang();
-    } catch (FileNotFoundException e) {
+    } catch (FileNotFoundException fnfx) {
       LX.error("Model file does not exist: " + file);
+      this.lx.pushError(fnfx, "Model file does not exist:" + file);
     } catch (IOException iox) {
-      LX.error(iox, "Exception loading model file: " + file);
+      LX.error(iox, "IO error importing model file: " + file);
+      this.lx.pushError(iox, "IO error importing model file " + file + ": " + iox.getMessage());
+    } catch (Throwable x) {
+      LX.error(x, "Exception importing model file: " + file);
+      this.lx.pushError(x, "Error importing model file " + file + ": " + x.getMessage());
     }
     this.lx.setModelImportFlag(false);
     this.isLoading = wasLoading;
