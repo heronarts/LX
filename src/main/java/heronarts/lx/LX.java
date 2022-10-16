@@ -81,12 +81,12 @@ public class LX {
 
     public final Type type;
 
-    protected InstantiationException(Type type, String message) {
+    public InstantiationException(Type type, String message) {
       super(message);
       this.type = type;
     }
 
-    protected InstantiationException(Exception underlying, String message) {
+    public InstantiationException(Exception underlying, String message) {
       super(message, underlying);
       this.type = Type.EXCEPTION;
     }
@@ -1122,7 +1122,7 @@ public class LX {
       return cls.getConstructor().newInstance();
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateModel: " + x.getMessage());
-      throw new InstantiationException(x, "This model could not be loaded. Check that all required content files are present.");
+      throw new InstantiationException(x, "Model " + className + " could not be loaded. Check that all required content files are present and constructor is public.");
     }
   }
 
@@ -1132,7 +1132,7 @@ public class LX {
       cls = Class.forName(className, true, this.registry.classLoader).asSubclass(type);
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
-      throw new InstantiationException(x, "This class could not be loaded. Check that all required content files are present.");
+      throw new InstantiationException(x, className + " could not be loaded. Check that all required content files are present and constructor is public.");
     }
     return instantiateComponent(cls, type);
   }
@@ -1154,7 +1154,7 @@ public class LX {
       }
     } catch (Exception x) {
       LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
-      throw new InstantiationException(x, "This class could not be loaded. Check that all required content files are present.");
+      throw new InstantiationException(x, cls.getSimpleName() + " could not be loaded. Check that all required content files are present and constructor is public.");
     }
   }
 
