@@ -18,6 +18,8 @@
 
 package heronarts.lx.utils;
 
+import java.util.Locale;
+
 import heronarts.lx.LX;
 
 /**
@@ -242,7 +244,7 @@ public class LXUtils {
    * @return Result rounded to 8 decimal places
    */
   public static float sinf(double radians) {
-    return Float.valueOf(String.format("%8f", Math.sin(radians)));
+    return Float.parseFloat(String.format(Locale.ROOT, "%8f", Math.sin(radians)));
   }
 
   /**
@@ -253,7 +255,7 @@ public class LXUtils {
    * @return Result rounded to 8 decimal places
    */
   public static float cosf(double radians) {
-    return Float.valueOf(String.format("%8f", Math.cos(radians)));
+    return Float.parseFloat(String.format(Locale.ROOT, "%8f", Math.cos(radians)));
   }
 
   /**
@@ -264,7 +266,7 @@ public class LXUtils {
    * @return Result rounded to 8 decimal places
    */
   public static float tanf(double radians) {
-    return Float.valueOf(String.format("%8f", Math.tan(radians)));
+    return Float.parseFloat(String.format(Locale.ROOT, "%8f", Math.tan(radians)));
   }
 
   /**
