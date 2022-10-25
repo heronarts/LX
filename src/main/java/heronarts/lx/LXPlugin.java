@@ -50,4 +50,10 @@ public interface LXPlugin {
    * @param lx LX instance
    */
   public void initialize(LX lx);
+
+  /**
+   * This method is invoked when the plugin is done and will not be used anymore.
+   * Any resources used should be freed, listeners should be unregistered, etc.
+   */
+  public default void dispose() {}
 }

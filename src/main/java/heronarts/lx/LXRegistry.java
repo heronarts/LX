@@ -428,6 +428,18 @@ public class LXRegistry implements LXSerializable {
         this.isEnabled = object.get(KEY_ENABLED).getAsBoolean();
       }
     }
+
+    public void dispose() {
+      if (this.instance != null) {
+        try {
+          this.instance.dispose();
+        } catch (Exception x) {
+          LX.error(x, "Unhandled exception in plugin dispose: " + clazz.getName());
+          lx.pushError(x, "Error on plugin dispose " + clazz.getSimpleName() + "\n" + x.getLocalizedMessage());
+          setException(x);
+        }
+      }
+    }
   }
 
   public final LX lx;
@@ -1037,6 +1049,12 @@ public class LXRegistry implements LXSerializable {
   protected void initializePlugins() {
     for (Plugin plugin : this.plugins) {
       plugin.initialize(this.lx);
+    }
+  }
+
+  protected void disposePlugins() {
+    for (Plugin plugin : this.plugins) {
+      plugin.dispose();
     }
   }
 
