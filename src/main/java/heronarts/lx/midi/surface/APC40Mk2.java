@@ -612,12 +612,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   private class ChannelListener implements LXChannel.Listener, LXBus.ClipListener, LXParameterListener {
 
     private final LXAbstractChannel channel;
+    private final LXParameterListener onCompositeModeChanged = this::onCompositeModeChanged;
 
     ChannelListener(LXAbstractChannel channel) {
       this.channel = channel;
       if (channel instanceof LXChannel) {
         ((LXChannel) channel).addListener(this);
-        ((LXChannel) channel).compositeMode.addListener(this::onCompositeModeChanged);
+        ((LXChannel) channel).compositeMode.addListener(this.onCompositeModeChanged);
       } else {
         channel.addListener(this);
       }
@@ -646,7 +647,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     public void dispose() {
       if (this.channel instanceof LXChannel) {
         ((LXChannel) this.channel).removeListener(this);
-        ((LXChannel) this.channel).compositeMode.removeListener(this::onCompositeModeChanged);
+        ((LXChannel) this.channel).compositeMode.removeListener(this.onCompositeModeChanged);
       } else {
         this.channel.removeListener(this);
       }
@@ -670,7 +671,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
     }
 
-    public void onCompositeModeChanged(LXParameter p) {
+    private void onCompositeModeChanged(LXParameter p) {
       final int index = this.channel.getIndex();
       if (index >= CLIP_LAUNCH_COLUMNS) {
         return;
