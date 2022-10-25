@@ -515,6 +515,7 @@ public class JsonFixture extends LXFixture {
   // Dictionary of values for local parameters (not the parent)
   private JsonObject jsonParameterValues = new JsonObject();
 
+  private int currentNumInstances = -1;
   private int currentChildInstance = -1;
 
   public JsonFixture(LX lx) {
@@ -722,13 +723,17 @@ public class JsonFixture extends LXFixture {
       String parameterValue = "";
 
       if (KEY_INSTANCE.equals(parameterName)) {
-
         parameterValue = String.valueOf(this.currentChildInstance);
         if (returnType == ParameterType.BOOLEAN) {
           addWarning("Cannot load non-boolean parameter $" + parameterName + " into a boolean type: " + key);
           return null;
         }
-
+      } else if (KEY_INSTANCES.equals(parameterName)) {
+        parameterValue = String.valueOf(this.currentNumInstances);
+        if (returnType == ParameterType.BOOLEAN) {
+          addWarning("Cannot load non-boolean parameter $" + parameterName + " into a boolean type: " + key);
+          return null;
+        }
       } else {
         ParameterDefinition parameter = this.definedParameters.get(parameterName);
         if (parameter == null) {
@@ -1669,12 +1674,14 @@ public class JsonFixture extends LXFixture {
       }
 
       // Load this child N times with an instance variable set
+      this.currentNumInstances = numInstances;
       for (int i = 0; i < numInstances; ++i) {
         this.currentChildInstance = i;
         JsonObject instanceObj = childObj.deepCopy();
         instanceObj.remove(KEY_INSTANCES);
         loadChild(instanceObj);
       }
+      this.currentNumInstances = -1;
       this.currentChildInstance = -1;
 
     } else {
