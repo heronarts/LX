@@ -296,7 +296,12 @@ public class LXRegistry implements LXSerializable {
 
       try (FileReader fr = new FileReader(file)) {
         JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
-        isVisible = !obj.has(KEY_IS_VISIBLE) || obj.get(KEY_IS_VISIBLE).getAsBoolean();
+        if (obj == null) {
+          LX.error("JSON fixture file is empty: " + file.getAbsolutePath());
+          mutableJsonFixtureErrors.add(new Error(prefix, file, "Syntax error", new Exception("File is empty")));
+        } else {
+          isVisible = !obj.has(KEY_IS_VISIBLE) || obj.get(KEY_IS_VISIBLE).getAsBoolean();
+        }
       } catch (JsonSyntaxException jsx) {
         LX.error(jsx, "JSON fixture file has invalid syntax: " + file.getAbsolutePath());
         mutableJsonFixtureErrors.add(new Error(prefix, file, "Syntax error", jsx));
