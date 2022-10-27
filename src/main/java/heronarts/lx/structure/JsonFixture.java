@@ -797,11 +797,24 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private final static char[] SIMPLE_EXPRESSION_OPERATORS = { '+', '-', '*', '/', '%' };
+  // 2D array of operators by precedence (low to high)
+  private final static char[][] SIMPLE_EXPRESSION_OPERATORS = {
+    { '+', '-' },
+    { '*', '/', '%' }
+  };
+
+  private static boolean isOperator(char ch, char[] operators) {
+    for (char operator : operators) {
+      if (ch == operator) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   private static boolean isSimpleOperator(char ch) {
-    for (char operator : SIMPLE_EXPRESSION_OPERATORS) {
-      if (ch == operator) {
+    for (char[] operators : SIMPLE_EXPRESSION_OPERATORS) {
+      if (isOperator(ch, operators)) {
         return true;
       }
     }
@@ -841,21 +854,21 @@ public class JsonFixture extends LXFixture {
 
     // All parentheses have now been cleared!
 
-    // Operator pass - these are prioritized so that * and / take precedence over + and -
-    for (char operator : SIMPLE_EXPRESSION_OPERATORS) {
+    // Operator pass - these are prioritized by precedence and are left-to-right associative
+    for (char[] operators : SIMPLE_EXPRESSION_OPERATORS) {
       for (int index = chars.length - 2; index > 0; --index) {
-        if (chars[index] == operator) {
+        if (isOperator(chars[index], operators)) {
 
           // Skip over the tricky unary minus operator! If preceded by another operator,
           // then it's actually just a negative sign which can be handled by parseFloat()
-          if ((operator == '-') && isSimpleOperator(chars[index-1])) {
+          if ((chars[index] == '-') && isSimpleOperator(chars[index-1])) {
             continue;
           }
 
-          float left = _evaluateSimpleExpression(obj, key, expression.substring(0, index));
-          float right = _evaluateSimpleExpression(obj, key, expression.substring(index + 1));
+          final float left = _evaluateSimpleExpression(obj, key, expression.substring(0, index));
+          final float right = _evaluateSimpleExpression(obj, key, expression.substring(index + 1));
 
-          switch (operator) {
+          switch (chars[index]) {
           case '+': return left + right;
           case '-': return left - right;
           case '*': return left * right;
