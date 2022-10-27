@@ -797,7 +797,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private final static char[] SIMPLE_EXPRESSION_OPERATORS = { '+', '-', '*', '/' };
+  private final static char[] SIMPLE_EXPRESSION_OPERATORS = { '+', '-', '*', '/', '%' };
 
   private static boolean isSimpleOperator(char ch) {
     for (char operator : SIMPLE_EXPRESSION_OPERATORS) {
@@ -860,6 +860,7 @@ public class JsonFixture extends LXFixture {
           case '-': return left - right;
           case '*': return left * right;
           case '/': return left / right;
+          case '%': return left % right;
           }
         }
       }
