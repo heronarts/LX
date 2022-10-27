@@ -913,7 +913,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     // arrays are typically dynamic, not fixed
 
     // Remove the modulation engine for any component that has one
-    if (this instanceof LXModulationContainer) {
+    if ((this != this.lx.engine) && (this instanceof LXModulationContainer)) {
       ((LXModulationContainer) this).getModulationEngine().dispose();
     }
 
