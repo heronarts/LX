@@ -1986,11 +1986,15 @@ public class JsonFixture extends LXFixture {
   }
 
   private void loadSegment(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject segmentObj, JsonByteOrderDefinition outputByteOrder, boolean isOutput) {
-    int start = 0, num = JsonOutputDefinition.ALL_POINTS;
+    int num = JsonOutputDefinition.ALL_POINTS;
+
+    int start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
+    if (start < 0) {
+      addWarning("Output " + KEY_START + " may not be negative");
+      return;
+    }
+
     if (segmentObj.has(KEY_COMPONENT_ID)) {
-      if (segmentObj.has(KEY_START)) {
-        addWarning("Output specifies " + KEY_COMPONENT_ID + ", ignoring " + KEY_START);
-      }
       if (!(fixture instanceof JsonFixture)) {
         addWarning("Output " + KEY_COMPONENT_ID + " may only be used on custom fixtures");
         return;
@@ -2005,11 +2009,20 @@ public class JsonFixture extends LXFixture {
         addWarning("Output " + KEY_COMPONENT_ID + " does not exist: " + componentId);
         return;
       }
+
+      final int offset = start;
       start = ((JsonFixture) fixture).getFixtureOffset(childComponents.get(0));
       num = 0;
       for (LXFixture childFixture : childComponents) {
         num += childFixture.totalSize();
       }
+      if (offset >= num) {
+        addWarning("Output " + KEY_COMPONENT_INDEX + " start value " + offset + " exceeds size " + num);
+        return;
+      }
+      start += offset;
+      num -= offset;
+
     } else if (segmentObj.has(KEY_COMPONENT_INDEX)) {
       if (segmentObj.has(KEY_START)) {
         addWarning("Output specifies " + KEY_COMPONENT_INDEX + ", ignoring " + KEY_START);
@@ -2032,17 +2045,18 @@ public class JsonFixture extends LXFixture {
         addWarning("Output " + KEY_COMPONENT_INDEX + " in invalid or disabled (" + componentIndex + ")");
         return;
       }
+      final int offset = start;
       start = ((JsonFixture) fixture).getFixtureOffset(childComponents.get(0));
       num = 0;
       for (LXFixture childFixture : childComponents) {
         num += childFixture.totalSize();
       }
-    } else {
-      start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
-      if (start < 0) {
-        addWarning("Output " + KEY_START + " may not be negative");
+      if (offset >= num) {
+        addWarning("Output " + KEY_COMPONENT_INDEX + " start value " + offset + " exceeds size " + num);
         return;
       }
+      start += offset;
+      num -= offset;
     }
 
     if (segmentObj.has(KEY_NUM)) {
@@ -2052,6 +2066,7 @@ public class JsonFixture extends LXFixture {
         return;
       }
     }
+
     int stride = DEFAULT_OUTPUT_STRIDE;
     if (segmentObj.has(KEY_STRIDE)) {
       stride = loadInt(segmentObj, KEY_STRIDE, true, "Output " + KEY_STRIDE + " must be a valid integer");
