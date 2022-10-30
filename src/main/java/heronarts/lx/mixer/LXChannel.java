@@ -69,6 +69,7 @@ public class LXChannel extends LXAbstractChannel {
     public default void patternMoved(LXChannel channel, LXPattern pattern) {}
     public default void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {}
     public default void patternDidChange(LXChannel channel, LXPattern pattern) {}
+    public default void patternEnabled(LXChannel channel, LXPattern pattern) {}
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -189,6 +190,10 @@ public class LXChannel extends LXAbstractChannel {
     new TriggerParameter("Trigger Pattern", this::onTriggerPatternCycle)
     .setDescription("Triggers a pattern change on the channel");
 
+  public final BooleanParameter viewPatternLabel =
+    new BooleanParameter("View Pattern Label", false)
+    .setDescription("Whether to show the active pattern as channel label");
+
   private double autoCycleProgress = 0;
   private double transitionProgress = 0;
   private int activePatternIndex = NO_PATTERN_INDEX;
@@ -228,6 +233,7 @@ public class LXChannel extends LXAbstractChannel {
     addArray("pattern", this.patterns);
 
     addInternalParameter("controlsExpanded", this.controlsExpanded);
+    addInternalParameter("viewPatternLabel", this.viewPatternLabel);
 
     addParameter("compositeMode", this.compositeMode);
     addParameter("compositeDampingEnabled", this.compositeDampingEnabled);
@@ -291,6 +297,14 @@ public class LXChannel extends LXAbstractChannel {
           activePattern.onActive();
         }
       }
+    }
+  }
+
+  // Invoked by LXPattern when the channel is in blend compositing mode and
+  // a new pattern is enabled
+  public void onPatternEnabled(LXPattern pattern) {
+    for (Listener listener : this.listeners) {
+      listener.patternEnabled(this, pattern);
     }
   }
 

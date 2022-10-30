@@ -128,13 +128,16 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
     final LXChannel channel = getChannel();
-    if ((channel != null) &&
-        (channel.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND) &&
-        !channel.compositeDampingEnabled.isOn()) {
+    if ((channel != null) && (channel.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND)) {
       if (isEnabled) {
-        onActive();
-      } else {
-        onInactive();
+        channel.onPatternEnabled(this);
+      }
+      if (!channel.compositeDampingEnabled.isOn()) {
+        if (isEnabled) {
+          onActive();
+        } else {
+          onInactive();
+        }
       }
     }
   };
