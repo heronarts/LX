@@ -86,6 +86,9 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_ROTATE_X = "rotateX";
   private static final String KEY_ROTATE_Y = "rotateY";
   private static final String KEY_ROTATE_Z = "rotateZ";
+  private static final String KEY_SCALE_X = "scaleX";
+  private static final String KEY_SCALE_Y = "scaleY";
+  private static final String KEY_SCALE_Z = "scaleZ";
   private static final String KEY_SCALE = "scale";
   private static final String KEY_DIRECTION = "direction";
   private static final String KEY_NORMAL = "normal";
@@ -1121,7 +1124,18 @@ public class JsonFixture extends LXFixture {
     }
   }
 
+  private static final String[] TRANSFORM_TRANSLATE = { KEY_X, KEY_Y, KEY_Z };
   private static final String[] TRANSFORM_ROTATE = { KEY_YAW, KEY_PITCH, KEY_ROLL, KEY_ROTATE_X, KEY_ROTATE_Y, KEY_ROTATE_Z };
+  private static final String[] TRANSFORM_SCALE = { KEY_SCALE, KEY_SCALE_X, KEY_SCALE_Y, KEY_SCALE_Z };
+
+  private static final boolean isTransform(JsonObject obj, String[] keys) {
+    for (String key : keys) {
+      if (obj.has(key)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   private void loadTransform(LXFixture fixture, JsonObject obj) {
     if (obj.has(KEY_ENABLED)) {
@@ -1142,23 +1156,38 @@ public class JsonFixture extends LXFixture {
       addWarning("Transform may not contain multiple rotations: " + obj);
       return;
     }
-    if (obj.has(KEY_X) || obj.has(KEY_Y) || obj.has(KEY_Z)) {
-      for (String key : TRANSFORM_ROTATE) {
-        if (obj.has(key)) {
-          addWarning("Transform may not contain both translation and rotation: " + obj);
-          return;
-        }
+
+    final boolean isTranslate = isTransform(obj, TRANSFORM_TRANSLATE);
+    final boolean isScale = isTransform(obj, TRANSFORM_SCALE);
+    final boolean isRotate = rotateCount > 0;
+
+    if (isTranslate) {
+      if (isRotate) {
+        addWarning("Transform may not contain both translation and rotation: " + obj);
+        return;
       }
-      if (obj.has(KEY_X)) {
-        fixture.addTransform(new Transform(Transform.Type.TRANSLATE_X, loadFloat(obj, KEY_X, true)));
+      if (isScale) {
+        addWarning("Transform may not contain both translation and scaling: " + obj);
+        return;
       }
-      if (obj.has(KEY_Y)) {
-        fixture.addTransform(new Transform(Transform.Type.TRANSLATE_Y, loadFloat(obj, KEY_Y, true)));
-      }
-      if (obj.has(KEY_Z)) {
-        fixture.addTransform(new Transform(Transform.Type.TRANSLATE_Z, loadFloat(obj, KEY_Z, true)));
+    } else if (isRotate) {
+      if (isScale) {
+        addWarning("Transform may not contain both rotation and scaling: " + obj);
+        return;
       }
     }
+
+    // All clear at this point, read the values
+    if (obj.has(KEY_X)) {
+      fixture.addTransform(new Transform(Transform.Type.TRANSLATE_X, loadFloat(obj, KEY_X, true)));
+    }
+    if (obj.has(KEY_Y)) {
+      fixture.addTransform(new Transform(Transform.Type.TRANSLATE_Y, loadFloat(obj, KEY_Y, true)));
+    }
+    if (obj.has(KEY_Z)) {
+      fixture.addTransform(new Transform(Transform.Type.TRANSLATE_Z, loadFloat(obj, KEY_Z, true)));
+    }
+
     if (obj.has(KEY_YAW)) {
       fixture.addTransform(new Transform(Transform.Type.ROTATE_Y, loadFloat(obj, KEY_YAW, true)));
     }
@@ -1176,6 +1205,33 @@ public class JsonFixture extends LXFixture {
     }
     if (obj.has(KEY_ROTATE_Z)) {
       fixture.addTransform(new Transform(Transform.Type.ROTATE_Z, loadFloat(obj, KEY_ROTATE_Z, true)));
+    }
+
+    if (obj.has(KEY_SCALE)) {
+      JsonElement scaleElem = obj.get(KEY_SCALE);
+      if (!scaleElem.isJsonObject()) {
+        addWarning("Transform element " + KEY_SCALE + " must be a JSON object: " + scaleElem);
+        return;
+      }
+      JsonObject scale = scaleElem.getAsJsonObject();
+      if (scale.has(KEY_X)) {
+        fixture.addTransform(new Transform(Transform.Type.SCALE_X, loadFloat(scale, KEY_X, true)));
+      }
+      if (scale.has(KEY_Y)) {
+        fixture.addTransform(new Transform(Transform.Type.SCALE_Y, loadFloat(scale, KEY_Y, true)));
+      }
+      if (scale.has(KEY_Z)) {
+        fixture.addTransform(new Transform(Transform.Type.SCALE_Z, loadFloat(scale, KEY_Z, true)));
+      }
+    }
+    if (obj.has(KEY_SCALE_X)) {
+      fixture.addTransform(new Transform(Transform.Type.SCALE_X, loadFloat(obj, KEY_SCALE_X, true)));
+    }
+    if (obj.has(KEY_SCALE_Y)) {
+      fixture.addTransform(new Transform(Transform.Type.SCALE_Y, loadFloat(obj, KEY_SCALE_Y, true)));
+    }
+    if (obj.has(KEY_SCALE_Z)) {
+      fixture.addTransform(new Transform(Transform.Type.SCALE_Z, loadFloat(obj, KEY_ROTATE_Z, true)));
     }
   }
 

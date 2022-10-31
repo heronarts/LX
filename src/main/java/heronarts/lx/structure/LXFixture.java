@@ -256,7 +256,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       TRANSLATE_Z,
       ROTATE_X,
       ROTATE_Y,
-      ROTATE_Z;
+      ROTATE_Z,
+      SCALE_X,
+      SCALE_Y,
+      SCALE_Z;
     }
 
     public final Type type;
@@ -818,6 +821,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       case ROTATE_X: geometryMatrix.rotateX((float) Math.toRadians(transform.value)); break;
       case ROTATE_Y: geometryMatrix.rotateY((float) Math.toRadians(transform.value)); break;
       case ROTATE_Z: geometryMatrix.rotateZ((float) Math.toRadians(transform.value)); break;
+      case SCALE_X: geometryMatrix.scaleX(transform.value); break;
+      case SCALE_Y: geometryMatrix.scaleY(transform.value); break;
+      case SCALE_Z: geometryMatrix.scaleZ(transform.value); break;
       }
     }
   }
