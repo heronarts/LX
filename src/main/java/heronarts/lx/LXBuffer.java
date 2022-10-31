@@ -20,4 +20,16 @@ package heronarts.lx;
 
 public interface LXBuffer {
   public int[] getArray();
+
+  public default LXBuffer copyTo(LXBuffer that) {
+    final int[] array = getArray();
+    System.arraycopy(array, 0, that.getArray(), 0, array.length);
+    return this;
+  }
+
+  public default LXBuffer copyFrom(LXBuffer that) {
+    final int[] array = getArray();
+    System.arraycopy(that.getArray(), 0, array, 0, array.length);
+    return this;
+  }
 }

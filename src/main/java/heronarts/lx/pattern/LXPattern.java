@@ -26,7 +26,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
-import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXTime;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.mixer.LXChannel;
@@ -43,7 +42,7 @@ import heronarts.lx.utils.LXUtils;
  * A pattern is the core object that the animation engine uses to generate
  * colors for all the points.
  */
-public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXLayeredComponent.Buffered, LXOscComponent {
+public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent {
 
   /**
    * Placeholder pattern for when a class is missing

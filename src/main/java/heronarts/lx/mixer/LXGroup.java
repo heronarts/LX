@@ -24,7 +24,6 @@ import java.util.List;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXModulatorComponent;
-import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXGroupClip;
 import heronarts.lx.effect.LXEffect;
@@ -116,35 +115,33 @@ public class LXGroup extends LXAbstractChannel {
   void afterLoop(double deltaMs) {
     // Composite all the channels in this group
     long compositeStart = System.nanoTime();
-    int[] blendDestination = this.lx.engine.mixer.backgroundTransparent.getArray();
-    int[] blendOutput = this.blendBuffer.getArray();
 
     // Because of channel views, channel blends may not touch all pixels, so start
-    // by splatting transparent to the group buffer
-    System.arraycopy(blendDestination, 0, blendOutput, 0, blendDestination.length);
-    blendDestination = blendOutput;
+    // by splatting transparency onto the group buffer
+    this.blendBuffer.copyFrom(this.lx.engine.mixer.backgroundTransparent);
+    this.colors = this.blendBuffer.getArray();
 
+    // Blend all channels that are enabled.
     for (LXChannel channel : this.channels) {
       if (channel.enabled.isOn()) {
-        LXBlend blend = channel.blendMode.getObject();
-        blend.blend(blendDestination, channel.getColors(), channel.fader.getValue(), blendOutput, channel.getModelView());
-        blendDestination = blendOutput;
+        channel.blendMode.getObject().blend(
+          this.colors,
+          channel.getColors(),
+          channel.fader.getValue(),
+          this.colors,
+          channel.getModelView()
+        );
       }
     }
-    this.colors = blendDestination;
     ((LXGroup.Profiler) this.profiler).compositeNanos = System.nanoTime() - compositeStart;
 
     // Run group effects
     long effectStart = System.nanoTime();
     if (this.effects.size() > 0) {
-      if (blendDestination != blendOutput) {
-        System.arraycopy(blendDestination, 0, blendOutput, 0, blendOutput.length);
-      }
       for (LXEffect effect : this.effects) {
         effect.setBuffer(this.blendBuffer);
         effect.loop(deltaMs);
       }
-      this.colors = blendOutput;
     }
     ((LXBus.Profiler) this.profiler).effectNanos = System.nanoTime() - effectStart;
 

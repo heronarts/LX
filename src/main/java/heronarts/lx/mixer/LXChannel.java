@@ -20,10 +20,10 @@ package heronarts.lx.mixer;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
-import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
@@ -194,6 +194,11 @@ public class LXChannel extends LXAbstractChannel {
     new BooleanParameter("View Pattern Label", false)
     .setDescription("Whether to show the active pattern as channel label");
 
+  /**
+   * This is a local buffer used to render a secondary pattern
+   */
+  protected final ModelBuffer renderBuffer;
+
   private double autoCycleProgress = 0;
   private double transitionProgress = 0;
   private int activePatternIndex = NO_PATTERN_INDEX;
@@ -214,6 +219,8 @@ public class LXChannel extends LXAbstractChannel {
   public LXChannel(LX lx, int index, LXPattern[] patterns) {
     super(lx, index, "Channel-" + (index+1));
 
+    this.renderBuffer = new ModelBuffer(lx);
+
     this.focusedPattern =
       new DiscreteParameter("Focused Pattern", 0, Math.max(1, patterns.length))
       .setDescription("Which pattern has focus in the UI");
@@ -225,10 +232,6 @@ public class LXChannel extends LXAbstractChannel {
     this.transitionMillis = lx.engine.nowMillis;
 
     _updatePatterns(patterns);
-
-    // Initialize colors array
-    LXPattern pattern = getActivePattern();
-    this.colors = (pattern != null) ? pattern.getColors() : this.blendBuffer.getArray();
 
     addArray("pattern", this.patterns);
 
@@ -952,17 +955,16 @@ public class LXChannel extends LXAbstractChannel {
       return;
     }
 
-    // Initialize colors to the blend buffer...
-    final int[] blendArray = this.blendBuffer.getArray();
-    int[] colors = blendArray;
+    // Initialize colors
+    this.colors = this.blendBuffer.getArray();
 
     if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
 
       // Blend mode, this channel is like a mini-mixer
       final LXModel modelView = getModelView();
-      for (int i = 0; i < colors.length; ++i) {
-        colors[i] = LXColor.BLACK;
-      }
+
+      // Initialize colors to black
+      this.blendBuffer.copyFrom(this.lx.engine.mixer.backgroundBlack);
 
       // Damping mode
       final boolean dampingEnabled = this.compositeDampingEnabled.isOn();
@@ -974,12 +976,13 @@ public class LXChannel extends LXAbstractChannel {
         if (patternDamping == 0) {
           continue;
         }
+        pattern.setBuffer(this.renderBuffer);
         pattern.loop(deltaMs);
         pattern.compositeMode.getObject().blend(
-          colors,
+          this.colors,
           pattern.getColors(),
           patternDamping * pattern.compositeLevel.getValue(),
-          colors,
+          this.colors,
           modelView
         );
       }
@@ -1007,29 +1010,28 @@ public class LXChannel extends LXAbstractChannel {
       }
 
       // Run active pattern
-      LXPattern activePattern = getActivePattern();
+      final LXPattern activePattern = getActivePattern();
       if (activePattern != null) {
+        activePattern.setBuffer(this.blendBuffer);
         activePattern.loop(deltaMs);
-        colors = activePattern.getColors();
       } else {
-        // No patterns here, blank the channel.
-        for (int i = 0; i < colors.length; ++i) {
-          colors[i] = LXColor.BLACK;
-        }
+        // No active pattern, black it out!
+        this.blendBuffer.copyFrom(this.lx.engine.mixer.backgroundBlack);
       }
 
       // Run transition!
       if (this.transition != null) {
         this.autoCycleProgress = 1.;
         this.transitionProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.transitionTimeSecs.getValue());
-        getNextPattern().loop(deltaMs);
+        final LXPattern nextPattern = getNextPattern();
+        nextPattern.setBuffer(this.renderBuffer);
+        nextPattern.loop(deltaMs);
         this.transition.loop(deltaMs);
-        colors = this.blendBuffer.getArray();
         this.transition.lerp(
-          getActivePattern().getColors(),
-          getNextPattern().getColors(),
+          this.colors,
+          this.renderBuffer.getArray(),
           this.transitionProgress,
-          colors,
+          this.colors,
           getModelView()
         );
       } else {
@@ -1042,18 +1044,12 @@ public class LXChannel extends LXAbstractChannel {
     // Apply effects
     long effectStart = System.nanoTime();
     if (this.mutableEffects.size() > 0) {
-      if (colors != blendArray) {
-        System.arraycopy(colors, 0, blendArray, 0, colors.length);
-        colors = blendArray;
-      }
       for (LXEffect effect : this.mutableEffects) {
         effect.setBuffer(this.blendBuffer);
         effect.loop(deltaMs);
       }
     }
     ((LXBus.Profiler) this.profiler).effectNanos = System.nanoTime() - effectStart;
-
-    this.colors = colors;
   }
 
   @Override
