@@ -127,6 +127,9 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
    * @return Scene at index
    */
   public BooleanParameter getScene(int index) {
+    if (index < 0) {
+      throw new IllegalArgumentException("Cannot request scene less than 0: " + index);
+    }
     return this.scenes[index];
   }
 
