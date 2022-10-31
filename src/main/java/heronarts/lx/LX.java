@@ -138,6 +138,8 @@ public class LX {
     public int engineThreadPriority = Thread.MAX_PRIORITY;
     public String mediaPath = ".";
     public LXPlugin initialize = null;
+    public boolean loadPreferences = true;
+    public List<String> enabledPlugins = new ArrayList<String>();
   }
 
   public static enum Media {
@@ -410,7 +412,9 @@ public class LX {
 
     // Load the global preferences before plugin initialization
     this.preferences = new LXPreferences(this);
-    this.preferences.load();
+    if (this.flags.loadPreferences) {
+      this.preferences.load();
+    }
 
     // Scheduler
     this.scheduler = new LXScheduler(this);

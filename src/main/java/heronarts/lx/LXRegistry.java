@@ -362,6 +362,9 @@ public class LXRegistry implements LXSerializable {
     }
 
     private boolean restorePluginEnabled(Class<? extends LXPlugin> clazz) {
+      if (lx.flags.enabledPlugins.contains(clazz.getName())) {
+        return true;
+      }
       try {
         for (JsonElement elem : pluginState) {
           final JsonObject plugin = elem.getAsJsonObject();
@@ -440,8 +443,10 @@ public class LXRegistry implements LXSerializable {
 
     @Override
     public void load(LX lx, JsonObject object) {
-      if (object.has(KEY_ENABLED)) {
-        this.isEnabled = object.get(KEY_ENABLED).getAsBoolean();
+      if (!lx.flags.enabledPlugins.contains(this.clazz.getName())) {
+        if (object.has(KEY_ENABLED)) {
+          this.isEnabled = object.get(KEY_ENABLED).getAsBoolean();
+        }
       }
     }
 
