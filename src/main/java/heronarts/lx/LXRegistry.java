@@ -36,6 +36,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
@@ -357,6 +358,21 @@ public class LXRegistry implements LXSerializable {
 
     private Plugin(Class<? extends LXPlugin> clazz) {
       this.clazz = clazz;
+      this.isEnabled = restorePluginEnabled(clazz);
+    }
+
+    private boolean restorePluginEnabled(Class<? extends LXPlugin> clazz) {
+      try {
+        for (JsonElement elem : pluginState) {
+          final JsonObject plugin = elem.getAsJsonObject();
+          if (plugin.get(KEY_CLASS).getAsString().equals(clazz.getName())) {
+            return plugin.get(KEY_ENABLED).getAsBoolean();
+          }
+        }
+      } catch (Exception x) {
+        LX.error(x, "Error parsing saved plugin state: " + pluginState);
+      }
+      return false;
     }
 
     public LXPlugin getInstance() {
@@ -1067,24 +1083,28 @@ public class LXRegistry implements LXSerializable {
     return null;
   }
 
+  private JsonArray pluginState = new JsonArray();
+
   private static final String KEY_PLUGINS = "plugins";
 
   @Override
   public void save(LX lx, JsonObject object) {
-    object.add(KEY_PLUGINS, LXSerializable.Utils.toArray(lx, this.plugins));
+    object.add(KEY_PLUGINS, this.pluginState = LXSerializable.Utils.toArray(lx, this.plugins));
   }
 
   @Override
   public void load(LX lx, JsonObject object) {
     if (object.has(KEY_PLUGINS)) {
-      for (JsonElement pluginElement : object.get(KEY_PLUGINS).getAsJsonArray()) {
+      this.pluginState = object.get(KEY_PLUGINS).getAsJsonArray().deepCopy();
+      for (JsonElement pluginElement : this.pluginState) {
         JsonObject pluginObj = pluginElement.getAsJsonObject();
         Plugin plugin = findPlugin(pluginObj.get(Plugin.KEY_CLASS).getAsString());
         if (plugin != null) {
           plugin.load(lx, pluginObj);
         }
       }
+    } else {
+      this.pluginState = new JsonArray();
     }
   }
-
 }
