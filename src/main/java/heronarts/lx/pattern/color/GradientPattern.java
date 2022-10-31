@@ -116,14 +116,26 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     new DiscreteParameter("Stops", LXSwatch.MAX_COLORS, 2, LXSwatch.MAX_COLORS + 1)
     .setDescription("How many color stops to use in the palette");
 
-  public final CompoundParameter gradient =
+  public final CompoundParameter gradient = (CompoundParameter)
     new CompoundParameter("Amount", 0, -1, 1)
     .setDescription("Amount of color gradient")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter gradientRange =
+  public final CompoundParameter gradientRange = (CompoundParameter)
     new CompoundParameter("Range", 360, 0, 360 * 10)
-    .setDescription("Range of total possible color gradient");
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Range of total possible color hue gradient");
+
+  public final CompoundParameter saturationRange = (CompoundParameter)
+    new CompoundParameter("Saturation Range", 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Range of total possible saturation gradient");
+
+  public final CompoundParameter brightnessRange = (CompoundParameter)
+    new CompoundParameter("Brightness Range", 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Range of total possible brightness gradient");
 
   public final EnumParameter<CoordinateMode> xMode =
     new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
@@ -211,6 +223,8 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     addParameter("paletteIndex", this.paletteIndex);
     addParameter("paletteStops", this.paletteStops);
     addParameter("gradientRange", this.gradientRange);
+    addParameter("saturationRange", this.saturationRange);
+    addParameter("brightnessRange", this.brightnessRange);
     addTransformParameter("rotate", this.rotate);
     addTransformParameter("yaw", this.yaw);
     addTransformParameter("pitch", this.pitch);
@@ -226,9 +240,13 @@ public class GradientPattern extends LXPattern implements GradientFunction {
   public void onParameterChanged(LXParameter p) {
     if (this.gradient == p ||
         this.gradientRange == p ||
+        this.saturationRange == p ||
+        this.brightnessRange == p ||
         this.colorMode == p ||
         this.paletteIndex == p ||
-        this.fixedColor.hue == p) {
+        this.fixedColor.hue == p ||
+        this.fixedColor.saturation == p ||
+        this.fixedColor.brightness == p) {
       setSecondaryColor();
     }
   }
@@ -238,23 +256,26 @@ public class GradientPattern extends LXPattern implements GradientFunction {
   }
 
   private void setSecondaryColor() {
-    double gradient = this.gradient.getValue() * this.gradientRange.getValue();
+    final double gradient = this.gradient.getValue();
+    final double hueGradient = gradient * this.gradientRange.getValue();
+    final double satGradient = gradient * this.saturationRange.getValue();
+    final double brtGradient = gradient * this.brightnessRange.getValue();
 
     switch (this.colorMode.getEnum()) {
     case FIXED:
       this.secondaryColor.setColor(LXColor.hsb(
-        this.fixedColor.hue.getValue() + gradient,
-        this.fixedColor.saturation.getValue(),
-        this.fixedColor.brightness.getValue()
+        this.fixedColor.hue.getValue() + hueGradient,
+        LXUtils.constrain(this.fixedColor.saturation.getValue() + satGradient, 0, 100),
+        LXUtils.constrain(this.fixedColor.brightness.getValue() + brtGradient, 0, 100)
       ));
       break;
     case PRIMARY:
       LXDynamicColor primary = getPrimaryColor();
       int c = primary.getColor();
       this.secondaryColor.setColor(LXColor.hsb(
-        primary.getHue() + gradient,
-        LXColor.s(c),
-        LXColor.b(c)
+        primary.getHue() + hueGradient,
+        LXUtils.constrain(LXColor.s(c) + satGradient, 0, 100),
+        LXUtils.constrain(LXColor.b(c) + brtGradient, 0, 100)
       ));
       break;
     default:
@@ -263,18 +284,21 @@ public class GradientPattern extends LXPattern implements GradientFunction {
   }
 
   private void setColorStops() {
-    float gradientf = this.gradient.getValuef() * this.gradientRange.getValuef();
+    final float gradientf = this.gradient.getValuef();
+    final float huef = gradientf * this.gradientRange.getValuef();
+    final float satf = gradientf * this.saturationRange.getValuef();
+    final float brtf = gradientf * this.brightnessRange.getValuef();
 
     switch (this.colorMode.getEnum()) {
     case FIXED:
       this.colorStops.stops[0].set(this.fixedColor);
-      this.colorStops.stops[1].set(this.fixedColor, gradientf);
+      this.colorStops.stops[1].set(this.fixedColor, huef, satf, brtf);
       this.colorStops.setNumStops(2);
       break;
     case PRIMARY:
       LXDynamicColor swatchColor = getPrimaryColor();
       this.colorStops.stops[0].set(swatchColor);
-      this.colorStops.stops[1].set(swatchColor, gradientf);
+      this.colorStops.stops[1].set(swatchColor, huef, satf, brtf);
       this.colorStops.setNumStops(2);
       setSecondaryColor();
       break;
