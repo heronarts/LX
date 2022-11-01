@@ -1209,19 +1209,23 @@ public class JsonFixture extends LXFixture {
 
     if (obj.has(KEY_SCALE)) {
       JsonElement scaleElem = obj.get(KEY_SCALE);
-      if (!scaleElem.isJsonObject()) {
-        addWarning("Transform element " + KEY_SCALE + " must be a JSON object: " + scaleElem);
+      if (scaleElem.isJsonObject()) {
+        JsonObject scale = scaleElem.getAsJsonObject();
+        if (scale.has(KEY_X)) {
+          fixture.addTransform(new Transform(Transform.Type.SCALE_X, loadFloat(scale, KEY_X, true)));
+        }
+        if (scale.has(KEY_Y)) {
+          fixture.addTransform(new Transform(Transform.Type.SCALE_Y, loadFloat(scale, KEY_Y, true)));
+        }
+        if (scale.has(KEY_Z)) {
+          fixture.addTransform(new Transform(Transform.Type.SCALE_Z, loadFloat(scale, KEY_Z, true)));
+        }
+      } else if (scaleElem.isJsonPrimitive()) {
+        final float scale = loadFloat(obj, KEY_SCALE, true);
+        fixture.addTransform(new Transform(Transform.Type.SCALE, scale));
+      } else {
+        addWarning("Transform element " + KEY_SCALE + " must be a float or JSON object: " + scaleElem);
         return;
-      }
-      JsonObject scale = scaleElem.getAsJsonObject();
-      if (scale.has(KEY_X)) {
-        fixture.addTransform(new Transform(Transform.Type.SCALE_X, loadFloat(scale, KEY_X, true)));
-      }
-      if (scale.has(KEY_Y)) {
-        fixture.addTransform(new Transform(Transform.Type.SCALE_Y, loadFloat(scale, KEY_Y, true)));
-      }
-      if (scale.has(KEY_Z)) {
-        fixture.addTransform(new Transform(Transform.Type.SCALE_Z, loadFloat(scale, KEY_Z, true)));
       }
     }
     if (obj.has(KEY_SCALE_X)) {
