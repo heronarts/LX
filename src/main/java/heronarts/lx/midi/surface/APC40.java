@@ -408,7 +408,6 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       } else {
         this.channel.removeListener(this);
       }
-      this.channel.removeListener(this);
       this.channel.removeClipListener(this);
       this.channel.cueActive.removeListener(this);
       this.channel.enabled.removeListener(this);
