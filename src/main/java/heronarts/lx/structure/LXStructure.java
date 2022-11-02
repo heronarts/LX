@@ -117,7 +117,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
 
       private void segmentCollision(int collisionStart, int collisionEnd) {
-        String err = this.protocol.toString() + this.address.toString() + " - ";
+        String err = this.protocol.toString() + this.address.toString() + " - duplicated ";
         switch (this.protocol) {
         case ARTNET:
         case SACN:
