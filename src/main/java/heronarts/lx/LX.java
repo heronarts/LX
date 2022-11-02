@@ -1252,7 +1252,11 @@ public class LX {
   }
 
   public static void error(Throwable x) {
-    error(x, x.getCause().getClass().getName() + ":" + x.getLocalizedMessage());
+    Throwable cause = x.getCause();
+    if (cause != null) {
+      x = cause;
+    }
+    error(x, x.getClass().getName() + ":" + x.getLocalizedMessage());
   }
 
   public static void error(Throwable x, String message) {
