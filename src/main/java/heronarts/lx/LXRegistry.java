@@ -355,14 +355,22 @@ public class LXRegistry implements LXSerializable {
     private boolean hasError = false;
     private boolean isEnabled = false;
     private Exception exception = null;
+    private final boolean cliEnabled;
 
     private Plugin(Class<? extends LXPlugin> clazz) {
       this.clazz = clazz;
+      this.cliEnabled = isPluginCliEnabled(clazz);
       this.isEnabled = restorePluginEnabled(clazz);
     }
 
+    private boolean isPluginCliEnabled(Class<? extends LXPlugin> clazz) {
+      return
+        lx.flags.enabledPlugins.contains(clazz.getName()) ||
+        lx.flags.classpathPlugins.contains(clazz.getName());
+    }
+
     private boolean restorePluginEnabled(Class<? extends LXPlugin> clazz) {
-      if (lx.flags.enabledPlugins.contains(clazz.getName())) {
+      if (this.cliEnabled) {
         return true;
       }
       try {
@@ -443,7 +451,7 @@ public class LXRegistry implements LXSerializable {
 
     @Override
     public void load(LX lx, JsonObject object) {
-      if (!lx.flags.enabledPlugins.contains(this.clazz.getName())) {
+      if (!this.cliEnabled) {
         if (object.has(KEY_ENABLED)) {
           this.isEnabled = object.get(KEY_ENABLED).getAsBoolean();
         }
@@ -477,8 +485,24 @@ public class LXRegistry implements LXSerializable {
   protected void initialize() {
     this.contentReloading = true;
     this.classLoader.load();
+    loadClasspathPlugins();
     addJsonFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
     this.contentReloading = false;
+  }
+
+  private void loadClasspathPlugins() {
+    for (String className : this.lx.flags.classpathPlugins) {
+      try {
+        Class<?> clz = Class.forName(className);
+        if (LXPlugin.class.isAssignableFrom(clz)) {
+          addPlugin(clz.asSubclass(LXPlugin.class));
+        } else {
+          LX.error("Classpath plugin is not an LXPlugin subclass: " + className);
+        }
+      } catch (ClassNotFoundException cnfx) {
+        LX.error(cnfx, "Classpath plugin class does not exist: " + className);
+      }
+    }
   }
 
   public void checkRegistration() {
@@ -502,6 +526,7 @@ public class LXRegistry implements LXSerializable {
     // objects defined by a new instance of the LXClassLoader.
     this.classLoader = new LXClassLoader(this.lx);
     this.classLoader.load();
+    loadClasspathPlugins();
 
     // Reload the available JSON fixture list
     this.mutableJsonFixtures.clear();

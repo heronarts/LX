@@ -140,6 +140,7 @@ public class LX {
     public LXPlugin initialize = null;
     public boolean loadPreferences = true;
     public List<String> enabledPlugins = new ArrayList<String>();
+    public List<String> classpathPlugins = new ArrayList<String>();
   }
 
   public static enum Media {
