@@ -130,6 +130,14 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     save();
   }
 
+  public void setWindowSize(int windowWidth, int windowHeight, int windowPosX, int windowPosY) {
+    this.windowWidth = windowWidth;
+    this.windowHeight = windowHeight;
+    this.windowPosX = windowPosX;
+    this.windowPosY = windowPosY;
+    save();
+  }
+
   public int getWindowPosX() {
     return this.windowPosX;
   }
