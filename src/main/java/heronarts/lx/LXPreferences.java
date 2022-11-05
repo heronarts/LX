@@ -82,6 +82,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
   private int windowWidth = -1;
   private int windowHeight = -1;
+  private int windowPosX = -1;
+  private int windowPosY = -1;
 
   private boolean inLoad = false;
 
@@ -122,9 +124,23 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     return this.windowHeight;
   }
 
-  public void setWindowSize(int uiWidth, int uiHeight) {
-    this.windowWidth = uiWidth;
-    this.windowHeight = uiHeight;
+  public void setWindowSize(int windowWidth, int windowHeight) {
+    this.windowWidth = windowWidth;
+    this.windowHeight = windowHeight;
+    save();
+  }
+
+  public int getWindowPosX() {
+    return this.windowPosX;
+  }
+
+  public int getWindowPosY() {
+    return this.windowPosY;
+  }
+
+  public void setWindowPosition(int windowPosX, int windowPosY) {
+    this.windowPosX = windowPosX;
+    this.windowPosY = windowPosY;
     save();
   }
 
@@ -152,6 +168,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_WINDOW_WIDTH = "windowWidth";
   private static final String KEY_WINDOW_WIDTH_LEGACY = "windwWidth";
   private static final String KEY_WINDOW_HEIGHT = "windowHeight";
+  private static final String KEY_WINDOW_POS_X = "windowPosX";
+  private static final String KEY_WINDOW_POS_Y = "windowPosY";
   private static final String KEY_UI_ZOOM = "uiZoom";
   private static final String KEY_UI_THEME = "uiTheme";
   private static final String KEY_FOCUS_CHANNEL_ON_CUE = "focusChannelOnCue";
@@ -174,6 +192,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     }
     object.addProperty(KEY_WINDOW_WIDTH, this.windowWidth);
     object.addProperty(KEY_WINDOW_HEIGHT, this.windowHeight);
+    object.addProperty(KEY_WINDOW_POS_X, this.windowPosX);
+    object.addProperty(KEY_WINDOW_POS_Y, this.windowPosY);
     object.addProperty(KEY_UI_ZOOM, this.uiZoom.getValuei());
     object.addProperty(KEY_UI_THEME, this.uiTheme.getString());
     object.addProperty(KEY_FOCUS_CHANNEL_ON_CUE, this.focusChannelOnCue.isOn());
@@ -203,6 +223,12 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     }
     if (object.has(KEY_WINDOW_HEIGHT)) {
       this.windowHeight = object.get(KEY_WINDOW_HEIGHT).getAsInt();
+    }
+    if (object.has(KEY_WINDOW_POS_X)) {
+      this.windowPosX = object.get(KEY_WINDOW_POS_X).getAsInt();
+    }
+    if (object.has(KEY_WINDOW_POS_Y)) {
+      this.windowPosY = object.get(KEY_WINDOW_POS_Y).getAsInt();
     }
     if (object.has(KEY_PROJECT_FILE_NAME)) {
       this.projectFileName = object.get(KEY_PROJECT_FILE_NAME).getAsString();
