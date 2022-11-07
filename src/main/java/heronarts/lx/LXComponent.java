@@ -18,6 +18,11 @@
 
 package heronarts.lx;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -53,6 +58,13 @@ import heronarts.lx.parameter.StringParameter;
  * from JSON files.
  */
 public abstract class LXComponent implements LXPath, LXParameterListener, LXSerializable {
+
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Hidden {
+    String value() default "";
+  }
 
   /**
    * Marker interface for components which can have their label changed. Any LXComponent
