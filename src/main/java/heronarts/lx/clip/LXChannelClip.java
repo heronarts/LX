@@ -56,7 +56,12 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
 
   @Override
   protected void onStartRecording() {
-    this.patternLane.appendEvent(new PatternClipEvent(this.patternLane, this.channel, this.channel.getActivePattern()));
+    if (this.channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
+      LXPattern activePattern = this.channel.getActivePattern();
+      if (activePattern != null) {
+        this.patternLane.appendEvent(new PatternClipEvent(this.patternLane, this.channel, activePattern));
+      }
+    }
   }
 
   @Override
