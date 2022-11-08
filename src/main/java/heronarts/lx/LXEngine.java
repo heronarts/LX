@@ -169,7 +169,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         if (this.restricted.isOn()) {
           final int myPoints = lx.model.size;
           final int limitPoints = lx.permissions.getMaxPoints();
-          lx.pushError(null, "You have exceeded the maximum number of points allowed by your license (" + myPoints + " > " + limitPoints + "). Output will be disabled.");
+          final String outputError =
+            (limitPoints == 0) ?
+              "Your license level does not support sending live network output, it will be disabled." :
+              ("You have exceeded the maximum number of points allowed by your license (" + myPoints + " > " + limitPoints + "). Output will be disabled.");
+          lx.pushError(null, outputError);
         }
       });
 
