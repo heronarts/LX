@@ -22,10 +22,31 @@ import heronarts.lx.LX;
 
 public abstract class LXBufferOutput extends LXOutput {
 
+  public interface ByteEncoder {
+
+    /**
+     * Number of bytes per pixel in this encoding
+     *
+     * @return Number of bytes per pixel in this encoder
+     */
+    public int getNumBytes();
+
+    /**
+     * Writes the bytes for a color pixel to an output
+     *
+     * @param argb Integer color value, ARGB format
+     * @param gamma Gamma lookup table
+     * @param output Output byte array
+     * @param offset Offset to write at in output array
+     */
+    public void writeBytes(int argb, byte[] gamma, byte[] output, int offset);
+
+  }
+
   /**
-   * Various orderings for RGB buffer data
+   * Most common static orderings for RGB buffer data
    */
-  public enum ByteOrder {
+  public enum ByteOrder implements ByteEncoder {
     RGB(new int[] { 0, 1, 2 }),
     RBG(new int[] { 0, 2, 1 }),
     GRB(new int[] { 1, 0, 2 }),
@@ -74,6 +95,27 @@ public abstract class LXBufferOutput extends LXOutput {
     public int[] getByteOffset() {
       return this.byteOffset;
     }
+
+    public void writeBytes(int color, byte[] gamma, byte[] output, int offset) {
+      final int r = ((color >> 16) & 0xff);
+      final int g = ((color >> 8) & 0xff);
+      final int b = (color & 0xff);
+      if (this.hasWhite) {
+        if (this.byteOffset.length == 1) {
+          output[offset] = gamma[(r + b + g) / 3];
+        } else {
+          final int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+          output[offset + this.byteOffset[0]] = gamma[r-w];
+          output[offset + this.byteOffset[1]] = gamma[g-w];
+          output[offset + this.byteOffset[2]] = gamma[b-w];
+          output[offset + this.byteOffset[3]] = gamma[w];
+        }
+      } else {
+        output[offset + this.byteOffset[0]] = gamma[r];
+        output[offset + this.byteOffset[1]] = gamma[g];
+        output[offset + this.byteOffset[2]] = gamma[b];
+      }
+    }
   };
 
   protected final IndexBuffer indexBuffer;
@@ -108,54 +150,71 @@ public abstract class LXBufferOutput extends LXOutput {
    * @return this
    */
   protected LXBufferOutput updateDataBuffer(int[] colors, byte[][] glut, double brightness) {
-    byte[] buffer = getDataBuffer();
+    final byte[] buffer = getDataBuffer();
 
     for (IndexBuffer.Segment segment : this.indexBuffer.segments) {
       // Determine the appropriate gamma curve for segment brightness
-      byte[] gamma = glut[(int) Math.round(255. * brightness * segment.brightness.getValue())];
+      final byte[] gamma = glut[(int) Math.round(255. * brightness * segment.brightness.getValue())];
+
+      final ByteEncoder byteEncoder = segment.byteEncoder;
+      final int numBytes = byteEncoder.getNumBytes();
 
       // Determine data offsets and byte size
       int offset = getDataBufferOffset() + segment.startChannel;
-      ByteOrder byteOrder = segment.byteOrder;
-      int[] byteOffset = byteOrder.getByteOffset();
-      int numBytes = byteOrder.getNumBytes();
-      if (byteOrder.hasWhite) {
-        if (numBytes == 1) {
-          for (int i = 0; i < segment.indices.length; ++i) {
-            int index = segment.indices[i];
-            int color = (index >= 0) ? colors[index] : 0;
-            int r = ((color >> 16) & 0xff);
-            int g = ((color >> 8) & 0xff);
-            int b = (color & 0xff);
-            int w = (r + b + g) / 3;
-            buffer[offset] = gamma[w];
-            offset += numBytes;
+
+      // TODO(mcslee): determine if there's actually any performance gain at all here by
+      // putting branches outside of the for loops? If not just nuke this...
+      if (byteEncoder instanceof ByteOrder) {
+        final ByteOrder byteOrder = (ByteOrder) byteEncoder;
+        final int[] byteOffset = byteOrder.getByteOffset();
+
+        if (byteOrder.hasWhite) {
+          if (numBytes == 1) {
+            for (int i = 0; i < segment.indices.length; ++i) {
+              int index = segment.indices[i];
+              int color = (index >= 0) ? colors[index] : 0;
+              int r = ((color >> 16) & 0xff);
+              int g = ((color >> 8) & 0xff);
+              int b = (color & 0xff);
+              int w = (r + b + g) / 3;
+              buffer[offset] = gamma[w];
+              offset += numBytes;
+            }
+          } else {
+            for (int i = 0; i < segment.indices.length; ++i) {
+              int index = segment.indices[i];
+              int color = (index >= 0) ? colors[index] : 0;
+              int r = ((color >> 16) & 0xff);
+              int g = ((color >> 8) & 0xff);
+              int b = (color & 0xff);
+              int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+              r -= w;
+              g -= w;
+              b -= w;
+              buffer[offset + byteOffset[0]] = gamma[r];
+              buffer[offset + byteOffset[1]] = gamma[g];
+              buffer[offset + byteOffset[2]] = gamma[b];
+              buffer[offset + byteOffset[3]] = gamma[w];
+              offset += numBytes;
+            }
           }
         } else {
           for (int i = 0; i < segment.indices.length; ++i) {
             int index = segment.indices[i];
             int color = (index >= 0) ? colors[index] : 0;
-            int r = ((color >> 16) & 0xff);
-            int g = ((color >> 8) & 0xff);
-            int b = (color & 0xff);
-            int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
-            r -= w;
-            g -= w;
-            b -= w;
-            buffer[offset + byteOffset[0]] = gamma[r];
-            buffer[offset + byteOffset[1]] = gamma[g];
-            buffer[offset + byteOffset[2]] = gamma[b];
-            buffer[offset + byteOffset[3]] = gamma[w];
+            buffer[offset + byteOffset[0]] = gamma[((color >> 16) & 0xff)]; // R
+            buffer[offset + byteOffset[1]] = gamma[((color >> 8) & 0xff)]; // G
+            buffer[offset + byteOffset[2]] = gamma[(color & 0xff)]; // B
             offset += numBytes;
           }
         }
       } else {
+
+        // Generic ByteEncoder implementation
         for (int i = 0; i < segment.indices.length; ++i) {
           int index = segment.indices[i];
           int color = (index >= 0) ? colors[index] : 0;
-          buffer[offset + byteOffset[0]] = gamma[((color >> 16) & 0xff)]; // R
-          buffer[offset + byteOffset[1]] = gamma[((color >> 8) & 0xff)]; // G
-          buffer[offset + byteOffset[2]] = gamma[(color & 0xff)]; // B
+          byteEncoder.writeBytes(color, gamma, buffer, offset);
           offset += numBytes;
         }
       }

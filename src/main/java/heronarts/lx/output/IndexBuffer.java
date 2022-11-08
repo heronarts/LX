@@ -50,7 +50,7 @@ public class IndexBuffer {
      * Byte order to use when sending the points in this segment, which implicitly
      * specifies how many bytes are used per pixel
      */
-    public final LXBufferOutput.ByteOrder byteOrder;
+    public final LXBufferOutput.ByteEncoder byteEncoder;
 
     /**
      * Starting channel in output packet for this segment (e.g. ArtNet channel)
@@ -86,36 +86,36 @@ public class IndexBuffer {
      * Segment with specified indices and byte ordering
      *
      * @param indices Array of indices into master color buffer
-     * @param byteOrder Byte ordering to send
+     * @param byteEncoder Byte encoder to use when sending
      */
-    public Segment(int[] indices, LXBufferOutput.ByteOrder byteOrder) {
-      this(indices, byteOrder, 0);
+    public Segment(int[] indices, LXBufferOutput.ByteEncoder byteEncoder) {
+      this(indices, byteEncoder, 0);
     }
 
     /**
      * Segment with specified indices, byte ordering and channel offset
      *
      * @param indices Array of indices into master color buffer
-     * @param byteOrder Byte ordering to send
+     * @param byteEncoder Byte encoder to  use when sending send
      * @param channel Channel offset in the output packet
      */
-    public Segment(int[] indices, LXBufferOutput.ByteOrder byteOrder, int channel) {
-      this(indices, byteOrder, channel, new FixedParameter(1));
+    public Segment(int[] indices, LXBufferOutput.ByteEncoder byteEncoder, int channel) {
+      this(indices, byteEncoder, channel, new FixedParameter(1));
     }
 
     /**
      * Segment with specified indices, byte ordering and channel offset
      *
      * @param indices Array of indices into master color buffer
-     * @param byteOrder Byte ordering to send
+     * @param byteEncoder Byte encoder to send
      * @param channel Channel offset in the output packet
      * @param brightness Brightness of this segment
      */
-    public Segment(int[] indices, LXBufferOutput.ByteOrder byteOrder, int channel, LXParameter brightness) {
+    public Segment(int[] indices, LXBufferOutput.ByteEncoder byteEncoder, int channel, LXParameter brightness) {
       this.indices = indices;
-      this.byteOrder = byteOrder;
+      this.byteEncoder = byteEncoder;
       this.startChannel = channel;
-      this.byteLength = this.indices.length * this.byteOrder.getNumBytes();
+      this.byteLength = this.indices.length * this.byteEncoder.getNumBytes();
       this.endChannel = this.startChannel + this.byteLength - 1;
       this.brightness = brightness;
     }

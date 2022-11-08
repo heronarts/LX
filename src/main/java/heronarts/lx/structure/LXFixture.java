@@ -123,8 +123,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Index buffer defined relative to this fixture
     protected final int[] indexBuffer;
 
-    // Byte order for this segment
-    protected final LXBufferOutput.ByteOrder byteOrder;
+    // Byte encoder for this segment
+    protected final LXBufferOutput.ByteEncoder byteEncoder;
 
     // Length of the index buffer (# of color index values))
     protected final int length;
@@ -161,7 +161,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       this(start, num, stride, repeat, reverse, LXBufferOutput.ByteOrder.RGB);
     }
 
-    protected Segment(int start, int num, int stride, int repeat, boolean reverse, LXBufferOutput.ByteOrder byteOrder) {
+    protected Segment(int start, int num, int stride, int repeat, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder) {
       this.length = num * repeat;
       this.indexBuffer = new int[this.length];
       if (reverse) {
@@ -175,8 +175,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
           this.indexBuffer[i++] = index;
         }
       }
-      this.byteOrder = byteOrder;
-      this.numChannels = this.length * byteOrder.getNumBytes();
+      this.byteEncoder = byteEncoder;
+      this.numChannels = this.length * byteEncoder.getNumBytes();
     }
 
     /**
@@ -184,13 +184,13 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      * to the fixture itself, not global.
      *
      * @param indexBuffer Relative-indexed buffer
-     * @param byteOrder Byte order for this segment
+     * @param byteEncoder Byte encoder for this segment
      */
-    protected Segment(int[] indexBuffer, LXBufferOutput.ByteOrder byteOrder) {
+    protected Segment(int[] indexBuffer, LXBufferOutput.ByteEncoder byteEncoder) {
       this.indexBuffer = indexBuffer;
-      this.byteOrder = byteOrder;
+      this.byteEncoder = byteEncoder;
       this.length = indexBuffer.length;
-      this.numChannels = indexBuffer.length * byteOrder.getNumBytes();
+      this.numChannels = indexBuffer.length * byteEncoder.getNumBytes();
     }
 
     /**

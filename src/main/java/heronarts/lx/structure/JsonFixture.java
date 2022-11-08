@@ -20,6 +20,7 @@ package heronarts.lx.structure;
 
 import java.io.File;
 import java.io.FileReader;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -228,42 +229,95 @@ public class JsonFixture extends LXFixture {
   // A bit superfluous, but avoiding using the LXBufferOutput stuff
   // directly as JSON-loading is a separate namespace and want the code
   // to clearly reflect that, in case the two diverge in the future
-  private enum JsonByteOrderDefinition {
+  private static class JsonByteEncoderDefinition {
 
-    RGB(LXBufferOutput.ByteOrder.RGB),
-    RBG(LXBufferOutput.ByteOrder.RBG),
-    GBR(LXBufferOutput.ByteOrder.GBR),
-    GRB(LXBufferOutput.ByteOrder.GRB),
-    BRG(LXBufferOutput.ByteOrder.BRG),
-    BGR(LXBufferOutput.ByteOrder.BGR),
+    private static final JsonByteEncoderDefinition RGB = new JsonByteEncoderDefinition(LXBufferOutput.ByteOrder.RGB);
 
-    RGBW(LXBufferOutput.ByteOrder.RGBW),
-    RBGW(LXBufferOutput.ByteOrder.RBGW),
-    GRBW(LXBufferOutput.ByteOrder.GRBW),
-    GBRW(LXBufferOutput.ByteOrder.GBRW),
-    BRGW(LXBufferOutput.ByteOrder.BRGW),
-    BGRW(LXBufferOutput.ByteOrder.BGRW),
+    private static final Map<String, JsonByteEncoderDefinition> instances = new HashMap<String, JsonByteEncoderDefinition>();
 
-    WRGB(LXBufferOutput.ByteOrder.WRGB),
-    WRBG(LXBufferOutput.ByteOrder.WRBG),
-    WGRB(LXBufferOutput.ByteOrder.WGRB),
-    WGBR(LXBufferOutput.ByteOrder.WGBR),
-    WBRG(LXBufferOutput.ByteOrder.WBRG),
-    WBGR(LXBufferOutput.ByteOrder.WBGR),
+    private final LXBufferOutput.ByteEncoder byteEncoder;
 
-    W(LXBufferOutput.ByteOrder.W);
-
-    private final LXBufferOutput.ByteOrder byteOrder;
-
-    private JsonByteOrderDefinition(LXBufferOutput.ByteOrder byteOrder) {
-      this.byteOrder = byteOrder;
+    private JsonByteEncoderDefinition(LXBufferOutput.ByteEncoder byteEncoder) {
+      this.byteEncoder = byteEncoder;
     }
 
-    private static JsonByteOrderDefinition get(String order) {
-      for (JsonByteOrderDefinition byteOrder : JsonByteOrderDefinition.values()) {
-        if (order.toLowerCase().equals(byteOrder.name().toLowerCase())) {
-          return byteOrder;
+    private JsonByteEncoderDefinition(LX lx, final String className) throws NoSuchMethodException, ClassNotFoundException {
+      final Class<?> cls = lx.instantiateStatic(className.replace('/', '$'));
+      final Method getNumBytes = cls.getMethod("getNumBytes");
+      final Method writeBytes = cls.getMethod("writeBytes", int.class, byte[].class, byte[].class, int.class);
+      this.byteEncoder = new LXBufferOutput.ByteEncoder() {
+
+        @Override
+        public int getNumBytes() {
+          try {
+            return (int) getNumBytes.invoke(null);
+          } catch (Throwable t) {
+            LX.error("ByteEncoderClass " + cls  + " error on getNumBytes: " + t.getMessage());
+            return 0;
+          }
         }
+
+        @Override
+        public void writeBytes(int argb, byte[] gamma, byte[] output, int offset) {
+          try {
+            writeBytes.invoke(null, argb, gamma, output, offset);
+          } catch (Throwable t) {
+            LX.error("ByteEncoderClass " + cls  + " error on writeBytes: " + t.getMessage());
+          }
+        }
+
+      };
+    }
+
+    private static JsonByteEncoderDefinition get(LX lx, String order) {
+      // Did we already look this encoder up? Re-use it!
+      JsonByteEncoderDefinition instance = instances.get(order);
+      if (instance != null) {
+        return instance;
+      }
+
+
+      // Check for the basic byte order enum types
+      for (LXBufferOutput.ByteOrder byteOrder : LXBufferOutput.ByteOrder.values()) {
+        if (order.equalsIgnoreCase(byteOrder.name())) {
+          instance = new JsonByteEncoderDefinition(byteOrder);
+          instances.put(order, instance);
+          return instance;
+        }
+      }
+
+      // Try to make a new dynamic encoder based upon class-name
+      try {
+        final Class<?> cls = lx.instantiateStatic(order.replace('/', '$'));
+        final Method getNumBytes = cls.getMethod("getNumBytes");
+        final Method writeBytes = cls.getMethod("writeBytes", int.class, byte[].class, byte[].class, int.class);
+
+        // Create a new dynamic encoder which uses reflection to call static methods
+        // on the provided class
+        instance = new JsonByteEncoderDefinition(new LXBufferOutput.ByteEncoder() {
+          @Override
+          public int getNumBytes() {
+            try {
+              return (int) getNumBytes.invoke(null);
+            } catch (Throwable t) {
+              LX.error("JsonByteEncoder " + cls  + " error on getNumBytes: " + t.getMessage());
+              return 0;
+            }
+          }
+
+          @Override
+          public void writeBytes(int argb, byte[] gamma, byte[] output, int offset) {
+            try {
+              writeBytes.invoke(null, argb, gamma, output, offset);
+            } catch (Throwable t) {
+              LX.error("JsonByteEncoder " + cls  + " error on writeBytes: " + t.getMessage());
+            }
+          }
+        });
+        instances.put(order, instance);
+        return instance;
+      } catch (Throwable x) {
+        LX.error(x, "Could not instantiate JsonByteEncoder " + order + ": " + x.getMessage());
       }
       return null;
     }
@@ -426,7 +480,7 @@ public class JsonFixture extends LXFixture {
     private final LXFixture fixture;
     private final JsonProtocolDefinition protocol;
     private final JsonTransportDefinition transport;
-    private final JsonByteOrderDefinition byteOrder;
+    private final JsonByteEncoderDefinition byteEncoder;
     private final InetAddress address;
     private final int port;
     private final int universe;
@@ -435,11 +489,11 @@ public class JsonFixture extends LXFixture {
     private final float fps;
     private final List<JsonSegmentDefinition> segments;
 
-    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteOrderDefinition byteOrder, InetAddress address, int port, int universe, int channel, boolean sequenceEnabled, float fps, List<JsonSegmentDefinition> segments) {
+    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteEncoderDefinition byteOrder, InetAddress address, int port, int universe, int channel, boolean sequenceEnabled, float fps, List<JsonSegmentDefinition> segments) {
       this.fixture = fixture;
       this.protocol = protocol;
       this.transport = transport;
-      this.byteOrder = byteOrder;
+      this.byteEncoder = byteOrder;
       this.address = address;
       this.port = port;
       this.universe = universe;
@@ -459,15 +513,15 @@ public class JsonFixture extends LXFixture {
     private final boolean reverse;
 
     // May or may not be specified, if null then the parent output definition is used
-    private final JsonByteOrderDefinition byteOrder;
+    private final JsonByteEncoderDefinition byteEncoder;
 
-    private JsonSegmentDefinition(int start, int num, int stride, int repeat, boolean reverse, JsonByteOrderDefinition byteOrder) {
+    private JsonSegmentDefinition(int start, int num, int stride, int repeat, boolean reverse, JsonByteEncoderDefinition byteEncoder) {
       this.start = start;
       this.num = num;
       this.stride = stride;
       this.repeat = repeat;
       this.reverse = reverse;
-      this.byteOrder = byteOrder;
+      this.byteEncoder = byteEncoder;
     }
   }
 
@@ -1994,7 +2048,7 @@ public class JsonFixture extends LXFixture {
     final boolean sequenceEnabled = loadBoolean(outputObj, KEY_SEQUENCE_ENABLED, true, "Output " + KEY_SEQUENCE_ENABLED + " must be a valid boolean");
 
     // Top level output byte-order
-    JsonByteOrderDefinition byteOrder = loadByteOrder(outputObj, JsonByteOrderDefinition.RGB);
+    JsonByteEncoderDefinition byteOrder = loadByteOrder(outputObj, JsonByteEncoderDefinition.RGB);
 
     // Load up the segment definitions
     List<JsonSegmentDefinition> segments = new ArrayList<JsonSegmentDefinition>();
@@ -2020,7 +2074,7 @@ public class JsonFixture extends LXFixture {
 
   private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_COMPONENT_ID, KEY_STRIDE, KEY_REVERSE };
 
-  private void loadSegments(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject outputObj, JsonByteOrderDefinition defaultByteOrder) {
+  private void loadSegments(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject outputObj, JsonByteEncoderDefinition defaultByteOrder) {
     if (outputObj.has(KEY_SEGMENTS)) {
       // Specifying an array of segments, keys should not be there by default
       for (String segmentKey : SEGMENT_KEYS) {
@@ -2045,7 +2099,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private void loadSegment(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject segmentObj, JsonByteOrderDefinition outputByteOrder, boolean isOutput) {
+  private void loadSegment(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject segmentObj, JsonByteEncoderDefinition outputByteOrder, boolean isOutput) {
     int num = JsonOutputDefinition.ALL_POINTS;
 
     int start = loadInt(segmentObj, KEY_START, true, "Output " + KEY_START + " must be a valid integer");
@@ -2147,7 +2201,7 @@ public class JsonFixture extends LXFixture {
 
     boolean reverse = loadBoolean(segmentObj, KEY_REVERSE, true, "Output " + KEY_REVERSE + " must be a valid boolean");
 
-    JsonByteOrderDefinition segmentByteOrder = null;
+    JsonByteEncoderDefinition segmentByteOrder = null;
     if (!isOutput) {
       segmentByteOrder = loadByteOrder(segmentObj, null);
     }
@@ -2155,14 +2209,14 @@ public class JsonFixture extends LXFixture {
     segments.add(new JsonSegmentDefinition(start, num, stride, repeat, reverse, segmentByteOrder));
   }
 
-  private JsonByteOrderDefinition loadByteOrder(JsonObject obj, JsonByteOrderDefinition defaultByteOrder) {
-    JsonByteOrderDefinition byteOrder = defaultByteOrder;
+  private JsonByteEncoderDefinition loadByteOrder(JsonObject obj, JsonByteEncoderDefinition defaultByteOrder) {
+    JsonByteEncoderDefinition byteOrder = defaultByteOrder;
     String byteOrderStr = loadString(obj, KEY_BYTE_ORDER, true, "Output must specify a valid string " + KEY_BYTE_ORDER);
     if (byteOrderStr != null) {
       if (byteOrderStr.isEmpty()) {
         addWarning("Output must specify non-empty string value for " + KEY_BYTE_ORDER);
       } else {
-        JsonByteOrderDefinition definedByteOrder = JsonByteOrderDefinition.get(byteOrderStr);
+        JsonByteEncoderDefinition definedByteOrder = JsonByteEncoderDefinition.get(this.lx, byteOrderStr);
         if (definedByteOrder == null) {
           addWarning("Unrecognized byte order type: " + byteOrderStr);
         } else {
@@ -2224,7 +2278,7 @@ public class JsonFixture extends LXFixture {
         segment.stride,
         segment.repeat,
         segment.reverse,
-        (segment.byteOrder != null) ? segment.byteOrder.byteOrder : output.byteOrder.byteOrder
+        (segment.byteEncoder != null) ? segment.byteEncoder.byteEncoder : output.byteEncoder.byteEncoder
        ));
     }
 

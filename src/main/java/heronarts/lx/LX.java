@@ -1140,6 +1140,7 @@ public class LX {
       LX.error(x, "Exception in instantiateComponent: " + x.getMessage());
       throw new InstantiationException(x, className + " could not be loaded. Check that all required content files are present and constructor is public.");
     }
+    // NOTE(mcslee): keep this out of above try/catch so as not to pointlessly nest/cascade exceptions
     return instantiateComponent(cls, type);
   }
 
@@ -1202,6 +1203,10 @@ public class LX {
 
   public LXBlend instantiateBlend(Class<? extends LXBlend> cls) throws InstantiationException {
     return instantiateComponent(cls, LXBlend.class);
+  }
+
+  public Class<?> instantiateStatic(String className) throws ClassNotFoundException {
+    return Class.forName(className, true, this.registry.classLoader);
   }
 
   public void setSystemClipboardString(String str) {

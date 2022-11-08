@@ -161,7 +161,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         }
 
         // Translate the fixture-scoped Segment into global address space
-        this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteOrder, startChannel, segment.getBrightness()));
+        this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteEncoder, startChannel, segment.getBrightness()));
 
         // Reduce packet max FPS to the specified limit, if one exists and a lower limit is not already present
         if (fps > 0) {
@@ -322,9 +322,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         }
 
         // Is there not enough available space? If so, chunk the packet
-        while (availableBytes < chunkLength * segment.byteOrder.getNumBytes()) {
+        while (availableBytes < chunkLength * segment.byteEncoder.getNumBytes()) {
           // How many indices can fit into the remaining available bytes?
-          int chunkLimit = availableBytes / segment.byteOrder.getNumBytes();
+          int chunkLimit = availableBytes / segment.byteEncoder.getNumBytes();
 
           // It could be 0, e.g. channel = 510 byteOrder RGB, can't fit an RGB pixel so
           // we must overflow...
@@ -348,7 +348,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
         // Add the final chunk (the whole segment in the common case)
         packet.addSegment(segment, channel, chunkStart, chunkLength, fps);
-        channel += chunkLength * segment.byteOrder.getNumBytes();
+        channel += chunkLength * segment.byteEncoder.getNumBytes();
 
         // Set flag for whether we need to overflow on the next segment
         overflow = channel >= protocol.maxChannels;
