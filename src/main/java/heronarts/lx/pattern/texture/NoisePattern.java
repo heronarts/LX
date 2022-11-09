@@ -176,16 +176,22 @@ public class NoisePattern extends LXPattern {
     .setExponent(2)
     .setDescription("Maximum scaling value for noise variation");
 
-  public final CompoundParameter xScale =
-    new CompoundParameter("X-Scale", 1)
+  public final CompoundParameter xScale = (CompoundParameter)
+    new CompoundParameter("X-Scale", 1, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of scaling applied to the X-axis");
 
-  public final CompoundParameter yScale =
-    new CompoundParameter("Y-Scale", 1)
+  public final CompoundParameter yScale = (CompoundParameter)
+    new CompoundParameter("Y-Scale", 1, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of scaling applied to the Y-axis");
 
-  public final CompoundParameter zScale =
-    new CompoundParameter("Z-Scale", 1)
+  public final CompoundParameter zScale = (CompoundParameter)
+    new CompoundParameter("Z-Scale", 1, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of scaling applied to the Z-axis");
 
   public final BooleanParameter motion =
