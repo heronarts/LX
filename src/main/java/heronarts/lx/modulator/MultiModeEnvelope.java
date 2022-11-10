@@ -39,57 +39,69 @@ import heronarts.lx.utils.LXUtils;
 public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, LXNormalizedParameter, LXTriggerSource, LXTriggerTarget, LXMidiListener {
 
   private final static CompoundParameter initial() {
-    return new CompoundParameter("Initial", 0, 0, 1)
-    .setDescription("Initial Value");
+    return
+      new CompoundParameter("Initial", 0, 0, 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+      .setDescription("Initial Value");
   }
 
   private final static CompoundParameter peak() {
-    return new CompoundParameter("Peak", 1, 0, 1)
-    .setDescription("Peak Value");
+    return
+      new CompoundParameter("Peak", 1, 0, 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+      .setDescription("Peak Value");
   }
 
   private final static CompoundParameter delay() {
-    return (CompoundParameter) new CompoundParameter("Delay", 0, 0, 5000)
-    .setExponent(2)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Delay Time");
+    return
+      new CompoundParameter("Delay", 0, 0, 5000)
+      .setExponent(2)
+      .setUnits(CompoundParameter.Units.MILLISECONDS)
+      .setDescription("Delay Time");
   }
 
   private final static CompoundParameter attack() {
-    return (CompoundParameter) new CompoundParameter("Attack", 100, 0, 5000)
-    .setExponent(2)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Attack Time");
+    return
+      new CompoundParameter("Attack", 100, 0, 5000)
+      .setExponent(2)
+      .setUnits(CompoundParameter.Units.MILLISECONDS)
+      .setDescription("Attack Time");
   }
 
   private final static CompoundParameter hold() {
-    return (CompoundParameter) new CompoundParameter("Hold", 0, 0, 5000)
-    .setExponent(2)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Hold Time");
+    return
+      new CompoundParameter("Hold", 0, 0, 5000)
+      .setExponent(2)
+      .setUnits(CompoundParameter.Units.MILLISECONDS)
+      .setDescription("Hold Time");
   }
 
   private final static CompoundParameter decay() {
-    return (CompoundParameter) new CompoundParameter("Decay", 1000, 0, 5000)
-    .setExponent(2)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Decay Time");
+    return
+      new CompoundParameter("Decay", 1000, 0, 5000)
+      .setExponent(2)
+      .setUnits(CompoundParameter.Units.MILLISECONDS)
+      .setDescription("Decay Time");
   }
 
   private final static CompoundParameter sustain() {
-    return new CompoundParameter("Sustain", 1)
-    .setDescription("Sustain Level");
+    return
+      new CompoundParameter("Sustain", 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+      .setDescription("Sustain Level");
   }
 
   private final static CompoundParameter release() {
-    return (CompoundParameter) new CompoundParameter("Release", 1000, 0, 5000)
-    .setExponent(2)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Release Time");
+    return
+      new CompoundParameter("Release", 1000, 0, 5000)
+      .setExponent(2)
+      .setUnits(CompoundParameter.Units.MILLISECONDS)
+      .setDescription("Release Time");
   }
 
   public final CompoundParameter shape =
     new CompoundParameter("Shape", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Shape of the envelope response curves");
 
@@ -118,15 +130,13 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     new BooleanParameter("MIDI", false)
     .setDescription("Whether to gate on MIDI notes");
 
-  public final BoundedParameter midiVelocityResponse = (BoundedParameter)
-    new BoundedParameter("Velocity", 25, -100, 100)
-    .setUnits(BoundedParameter.Units.PERCENT)
-    .setDescription("Degree to which MIDI velocity influences ceiling level");
+  public final BoundedParameter midiVelocityResponse = new BoundedParameter("Velocity", 25, -100, 100)
+  .setUnits(BoundedParameter.Units.PERCENT)
+  .setDescription("Degree to which MIDI velocity influences ceiling level");
 
-  public final BoundedParameter midiNoteResponse = (BoundedParameter)
-    new BoundedParameter("Note Response", 0, -100, 100)
-    .setUnits(BoundedParameter.Units.PERCENT)
-    .setDescription("Degree to which MIDI note influences ceiling level");
+  public final BoundedParameter midiNoteResponse = new BoundedParameter("Note Response", 0, -100, 100)
+  .setUnits(BoundedParameter.Units.PERCENT)
+  .setDescription("Degree to which MIDI note influences ceiling level");
 
   public final DiscreteParameter midiMinNote = (DiscreteParameter)
     new DiscreteParameter("Base Note", 0, 128)

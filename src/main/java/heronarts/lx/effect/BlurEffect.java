@@ -49,9 +49,10 @@ public class BlurEffect extends LXEffect {
 
   public final CompoundParameter level =
     new CompoundParameter("Level", 0, 0, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the level of the blur relative to original signal");
 
-  public final CompoundParameter decay = (CompoundParameter)
+  public final CompoundParameter decay =
     new CompoundParameter("Decay", 1, 0.01, 60)
     .setDescription("Sets the decay of the motion blur, time to half brightness")
     .setExponent(3)

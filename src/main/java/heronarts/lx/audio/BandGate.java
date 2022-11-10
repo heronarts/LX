@@ -44,7 +44,7 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
   /**
    * Gain of the meter, in decibels
    */
-  public final BoundedParameter gain = (BoundedParameter)
+  public final BoundedParameter gain =
     new BoundedParameter("Gain", 0, -48, 48)
     .setDescription("Sets the gain of the meter in dB")
     .setUnits(LXParameter.Units.DECIBELS);
@@ -52,7 +52,7 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
   /**
    * Range of the meter, in decibels.
    */
-  public final BoundedParameter range = (BoundedParameter)
+  public final BoundedParameter range =
     new BoundedParameter("Range", 36, 6, 96)
     .setDescription("Sets the range of the meter in dB")
     .setUnits(LXParameter.Units.DECIBELS);
@@ -60,7 +60,7 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
   /**
    * Meter attack time, in milliseconds
    */
-  public final BoundedParameter attack = (BoundedParameter)
+  public final BoundedParameter attack =
     new BoundedParameter("Attack", 10, 0, 100)
     .setDescription("Sets the attack time of the meter response")
     .setUnits(LXParameter.Units.MILLISECONDS_RAW);
@@ -68,7 +68,7 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
   /**
    * Meter release time, in milliseconds
    */
-  public final BoundedParameter release = (BoundedParameter)
+  public final BoundedParameter release =
     new BoundedParameter("Release", 100, 0, 1000)
     .setDescription("Sets the release time of the meter response")
     .setExponent(2)
@@ -77,7 +77,7 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
   /**
    * dB/octave slope applied to the equalizer
    */
-  public final BoundedParameter slope = (BoundedParameter)
+  public final BoundedParameter slope =
     new BoundedParameter("Slope", 4.5, -3, 12)
     .setDescription("Sets the slope of the meter in dB per octave")
     .setUnits(LXParameter.Units.DECIBELS);
@@ -89,6 +89,7 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
    */
   public final BoundedParameter threshold =
     new BoundedParameter("Threshold", 0.8)
+    .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the level at which the band is triggered");
 
   /**
@@ -99,16 +100,17 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
    */
   public final BoundedParameter floor =
     new BoundedParameter("Floor", 0.75)
+    .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the level the signal must drop below before being triggered again");
 
   /**
    * The time the trigger takes to falloff from 1 to 0 after triggered, in
    * milliseconds
    */
-  public final BoundedParameter decay = (BoundedParameter)
+  public final BoundedParameter decay =
     new BoundedParameter("Decay", 400, 0, 1600)
     .setDescription("Sets the decay time of the trigger signal")
-    .setUnits(LXParameter.Units.MILLISECONDS);
+    .setUnits(LXParameter.Units.MILLISECONDS_RAW);
 
   /**
    * Minimum frequency for the band
@@ -178,11 +180,11 @@ public class BandGate extends LXModulator implements LXNormalizedParameter, LXTr
     this.impl = new LXMeterImpl(meter.numBands, meter.fft.getBandOctaveRatio());
     this.meter = meter;
     int nyquist = meter.fft.getSampleRate() / 2;
-    this.minFreq = (BoundedParameter) new BoundedParameter("Min Freq", 60, 0, nyquist)
+    this.minFreq = new BoundedParameter("Min Freq", 60, 0, nyquist)
       .setDescription("Minimum frequency the gate responds to")
       .setExponent(4)
       .setUnits(LXParameter.Units.HERTZ);
-    this.maxFreq = (BoundedParameter) new BoundedParameter("Max Freq", 120, 0, nyquist)
+    this.maxFreq = new BoundedParameter("Max Freq", 120, 0, nyquist)
       .setDescription("Maximum frequency the gate responds to")
       .setExponent(4)
       .setUnits(LXParameter.Units.HERTZ);

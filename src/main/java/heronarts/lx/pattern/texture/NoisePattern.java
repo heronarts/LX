@@ -109,28 +109,28 @@ public class NoisePattern extends LXPattern {
     new DiscreteParameter("Seed", 0, 256)
     .setDescription("Seed value supplied to the noise function");
 
-  public final CompoundParameter level = (CompoundParameter)
+  public final CompoundParameter level =
     new CompoundParameter("Level", 50, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Midpoint brightness level for the noise generation");
 
-  public final CompoundParameter contrast = (CompoundParameter)
+  public final CompoundParameter contrast =
     new CompoundParameter("Contrast", 100, 0, 500)
     .setExponent(2)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Dynamic contrast of noise generation");
 
-  public final CompoundParameter minLevel = (CompoundParameter)
+  public final CompoundParameter minLevel =
     new CompoundParameter("Min", 0, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Minimum output level");
 
-  public final CompoundParameter maxLevel = (CompoundParameter)
+  public final CompoundParameter maxLevel =
     new CompoundParameter("Max", 100, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Maximum output level");
 
-  public final CompoundParameter invert = (CompoundParameter)
+  public final CompoundParameter invert =
     new CompoundParameter("Invert", 0)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("How much to invert the brightness output");
@@ -164,6 +164,7 @@ public class NoisePattern extends LXPattern {
 
   public final CompoundParameter scale =
     new CompoundParameter("Scale", .5f)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Scale factor for the size of the noise variation");
 
   public final BoundedParameter minScale =
@@ -176,19 +177,19 @@ public class NoisePattern extends LXPattern {
     .setExponent(2)
     .setDescription("Maximum scaling value for noise variation");
 
-  public final CompoundParameter xScale = (CompoundParameter)
+  public final CompoundParameter xScale =
     new CompoundParameter("X-Scale", 1, -1, 1)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of scaling applied to the X-axis");
 
-  public final CompoundParameter yScale = (CompoundParameter)
+  public final CompoundParameter yScale =
     new CompoundParameter("Y-Scale", 1, -1, 1)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of scaling applied to the Y-axis");
 
-  public final CompoundParameter zScale = (CompoundParameter)
+  public final CompoundParameter zScale =
     new CompoundParameter("Z-Scale", 1, -1, 1)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
@@ -198,7 +199,7 @@ public class NoisePattern extends LXPattern {
     new BooleanParameter("Motion", true)
     .setDescription("Whether motion is applied to the noise");
 
-  public final CompoundParameter motionSpeed = (CompoundParameter)
+  public final CompoundParameter motionSpeed =
     new CompoundParameter("Speed", 0, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
@@ -208,19 +209,19 @@ public class NoisePattern extends LXPattern {
     new BoundedParameter("Speed Range", 128, 1, 256)
     .setDescription("Range of the speed control");
 
-  public final CompoundParameter xMotion = (CompoundParameter)
+  public final CompoundParameter xMotion =
     new CompoundParameter("X-Motion", 0, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Rate of motion on the X-axis");
 
-  public final CompoundParameter yMotion = (CompoundParameter)
+  public final CompoundParameter yMotion =
     new CompoundParameter("Y-Motion", 0, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Rate of motion on the Y-axis");
 
-  public final CompoundParameter zMotion = (CompoundParameter)
+  public final CompoundParameter zMotion =
     new CompoundParameter("Z-Motion", 1, -1, 1)
     .setPolarity(LXParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)

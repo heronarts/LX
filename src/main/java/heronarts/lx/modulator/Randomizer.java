@@ -36,22 +36,19 @@ import heronarts.lx.utils.LXUtils;
 @LXCategory(LXCategory.CORE)
 public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXTriggerTarget, LXOscComponent {
 
-  public final CompoundParameter periodMs = (CompoundParameter)
-    new CompoundParameter("Interval", 1000, 10, 1000*60)
-    .setExponent(3)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Base interval for random target value updates");
+  public final CompoundParameter periodMs = new CompoundParameter("Interval", 1000, 10, 1000*60)
+  .setExponent(3)
+  .setUnits(CompoundParameter.Units.MILLISECONDS)
+  .setDescription("Base interval for random target value updates");
 
-  public final CompoundParameter randomMs = (CompoundParameter)
-    new CompoundParameter("Random", 0, 0, 1000*60)
-    .setExponent(3)
-    .setUnits(CompoundParameter.Units.MILLISECONDS)
-    .setDescription("Range of random time added to each interval");
+  public final CompoundParameter randomMs = new CompoundParameter("Random", 0, 0, 1000*60)
+  .setExponent(3)
+  .setUnits(CompoundParameter.Units.MILLISECONDS)
+  .setDescription("Range of random time added to each interval");
 
-  public final CompoundParameter chance = (CompoundParameter)
-    new CompoundParameter("Chance", 100, 0, 100)
-    .setUnits(CompoundParameter.Units.PERCENT)
-    .setDescription("Chance that the randomizer fires on each interval");
+  public final CompoundParameter chance = new CompoundParameter("Chance", 100, 0, 100)
+  .setUnits(CompoundParameter.Units.PERCENT)
+  .setDescription("Chance that the randomizer fires on each interval");
 
   private double randomInterval = 0;
 
@@ -78,10 +75,12 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
 
   public final CompoundParameter min =
     new CompoundParameter("Minimum", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Minimum output value");
 
   public final CompoundParameter max =
     new CompoundParameter("Maximum", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Maximum output value");
 
   public final TriggerParameter triggerOut =

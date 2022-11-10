@@ -94,13 +94,13 @@ public class SparklePattern extends LXPattern {
     private int numSparkles;
     private int maxPixelsPerSparkle;
 
-    public final CompoundParameter minInterval = (CompoundParameter)
+    public final CompoundParameter minInterval =
       new CompoundParameter("Fast", 1, .1, 60)
       .setExponent(2)
       .setUnits(CompoundParameter.Units.SECONDS)
       .setDescription("Minimum interval between sparkles");
 
-    public final CompoundParameter maxInterval = (CompoundParameter)
+    public final CompoundParameter maxInterval =
       new CompoundParameter("Slow", 1, .1, 60)
       .setExponent(2)
       .setUnits(CompoundParameter.Units.SECONDS)
@@ -111,17 +111,17 @@ public class SparklePattern extends LXPattern {
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Speed of the sparkle effect");
 
-    public final CompoundParameter variation = (CompoundParameter)
+    public final CompoundParameter variation =
       new CompoundParameter("Variation", 25, 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Variation of sparkle interval");
 
-    public final CompoundParameter duration = (CompoundParameter)
+    public final CompoundParameter duration =
       new CompoundParameter("Duration", 100, 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Duration of a sparkle as percentage of interval");
 
-    public final CompoundParameter density = (CompoundParameter)
+    public final CompoundParameter density =
       new CompoundParameter("Density", 50, 0, MAX_DENSITY * 100)
       .setExponent(2)
       .setUnits(CompoundParameter.Units.PERCENT)
@@ -129,20 +129,21 @@ public class SparklePattern extends LXPattern {
 
     public final CompoundParameter sharp =
       new CompoundParameter("Sharp", 0, -1, 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Sharpness of sparkle curve");
 
-    public final CompoundParameter baseLevel = (CompoundParameter)
+    public final CompoundParameter baseLevel =
       new CompoundParameter("Base", 0, 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Base Level");
 
-    public final CompoundParameter minLevel = (CompoundParameter)
+    public final CompoundParameter minLevel =
       new CompoundParameter("Min", 75, 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Minimum brightness level, as a percentage of the maximum");
 
-    public final CompoundParameter maxLevel = (CompoundParameter)
+    public final CompoundParameter maxLevel =
       new CompoundParameter("Max", 100, 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Peak sparkle brightness level");

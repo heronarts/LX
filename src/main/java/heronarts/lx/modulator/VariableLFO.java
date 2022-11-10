@@ -44,24 +44,33 @@ public class VariableLFO extends LXVariablePeriodModulator implements LXTriggerT
   /** Period of the waveform, in ms */
   public final CompoundParameter periodCustom;
 
-  public final CompoundParameter skew = new CompoundParameter("Skew", 0, -1, 1)
-  .setDescription("Sets a skew coefficient for the waveshape")
-  .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter skew =
+    new CompoundParameter("Skew", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Sets a skew coefficient for the waveshape")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter shape = new CompoundParameter("Shape", 0, -1, 1)
-  .setDescription("Applies shaping to the waveshape")
-  .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter shape =
+    new CompoundParameter("Shape", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Applies shaping to the waveshape")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter exp = new CompoundParameter("Exp", 0, -1, 1)
-  .setDescription("Applies exponential scaling to the waveshape")
-  .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter exp =
+    new CompoundParameter("Exp", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Applies exponential scaling to the waveshape")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter bias = new CompoundParameter("Bias", 0, -1, 1)
-  .setDescription("Bias towards or away from the center of the waveform")
-  .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter bias =
+    new CompoundParameter("Bias", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Bias towards or away from the center of the waveform")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter phase =
     new CompoundParameter("Phase", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Shifts the phase of the waveform");
 
   public VariableLFO() {

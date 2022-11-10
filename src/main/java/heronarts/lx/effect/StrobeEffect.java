@@ -45,27 +45,30 @@ public class StrobeEffect extends LXEffect {
       LXWaveshape.DOWN
     });
 
-  public final BoundedParameter maxFrequency = (BoundedParameter)
+  public final BoundedParameter maxFrequency =
     new BoundedParameter("Max Freq", 5, 1, 30)
     .setDescription("Maximum strobing frequency")
     .setUnits(LXParameter.Units.HERTZ);
 
-  public final BoundedParameter minFrequency = (BoundedParameter)
+  public final BoundedParameter minFrequency =
     new BoundedParameter("Min Freq", .5, .1, 1)
     .setDescription("Minimium strobing frequency")
     .setUnits(LXParameter.Units.HERTZ);
 
   public final CompoundParameter speed =
     new CompoundParameter("Speed", .5)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setExponent(2)
     .setDescription("Speed of the strobe effect");
 
   public final CompoundParameter depth =
     new CompoundParameter("Depth", 0.5)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Depth of the strobe effect");
 
   public final CompoundParameter bias =
     new CompoundParameter("Bias", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Bias of the strobe effect");
 
@@ -79,6 +82,7 @@ public class StrobeEffect extends LXEffect {
 
   public final BoundedParameter tempoPhaseOffset =
     new BoundedParameter("Phase Offset", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Shifts the phase of the strobe LFO relative to tempo");
 
   private final SawLFO basis = startModulator(new SawLFO(0, 1, new FunctionalParameter() {

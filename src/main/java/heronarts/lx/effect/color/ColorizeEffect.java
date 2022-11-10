@@ -135,11 +135,13 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   public final CompoundParameter gradientSaturation =
     new CompoundParameter("S-Offset", 0, -100, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount of saturation gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter gradientBrightness =
     new CompoundParameter("B-Offset", 0, -100, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount of brightness gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 

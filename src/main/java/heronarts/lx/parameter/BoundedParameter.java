@@ -247,6 +247,18 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   }
 
   @Override
+  public BoundedParameter setWrappable(boolean wrappable) {
+    super.setWrappable(wrappable);
+    return this;
+  }
+
+  @Override
+  public BoundedParameter setUnits(BoundedParameter.Units units) {
+    super.setUnits(units);
+    return this;
+  }
+
+  @Override
   public BoundedParameter setDescription(String description) {
     super.setDescription(description);
     return this;

@@ -135,10 +135,12 @@ public class PlanesPattern extends LXPattern {
 
     public final CompoundParameter level =
       new CompoundParameter("Level", 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setDescription("Brightness of this plane");
 
     public final CompoundParameter position =
       new CompoundParameter("Position", 0, -1, 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Position of the plane");
 
@@ -152,6 +154,7 @@ public class PlanesPattern extends LXPattern {
 
     public final CompoundParameter width =
       new CompoundParameter("Width", 0.1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setDescription("Width of the plane");
 
     public final BoundedParameter widthMin =
@@ -164,10 +167,12 @@ public class PlanesPattern extends LXPattern {
 
     public final CompoundParameter contrast =
       new CompoundParameter("Contrast", 0.75)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setDescription("Contrast on the plane edge");
 
     public final CompoundParameter tiltPosition =
       new CompoundParameter("Tilt Pos", 0, -1, 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Tilt position");
 
@@ -180,6 +185,7 @@ public class PlanesPattern extends LXPattern {
 
     public final CompoundParameter spinPosition =
       new CompoundParameter("Spin Pos", 0, -1, 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Spin position");
 

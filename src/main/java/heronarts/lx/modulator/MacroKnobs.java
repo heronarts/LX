@@ -28,22 +28,27 @@ public class MacroKnobs extends LXModulator implements LXOscComponent {
 
   public final CompoundParameter macro1 =
     new CompoundParameter("K1")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Macro control parameter");
 
   public final CompoundParameter macro2 =
     new CompoundParameter("K2")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Macro control parameter");
 
   public final CompoundParameter macro3 =
     new CompoundParameter("K3")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Macro control parameter");
 
   public final CompoundParameter macro4 =
     new CompoundParameter("K4")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Macro control parameter");
 
   public final CompoundParameter macro5 =
     new CompoundParameter("K5")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Macro control parameter");
 
   public MacroKnobs() {

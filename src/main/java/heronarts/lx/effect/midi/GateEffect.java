@@ -77,31 +77,33 @@ public class GateEffect extends LXEffect {
 
   public final CompoundParameter initial =
     new CompoundParameter("Initial", 0, 0, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Initial Value");
 
   public final CompoundParameter peak =
     new CompoundParameter("Peak", 1, 0, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Peak Value");
 
-  public final CompoundParameter delay = (CompoundParameter)
+  public final CompoundParameter delay =
     new CompoundParameter("Delay", 0, 0, 5000)
     .setExponent(2)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
     .setDescription("Delay Time");
 
-  public final CompoundParameter attack = (CompoundParameter)
+  public final CompoundParameter attack =
     new CompoundParameter("Attack", 100, 0, 5000)
     .setExponent(2)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
     .setDescription("Attack Time");
 
-  public final CompoundParameter hold = (CompoundParameter)
+  public final CompoundParameter hold =
     new CompoundParameter("Hold", 0, 0, 5000)
     .setExponent(2)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
     .setDescription("Hold Time");
 
-  public final CompoundParameter decay = (CompoundParameter)
+  public final CompoundParameter decay =
     new CompoundParameter("Decay", 1000, 0, 5000)
     .setExponent(2)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
@@ -109,9 +111,10 @@ public class GateEffect extends LXEffect {
 
   public final CompoundParameter sustain =
     new CompoundParameter("Sustain", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sustain Level");
 
-  public final CompoundParameter release = (CompoundParameter)
+  public final CompoundParameter release =
     new CompoundParameter("Release", 1000, 0, 5000)
     .setExponent(2)
     .setUnits(CompoundParameter.Units.MILLISECONDS)
@@ -119,6 +122,7 @@ public class GateEffect extends LXEffect {
 
   public final CompoundParameter shape =
     new CompoundParameter("Shape", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Shape of the envelope response curves");
 
@@ -143,17 +147,17 @@ public class GateEffect extends LXEffect {
     new BooleanParameter("MIDI", false)
     .setDescription("Whether to gate on MIDI notes");
 
-  public final BoundedParameter midiVelocityResponse = (BoundedParameter)
+  public final BoundedParameter midiVelocityResponse =
     new BoundedParameter("Velocity", 25, -100, 100)
     .setUnits(BoundedParameter.Units.PERCENT)
     .setDescription("Degree to which MIDI velocity influences ceiling level");
 
-  public final BoundedParameter midiNoteResponse = (BoundedParameter)
+  public final BoundedParameter midiNoteResponse =
     new BoundedParameter("Note Response", 0, -100, 100)
     .setUnits(BoundedParameter.Units.PERCENT)
     .setDescription("Degree to which MIDI note influences ceiling level");
 
-  public final DiscreteParameter midiMinNote = (DiscreteParameter)
+  public final DiscreteParameter midiMinNote =
     new DiscreteParameter("Base Note", 0, 128)
     .setUnits(DiscreteParameter.Units.MIDI_NOTE)
     .setDescription("Base MIDI note");

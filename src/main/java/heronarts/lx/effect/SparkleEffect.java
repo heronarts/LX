@@ -33,6 +33,7 @@ public class SparkleEffect extends LXEffect {
 
   public final CompoundParameter amount =
     new CompoundParameter("Amount", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of sparkle to apply");
 
   public SparkleEffect(LX lx) {

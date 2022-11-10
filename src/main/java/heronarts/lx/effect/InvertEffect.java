@@ -29,18 +29,22 @@ public class InvertEffect extends LXEffect {
 
   public final CompoundParameter amount =
     new CompoundParameter("Amount", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of inversion to apply");
 
   public final CompoundParameter redAmount =
     new CompoundParameter("Red", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of inversion to apply to the green channel");
 
   public final CompoundParameter greenAmount =
     new CompoundParameter("Green", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of inversion to apply to the red channel");
 
   public final CompoundParameter blueAmount =
     new CompoundParameter("Blue", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of inversion to apply to the blue channel");
 
   private final int[] redLUT = new int[256];

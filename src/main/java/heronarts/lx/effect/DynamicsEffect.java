@@ -65,19 +65,23 @@ public class DynamicsEffect extends LXEffect {
 
   public final CompoundParameter floor =
     new CompoundParameter("Floor", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Minimum possible value");
 
   public final CompoundParameter ceiling =
     new CompoundParameter("Ceiling", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Maximum possible value");
 
   public final CompoundParameter shape =
     new CompoundParameter("Shape", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Shaping factor");
 
   public final CompoundParameter contrast =
     new CompoundParameter("Contrast", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Contrast factor");
 
@@ -88,18 +92,22 @@ public class DynamicsEffect extends LXEffect {
 
   public final CompoundParameter gate =
     new CompoundParameter("Gate", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Minimum incoming level to generate output");
 
   public final CompoundParameter redAmount =
     new CompoundParameter("Red", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of effect to apply to red channel");
 
   public final CompoundParameter greenAmount =
     new CompoundParameter("Green", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of effect to apply to green channel");
 
   public final CompoundParameter blueAmount =
     new CompoundParameter("Blue", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of effect to apply to blue channel");
 
   public final MutableParameter waveChanged =

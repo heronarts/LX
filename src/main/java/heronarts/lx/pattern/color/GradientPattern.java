@@ -116,26 +116,22 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     new DiscreteParameter("Stops", LXSwatch.MAX_COLORS, 2, LXSwatch.MAX_COLORS + 1)
     .setDescription("How many color stops to use in the palette");
 
-  public final CompoundParameter gradient = (CompoundParameter)
-    new CompoundParameter("Amount", 0, -1, 1)
-    .setDescription("Amount of color gradient")
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter gradient = new CompoundParameter("Amount", 0, -1, 1)
+  .setDescription("Amount of color gradient")
+  .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+  .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter gradientRange = (CompoundParameter)
-    new CompoundParameter("Range", 360, 0, 360 * 10)
-    .setUnits(CompoundParameter.Units.DEGREES)
-    .setDescription("Range of total possible color hue gradient");
+  public final CompoundParameter gradientRange = new CompoundParameter("Range", 360, 0, 360 * 10)
+  .setUnits(CompoundParameter.Units.DEGREES)
+  .setDescription("Range of total possible color hue gradient");
 
-  public final CompoundParameter saturationRange = (CompoundParameter)
-    new CompoundParameter("Saturation Range", 0, 100)
-    .setUnits(CompoundParameter.Units.PERCENT)
-    .setDescription("Range of total possible saturation gradient");
+  public final CompoundParameter saturationRange = new CompoundParameter("Saturation Range", 0, 100)
+  .setUnits(CompoundParameter.Units.PERCENT)
+  .setDescription("Range of total possible saturation gradient");
 
-  public final CompoundParameter brightnessRange = (CompoundParameter)
-    new CompoundParameter("Brightness Range", 0, 100)
-    .setUnits(CompoundParameter.Units.PERCENT)
-    .setDescription("Range of total possible brightness gradient");
+  public final CompoundParameter brightnessRange = new CompoundParameter("Brightness Range", 0, 100)
+  .setUnits(CompoundParameter.Units.PERCENT)
+  .setDescription("Range of total possible brightness gradient");
 
   public final EnumParameter<CoordinateMode> xMode =
     new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
@@ -151,31 +147,37 @@ public class GradientPattern extends LXPattern implements GradientFunction {
 
   public final CompoundParameter xAmount =
     new CompoundParameter("X-Amt", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the amount of hue spread on the X axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter yAmount =
     new CompoundParameter("Y-Amt", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the amount of hue spread on the Y axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter zAmount =
     new CompoundParameter("Z-Amt", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the amount of hue spread on the Z axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter xOffset =
     new CompoundParameter("X-Off", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the offset of the hue spread point on the X axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter yOffset =
     new CompoundParameter("Y-Off", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the offset of the hue spread point on the Y axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final CompoundParameter zOffset =
     new CompoundParameter("Z-Off", 0, -1, 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the offset of the hue spread point on the Z axis")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 

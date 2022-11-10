@@ -39,6 +39,12 @@ public class BooleanParameter extends LXListenableNormalizedParameter {
   }
 
   @Override
+  public BooleanParameter setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
+  @Override
   public BooleanParameter setDescription(String description) {
     return (BooleanParameter) super.setDescription(description);
   }

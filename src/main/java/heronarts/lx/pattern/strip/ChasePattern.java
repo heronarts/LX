@@ -107,20 +107,19 @@ public class ChasePattern extends LXPattern {
     new DiscreteParameter("Max Chunk", 100, 10, 1000)
     .setDescription("Maximum swarm chunk size");
 
-  public final CompoundParameter chunkSize = (CompoundParameter)
+  public final CompoundParameter chunkSize =
     new CompoundParameter("Chunk Size", 50, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Chunk size within range");
 
-  public final CompoundParameter shift = (CompoundParameter)
+  public final CompoundParameter shift =
     new CompoundParameter("Shift", 0, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount the position of motion is shifted on each chunk");
 
-  public final BoundedParameter shiftRange = (BoundedParameter)
-    new BoundedParameter("Shift Range", 100, 0, 100)
-    .setUnits(BoundedParameter.Units.PERCENT)
-    .setDescription("Maximum range of the shift knob");
+  public final BoundedParameter shiftRange = new BoundedParameter("Shift Range", 100, 0, 100)
+  .setUnits(BoundedParameter.Units.PERCENT)
+  .setDescription("Maximum range of the shift knob");
 
   public final BooleanParameter alternate =
     new BooleanParameter("Alternate", false)
@@ -130,16 +129,15 @@ public class ChasePattern extends LXPattern {
     new EnumParameter<WrapMode>("Wrap", WrapMode.ABS)
     .setDescription("Whether to wrap distance calculations within chunk");
 
-  public final CompoundParameter speed = (CompoundParameter)
+  public final CompoundParameter speed =
     new CompoundParameter("Speed", 50, -100, 100)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Speed of chase motion");
 
-  public final BoundedParameter speedRange = (BoundedParameter)
-    new BoundedParameter("Range", 1, 0, 10)
-    .setUnits(BoundedParameter.Units.HERTZ)
-    .setDescription("Maximum range of the speed control in Hz");
+  public final BoundedParameter speedRange = new BoundedParameter("Range", 1, 0, 10)
+  .setUnits(BoundedParameter.Units.HERTZ)
+  .setDescription("Maximum range of the speed control in Hz");
 
   public final BooleanParameter tempoSync =
     new BooleanParameter("Sync", false)
@@ -153,17 +151,17 @@ public class ChasePattern extends LXPattern {
     new BooleanParameter("Reverse", false)
     .setDescription("Whether to reverse the direction of motion");
 
-  public final CompoundParameter size = (CompoundParameter)
+  public final CompoundParameter size =
     new CompoundParameter("Size", 50, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Size of core motion");
 
-  public final CompoundParameter fade = (CompoundParameter)
+  public final CompoundParameter fade =
     new CompoundParameter("Fade", 50, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Fade size of motion");
 
-  public final CompoundParameter invert = (CompoundParameter)
+  public final CompoundParameter invert =
     new CompoundParameter("Invert", 0, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Invert the levels");
@@ -184,14 +182,15 @@ public class ChasePattern extends LXPattern {
 
   public final CompoundParameter swarmSize =
     new CompoundParameter("Size", 0.5)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Swarm strength");
 
-  public final CompoundParameter swarmFade = (CompoundParameter)
+  public final CompoundParameter swarmFade =
     new CompoundParameter(">Fade", 50, 0, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("How much the swarm affects the fade shape");
 
-  public final CompoundParameter swarmBrightness = (CompoundParameter)
+  public final CompoundParameter swarmBrightness =
     new CompoundParameter(">Brt", 50, -100, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("How much the swarm affects the brightness");

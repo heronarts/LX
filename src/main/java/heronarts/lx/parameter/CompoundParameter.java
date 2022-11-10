@@ -119,6 +119,18 @@ public class CompoundParameter extends BoundedParameter {
   }
 
   @Override
+  public CompoundParameter setWrappable(boolean wrappable) {
+    super.setWrappable(wrappable);
+    return this;
+  }
+
+  @Override
+  public CompoundParameter setUnits(CompoundParameter.Units units) {
+    super.setUnits(units);
+    return this;
+  }
+
+  @Override
   public CompoundParameter setPolarity(LXParameter.Polarity polarity) {
     super.setPolarity(polarity);
     return this;
