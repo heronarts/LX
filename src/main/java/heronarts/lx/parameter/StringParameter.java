@@ -53,13 +53,20 @@ public class StringParameter extends LXListenableParameter {
   }
 
   public StringParameter setValue(String string) {
+    return setValue(string, false);
+  }
+
+  public StringParameter setValue(String string, boolean update) {
     if (this.string == null) {
       if (string != null) {
         this.string = string;
-        incrementValue(1);
+        update = true;
       }
     } else if (!this.string.equals(string)) {
       this.string = string;
+      update = true;
+    }
+    if (update) {
       incrementValue(1);
     }
     return this;
