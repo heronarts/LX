@@ -350,7 +350,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   protected final List<OutputDefinition> outputDefinitions = new ArrayList<OutputDefinition>();
 
-  private final List<String> tagList = new ArrayList<String>();
+  private final List<String> mutableTagList = new ArrayList<String>();
+
+  public final List<String> tagList = Collections.unmodifiableList(this.mutableTagList);
 
   protected final Map<String, String> metaData = new HashMap<String, String>();
 
@@ -1100,8 +1102,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @return this
    */
   protected LXFixture setTags(List<String> tags) {
-    this.tagList.clear();
-    this.tagList.addAll(tags);
+    this.mutableTagList.clear();
+    this.mutableTagList.addAll(tags);
     return this;
   }
 
@@ -1112,13 +1114,13 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    */
   private List<String> getModelTags() {
     // Copy the tag list that we own (specified by JSON)
-    List<String> modelTags = new ArrayList<String>(this.tagList);
+    final List<String> modelTags = new ArrayList<String>(this.tagList);
 
     // Add any extra tags specified by string field
     boolean hasExtra = false;
     String extraTags = this.tags.getString();
     if ((extraTags != null) && !extraTags.isEmpty()) {
-      String[] tags = extraTags.trim().split("\\s+");
+      String[] tags = extraTags.trim().replace(',', ' ').split("\\s+");
       for (String tag : tags) {
         tag = tag.trim();
         if (!tag.isEmpty() && LXModel.Tag.isValid(tag)) {
@@ -1128,7 +1130,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       }
     }
 
-    // Was no custom tag list specified, and no parameter? Use defaults...
+    // Was no custom tag list specified, and no parameter? Fall-back to default tags...
     if (this.tagList.isEmpty() && !hasExtra) {
       for (String tag : getDefaultTags()) {
         modelTags.add(tag);
