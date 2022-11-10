@@ -130,15 +130,17 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     new BooleanParameter("MIDI", false)
     .setDescription("Whether to gate on MIDI notes");
 
-  public final BoundedParameter midiVelocityResponse = new BoundedParameter("Velocity", 25, -100, 100)
-  .setUnits(BoundedParameter.Units.PERCENT)
-  .setDescription("Degree to which MIDI velocity influences ceiling level");
+  public final BoundedParameter midiVelocityResponse =
+    new BoundedParameter("Velocity", 25, -100, 100)
+    .setUnits(BoundedParameter.Units.PERCENT)
+    .setDescription("Degree to which MIDI velocity influences ceiling level");
 
-  public final BoundedParameter midiNoteResponse = new BoundedParameter("Note Response", 0, -100, 100)
-  .setUnits(BoundedParameter.Units.PERCENT)
-  .setDescription("Degree to which MIDI note influences ceiling level");
+  public final BoundedParameter midiNoteResponse =
+    new BoundedParameter("Note Response", 0, -100, 100)
+    .setUnits(BoundedParameter.Units.PERCENT)
+    .setDescription("Degree to which MIDI note influences ceiling level");
 
-  public final DiscreteParameter midiMinNote = (DiscreteParameter)
+  public final DiscreteParameter midiMinNote =
     new DiscreteParameter("Base Note", 0, 128)
     .setUnits(DiscreteParameter.Units.MIDI_NOTE)
     .setDescription("Base MIDI note");

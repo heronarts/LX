@@ -117,9 +117,10 @@ public class ChasePattern extends LXPattern {
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount the position of motion is shifted on each chunk");
 
-  public final BoundedParameter shiftRange = new BoundedParameter("Shift Range", 100, 0, 100)
-  .setUnits(BoundedParameter.Units.PERCENT)
-  .setDescription("Maximum range of the shift knob");
+  public final BoundedParameter shiftRange =
+    new BoundedParameter("Shift Range", 100, 0, 100)
+    .setUnits(BoundedParameter.Units.PERCENT)
+    .setDescription("Maximum range of the shift knob");
 
   public final BooleanParameter alternate =
     new BooleanParameter("Alternate", false)
@@ -136,8 +137,8 @@ public class ChasePattern extends LXPattern {
     .setDescription("Speed of chase motion");
 
   public final BoundedParameter speedRange = new BoundedParameter("Range", 1, 0, 10)
-  .setUnits(BoundedParameter.Units.HERTZ)
-  .setDescription("Maximum range of the speed control in Hz");
+    .setUnits(BoundedParameter.Units.HERTZ)
+    .setDescription("Maximum range of the speed control in Hz");
 
   public final BooleanParameter tempoSync =
     new BooleanParameter("Sync", false)

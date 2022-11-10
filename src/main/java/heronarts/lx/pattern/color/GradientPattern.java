@@ -116,22 +116,26 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     new DiscreteParameter("Stops", LXSwatch.MAX_COLORS, 2, LXSwatch.MAX_COLORS + 1)
     .setDescription("How many color stops to use in the palette");
 
-  public final CompoundParameter gradient = new CompoundParameter("Amount", 0, -1, 1)
-  .setDescription("Amount of color gradient")
-  .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-  .setPolarity(LXParameter.Polarity.BIPOLAR);
+  public final CompoundParameter gradient =
+    new CompoundParameter("Amount", 0, -1, 1)
+    .setDescription("Amount of color gradient")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter gradientRange = new CompoundParameter("Range", 360, 0, 360 * 10)
-  .setUnits(CompoundParameter.Units.DEGREES)
-  .setDescription("Range of total possible color hue gradient");
+  public final CompoundParameter gradientRange =
+    new CompoundParameter("Range", 360, 0, 360 * 10)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Range of total possible color hue gradient");
 
-  public final CompoundParameter saturationRange = new CompoundParameter("Saturation Range", 0, 100)
-  .setUnits(CompoundParameter.Units.PERCENT)
-  .setDescription("Range of total possible saturation gradient");
+  public final CompoundParameter saturationRange =
+    new CompoundParameter("Saturation Range", 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Range of total possible saturation gradient");
 
-  public final CompoundParameter brightnessRange = new CompoundParameter("Brightness Range", 0, 100)
-  .setUnits(CompoundParameter.Units.PERCENT)
-  .setDescription("Range of total possible brightness gradient");
+  public final CompoundParameter brightnessRange =
+    new CompoundParameter("Brightness Range", 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Range of total possible brightness gradient");
 
   public final EnumParameter<CoordinateMode> xMode =
     new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
@@ -185,23 +189,20 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     new BooleanParameter("Rotate", false)
     .setDescription("Whether to rotate the geometry");
 
-  public final CompoundParameter yaw = (CompoundParameter)
-    new CompoundParameter("Yaw", 0, 360)
-    .setWrappable(true)
-    .setUnits(CompoundParameter.Units.DEGREES)
-    .setDescription("Yaw rotation");
+  public final CompoundParameter yaw = new CompoundParameter("Yaw", 0, 360)
+  .setWrappable(true)
+  .setUnits(CompoundParameter.Units.DEGREES)
+  .setDescription("Yaw rotation");
 
-  public final CompoundParameter pitch = (CompoundParameter)
-    new CompoundParameter("Pitch", 0, 360)
-    .setWrappable(true)
-    .setUnits(CompoundParameter.Units.DEGREES)
-    .setDescription("Pitch rotation");
+  public final CompoundParameter pitch = new CompoundParameter("Pitch", 0, 360)
+  .setWrappable(true)
+  .setUnits(CompoundParameter.Units.DEGREES)
+  .setDescription("Pitch rotation");
 
-  public final CompoundParameter roll = (CompoundParameter)
-    new CompoundParameter("Roll", 0, 360)
-    .setWrappable(true)
-    .setUnits(CompoundParameter.Units.DEGREES)
-    .setDescription("Roll rotation");
+  public final CompoundParameter roll = new CompoundParameter("Roll", 0, 360)
+  .setWrappable(true)
+  .setUnits(CompoundParameter.Units.DEGREES)
+  .setDescription("Roll rotation");
 
   private final LXParameterizedMatrix transform = new LXParameterizedMatrix();
 
