@@ -292,12 +292,12 @@ public class LXChannel extends LXAbstractChannel {
         // Inactivate all but the active pattern
         for (LXPattern pattern : this.patterns) {
           if ((pattern != activePattern) && (pattern.getCompositeDampingLevel() > 0)) {
-            pattern._deactivate();
+            pattern.deactivate(LXMixerEngine.patternActivationLock);
           }
         }
         // The active pattern was not enabled? It is now!
         if (!activePattern.enabled.isOn()) {
-          activePattern._activate();
+          activePattern.activate(LXMixerEngine.patternActivationLock);
         }
       }
     }
@@ -470,7 +470,7 @@ public class LXChannel extends LXAbstractChannel {
     } else {
       active = getActivePattern();
       if (active != null) {
-        active._deactivate();
+        active.deactivate(LXMixerEngine.patternActivationLock);
       }
     }
     _updatePatterns(patterns);
@@ -480,7 +480,7 @@ public class LXChannel extends LXAbstractChannel {
     // Is there an active pattern? Notify it
     active = getActivePattern();
     if (active != null) {
-      active._activate();
+      active.activate(LXMixerEngine.patternActivationLock);
     }
     return this;
   }
@@ -542,14 +542,14 @@ public class LXChannel extends LXAbstractChannel {
       this.activePatternIndex = this.nextPatternIndex = 0;
       this.focusedPattern.bang();
       final LXPattern activePattern = getActivePattern();
-      activePattern._activate();
+      activePattern.activate(LXMixerEngine.patternActivationLock);
       for (Listener listener : this.listeners) {
         listener.patternDidChange(this, activePattern);
       }
     } else if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
       // We're in blend mode! This pattern is active if it's enabled
       if (pattern.enabled.isOn()) {
-        pattern._activate();
+        pattern.activate(LXMixerEngine.patternActivationLock);
       }
     }
     return this;
@@ -571,7 +571,7 @@ public class LXChannel extends LXAbstractChannel {
         finishTransition();
       }
     } else if (wasActive) {
-      pattern._deactivate();
+      pattern.deactivate(LXMixerEngine.patternActivationLock);
       activateNext = true;
     }
     this.mutablePatterns.remove(index);
@@ -607,7 +607,7 @@ public class LXChannel extends LXAbstractChannel {
     }
     if (activateNext && !this.patterns.isEmpty()) {
       LXPattern newActive = getActivePattern();
-      newActive._activate();
+      newActive.activate(LXMixerEngine.patternActivationLock);
       for (Listener listener : this.listeners) {
         listener.patternDidChange(this, newActive);
       }
@@ -878,7 +878,7 @@ public class LXChannel extends LXAbstractChannel {
     if (activePattern == nextPattern) {
       return;
     }
-    nextPattern._activate();
+    nextPattern.activate(LXMixerEngine.patternActivationLock);
     for (Listener listener : this.listeners) {
       listener.patternWillChange(this, activePattern, nextPattern);
     }
@@ -897,7 +897,7 @@ public class LXChannel extends LXAbstractChannel {
     if (this.transition != null) {
       LXPattern nextPattern = getNextPattern();
       nextPattern.onTransitionEnd();
-      nextPattern._deactivate();
+      nextPattern.deactivate(LXMixerEngine.patternActivationLock);
       this.transition.onInactive();
       this.transition = null;
       this.transitionMillis = this.lx.engine.nowMillis;
@@ -911,7 +911,7 @@ public class LXChannel extends LXAbstractChannel {
   }
 
   private void finishTransition() {
-    getActivePattern()._deactivate();
+    getActivePattern().deactivate(LXMixerEngine.patternActivationLock);
     this.activePatternIndex = this.nextPatternIndex;
     LXPattern activePattern = getActivePattern();
     if (this.transition != null) {

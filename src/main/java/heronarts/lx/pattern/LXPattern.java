@@ -29,6 +29,7 @@ import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXTime;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -375,7 +376,14 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * Method invoked by the mixer engine to notify a pattern that it is going
    * to become activated. Not a user-facing API.
    */
-  public final void _activate() {
+  public final void activate(LXMixerEngine.PatternActivationLock lock) {
+    if (lock == null) {
+      throw new IllegalStateException("Only the LXMixerEngine may call LXPattern.activate()");
+    }
+    _activate();
+  }
+
+  private void _activate() {
     // NOTE: this is a no-op, onActivate() will be invoked by the onLoop()
     // method whenever the pattern is run and this state is not set
   }
@@ -384,7 +392,14 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * Method invoked by the mixer engine to notify a pattern that it is not
    * going to be run. Not a user-facing API.
    */
-  public final void _deactivate() {
+  public final void deactivate(LXMixerEngine.PatternActivationLock lock) {
+    if (lock == null) {
+      throw new IllegalStateException("Only the LXMixerEngine may call LXPattern.activate()");
+    }
+    _deactivate();
+  }
+
+  private void _deactivate() {
     if (this.isActive) {
       this.isActive = false;
       onInactive();
