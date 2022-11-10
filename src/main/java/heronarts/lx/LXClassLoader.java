@@ -20,6 +20,7 @@ package heronarts.lx;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -29,6 +30,9 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
 /**
  * The LX class loader parses JAR files in the LX content directory. Any
@@ -44,22 +48,36 @@ import java.util.jar.JarFile;
  */
 public class LXClassLoader extends URLClassLoader {
 
+  static final String PACKAGE_DESCRIPTOR_FILE_NAME = "lx.package";
+
   public static class Package {
 
     final File jarFile;
 
-    public final String name;
+    private String name;
+    private String author = "Unknown Author";
 
     private Throwable error = null;
     private int numClasses = 0;
 
     private Package(File jarFile) {
       this.jarFile = jarFile;
-      String name = jarFile.getName();
+      this.name = jarFile.getName();
       if (name.endsWith(".jar")) {
-        name = name.substring(0, name.length() - ".jar".length());
+        this.name = name.substring(0, name.length() - ".jar".length());
       }
-      this.name = name;
+    }
+
+    public String getFileName() {
+      return this.jarFile.getName();
+    }
+
+    public String getName() {
+      return this.name;
+    }
+
+    public String getAuthor() {
+      return this.author;
     }
 
     private void setError(Throwable error) {
@@ -150,13 +168,25 @@ public class LXClassLoader extends URLClassLoader {
 
   private void loadJarFile(File file) {
     LX.log("Loading package content from: " + file);
-    Package pack = new Package(file);
+    final Package pack = new Package(file);
     try (JarFile jarFile = new JarFile(file)) {
-      Enumeration<JarEntry> entries = jarFile.entries();
+      final Enumeration<JarEntry> entries = jarFile.entries();
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         String fileName = entry.getName();
-        if (fileName.endsWith(".class")) {
+        if (fileName.equals(PACKAGE_DESCRIPTOR_FILE_NAME)) {
+          try {
+            JsonObject obj = new Gson().fromJson(new InputStreamReader(jarFile.getInputStream(entry)), JsonObject.class);
+            if (obj.has("name")) {
+              pack.name = obj.get("name").getAsString();
+            }
+            if (obj.has("author")) {
+              pack.author = obj.get("author").getAsString();
+            }
+          } catch (Throwable x) {
+            LX.error(x, "Exception reading lx.package contents for: " + jarFile);
+          }
+        } else if (fileName.endsWith(".class")) {
           loadClassEntry(pack, jarFile, className(fileName).replaceAll("/", "\\."));
         }
       }

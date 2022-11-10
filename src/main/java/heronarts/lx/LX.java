@@ -494,7 +494,7 @@ public class LX {
 
   public LX pushStatusMessage(String message) {
     log(message);
-    this.statusMessage.setValue(message);
+    this.statusMessage.setValue(message, true);
     return this;
   }
 

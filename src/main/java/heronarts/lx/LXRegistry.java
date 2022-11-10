@@ -540,6 +540,8 @@ public class LXRegistry implements LXSerializable {
     for (Listener listener : this.listeners) {
       listener.contentChanged(this.lx);
     }
+
+    this.lx.pushStatusMessage("Package content reloaded.");
   }
 
   void addPackage(LXClassLoader.Package pack) {
@@ -573,7 +575,7 @@ public class LXRegistry implements LXSerializable {
 
   private void installPackageMedia(File file) {
     try (JarFile jarFile = new JarFile(file)) {
-      JarEntry packageEntry = jarFile.getJarEntry("lx.package");
+      JarEntry packageEntry = jarFile.getJarEntry(LXClassLoader.PACKAGE_DESCRIPTOR_FILE_NAME);
       if (packageEntry == null) {
         this.lx.pushError("Package is missing lx.package entry, cannot install media: " + jarFile.getName());
         return;
