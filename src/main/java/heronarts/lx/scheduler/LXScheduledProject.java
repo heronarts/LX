@@ -33,20 +33,21 @@ public class LXScheduledProject extends LXComponent implements LXComponent.Renam
     new BooleanParameter("Enabled", false)
     .setDescription("Whether this schedule entry is enabled");
 
-  public final StringParameter projectFile = new StringParameter("Project")
+  public final StringParameter projectFile =
+    new StringParameter("Project")
     .setDescription("The project file that will be opened");
 
-  public final DiscreteParameter hours = (DiscreteParameter)
+  public final DiscreteParameter hours =
     new DiscreteParameter("Hours", 0, 24)
     .setUnits(DiscreteParameter.Units.CLOCK)
     .setDescription("The hour of day the project will open on");
 
-  public final DiscreteParameter minutes = (DiscreteParameter)
+  public final DiscreteParameter minutes =
     new DiscreteParameter("Minutes", 0, 60)
     .setUnits(DiscreteParameter.Units.CLOCK)
     .setDescription("The minute of hour the project will open on");
 
-  public final DiscreteParameter seconds = (DiscreteParameter)
+  public final DiscreteParameter seconds =
     new DiscreteParameter("Seconds", 0, 60)
     .setUnits(DiscreteParameter.Units.CLOCK)
     .setDescription("The second of the minute the project will open on");

@@ -32,7 +32,7 @@ public abstract class LXMidiDevice {
    * true doesn't guarantee availability, but it indicates that we want availability
    * if at all possible.
    */
-  public final BooleanParameter enabled = (BooleanParameter)
+  public final BooleanParameter enabled =
     new BooleanParameter("Enabled", false)
     .setMappable(false);
 

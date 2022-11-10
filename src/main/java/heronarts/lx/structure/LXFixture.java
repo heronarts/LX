@@ -294,17 +294,17 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
     .setDescription("Base Z position of the fixture in space");
 
-  public final BoundedParameter yaw = (BoundedParameter)
+  public final BoundedParameter yaw =
     new BoundedParameter("Yaw", 0, -360, 360)
     .setDescription("Rotation of the fixture about the vertical axis")
     .setUnits(LXParameter.Units.DEGREES);
 
-  public final BoundedParameter pitch = (BoundedParameter)
+  public final BoundedParameter pitch =
     new BoundedParameter("Pitch", 0, -360, 360)
     .setDescription("Rotation of the fixture about the horizontal plane")
     .setUnits(LXParameter.Units.DEGREES);
 
-  public final BoundedParameter roll = (BoundedParameter)
+  public final BoundedParameter roll =
     new BoundedParameter("Roll", 0, -360, 360)
     .setDescription("Rotation of the fixture about its normal vector")
     .setUnits(LXParameter.Units.DEGREES);

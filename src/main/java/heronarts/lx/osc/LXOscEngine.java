@@ -65,7 +65,7 @@ public class LXOscEngine extends LXComponent {
     SOCKET_ERROR
   };
 
-  public final BooleanParameter receiveActive = (BooleanParameter)
+  public final BooleanParameter receiveActive =
     new BooleanParameter("RX Active", false)
     .setMappable(false)
     .setDescription("Enables or disables OSC engine input");
@@ -74,9 +74,8 @@ public class LXOscEngine extends LXComponent {
     new StringParameter("RX Host", DEFAULT_RECEIVE_HOST)
     .setDescription("Hostname to which OSC input socket is bound");
 
-  public final BooleanParameter unknownReceiveHost = (BooleanParameter)
-    new BooleanParameter(
-    "Unknown RX Host", false)
+  public final BooleanParameter unknownReceiveHost =
+    new BooleanParameter("Unknown RX Host", false)
     .setMappable(false)
     .setDescription("Set to true if the receive host is unknown");
 
@@ -85,21 +84,22 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("The state of the OSC receiver");
 
-  public final DiscreteParameter receivePort = (DiscreteParameter)
+  public final DiscreteParameter receivePort =
     new DiscreteParameter("RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
     .setDescription("UDP port on which the engine listens for OSC message")
     .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
-  public final BooleanParameter transmitActive = (BooleanParameter)
+  public final BooleanParameter transmitActive =
     new BooleanParameter("TX Active", false)
     .setMappable(false)
     .setDescription("Enables or disables OSC engine output");
 
   public final StringParameter transmitHost = (StringParameter)
-    new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST).setMappable(false)
+    new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST)
+    .setMappable(false)
     .setDescription("Hostname to which OSC messages are sent");
 
-  public final BooleanParameter unknownTransmitHost = (BooleanParameter)
+  public final BooleanParameter unknownTransmitHost =
     new BooleanParameter("Unknown TX Host", false)
     .setMappable(false)
     .setDescription("Set to true if the transmit host is unknown");
@@ -109,10 +109,11 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("The state of the OSC transmitter");
 
-  public final DiscreteParameter transmitPort = (DiscreteParameter)
+  public final DiscreteParameter transmitPort =
     new DiscreteParameter("TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
     .setDescription("UDP port on which the engine transmits OSC messages")
-    .setMappable(false).setUnits(LXParameter.Units.INTEGER);
+    .setMappable(false)
+    .setUnits(LXParameter.Units.INTEGER);
 
   public final BooleanParameter logInput =
     new BooleanParameter("Log OSC Input", false)

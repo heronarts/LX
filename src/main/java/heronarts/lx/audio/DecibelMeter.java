@@ -39,7 +39,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
   /**
    * Gain of the meter, in decibels
    */
-  public final CompoundParameter gain = (CompoundParameter)
+  public final CompoundParameter gain =
     new CompoundParameter("Gain", 0, -48, 48)
     .setDescription("Sets the gain of the meter in dB")
     .setUnits(LXParameter.Units.DECIBELS);
@@ -47,7 +47,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
   /**
    * Range of the meter, in decibels.
    */
-  public final CompoundParameter range = (CompoundParameter)
+  public final CompoundParameter range =
     new CompoundParameter("Range", 48, 6, 96)
     .setDescription("Sets the range of the meter in dB")
     .setUnits(LXParameter.Units.DECIBELS);
@@ -55,7 +55,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
   /**
    * Meter attack time, in milliseconds
    */
-  public final CompoundParameter attack = (CompoundParameter)
+  public final CompoundParameter attack =
     new CompoundParameter("Attack", 10, 0, 100)
     .setDescription("Sets the attack time of the meter response")
     .setUnits(LXParameter.Units.MILLISECONDS_RAW);
@@ -63,7 +63,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
   /**
    * Meter release time, in milliseconds
    */
-  public final CompoundParameter release = (CompoundParameter)
+  public final CompoundParameter release =
     new CompoundParameter("Release", 100, 0, 1000)
     .setDescription("Sets the release time of the meter response")
     .setExponent(2)

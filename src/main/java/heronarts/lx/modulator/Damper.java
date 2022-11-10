@@ -53,7 +53,7 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXOscC
     new TriggerParameter("Release")
     .setDescription("Trigger the damper to release");
 
-  public final CompoundParameter periodMs = (CompoundParameter)
+  public final CompoundParameter periodMs =
     new CompoundParameter("Interval", 1000, 10, 1000*60*5)
     .setExponent(3)
     .setUnits(CompoundParameter.Units.MILLISECONDS)

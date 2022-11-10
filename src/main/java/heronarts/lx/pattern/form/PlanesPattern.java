@@ -176,7 +176,7 @@ public class PlanesPattern extends LXPattern {
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Tilt position");
 
-    public final CompoundParameter tilt = (CompoundParameter)
+    public final CompoundParameter tilt =
       new CompoundParameter("Tilt", 0, -180, 180)
       .setWrappable(true)
       .setUnits(CompoundParameter.Units.DEGREES)
@@ -189,7 +189,7 @@ public class PlanesPattern extends LXPattern {
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Spin position");
 
-    public final CompoundParameter spin = (CompoundParameter)
+    public final CompoundParameter spin =
       new CompoundParameter("Spin", 0, -180, 180)
       .setWrappable(true)
       .setUnits(CompoundParameter.Units.DEGREES)

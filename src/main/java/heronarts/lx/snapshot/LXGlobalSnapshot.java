@@ -47,7 +47,7 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
     new BooleanParameter("Cycle", true)
     .setDescription("Whether the snapshot is eligible for auto-cycle");
 
-  public final BoundedParameter cycleTimeSecs = (BoundedParameter)
+  public final BoundedParameter cycleTimeSecs =
     new BoundedParameter("Cycle Time", 60, .1, 60*60*24)
     .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
     .setUnits(LXParameter.Units.SECONDS);

@@ -52,7 +52,7 @@ public class ArcFixture extends LXBasicFixture {
     }
   }
 
-  public final DiscreteParameter numPoints = (DiscreteParameter)
+  public final DiscreteParameter numPoints =
     new DiscreteParameter("Num", 10, 1, MAX_POINTS + 1)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of points in the arc");
@@ -61,7 +61,7 @@ public class ArcFixture extends LXBasicFixture {
     new BoundedParameter("Radius", 100, 0, 1000000)
     .setDescription("Radius of the arc");
 
-  public final BoundedParameter degrees = (BoundedParameter)
+  public final BoundedParameter degrees =
     new BoundedParameter("Degrees", 90, 0, 360)
     .setUnits(LXParameter.Units.DEGREES)
     .setDescription("Number of degrees the arc covers");

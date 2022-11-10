@@ -44,17 +44,17 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
 
   private final Receiver receiver = new Receiver();
 
-  public final BooleanParameter channelEnabled = (BooleanParameter)
+  public final BooleanParameter channelEnabled =
     new BooleanParameter("Channel", false)
     .setMappable(false)
     .setDescription("Whether midi events from this device are forwarded to channels");
 
-  public final BooleanParameter controlEnabled = (BooleanParameter)
+  public final BooleanParameter controlEnabled =
     new BooleanParameter("Control", false)
     .setMappable(false)
     .setDescription("Whether midi events from this device are used for control mapping");
 
-  public final BooleanParameter syncEnabled = (BooleanParameter)
+  public final BooleanParameter syncEnabled =
     new BooleanParameter("Sync", false)
     .setMappable(false)
     .setDescription("Whether midi clock signal from this device is used to control tempo");

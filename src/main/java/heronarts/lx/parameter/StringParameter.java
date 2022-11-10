@@ -36,7 +36,8 @@ public class StringParameter extends LXListenableParameter {
 
   @Override
   public StringParameter setDescription(String description) {
-    return (StringParameter) super.setDescription(description);
+    super.setDescription(description);
+    return this;
   }
 
   @Override

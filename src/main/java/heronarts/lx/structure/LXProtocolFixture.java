@@ -64,12 +64,12 @@ public abstract class LXProtocolFixture extends LXFixture {
     new DiscreteParameter("Port", OPCOutput.DEFAULT_PORT, 0, 65536)
     .setDescription("Port number this fixture transmits to");
 
-  public final DiscreteParameter dmxChannel = (DiscreteParameter)
+  public final DiscreteParameter dmxChannel =
     new DiscreteParameter("DMX Channel", 0, 512)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Starting DMX data channel offset for ArtNet/SACN/Kinet");
 
-  public final DiscreteParameter artNetUniverse = (DiscreteParameter)
+  public final DiscreteParameter artNetUniverse =
     new DiscreteParameter("ArtNet Universe", 0, 0, ArtNetDatagram.MAX_UNIVERSE)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which ArtNet universe is used");
@@ -78,22 +78,22 @@ public abstract class LXProtocolFixture extends LXFixture {
     new BooleanParameter("ArtNet Sequence", false)
     .setDescription("Whether ArtNet sequence numbers are used");
 
-  public final DiscreteParameter opcChannel = (DiscreteParameter)
+  public final DiscreteParameter opcChannel =
     new DiscreteParameter("OPC Channel", 0, 0, 256)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which OPC channel is used");
 
-  public final DiscreteParameter opcOffset = (DiscreteParameter)
+  public final DiscreteParameter opcOffset =
     new DiscreteParameter("OPC Offset", 0, 0, OPCOutput.MAX_DATA_LENGTH)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("The OPC data offset for this fixture");
 
-  public final DiscreteParameter ddpDataOffset = (DiscreteParameter)
+  public final DiscreteParameter ddpDataOffset =
     new DiscreteParameter("DDP Offset", 0, 0, DDPDatagram.MAX_DATA_LENGTH)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("The DDP data offset for this fixture packet");
 
-  public final DiscreteParameter kinetPort = (DiscreteParameter)
+  public final DiscreteParameter kinetPort =
     new DiscreteParameter("KiNET Port", 1, 0, 256)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Which KiNET physical output port is used");

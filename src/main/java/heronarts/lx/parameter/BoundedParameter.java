@@ -253,6 +253,12 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   }
 
   @Override
+  public BoundedParameter setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
+  @Override
   public BoundedParameter setUnits(BoundedParameter.Units units) {
     super.setUnits(units);
     return this;

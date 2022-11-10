@@ -69,7 +69,7 @@ public abstract class LXOutput extends LXComponent {
   /**
    * Framerate throttle
    */
-  public final BoundedParameter framesPerSecond = (BoundedParameter)
+  public final BoundedParameter framesPerSecond =
     new BoundedParameter("FPS", 0, MAX_FRAMES_PER_SECOND)
     .setMappable(false)
     .setDescription("Maximum frames per second this output will send (0 for no limiting)");
@@ -77,7 +77,7 @@ public abstract class LXOutput extends LXComponent {
   /**
    * Gamma correction level
    */
-  public final BoundedParameter gamma = (BoundedParameter)
+  public final BoundedParameter gamma =
     new BoundedParameter("Gamma", 1, 1, 4)
     .setMappable(false)
     .setDescription("Gamma correction on the output, 1 is linear (no gamma)");

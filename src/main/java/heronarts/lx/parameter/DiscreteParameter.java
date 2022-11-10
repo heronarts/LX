@@ -102,6 +102,17 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     return this;
   }
 
+  @Override
+  public DiscreteParameter setWrappable(boolean wrappable) {
+    super.setWrappable(wrappable);
+    return this;
+  }
+
+  @Override
+  public DiscreteParameter setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
 
   @Override
   public DiscreteParameter setDescription(String description) {

@@ -35,7 +35,7 @@ public class StripFixture extends LXBasicFixture {
 
   public static final int MAX_POINTS = 4096;
 
-  public final DiscreteParameter numPoints = (DiscreteParameter)
+  public final DiscreteParameter numPoints =
     new DiscreteParameter("Num", 30, 1, MAX_POINTS + 1)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of points in the strip");

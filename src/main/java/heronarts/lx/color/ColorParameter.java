@@ -41,15 +41,20 @@ public class ColorParameter extends AggregateParameter {
 
   public ColorParameter(String label, int color) {
     super(label, Double.longBitsToDouble(color));
-    double h = LXColor.h(color);
-    this.hue = new CompoundParameter("Hue", Double.isNaN(h) ? 0 : h, 0, 359)
+
+    final double h = LXColor.h(color);
+
+    this.hue =
+      new CompoundParameter("Hue", Double.isNaN(h) ? 0 : h, 0, 359)
+      .setWrappable(true)
       .setDescription("Hue component of the color");
-    this.hue.setWrappable(true);
-    this.saturation = (CompoundParameter)
+
+    this.saturation =
       new CompoundParameter("Saturation", LXColor.s(color), 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Saturation component of the color");
-    this.brightness = (CompoundParameter)
+
+    this.brightness =
       new CompoundParameter("Brightness", LXColor.b(color), 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Brightness component of the color");

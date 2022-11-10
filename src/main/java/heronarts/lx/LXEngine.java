@@ -93,7 +93,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final Output output;
 
-  public final BoundedParameter framesPerSecond = (BoundedParameter)
+  public final BoundedParameter framesPerSecond =
     new BoundedParameter("FPS", 60, 1, 300)
     .setMappable(false)
     .setDescription("Number of frames per second the engine runs at");
@@ -315,20 +315,17 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private final DoubleBuffer buffer;
 
-  public final BooleanParameter isMultithreaded = (BooleanParameter)
-    new BooleanParameter("Threaded", false)
-    .setMappable(false)
-    .setDescription("Whether the engine and UI are on separate threads");
+  public final BooleanParameter isMultithreaded = new BooleanParameter("Threaded", false)
+  .setMappable(false)
+  .setDescription("Whether the engine and UI are on separate threads");
 
-  public final BooleanParameter isChannelMultithreaded = (BooleanParameter)
-    new BooleanParameter("Channel Threaded", false)
-    .setMappable(false)
-    .setDescription("Whether the engine is multi-threaded per channel");
+  public final BooleanParameter isChannelMultithreaded = new BooleanParameter("Channel Threaded", false)
+  .setMappable(false)
+  .setDescription("Whether the engine is multi-threaded per channel");
 
-  public final BooleanParameter isNetworkMultithreaded = (BooleanParameter)
-    new BooleanParameter("Network Threaded", false)
-    .setMappable(false)
-    .setDescription("Whether the network output is on a separate thread");
+  public final BooleanParameter isNetworkMultithreaded = new BooleanParameter("Network Threaded", false)
+  .setMappable(false)
+  .setDescription("Whether the network output is on a separate thread");
 
   private Thread engineThread = null;
   private final ExecutorService engineExecutorService;

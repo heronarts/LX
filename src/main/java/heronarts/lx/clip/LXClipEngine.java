@@ -75,7 +75,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
    */
-  public final BoundedParameter snapshotTransitionTimeSecs = (BoundedParameter)
+  public final BoundedParameter snapshotTransitionTimeSecs =
     new BoundedParameter("Snapshot Transition Time", 5, .1, 180)
     .setDescription("Sets the duration of interpolated transitions between clip snapshots")
     .setUnits(LXParameter.Units.SECONDS);

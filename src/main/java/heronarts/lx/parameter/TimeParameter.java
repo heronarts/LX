@@ -32,17 +32,17 @@ public class TimeParameter extends AggregateParameter {
   public static final int SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
   public static final int SECONDS_PER_DAY = SECONDS_PER_HOUR * HOURS_PER_DAY;
 
-  public final DiscreteParameter hours = (DiscreteParameter)
+  public final DiscreteParameter hours =
     new DiscreteParameter("Hours", 0, 24)
     .setUnits(DiscreteParameter.Units.CLOCK)
     .setDescription("Hours of the day (0-23)");
 
-  public final DiscreteParameter minutes = (DiscreteParameter)
+  public final DiscreteParameter minutes =
     new DiscreteParameter("Minutes", 0, 60)
     .setUnits(DiscreteParameter.Units.CLOCK)
     .setDescription("Minutes of the hour (0-59)");
 
-  public final DiscreteParameter seconds = (DiscreteParameter)
+  public final DiscreteParameter seconds =
     new DiscreteParameter("Seconds", 0, 60)
     .setUnits(DiscreteParameter.Units.CLOCK)
     .setDescription("Seconds of the minute (0-59)");
@@ -56,7 +56,8 @@ public class TimeParameter extends AggregateParameter {
 
   @Override
   public TimeParameter setDescription(String description) {
-    return (TimeParameter) super.setDescription(description);
+    super.setDescription(description);
+    return this;
   }
 
   /**

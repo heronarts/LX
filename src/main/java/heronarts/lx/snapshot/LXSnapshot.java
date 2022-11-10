@@ -109,10 +109,9 @@ public abstract class LXSnapshot extends LXComponent {
     /**
      * Whether this view is enabled for recall or not.
      */
-    public final BooleanParameter enabled = (BooleanParameter)
-      new BooleanParameter("Enabled", true)
-      .setMappable(false)
-      .setDescription("Whether this view is enabled in the snapshot");
+    public final BooleanParameter enabled = new BooleanParameter("Enabled", true)
+    .setMappable(false)
+    .setDescription("Whether this view is enabled in the snapshot");
 
     private View(ViewScope scope, ViewType type) {
       this.scope = scope;
@@ -495,7 +494,7 @@ public abstract class LXSnapshot extends LXComponent {
     }
   }
 
-  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
+  public final BoundedParameter transitionTimeSecs =
     new BoundedParameter("Transition Time", 1, .1, 180)
     .setDescription("Sets the duration of interpolated transitions between snapshots")
     .setUnits(LXParameter.Units.SECONDS);

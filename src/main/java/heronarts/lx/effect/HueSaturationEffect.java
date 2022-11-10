@@ -34,13 +34,13 @@ public class HueSaturationEffect extends LXEffect {
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Sets the amount of hue shift to apply");
 
-  public final CompoundParameter saturation = (CompoundParameter)
+  public final CompoundParameter saturation =
     new CompoundParameter("Saturation", 0, -100, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Sets the amount to increase or decrease saturation");
 
-  public final CompoundParameter brightness = (CompoundParameter)
+  public final CompoundParameter brightness =
     new CompoundParameter("Brightness", 0, -100, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
