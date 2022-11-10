@@ -128,7 +128,7 @@ public class FocusedDevice {
     if (!this.isRegistered) {
       throw new IllegalStateException("Cannot unregister non-registered FocusedDevice");
     }
-    unregisterDevice();
+    unregisterDevice(true);
     unregisterBus();
     for (Map.Entry<LXListenableParameter, LXParameterListener> entry : this.listeners.entrySet()) {
       entry.getKey().removeListener(entry.getValue());
@@ -301,7 +301,7 @@ public class FocusedDevice {
 
   private void registerDevice(LXDeviceComponent device) {
     if (this.device != device) {
-      unregisterDevice();
+      unregisterDevice(false);
       this.device = device;
       this.listener.onDeviceFocused(device);
       if (this.device != null && this.surface != null) {
@@ -310,13 +310,15 @@ public class FocusedDevice {
     }
   }
 
-  private void unregisterDevice() {
+  private void unregisterDevice(boolean notify) {
     if (this.device != null) {
       if (this.surface != null) {
         this.device.removeControlSurface(this.surface);
       }
       this.device = null;
-      this.listener.onDeviceFocused(null);
+      if (notify) {
+        this.listener.onDeviceFocused(null);
+      }
     }
   }
 
