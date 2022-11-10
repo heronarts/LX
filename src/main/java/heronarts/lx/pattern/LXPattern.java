@@ -133,9 +133,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       }
       if (!channel.compositeDampingEnabled.isOn()) {
         if (isEnabled) {
-          onActive();
+          _activate();
         } else {
-          onInactive();
+          _deactivate();
         }
       }
     }
@@ -148,6 +148,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   };
 
   protected double runMs = 0;
+
+  private boolean isActive = false;
 
   public final Profiler profiler = new Profiler();
 
@@ -351,6 +353,10 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   @Override
   protected final void onLoop(double deltaMs) {
+    if (!this.isActive) {
+      this.isActive = true;
+      onActive();
+    }
     long runStart = System.nanoTime();
     this.runMs += deltaMs;
     this.run(deltaMs);
@@ -366,18 +372,38 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   protected abstract void run(double deltaMs);
 
   /**
+   * Method invoked by the mixer engine to notify a pattern that it is going
+   * to become activated. Not a user-facing API.
+   */
+  public final void _activate() {
+    // NOTE: this is a no-op, onActivate() will be invoked by the onLoop()
+    // method whenever the pattern is run and this state is not set
+  }
+
+  /**
+   * Method invoked by the mixer engine to notify a pattern that it is not
+   * going to be run. Not a user-facing API.
+   */
+  public final void _deactivate() {
+    if (this.isActive) {
+      this.isActive = false;
+      onInactive();
+    }
+  }
+
+  /**
    * Subclasses may override this method. It will be invoked when the pattern is
    * about to become active. Patterns may take care of any initialization needed
    * or reset parameters if desired.
    */
-  public/* abstract */void onActive() {
+  protected /* abstract */ void onActive() {
   }
 
   /**
    * Subclasses may override this method. It will be invoked when the pattern is
    * no longer active. Resources may be freed if desired.
    */
-  public/* abstract */void onInactive() {
+  protected /* abstract */void onInactive() {
   }
 
   /**

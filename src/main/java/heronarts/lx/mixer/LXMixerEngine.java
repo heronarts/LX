@@ -1075,7 +1075,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       if (channel instanceof LXChannel) {
         LXPattern pattern = ((LXChannel) channel).getActivePattern();
         if (pattern != null) {
-          pattern.onActive();
+          pattern._activate();
         }
       }
     }

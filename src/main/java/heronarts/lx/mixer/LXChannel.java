@@ -137,7 +137,7 @@ public class LXChannel extends LXAbstractChannel {
   /**
    * Damping time when a pattern is enabled or disabled in blending mode
    */
-  public final CompoundParameter compositeDampingTimeSecs = (CompoundParameter)
+  public final CompoundParameter compositeDampingTimeSecs =
     new CompoundParameter("Damping Time", .1, .05, 5)
     .setUnits(CompoundParameter.Units.SECONDS)
     .setDescription("Damping time when a pattern is enabled/disabled in blend mode");
@@ -159,12 +159,12 @@ public class LXChannel extends LXAbstractChannel {
   /**
    * Time in seconds after which transition thru the pattern set is automatically initiated.
    */
-  public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
+  public final BoundedParameter autoCycleTimeSecs =
     new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
     .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
     .setUnits(LXParameter.Units.SECONDS);
 
-  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
+  public final BoundedParameter transitionTimeSecs =
     new BoundedParameter("Transition Time", 5, .05, 180)
     .setDescription("Sets the duration of blending transitions between patterns")
     .setUnits(LXParameter.Units.SECONDS);
@@ -292,12 +292,12 @@ public class LXChannel extends LXAbstractChannel {
         // Inactivate all but the active pattern
         for (LXPattern pattern : this.patterns) {
           if ((pattern != activePattern) && (pattern.getCompositeDampingLevel() > 0)) {
-            pattern.onInactive();
+            pattern._deactivate();
           }
         }
         // The active pattern was not enabled? It is now!
         if (!activePattern.enabled.isOn()) {
-          activePattern.onActive();
+          activePattern._activate();
         }
       }
     }
@@ -470,7 +470,7 @@ public class LXChannel extends LXAbstractChannel {
     } else {
       active = getActivePattern();
       if (active != null) {
-        active.onInactive();
+        active._deactivate();
       }
     }
     _updatePatterns(patterns);
@@ -480,7 +480,7 @@ public class LXChannel extends LXAbstractChannel {
     // Is there an active pattern? Notify it
     active = getActivePattern();
     if (active != null) {
-      active.onActive();
+      active._activate();
     }
     return this;
   }
@@ -542,14 +542,14 @@ public class LXChannel extends LXAbstractChannel {
       this.activePatternIndex = this.nextPatternIndex = 0;
       this.focusedPattern.bang();
       final LXPattern activePattern = getActivePattern();
-      activePattern.onActive();
+      activePattern._activate();
       for (Listener listener : this.listeners) {
         listener.patternDidChange(this, activePattern);
       }
     } else if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
       // We're in blend mode! This pattern is active if it's enabled
       if (pattern.enabled.isOn()) {
-        pattern.onActive();
+        pattern._activate();
       }
     }
     return this;
@@ -571,7 +571,7 @@ public class LXChannel extends LXAbstractChannel {
         finishTransition();
       }
     } else if (wasActive) {
-      pattern.onInactive();
+      pattern._deactivate();
       activateNext = true;
     }
     this.mutablePatterns.remove(index);
@@ -607,7 +607,7 @@ public class LXChannel extends LXAbstractChannel {
     }
     if (activateNext && !this.patterns.isEmpty()) {
       LXPattern newActive = getActivePattern();
-      newActive.onActive();
+      newActive._activate();
       for (Listener listener : this.listeners) {
         listener.patternDidChange(this, newActive);
       }
@@ -878,7 +878,7 @@ public class LXChannel extends LXAbstractChannel {
     if (activePattern == nextPattern) {
       return;
     }
-    nextPattern.onActive();
+    nextPattern._activate();
     for (Listener listener : this.listeners) {
       listener.patternWillChange(this, activePattern, nextPattern);
     }
@@ -897,7 +897,7 @@ public class LXChannel extends LXAbstractChannel {
     if (this.transition != null) {
       LXPattern nextPattern = getNextPattern();
       nextPattern.onTransitionEnd();
-      nextPattern.onInactive();
+      nextPattern._deactivate();
       this.transition.onInactive();
       this.transition = null;
       this.transitionMillis = this.lx.engine.nowMillis;
@@ -911,7 +911,7 @@ public class LXChannel extends LXAbstractChannel {
   }
 
   private void finishTransition() {
-    getActivePattern().onInactive();
+    getActivePattern()._deactivate();
     this.activePatternIndex = this.nextPatternIndex;
     LXPattern activePattern = getActivePattern();
     if (this.transition != null) {
