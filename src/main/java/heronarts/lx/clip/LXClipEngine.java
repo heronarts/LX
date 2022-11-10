@@ -18,6 +18,8 @@
 
 package heronarts.lx.clip;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.mixer.LXAbstractChannel;
@@ -173,6 +175,15 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       }
     }
     return this;
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    if (obj.has(LXComponent.KEY_RESET)) {
+      this.clipViewGridOffset.reset();
+      this.numScenes.reset();
+    }
   }
 
 }

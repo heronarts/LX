@@ -1175,6 +1175,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final static String KEY_ID = "id";
   public final static String KEY_CLASS = "class";
 
+  public final static String KEY_RESET = "_reset_";
   public final static String KEY_PARAMETERS = "parameters";
   public final static String KEY_INTERNAL = "internal";
   public final static String KEY_CHILDREN = "children";
@@ -1271,7 +1272,9 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       if (children.has(path)) {
         child.load(lx, children.getAsJsonObject(path));
       } else {
-        child.load(lx, new JsonObject());
+        final JsonObject reset = new JsonObject();
+        reset.addProperty(KEY_RESET, KEY_RESET);
+        child.load(lx, reset);
       }
     }
   }

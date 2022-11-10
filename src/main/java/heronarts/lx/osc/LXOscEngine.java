@@ -35,6 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.color.ColorParameter;
@@ -735,6 +737,15 @@ public class LXOscEngine extends LXComponent {
   public void dispatch() {
     for (Receiver receiver : this.receivers) {
       receiver.dispatch();
+    }
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    if (obj.has(LXComponent.KEY_RESET)) {
+      this.receiveActive.setValue(false);
+      this.transmitActive.setValue(false);
     }
   }
 
