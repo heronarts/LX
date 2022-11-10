@@ -52,6 +52,7 @@ public interface LXParameter extends LXPath {
     INTEGER,
     SECONDS,
     MILLISECONDS,
+    MILLISECONDS_RAW,
     DECIBELS,
     HERTZ,
     MIDI_NOTE,
@@ -63,12 +64,7 @@ public interface LXParameter extends LXPath {
 
     @Override
     public String format(double value) {
-      return Units.format(this, value);
-    }
-
-    @SuppressWarnings("fallthrough")
-    public static String format(Units units, double value) {
-      switch (units) {
+      switch (this) {
       case INTEGER:
         return String.format("%d", (int) value);
       case PERCENT:
@@ -77,8 +73,9 @@ public interface LXParameter extends LXPath {
         return String.format("%d%%", (int) (100*value));
       case SECONDS:
         value *= 1000;
-        // pass through!
+        //$FALL-THROUGH$
       case MILLISECONDS:
+      case MILLISECONDS_RAW:
         if (value < 1000) {
           return String.format("%dms", (int) value);
         } else if (value < 60000) {
@@ -116,6 +113,33 @@ public interface LXParameter extends LXPath {
       case RADIANS:
       case NONE:
         return String.format("%.2f", value);
+      }
+    }
+
+    public double parseDouble(String value) throws NumberFormatException {
+      switch (this) {
+      case MILLISECONDS_RAW:
+      case MILLISECONDS:
+      case SECONDS:
+        double timeMultiple = 1;
+        if ((value.indexOf(":") >= 0) || (this == MILLISECONDS)) {
+          // NOTE: MILLISECONDS_RAW takes values in raw milliseconds, except when
+          // they are specified in m:ss format. MILLISECONDS parses values expressed
+          // in seconds, but always multiplies by 1000 to get the ms equivalent
+          timeMultiple = 1000;
+        }
+        double raw = 0;
+        for (String part : value.split(":")) {
+          raw = raw*60 + ((part.length() > 0) ? Double.parseDouble(part) : 0);
+        }
+        return timeMultiple * raw;
+
+      case PERCENT_NORMALIZED:
+        return .01 * Double.parseDouble(value);
+
+      default:
+      case NONE:
+        return Double.parseDouble(value);
       }
     }
   };

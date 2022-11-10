@@ -58,7 +58,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
   public final CompoundParameter attack = (CompoundParameter)
     new CompoundParameter("Attack", 10, 0, 100)
     .setDescription("Sets the attack time of the meter response")
-    .setUnits(LXParameter.Units.MILLISECONDS);
+    .setUnits(LXParameter.Units.MILLISECONDS_RAW);
 
   /**
    * Meter release time, in milliseconds
@@ -67,7 +67,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
     new CompoundParameter("Release", 100, 0, 1000)
     .setDescription("Sets the release time of the meter response")
     .setExponent(2)
-    .setUnits(LXParameter.Units.MILLISECONDS);
+    .setUnits(LXParameter.Units.MILLISECONDS_RAW);
 
   private final static float PEAK_HOLD = 250;
 
