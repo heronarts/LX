@@ -963,8 +963,8 @@ public class LXChannel extends LXAbstractChannel {
       // Blend mode, this channel is like a mini-mixer
       final LXModel modelView = getModelView();
 
-      // Initialize colors to black
-      this.blendBuffer.copyFrom(this.lx.engine.mixer.backgroundBlack);
+      // Initialize colors to transparent
+      this.blendBuffer.copyFrom(this.lx.engine.mixer.backgroundTransparent);
 
       // Damping mode
       final boolean dampingEnabled = this.compositeDampingEnabled.isOn();
