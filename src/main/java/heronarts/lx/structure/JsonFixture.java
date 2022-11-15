@@ -857,7 +857,8 @@ public class JsonFixture extends LXFixture {
   // 2D array of operators by precedence (low to high)
   private final static char[][] SIMPLE_EXPRESSION_OPERATORS = {
     { '+', '-' },
-    { '*', '/', '%' }
+    { '*', '/', '%' },
+    { '^' }
   };
 
   private static boolean isOperator(char ch, char[] operators) {
@@ -931,6 +932,7 @@ public class JsonFixture extends LXFixture {
           case '*': return left * right;
           case '/': return left / right;
           case '%': return left % right;
+          case '^': return (float) Math.pow(left, right);
           }
         }
       }
