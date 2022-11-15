@@ -382,7 +382,7 @@ public class LX {
     this(flags, null);
   }
 
-  protected LX(Flags flags, LXModel model) {
+  public LX(Flags flags, LXModel model) {
     LX.initProfiler.init();
     this.flags = flags;
     this.flags.immutableModel = (model != null);
