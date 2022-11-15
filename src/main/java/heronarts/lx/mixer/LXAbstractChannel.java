@@ -117,6 +117,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   public final CompoundParameter fader =
     new CompoundParameter("Fader", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Sets the alpha level of the output of this channel");
 
   /**
