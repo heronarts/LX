@@ -102,16 +102,22 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
 
     super.loop(deltaMs);
     onLoop(deltaMs);
-    for (LXLayer layer : this.mutableLayers) {
-      this.loopingLayer = layer;
-      layer.setBuffer(this.buffer);
 
-      // TODO(mcslee): is this best here or should it be in addLayer?
-      layer.setModel(this.model);
-
-      layer.loop(deltaMs);
+    // Run the layers
+    try {
+      for (LXLayer layer : this.mutableLayers) {
+        this.loopingLayer = layer;
+        layer.setBuffer(this.buffer);
+        layer.setModel(this.model);
+        layer.loop(deltaMs);
+      }
+      this.loopingLayer = null;
+    } catch (Throwable x) {
+      // NOTE(mcslee): Need to defend against hanging loopingLayer state...
+      // otherwise we'll fail to later dispose() this crashed-out object
+      this.loopingLayer = null;
+      throw x;
     }
-    this.loopingLayer = null;
     afterLayers(deltaMs);
 
     this.profiler.loopNanos = System.nanoTime() - loopStart;
