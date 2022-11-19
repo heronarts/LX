@@ -55,11 +55,11 @@ import heronarts.lx.utils.LXUtils;
  */
 public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
-  public static class PatternActivationLock {
-    private PatternActivationLock() {}
+  public static class PatternFriendAccess {
+    private PatternFriendAccess() {}
   }
 
-  static final PatternActivationLock patternActivationLock = new PatternActivationLock();
+  static final PatternFriendAccess patternFriendAccess = new PatternFriendAccess();
 
   public interface Listener {
     public void channelAdded(LXMixerEngine mixer, LXAbstractChannel channel);
@@ -1081,7 +1081,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       if (channel instanceof LXChannel) {
         LXPattern pattern = ((LXChannel) channel).getActivePattern();
         if (pattern != null) {
-          pattern.activate(LXMixerEngine.patternActivationLock);
+          pattern.activate(LXMixerEngine.patternFriendAccess);
         }
       }
     }

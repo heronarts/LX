@@ -376,7 +376,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * Method invoked by the mixer engine to notify a pattern that it is going
    * to become activated. Not a user-facing API.
    */
-  public final void activate(LXMixerEngine.PatternActivationLock lock) {
+  public final void activate(LXMixerEngine.PatternFriendAccess lock) {
     if (lock == null) {
       throw new IllegalStateException("Only the LXMixerEngine may call LXPattern.activate()");
     }
@@ -392,7 +392,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * Method invoked by the mixer engine to notify a pattern that it is not
    * going to be run. Not a user-facing API.
    */
-  public final void deactivate(LXMixerEngine.PatternActivationLock lock) {
+  public final void deactivate(LXMixerEngine.PatternFriendAccess lock) {
     if (lock == null) {
       throw new IllegalStateException("Only the LXMixerEngine may call LXPattern.activate()");
     }
