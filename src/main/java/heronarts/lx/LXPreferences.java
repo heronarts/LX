@@ -301,6 +301,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
         projectFile = this.lx.getMediaFile(LX.Media.PROJECTS, DEFAULT_PROJECT_FILE);
       }
       if (projectFile.exists()) {
+        LX.log("Opening project file: " + projectFile);
         this.lx.openProject(projectFile);
       }
     } catch (Exception x) {
@@ -314,6 +315,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
       if (!scheduleFile.exists()) {
         LX.error("Last saved schedule file no longer exists: " + this.scheduleFileName);
       } else {
+        LX.log("Restoring schedule file: " + this.scheduleFileName);
         this.lx.scheduler.openSchedule(scheduleFile);
       }
     }
