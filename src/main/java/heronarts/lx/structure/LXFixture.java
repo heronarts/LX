@@ -323,6 +323,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   public final BoundedParameter brightness =
     new BoundedParameter("Brightness", 1)
+    .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Brightness level of this fixture");
 
   public final BooleanParameter mute =

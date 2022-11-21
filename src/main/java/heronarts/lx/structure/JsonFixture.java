@@ -94,6 +94,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_DIRECTION = "direction";
   private static final String KEY_NORMAL = "normal";
   private static final String KEY_TRANSFORMS = "transforms";
+  private static final String KEY_BRIGHTNESS = "brightness";
 
   // Points
   private static final String KEY_POINTS = "points";
@@ -1896,6 +1897,9 @@ public class JsonFixture extends LXFixture {
       // Do this for all child types
       loadGeometry(child, childObj);
 
+      // Load child brightness
+      loadBrightness(child, childObj);
+
       // Load tags for non-JSON child types
       if (type != ChildType.JSON) {
         loadTags(child, childObj, false, false, true);
@@ -2057,6 +2061,17 @@ public class JsonFixture extends LXFixture {
     loadSegments(fixture, segments, outputObj, byteOrder);
 
     this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, sequenceEnabled, fps, segments));
+  }
+
+  private void loadBrightness(LXFixture child, JsonObject childObj) {
+    if (childObj.has(KEY_BRIGHTNESS)) {
+      float brightness = loadFloat(childObj, KEY_BRIGHTNESS, true);
+      if (brightness < 0f || brightness > 1f) {
+        addWarning("Component " + KEY_BRIGHTNESS + " must be in the range 0-1, invalid: " + brightness);
+      } else {
+        child.brightness.setValue(brightness);
+      }
+    }
   }
 
   private void loadMetaData(JsonObject obj, Map<String, String> metaData) {
