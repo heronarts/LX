@@ -687,12 +687,13 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       for (LXParameter p : this.parameters.values()) {
         this.lx.engine.osc.sendParameter(p);
       }
-      for (LXComponent child : this.mutableChildren.values()) {
+      final Collection<LXComponent> children = this.children.values();
+      for (LXComponent child : children) {
         child.oscQuery();
       }
       for (List<? extends LXComponent> array : this.childArrays.values()) {
         for (LXComponent component : array) {
-          if (component != null) {
+          if ((component != null) && !children.contains(component)) {
             component.oscQuery();
           }
         }
