@@ -173,17 +173,19 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   /**
    * Time in seconds after which transition thru the pattern set is automatically initiated.
    */
-  public final BoundedParameter autoCycleTimeSecs =
+  public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
     new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
     .setDescription("Sets the number of seconds after which the engine cycles to the next snapshot")
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setUnits(LXParameter.Units.SECONDS);
 
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
    */
-  public final BoundedParameter transitionTimeSecs =
+  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
     new BoundedParameter("Transition Time", 5, .1, 180)
     .setDescription("Sets the duration of interpolated transitions between snapshots")
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setUnits(LXParameter.Units.SECONDS);
 
   public final BooleanParameter transitionEnabled =

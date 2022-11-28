@@ -62,9 +62,10 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
     new EnumParameter<BlendMode>("Blend", BlendMode.HSV)
     .setDescription("The blend mode when in oscillation");
 
-  public final BoundedParameter period =
+  public final BoundedParameter period = (BoundedParameter)
     new BoundedParameter("Period", 30, 1, 60*60)
     .setUnits(BoundedParameter.Units.SECONDS)
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("The period of oscillation or rotation in this color");
 
   public final ColorParameter primary =

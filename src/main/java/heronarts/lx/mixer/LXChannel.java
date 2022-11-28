@@ -137,8 +137,9 @@ public class LXChannel extends LXAbstractChannel {
   /**
    * Damping time when a pattern is enabled or disabled in blending mode
    */
-  public final CompoundParameter compositeDampingTimeSecs =
+  public final CompoundParameter compositeDampingTimeSecs = (CompoundParameter)
     new CompoundParameter("Damping Time", .1, .05, 5)
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setUnits(CompoundParameter.Units.SECONDS)
     .setDescription("Damping time when a pattern is enabled/disabled in blend mode");
 
@@ -159,14 +160,16 @@ public class LXChannel extends LXAbstractChannel {
   /**
    * Time in seconds after which transition thru the pattern set is automatically initiated.
    */
-  public final BoundedParameter autoCycleTimeSecs =
+  public final BoundedParameter autoCycleTimeSecs = (BoundedParameter)
     new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
     .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setUnits(LXParameter.Units.SECONDS);
 
-  public final BoundedParameter transitionTimeSecs =
+  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
     new BoundedParameter("Transition Time", 5, .05, 180)
     .setDescription("Sets the duration of blending transitions between patterns")
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setUnits(LXParameter.Units.SECONDS);
 
   public final BooleanParameter transitionEnabled =

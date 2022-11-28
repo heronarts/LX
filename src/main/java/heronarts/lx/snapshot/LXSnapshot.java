@@ -494,9 +494,10 @@ public abstract class LXSnapshot extends LXComponent {
     }
   }
 
-  public final BoundedParameter transitionTimeSecs =
+  public final BoundedParameter transitionTimeSecs = (BoundedParameter)
     new BoundedParameter("Transition Time", 1, .1, 180)
     .setDescription("Sets the duration of interpolated transitions between snapshots")
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setUnits(LXParameter.Units.SECONDS);
 
   protected LXSnapshot(LX lx) {

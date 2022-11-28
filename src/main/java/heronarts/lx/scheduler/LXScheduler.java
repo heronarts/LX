@@ -85,9 +85,10 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     new BooleanParameter("Fade", true)
     .setDescription("Whether to fade in and out on project transitions");
 
-  public final BoundedParameter fadeTimeSecs =
+  public final BoundedParameter fadeTimeSecs = (BoundedParameter)
     new BoundedParameter("Fade Time", 5, 0, 60)
     .setDescription("Fade time in seconds")
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setUnits(BoundedParameter.Units.SECONDS);
 
   public final BooleanParameter dirty =
