@@ -169,6 +169,30 @@ public class LXUtils {
     return Math.round(v1 + (v2 - v1) * amt);
   }
 
+  /**
+   * Inverse linear interpolation, normalizes a value relative to bounds
+   *
+   * @param amt Interpolated value
+   * @param v1 Start value
+   * @param v2 End value
+   * @return Normalized value in range 0-1 for amt in [v1,v2]
+   */
+  public static float ilerpf(float amt, float v1, float v2) {
+    return (amt - v1) / (v2 - v1);
+  }
+
+  /**
+   * Inverse linear interpolation, normalizes a value relative to bounds
+   *
+   * @param amt Interpolated value
+   * @param v1 Start value
+   * @param v2 End value
+   * @return Normalized value in range 0-1 for amt in [v1,v2]
+   */
+  public static double ilerp(double amt, double v1, double v2) {
+    return (amt - v1) / (v2 - v1);
+  }
+
   public static double tri(double t) {
     t = t - Math.floor(t);
     if (t < 0.25) {
