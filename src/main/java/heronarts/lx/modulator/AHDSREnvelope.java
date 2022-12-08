@@ -241,6 +241,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     case DELAY:
       return Stage.ATTACK;
     case ATTACK:
+      this.decayFrom = this.peak.getValue();
       return this.stageMode.getEnum().has(Stage.HOLD) ? Stage.HOLD : Stage.DECAY;
     case HOLD:
       this.decayFrom = this.peak.getValue();

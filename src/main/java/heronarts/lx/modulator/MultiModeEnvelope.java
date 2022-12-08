@@ -202,6 +202,7 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
       this.peak.setValue(1);
       this.engage.setValue(this.manualTrigger.isOn());
     } else if (p == this.targetTrigger) {
+      this.peak.setValue(1);
       this.engage.setValue(this.targetTrigger.isOn());
     } else if (p == this.midiEnabled) {
       if (!this.midiEnabled.isOn() && !this.manualTrigger.isOn()) {
