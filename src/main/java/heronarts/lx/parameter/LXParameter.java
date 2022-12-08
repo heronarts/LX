@@ -117,17 +117,18 @@ public interface LXParameter extends LXPath {
     }
 
     public double parseDouble(String value) throws NumberFormatException {
+      double timeMultiple = 1;
       switch (this) {
       case MILLISECONDS_RAW:
       case MILLISECONDS:
-      case SECONDS:
-        double timeMultiple = 1;
         if ((value.indexOf(":") >= 0) || (this == MILLISECONDS)) {
           // NOTE: MILLISECONDS_RAW takes values in raw milliseconds, except when
           // they are specified in m:ss format. MILLISECONDS parses values expressed
           // in seconds, but always multiplies by 1000 to get the ms equivalent
           timeMultiple = 1000;
         }
+        //$FALL-THROUGH$
+      case SECONDS:
         double raw = 0;
         for (String part : value.split(":")) {
           raw = raw*60 + ((part.length() > 0) ? Double.parseDouble(part) : 0);
