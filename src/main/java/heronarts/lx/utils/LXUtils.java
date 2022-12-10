@@ -149,8 +149,28 @@ public class LXUtils {
     return value;
   }
 
+  public static int randomi(int max) {
+    return randomi(0, max);
+  }
+
+  public static int randomi(int min, int max) {
+    return (int) constrain(random(min, max+1), min, max);
+  }
+
+  public static double random(double max) {
+    return random(0, max);
+  }
+
   public static double random(double min, double max) {
     return min + Math.random() * (max - min);
+  }
+
+  public static float randomf(float max) {
+    return randomf(0, max);
+  }
+
+  public static float randomf(float min, float max) {
+    return min + (float) Math.random() * (max-min);
   }
 
   public static double distance(double x1, double y1, double x2, double y2) {
