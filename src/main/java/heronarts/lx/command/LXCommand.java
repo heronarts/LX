@@ -221,7 +221,7 @@ public abstract class LXCommand {
 
     private void removeMidiMappings(LXMidiEngine midi, LXComponent component) {
       List<LXMidiMapping> mappings = midi.findMappings(component);
-      if (mappings  != null) {
+      if (mappings != null) {
         for (LXMidiMapping mapping : mappings) {
           this.removeMidiMappings.add(new Midi.RemoveMapping(midi.getLX(), mapping));
         }
@@ -1436,11 +1436,6 @@ public abstract class LXCommand {
         this.modulator = new ComponentReference<LXModulator>(modulator);
         this.index = modulator.getIndex();
         this.modulatorObj = LXSerializable.Utils.toObject(modulator);
-
-        // Not the global modulation engine? Remove from ours as well!
-        if (modulation != modulator.getLX().engine.modulation) {
-          removeModulationMappings(modulation, modulator);
-        }
       }
 
       @Override
@@ -1544,8 +1539,7 @@ public abstract class LXCommand {
 
       public RemoveModulation(LXModulationEngine engine, LXCompoundModulation modulation) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
-        this.modulation = new ComponentReference<LXCompoundModulation>(
-          modulation);
+        this.modulation = new ComponentReference<LXCompoundModulation>(modulation);
         this.modulationObj = LXSerializable.Utils.toObject(modulation);
       }
 
