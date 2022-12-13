@@ -139,9 +139,8 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
    * @return The newly added color
    */
   public LXDynamicColor addColor() {
-    LXDynamicColor newColor = new LXDynamicColor(this);
-    newColor.primary.setColor(this.colors.get(this.colors.size() - 1).getColor());
-    return addColor(newColor, -1);
+    final int initialColor = this.colors.get(this.colors.size() - 1).getColor();
+    return addColor(new LXDynamicColor(this, initialColor), -1);
   }
 
   public LXDynamicColor addColor(int index, JsonObject colorObj) {

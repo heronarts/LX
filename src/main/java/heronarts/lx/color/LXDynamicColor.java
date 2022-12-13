@@ -32,6 +32,8 @@ import heronarts.lx.utils.LXUtils;
  */
 public class LXDynamicColor extends LXModulatorComponent implements LXOscComponent {
 
+  private static final int DEFAULT_COLOR = LXColor.RED;
+
   public enum Mode {
     FIXED("Fixed Color"),
     OSCILLATE("Oscillate"),
@@ -68,11 +70,11 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
     .setDescription("The period of oscillation or rotation in this color");
 
   public final ColorParameter primary =
-    new ColorParameter("Color", 0xffff0000)
+    new ColorParameter("Color", DEFAULT_COLOR)
     .setDescription("The base color setting");
 
   public final ColorParameter secondary =
-    new ColorParameter("Secondary", 0xff00ff00)
+    new ColorParameter("Secondary", LXColor.GREEN)
     .setDescription("The secondary color setting");
 
   public final ColorParameter color = this.primary;
@@ -87,11 +89,15 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
   private int index = 0;
 
   public LXDynamicColor(LXSwatch swatch) {
+    this(swatch, DEFAULT_COLOR);
+  }
+
+  protected LXDynamicColor(LXSwatch swatch, int initialColor) {
     super(swatch.getLX());
     setParent(swatch);
     addParameter("mode", this.mode);
     addParameter("period", this.period);
-    addParameter("primary", this.color);
+    addParameter("primary", this.color.setColor(initialColor));
     addParameter("secondary", this.secondary);
   }
 
