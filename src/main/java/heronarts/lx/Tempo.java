@@ -142,7 +142,9 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     .setDescription("Beats per minute of the master tempo object");
 
   public final TriggerParameter trigger =
-    new TriggerParameter("Trigger")
+    new TriggerParameter("Trigger", () -> {
+      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_BEAT, 1 + (this.beatCount % this.beatsPerMeasure.getValuei()));
+    })
     .setDescription("Listeable trigger which is set on each beat");
 
   public final BooleanParameter enabled =
