@@ -972,6 +972,9 @@ public class JsonFixture extends LXFixture {
     if (expression.startsWith("deg")) {
       return (float) Math.toDegrees(_evaluateSimpleExpression(obj, key, expression.substring(3)));
     }
+    if (expression.startsWith("sqrt")) {
+      return (float) Math.sqrt(_evaluateSimpleExpression(obj, key, expression.substring(4)));
+    }
 
     // All clear this should just be a number now
     return Float.parseFloat(expression);
