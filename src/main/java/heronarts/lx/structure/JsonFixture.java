@@ -815,6 +815,8 @@ public class JsonFixture extends LXFixture {
         case INT:
           if (parameter.type == ParameterType.INT) {
             parameterValue = String.valueOf(parameter.intParameter.getValuei());
+          } else if (parameter.type == ParameterType.FLOAT) {
+            parameterValue = String.valueOf(parameter.floatParameter.getValue());
           } else {
             addWarning("Cannot load non-integer parameter $" + parameterName + " into an integer type: " + key);
             return null;
