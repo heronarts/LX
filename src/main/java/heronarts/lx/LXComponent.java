@@ -663,7 +663,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       }
     } else if (parameter instanceof DiscreteParameter) {
       OscArgument arg = message.get();
-      if (arg instanceof OscInt) {
+      if ((arg instanceof OscInt) || ((DiscreteParameter) parameter).getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
         parameter.setValue(arg.toInt());
       } else {
         ((DiscreteParameter) parameter).setNormalized(arg.toFloat());
