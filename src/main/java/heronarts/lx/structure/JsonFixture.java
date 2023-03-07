@@ -688,7 +688,8 @@ public class JsonFixture extends LXFixture {
     }
     this.isLoaded = true;
 
-    File fixtureFile = getFixtureFile(this.fixtureType.getString());
+    final String fixtureType = this.fixtureType.getString();
+    final File fixtureFile = getFixtureFile(fixtureType);
     if (!fixtureFile.exists()) {
       setError("Invalid fixture type, could not find file: " + fixtureFile);
       return;
@@ -733,8 +734,10 @@ public class JsonFixture extends LXFixture {
         message = "Invalid JSON in " + fixtureFile.getName() + ": " + ((MalformedJsonException)cause).getLocalizedMessage();
       }
       setError(jpx, message);
+      setErrorLabel(fixtureType);
     } catch (Exception x) {
       setError(x, "Error loading fixture from " + fixtureFile.getName() + ": " + x.getLocalizedMessage());
+      setErrorLabel(fixtureType);
     }
   }
 
@@ -1312,6 +1315,16 @@ public class JsonFixture extends LXFixture {
       }
     }
     this.label.setValue(validLabel);
+  }
+
+  private void setErrorLabel(String fixtureType) {
+    if (this.label.getString().equals(LABEL_PLACEHOLDER)) {
+      int lastSeparator = fixtureType.lastIndexOf(PATH_SEPARATOR);
+      if (lastSeparator >= 0) {
+        fixtureType = fixtureType.substring(lastSeparator+1);
+      }
+      this.label.setValue(fixtureType);
+    }
   }
 
   private void loadTags(LXFixture fixture, JsonObject obj, boolean required, boolean includeParent, boolean replaceVariables) {
