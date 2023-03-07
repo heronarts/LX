@@ -850,7 +850,16 @@ public class JsonFixture extends LXFixture {
       return 0;
     }
     try {
-      return _evaluateSimpleExpression(obj, key, substitutedExpression.replaceAll("\\s", ""));
+      float value = _evaluateSimpleExpression(obj, key, substitutedExpression.replaceAll("\\s", ""));
+      if (Float.isNaN(value)) {
+        addWarning("Variable expression produces NaN: " + expression);
+        return 0;
+      }
+      if (Float.isInfinite(value)) {
+        addWarning("Variable expression produces infinite value: " + expression);
+        return 0;
+      }
+      return value;
     } catch (Exception nfx) {
       addWarning("Bad formatting in variable expression: " + expression);
       nfx.printStackTrace();
