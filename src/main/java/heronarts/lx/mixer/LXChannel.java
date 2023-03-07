@@ -296,7 +296,7 @@ public class LXChannel extends LXAbstractChannel {
           }
         }
         // The active pattern was not enabled? It is now!
-        if (!activePattern.enabled.isOn()) {
+        if ((activePattern != null) && !activePattern.enabled.isOn()) {
           activePattern.activate(LXMixerEngine.patternFriendAccess);
         }
       }
