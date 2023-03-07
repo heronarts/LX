@@ -55,6 +55,24 @@ public abstract class LXListenableNormalizedParameter extends
   }
 
   @Override
+  public LXListenableNormalizedParameter setUnits(Units units) {
+    super.setUnits(units);
+    switch (units) {
+    case INTEGER:
+    case SECONDS:
+    case MILLISECONDS:
+    case MILLISECONDS_RAW:
+    case MIDI_NOTE:
+    case CLOCK:
+      setOscMode(OscMode.ABSOLUTE);
+      break;
+    default:
+      break;
+    }
+    return this;
+  }
+
+  @Override
   public boolean isMappable() {
     return this.mappable;
   }
