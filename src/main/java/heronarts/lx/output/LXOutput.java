@@ -77,9 +77,10 @@ public abstract class LXOutput extends LXComponent {
   /**
    * Gamma correction level
    */
-  public final BoundedParameter gamma =
+  public final BoundedParameter gamma = (BoundedParameter)
     new BoundedParameter("Gamma", 1, 1, 4)
     .setMappable(false)
+    .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Gamma correction on the output, 1 is linear (no gamma)");
 
   /**
