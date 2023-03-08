@@ -876,6 +876,31 @@ public class JsonFixture extends LXFixture {
     { '^' }
   };
 
+
+  private enum SimpleFunction {
+    sin(f -> { return (float) Math.toRadians(Math.sin(f)); }),
+    cos(f -> { return (float) Math.toRadians(Math.cos(f)); }),
+    tan(f -> { return (float) Math.toRadians(Math.tan(f)); }),
+    asin(f -> { return (float) Math.toDegrees(Math.asin(f)); }),
+    acos(f -> { return (float) Math.toDegrees(Math.acos(f)); }),
+    atan(f -> { return (float) Math.toDegrees(Math.atan(f)); }),
+    deg(f -> { return (float) Math.toDegrees(f); }),
+    rad(f -> { return (float) Math.toRadians(f); }),
+    abs(f -> { return Math.abs(f); }),
+    sqrt(f -> { return (float) Math.sqrt(f); });
+
+    private interface Compute {
+      public float compute(float f);
+    }
+
+    private final Compute compute;
+
+    private SimpleFunction(Compute compute) {
+      this.compute = compute;
+    }
+
+  }
+
   private static boolean isOperator(char ch, char[] operators) {
     for (char operator : operators) {
       if (ch == operator) {
@@ -888,6 +913,28 @@ public class JsonFixture extends LXFixture {
   private static boolean isSimpleOperator(char ch) {
     for (char[] operators : SIMPLE_EXPRESSION_OPERATORS) {
       if (isOperator(ch, operators)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isUnaryMinus(char[] chars, int index) {
+    // Check it's actually a minus
+    if (chars[index] != '-') {
+      return false;
+    }
+
+    // Check if preceded by another simple operator, e.g. 4+-4
+    if (isSimpleOperator(chars[index-1])) {
+      return true;
+    }
+    // Check if preceded by a simple function token, which will no longer have
+    // parentheses, e.g. sin(-4) will have become sin-4 after parenthetical resolution
+    for (SimpleFunction function : SimpleFunction.values()) {
+      final String name = function.name();
+      final int len = name.length();
+      if ((index >= len) && new String(chars, index-len, len).equals(name)) {
         return true;
       }
     }
@@ -933,8 +980,9 @@ public class JsonFixture extends LXFixture {
         if (isOperator(chars[index], operators)) {
 
           // Skip over the tricky unary minus operator! If preceded by another operator,
-          // then it's actually just a negative sign which can be handled by parseFloat()
-          if ((chars[index] == '-') && isSimpleOperator(chars[index-1])) {
+          // then it's actually just a negative sign which will be handled below. Do not
+          // process it now as subtraction.
+          if (isUnaryMinus(chars, index)) {
             continue;
           }
 
@@ -953,41 +1001,24 @@ public class JsonFixture extends LXFixture {
       }
     }
 
-    // Unary function operators!
+    // The dreaded nasty unary minus operator!
     if (chars[0] == '-') {
       // Float.parseFloat() would handle one of these fine, but it won't handle
-      // them potentially stacking up at the front, so do it manually
+      // them potentially stacking up at the front, e.g. if multiple expression
+      // resolutions have resulted in something like ---4, so do the negations
+      // manually one by one
       return -_evaluateSimpleExpression(obj, key, expression.substring(1));
     }
-    if (expression.startsWith("sin")) {
-      return (float) Math.sin(Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3))));
-    }
-    if (expression.startsWith("cos")) {
-      return (float) Math.cos(Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3))));
-    }
-    if (expression.startsWith("tan")) {
-      return (float) Math.tan(Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3))));
-    }
-    if (expression.startsWith("asin")) {
-      return (float) Math.toDegrees(Math.asin(_evaluateSimpleExpression(obj, key, expression.substring(4))));
-    }
-    if (expression.startsWith("acos")) {
-      return (float) Math.toDegrees(Math.acos(_evaluateSimpleExpression(obj, key, expression.substring(4))));
-    }
-    if (expression.startsWith("atan")) {
-      return (float) Math.toDegrees(Math.atan(_evaluateSimpleExpression(obj, key, expression.substring(4))));
-    }
-    if (expression.startsWith("rad")) {
-      return (float) Math.toRadians(_evaluateSimpleExpression(obj, key, expression.substring(3)));
-    }
-    if (expression.startsWith("deg")) {
-      return (float) Math.toDegrees(_evaluateSimpleExpression(obj, key, expression.substring(3)));
-    }
-    if (expression.startsWith("sqrt")) {
-      return (float) Math.sqrt(_evaluateSimpleExpression(obj, key, expression.substring(4)));
+
+    // Check for simple function operators
+    for (SimpleFunction function : SimpleFunction.values()) {
+      final String name = function.name();
+      if (expression.startsWith(name)) {
+        return function.compute.compute(_evaluateSimpleExpression(obj, key, expression.substring(name.length())));
+      }
     }
 
-    // All clear this should just be a number now
+    // All clear, this *should* just be a number now (if not, syntax was bad)
     return Float.parseFloat(expression);
   }
 
