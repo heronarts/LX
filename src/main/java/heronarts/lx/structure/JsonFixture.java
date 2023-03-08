@@ -818,7 +818,7 @@ public class JsonFixture extends LXFixture {
           } else if (parameter.type == ParameterType.FLOAT) {
             parameterValue = String.valueOf(parameter.floatParameter.getValue());
           } else {
-            addWarning("Cannot load non-integer parameter $" + parameterName + " into an integer type: " + key);
+            addWarning("Cannot load non-numeric parameter $" + parameterName + " into an integer type: " + key);
             return null;
           }
           break;
@@ -1690,7 +1690,7 @@ public class JsonFixture extends LXFixture {
       return null;
     }
     if (numPoints > StripFixture.MAX_POINTS) {
-      addWarning("Single strip may not define more than " + StripFixture.MAX_POINTS + " points");
+      addWarning("Single strip may not define more than " + StripFixture.MAX_POINTS + " points, tried to define " + numPoints);
       return null;
     }
 
