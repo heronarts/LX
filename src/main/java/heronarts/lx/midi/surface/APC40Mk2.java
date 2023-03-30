@@ -310,6 +310,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
         }
       }
+      sendDeviceOnOff();
+    }
+
+    private void sendDeviceOnOff() {
       boolean isEnabled = false;
       if (this.device instanceof LXEffect) {
         LXEffect effect = (LXEffect) this.device;
@@ -690,6 +694,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         return;
       }
       sendChannelPatterns(index, this.channel);
+      sendDeviceOnOff();
     }
 
     public void onParameterChanged(LXParameter p) {
@@ -1022,6 +1027,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     for (int i = 0; i < SCENE_LAUNCH_NUM; i++) {
       sendNoteOn(LED_MODE_PRIMARY, SCENE_LAUNCH + i, LED_OFF);
     }
+  }
+
+  private void sendDeviceOnOff() {
+    this.deviceListener.sendDeviceOnOff();
   }
 
   private void sendSwatches() {
