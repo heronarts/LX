@@ -386,6 +386,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       int skip = this.bankNumber * DEVICE_KNOB_NUM;
       int s = 0;
       final List<LXParameter> uniqueParameters = new ArrayList<LXParameter>();
+      // Avoid registering enabled twice
+      if (this.device instanceof LXEffect) {
+        uniqueParameters.add(((LXEffect)this.device).enabled);
+      } else if (this.device instanceof LXPattern) {
+        uniqueParameters.add(((LXPattern)this.device).enabled);
+      }
       for (LXListenableNormalizedParameter parameter : this.device.getRemoteControls()) {
         if (s++ < skip) {
           continue;
@@ -442,12 +448,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       if (parameter == this.device.remoteControlsChanged) {
         unregisterDeviceKnobs();
         registerDeviceKnobs();
-      } else if ((effect != null) && (parameter == effect.enabled)) {
-        sendNoteOn(0, DEVICE_ON_OFF, effect.enabled.isOn() ? LED_ON : LED_OFF);
-      } else if ((pattern != null) && (parameter == pattern.enabled)) {
-        sendNoteOn(0, DEVICE_ON_OFF, isPatternEnabled(pattern) ? LED_ON : LED_OFF);
-        sendChannelPatterns(pattern.getChannel().getIndex(), pattern.getChannel());
       } else {
+        if ((effect != null) && (parameter == effect.enabled)) {
+          sendNoteOn(0, DEVICE_ON_OFF, effect.enabled.isOn() ? LED_ON : LED_OFF);
+        } else if ((pattern != null) && (parameter == pattern.enabled)) {
+          sendNoteOn(0, DEVICE_ON_OFF, isPatternEnabled(pattern) ? LED_ON : LED_OFF);
+          sendChannelPatterns(pattern.getChannel().getIndex(), pattern.getChannel());
+        }
+        // enabled could be a remote parameter
         for (int i = 0; i < this.knobs.length; ++i) {
           LXListenableNormalizedParameter knobParam = parameterForKnob(this.knobs[i]);
           if (parameter == knobParam) {
@@ -565,8 +573,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         if (this.device instanceof LXEffect) {
           LXEffect effect = (LXEffect) this.device;
           effect.enabled.removeListener(this);
-        }
-        if (this.device instanceof LXPattern) {
+        } else if (this.device instanceof LXPattern) {
           LXPattern pattern = (LXPattern) this.device;
           pattern.enabled.removeListener(this);
         }
@@ -579,6 +586,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     private void unregisterDeviceKnobs() {
       if (this.device != null) {
         final List<LXParameter> uniqueParameters = new ArrayList<LXParameter>();
+        // Avoid unregistering enabled twice
+        if (this.device instanceof LXEffect) {
+          uniqueParameters.add(((LXEffect)this.device).enabled);
+        } else if (this.device instanceof LXPattern) {
+          uniqueParameters.add(((LXPattern)this.device).enabled);
+        }
         for (int i = 0; i < this.knobs.length; ++i) {
           if (this.knobs[i] == null) {
             continue;
