@@ -24,7 +24,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BooleanParameter.Mode;
-import heronarts.lx.parameter.PresetCompoundParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.pattern.LXPattern;
 
 @LXCategory("CoreExample")
@@ -35,10 +35,14 @@ public class PresetExamplePattern extends LXPattern {
     .setDescription("When On, linked parameters will stop only at preset values")
     .setMode(Mode.MOMENTARY);
 
-  public final PresetCompoundParameter x =
-    (PresetCompoundParameter) new PresetCompoundParameter("X")
-    .setPresetParameter(this.preset)
-    .setPresetValues(new double[] { 0, .25, .5, .75, 1 })
+  public final CompoundParameter x =
+    (CompoundParameter) new CompoundParameter("X") {
+      @Override
+      public boolean getDetentOn() {
+        return preset.isOn();
+      }
+    }
+    .setDetents(new double[] { 0, .25, .5, .75, 1 })
     .setWrappable(true);
 
   public PresetExamplePattern(LX lx) {

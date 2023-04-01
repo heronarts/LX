@@ -18,6 +18,10 @@
 
 package heronarts.lx.parameter;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import heronarts.lx.LX;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -291,6 +295,73 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     return this.curve;
   }
 
+  private boolean detentOn = false;
+  private double[] detents = null;
+  private double[] detentsNormalized = null;
+  private int iDetent = -1;
+  private static final int TICKS_PER_DETENT = 12;
+  private int ticks = 0;
+  private boolean currentIsDetent = false;
+
+  /**
+   * Subclasses can override this method to customize the Detent On state,
+   * for example to make it dependent on another parameter.
+   *
+   * When this method returns True, calls to incrementNormalized()
+   * accumulate ticks rather than modifying the underlying value immediately.
+   * After a certain number of ticks have accumulated the parameter value
+   * will be moved to the next detent in the list.
+   */
+  public boolean getDetentOn() {
+    return this.detentOn;
+  }
+
+  /**
+   * By default this method allows manual control of Detent On state.
+   */
+  public BoundedParameter setDetentOn(boolean on) {
+    this.detentOn = on;
+    return this;
+  }
+
+  public final BoundedParameter setDetents(double[] values) {
+    this.detents = sanitizeDetents(values);
+    this.detentsNormalized = null;
+    this.iDetent = -1;
+    this.currentIsDetent = false;
+    return this;
+  }
+
+  public final BoundedParameter setDetentsNormalized(double[] normalized) {
+    this.detentsNormalized = sanitizeDetents(normalized, 0, 1);
+    this.detents = null;
+    this.iDetent = -1;
+    this.currentIsDetent = false;
+    return this;
+  }
+
+  private double[] sanitizeDetents(double[] values) {
+    return sanitizeDetents(values, this.range.min, this.range.max);
+  }
+
+  private double[] sanitizeDetents(double[] values, double min, double max) {
+    List<Double> filtered = new ArrayList<Double>();
+
+    for (double value : values) {
+      if (min <= value && value <= max) {
+        filtered.add(value);
+      } else {
+        LX.error("Detent out of range: " + Double.toString(value));
+      }
+    }
+
+    double[] r = new double[filtered.size()];
+    for (int i = 0; i < filtered.size(); i++) {
+      r[i] = filtered.get(i);
+    }
+    return r;
+  }
+
   @Override
   public BoundedParameter incrementValue(double amount) {
     return incrementValue(amount, isWrappable());
@@ -305,7 +376,204 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
         newValue = this.range.max + ((newValue - this.range.min) % this.range.range);
       }
     }
+    this.currentIsDetent = false;   // Would prefer to intercept all calls to setValue() but it is final
     return (BoundedParameter) setValue(newValue);
+  }
+
+  // Another example of a place this flag needs to be reset,
+  // which could be eliminated if this was done in setValue().
+  @Override
+  public LXParameter reset() {
+    this.currentIsDetent = false;
+    return super.reset();
+  }
+
+
+  public LXListenableNormalizedParameter incrementDetentTicks(boolean increase) {
+    return incrementDetentTicks(increase, isWrappable());
+  }
+
+  public LXListenableNormalizedParameter incrementDetentTicks(boolean increase, boolean wrap) {
+    return incrementNormalized(increase ? 1 : -1, wrap, true);
+  }
+
+  @Override
+  public LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap) {
+    return incrementNormalized(amount, wrap, getDetentOn());
+  }
+
+  public LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap, boolean detent) {
+    if (detent) {
+      // Swallow increments and convert to ticks
+      if (amount > 0) {
+        ticks = LXUtils.max(this.ticks, 0) + 1;
+        if (this.ticks == TICKS_PER_DETENT) {
+          nextDetent(wrap);
+        }
+      } else if (amount < 0) {
+        this.ticks = LXUtils.min(this.ticks, 0) - 1;
+        if (this.ticks == 0-TICKS_PER_DETENT) {
+          previousDetent(wrap);
+        }
+      }
+      return this;
+    } else {
+      this.ticks = 0;
+      this.currentIsDetent = false;
+      return super.incrementNormalized(amount, wrap);
+    }
+  }
+
+  public BoundedParameter nextDetent() {
+    return nextDetent(isWrappable());
+  }
+
+  public final BoundedParameter nextDetent(boolean wrap) {
+    this.ticks = 0;
+    if (this.currentIsDetent) {
+      if (this.detents != null && this.detents.length > 0) {
+        if (this.iDetent == this.detents.length-1) {
+          // Wrap if allowed
+          if (wrap) {
+            this.iDetent = 0;
+            super.setValue(this.detents[this.iDetent]);
+          }
+        } else {
+          this.iDetent++;
+          super.setValue(this.detents[this.iDetent]);
+        }
+      } else if (this.detentsNormalized != null && this.detentsNormalized.length > 0) {
+        if (this.iDetent == this.detentsNormalized.length-1) {
+          // Wrap if allowed
+          if (wrap) {
+            this.iDetent = 0;
+            super.setValue(this.detentsNormalized[this.iDetent]);
+          }
+        } else {
+          this.iDetent++;
+          super.setValue(this.detentsNormalized[this.iDetent]);
+        }
+      }
+    } else {
+      if (this.detents != null) {
+        // Detents are values
+        double value = getValue();
+        // Locate next detent above current value
+        for (int i=0; i<this.detents.length; i++) {
+          if (this.detents[i] > value) {
+            this.currentIsDetent = true;
+            this.iDetent = i;
+            super.setValue(this.detents[this.iDetent]);
+            return this;
+          }
+        }
+        // All detents were less than current value. Wrap if allowed.
+        if (wrap) {
+          if (this.detents.length > 0) {
+            this.currentIsDetent = true;
+            this.iDetent = 0;
+            super.setValue(this.detents[this.iDetent]);
+          }
+        }
+      } else if (this.detentsNormalized != null) {
+        // Detents are normalized values
+        double normalizedValue = getNormalized();
+        // Locate next detent above current value
+        for (int i=0; i<this.detentsNormalized.length; i++) {
+          if (this.detentsNormalized[i] > normalizedValue) {
+            this.currentIsDetent = true;
+            this.iDetent = i;
+            super.setValue(this.detentsNormalized[this.iDetent]);
+            return this;
+          }
+        }
+        // All detents were less than current value. Wrap if allowed.
+        if (wrap) {
+          if (this.detentsNormalized.length > 0) {
+            this.currentIsDetent = true;
+            this.iDetent = 0;
+            super.setValue(this.detentsNormalized[this.iDetent]);
+          }
+        }
+      }
+    }
+    return this;
+  }
+
+  public BoundedParameter previousDetent() {
+    return previousDetent(isWrappable());
+  }
+
+  public final BoundedParameter previousDetent(boolean wrap) {
+    this.ticks = 0;
+    if (this.currentIsDetent) {
+      if (this.detents != null && this.detents.length > 0) {
+        if (this.iDetent <= 0) {
+          // Wrap if allowed
+          if (wrap) {
+            this.iDetent = this.detents.length - 1;
+            super.setValue(this.detents[this.iDetent]);
+          }
+        } else {
+          this.iDetent--;
+          super.setValue(this.detents[this.iDetent]);
+        }
+      } else if (this.detentsNormalized != null && this.detentsNormalized.length > 0) {
+        if (this.iDetent <= 0) {
+          // Wrap if allowed
+          if (wrap) {
+            this.iDetent = this.detentsNormalized.length - 1;
+            super.setValue(this.detentsNormalized[this.iDetent]);
+          }
+        } else {
+          this.iDetent--;
+          super.setValue(this.detentsNormalized[this.iDetent]);
+        }
+      }
+    } else {
+      if (this.detents != null) {
+        // Detents are values
+        double value = getValue();
+        // Locate next detent below current value
+        for (int i=this.detents.length-1; i>=0; i--) {
+          if (this.detents[i] < value) {
+            this.currentIsDetent = true;
+            this.iDetent = i;
+            super.setValue(this.detents[this.iDetent]);
+            return this;
+          }
+        }
+        // All detents were above current value. Wrap if allowed.
+        if (wrap) {
+          if (this.detents.length > 0) {
+            this.currentIsDetent = true;
+            this.iDetent = this.detents.length - 1;
+            super.setValue(this.detents[this.iDetent]);
+          }
+        }
+      } else if (this.detentsNormalized != null) {
+        // Detents are normalized values
+        double normalizedValue = getNormalized();
+        // Locate next detent below current value
+        for (int i=this.detentsNormalized.length-1; i>=0; i--) {
+          if (this.detentsNormalized[i] < normalizedValue) {
+            this.currentIsDetent = true;
+            this.iDetent = i;
+            super.setValue(this.detentsNormalized[this.iDetent]);
+            return this;
+          }
+        }
+        // All detents were above current value. Wrap if allowed.
+        if (wrap) {
+          if (this.detentsNormalized.length > 0) {
+            this.currentIsDetent = true;
+            this.iDetent = this.detentsNormalized.length - 1;
+            super.setValue(this.detentsNormalized[this.iDetent]);
+          }
+        }
+      }
+    }
+    return this;
   }
 
   /**
