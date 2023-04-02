@@ -764,6 +764,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
+    @SuppressWarnings("unused")
     private void onKnob(int index, double normalized) {
       if (this.knobs[index] != null) {
         this.knobs[index].setNormalized(normalized);
@@ -1009,15 +1010,19 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       case CHANNEL_ROTARY_ENCODER:
         if (number >= DEVICE_KNOB && number <= DEVICE_KNOB_MAX) {
           int iKnob = number - DEVICE_KNOB;
+          if (value < KNOB_DECREMENT_VERYFAST || value > KNOB_INCREMENT_VERYFAST) {
+            // Knob sent value outside of expected range for relative values.  Possible causes:
+            //   1. Knob is configured to send absolute values.
+            //   2. Knob was rotated during config sysex / reboot.
+            //   3. Knob internals are dusty.
+            LXMidiEngine.error("Received value " + value + " on MFT encoder " + number + ". Confirm Encoder MIDI Type is ENC 3FH/41H and controller is clean.");
+            // Assume the direction is correct, keep behavior smooth even on dusty controllers.
+            value = LXUtils.constrain(value, KNOB_DECREMENT_VERYFAST, KNOB_INCREMENT_VERYFAST);
+          }
           if (value == KNOB_INCREMENT || value == KNOB_INCREMENT_FAST || value == KNOB_INCREMENT_VERYFAST) {
             this.deviceListener.onKnobIncrement(iKnob, true);
           } else if (value == KNOB_DECREMENT || value == KNOB_DECREMENT_FAST || value == KNOB_DECREMENT_VERYFAST) {
             this.deviceListener.onKnobIncrement(iKnob, false);
-          } else {
-            // Knob sent absolute values but software is expecting relative values
-            LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received value " + value);
-            // Let it through just to be nice
-            this.deviceListener.onKnob(iKnob, cc.getNormalized());
           }
           return;
         }
