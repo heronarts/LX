@@ -764,12 +764,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    private void onKnob(int index, double normalized) {
-      if (this.knobs[index] != null) {
-        this.knobs[index].setNormalized(normalized);
-      }
-    }
-
     private final static double KNOB_INCREMENT_AMOUNT = 1/128.;
 
     private void onKnobIncrement(int index, boolean isUp) {
@@ -1014,10 +1008,17 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           } else if (value == KNOB_DECREMENT || value == KNOB_DECREMENT_FAST || value == KNOB_DECREMENT_VERYFAST) {
             this.deviceListener.onKnobIncrement(iKnob, false);
           } else {
-            // Knob sent absolute values but software is expecting relative values
-            LXMidiEngine.error("MFT Encoder MIDI Type should be ENC 3FH/41H for encoder " + number + ". Received value " + value);
-            // Let it through just to be nice
-            this.deviceListener.onKnob(iKnob, cc.getNormalized());
+            // Knob sent value outside of expected range for relative values.  Possible causes:
+            //   1. Knob is configured to send absolute values.
+            //   2. Knob was rotated during config sysex / reboot.
+            //   3. Knob internals are dusty.
+            LXMidiEngine.error("Received value " + value + " on MFT encoder " + number + ". Confirm Encoder MIDI Type is ENC 3FH/41H and controller is clean.");
+            // Assume the direction is correct, keep behavior smooth even on dusty controllers.
+            if (value > KNOB_INCREMENT_VERYFAST) {
+              this.deviceListener.onKnobIncrement(iKnob, true);
+            } else if (value < KNOB_DECREMENT_VERYFAST) {
+              this.deviceListener.onKnobIncrement(iKnob, false);
+            }
           }
           return;
         }
