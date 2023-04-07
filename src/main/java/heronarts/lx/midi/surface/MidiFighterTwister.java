@@ -695,7 +695,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             // We will track an absolute knob value for Normalized DiscreteParameters even though MFT sends relative CCs.
             if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
               this.knobTicks[i] = (int) (parameter.getNormalized() * 127);
-              this.knobIncrementSize[i] = LXUtils.max(1, 128/((DiscreteParameter)parameter).getRange());
+              this.knobIncrementSize[i] = LXUtils.max(1, 127/((DiscreteParameter)parameter).getRange());
             }
             if (!uniqueParameters.contains(parameter)) {
               parameter.addListener(this);
@@ -764,7 +764,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
-    private final static double KNOB_INCREMENT_AMOUNT = 1/128.;
+    private final static double KNOB_INCREMENT_AMOUNT = 1/127.;
 
     private void onKnobIncrement(int index, boolean isUp) {
       LXListenableNormalizedParameter knob = this.knobs[index];
@@ -783,7 +783,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               value = LXUtils.constrain(value, 0, 127);
               this.knobTicks[index] = value;
             }
-            knob.setNormalized(value/128.);
+            knob.setNormalized(value/127.);
           } else {
             // IncrementMode == RELATIVE
             // Move after a set number of ticks in the same direction
