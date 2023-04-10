@@ -878,9 +878,9 @@ public class JsonFixture extends LXFixture {
 
 
   private enum SimpleFunction {
-    sin(f -> { return (float) Math.toRadians(Math.sin(f)); }),
-    cos(f -> { return (float) Math.toRadians(Math.cos(f)); }),
-    tan(f -> { return (float) Math.toRadians(Math.tan(f)); }),
+    sin(f -> { return (float) Math.sin(Math.toRadians(f)); }),
+    cos(f -> { return (float) Math.cos(Math.toRadians(f)); }),
+    tan(f -> { return (float) Math.tan(Math.toRadians(f)); }),
     asin(f -> { return (float) Math.toDegrees(Math.asin(f)); }),
     acos(f -> { return (float) Math.toDegrees(Math.acos(f)); }),
     atan(f -> { return (float) Math.toDegrees(Math.atan(f)); }),

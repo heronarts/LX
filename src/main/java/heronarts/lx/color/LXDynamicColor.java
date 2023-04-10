@@ -186,8 +186,29 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
     return (float) getHue();
   }
 
+  /**
+   * Gets the saturation of the current dynamic color. This will return a valid
+   * value even if brightness is all the way down and the color is black.
+   */
   public float getSaturation() {
-    return LXColor.s(getColor());
+    switch (this.mode.getEnum()) {
+    case OSCILLATE:
+      double lerp = getBasis();
+      switch (this.blendMode.getEnum()) {
+      case HSV:
+        return (float) LXUtils.lerp(this.primary.saturation.getValue(), this.secondary.saturation.getValue(), lerp);
+      default:
+      case RGB:
+        return LXColor.s(LXColor.lerp(this.primary.getColor(), this.secondary.getColor(), lerp));
+      }
+
+    case CYCLE:
+      return this.color.saturation.getValuef();
+
+    default:
+    case FIXED:
+      return this.color.saturation.getValuef();
+    }
   }
 
   public float getBrightness() {
