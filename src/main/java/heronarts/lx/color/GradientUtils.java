@@ -206,11 +206,9 @@ public class GradientUtils {
       if (c1.isBlack()) {
         hue1 = hue2;
         sat1 = 0;
-        bright1 = 0;
       } else if (c2.isBlack()) {
         hue2 = hue1;
         sat2 = 0;
-        bright2 = 0;
       }
       return LXColor.hsb(
         LXUtils.lerpf(hue1, hue2, lerp),
@@ -234,11 +232,9 @@ public class GradientUtils {
       if (c1.isBlack()) {
         hue1 = hue2;
         sat1 = 0;
-        bright1 = 0;
       } else if (c2.isBlack()) {
         hue2 = hue1;
         sat2 = 0;
-        bright2 = 0;
       }
       return LXColor.hsb(
         LXUtils.lerpf(hue1, hue2, lerp),

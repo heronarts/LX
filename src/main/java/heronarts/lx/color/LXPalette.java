@@ -517,11 +517,9 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       if (isBlack(fromColor)) {
         fromHue = toHue;
         fromSat = 0;
-        fromBright = 0;
       } else if (isBlack(toColor)) {
         toHue = fromHue;
         toSat = 0;
-        toBright = 0;
       }
       color.primary.setColor(LXColor.hsb(
         LXUtils.lerpf(fromHue, toHue, lerp),
