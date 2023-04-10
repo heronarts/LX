@@ -507,24 +507,22 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       float toHue = toColor.hue.getValuef();
       float fromSat = fromColor.saturation.getValuef();
       float toSat = toColor.saturation.getValuef();
-      float fromBright = fromColor.brightness.getValuef();
-      float toBright = toColor.brightness.getValuef();
       if (toHue - fromHue > 180) {
         fromHue += 360;
       } else if (fromHue - toHue > 180) {
         toHue += 360;
       }
-      if (isBlack(fromColor)) {
+      if (fromColor.isBlack()) {
         fromHue = toHue;
-        fromSat = 0;
-      } else if (isBlack(toColor)) {
+        fromSat = toSat;
+      } else if (toColor.isBlack()) {
         toHue = fromHue;
-        toSat = 0;
+        toSat = fromSat;
       }
       color.primary.setColor(LXColor.hsb(
         LXUtils.lerpf(fromHue, toHue, lerp),
         LXUtils.lerpf(fromSat, toSat, lerp),
-        LXUtils.lerpf(fromBright, toBright, lerp)
+        LXUtils.lerpf(fromColor.brightness.getValuef(), toColor.brightness.getValuef(), lerp)
       ));
       break;
 
@@ -537,10 +535,6 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       ));
       break;
     }
-  }
-
-  private boolean isBlack(ColorParameter color) {
-    return color.brightness.getValue() == 0;
   }
 
   /**

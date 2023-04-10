@@ -201,19 +201,17 @@ public class GradientUtils {
       float hue2 = c2.hue;
       float sat1 = c1.saturation;
       float sat2 = c2.saturation;
-      float bright1 = c1.brightness;
-      float bright2 = c2.brightness;
       if (c1.isBlack()) {
         hue1 = hue2;
-        sat1 = 0;
+        sat1 = sat2;
       } else if (c2.isBlack()) {
         hue2 = hue1;
-        sat2 = 0;
+        sat2 = sat1;
       }
       return LXColor.hsb(
         LXUtils.lerpf(hue1, hue2, lerp),
         LXUtils.lerpf(sat1, sat2, lerp),
-        LXUtils.lerpf(bright1, bright2, lerp)
+        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
       );
     }),
 
@@ -222,8 +220,6 @@ public class GradientUtils {
       float hue2 = c2.hue;
       float sat1 = c1.saturation;
       float sat2 = c2.saturation;
-      float bright1 = c1.brightness;
-      float bright2 = c2.brightness;
       if (hue2 - hue1 > 180) {
         hue1 += 360;
       } else if (hue1 - hue2 > 180) {
@@ -231,15 +227,15 @@ public class GradientUtils {
       }
       if (c1.isBlack()) {
         hue1 = hue2;
-        sat1 = 0;
+        sat1 = sat2;
       } else if (c2.isBlack()) {
         hue2 = hue1;
-        sat2 = 0;
+        sat2 = sat1;
       }
       return LXColor.hsb(
         LXUtils.lerpf(hue1, hue2, lerp),
         LXUtils.lerpf(sat1, sat2, lerp),
-        LXUtils.lerpf(bright1, bright2, lerp)
+        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
       );
     });
 
