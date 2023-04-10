@@ -106,9 +106,9 @@ public class GradientUtils {
     }
 
     public void set(LXDynamicColor color, float hueOffset) {
-      int c = color.getColor();
+      final int c = color.getColor();
       this.hue = color.getHuef() + hueOffset;
-      this.saturation = LXColor.s(c);
+      this.saturation = color.getSaturation();
       this.brightness = LXColor.b(c);
       setRGB(LXColor.hsb(this.hue, this.saturation, this.brightness));
     }
