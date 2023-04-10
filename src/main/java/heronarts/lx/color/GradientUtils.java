@@ -136,6 +136,10 @@ public class GradientUtils {
       this.b = that.b;
     }
 
+    public boolean isBlack() {
+      return this.brightness == 0;
+    }
+
     @Override
     public String toString() {
       return String.format("rgb(%d,%d,%d) hsb(%f,%f,%f)", r, g, b, hue, saturation, brightness);
@@ -193,25 +197,53 @@ public class GradientUtils {
     }),
 
     HSV((c1, c2, lerp) -> {
+      float hue1 = c1.hue;
+      float hue2 = c2.hue;
+      float sat1 = c1.saturation;
+      float sat2 = c2.saturation;
+      float bright1 = c1.brightness;
+      float bright2 = c2.brightness;
+      if (c1.isBlack()) {
+        hue1 = hue2;
+        sat1 = 0;
+        bright1 = 0;
+      } else if (c2.isBlack()) {
+        hue2 = hue1;
+        sat2 = 0;
+        bright2 = 0;
+      }
       return LXColor.hsb(
-        LXUtils.lerpf(c1.hue, c2.hue, lerp),
-        LXUtils.lerpf(c1.saturation, c2.saturation, lerp),
-        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
+        LXUtils.lerpf(hue1, hue2, lerp),
+        LXUtils.lerpf(sat1, sat2, lerp),
+        LXUtils.lerpf(bright1, bright2, lerp)
       );
     }),
 
     HSV2((c1, c2, lerp) -> {
       float hue1 = c1.hue;
       float hue2 = c2.hue;
+      float sat1 = c1.saturation;
+      float sat2 = c2.saturation;
+      float bright1 = c1.brightness;
+      float bright2 = c2.brightness;
       if (hue2 - hue1 > 180) {
         hue1 += 360;
       } else if (hue1 - hue2 > 180) {
         hue2 += 360;
       }
+      if (c1.isBlack()) {
+        hue1 = hue2;
+        sat1 = 0;
+        bright1 = 0;
+      } else if (c2.isBlack()) {
+        hue2 = hue1;
+        sat2 = 0;
+        bright2 = 0;
+      }
       return LXColor.hsb(
         LXUtils.lerpf(hue1, hue2, lerp),
-        LXUtils.lerpf(c1.saturation, c2.saturation, lerp),
-        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
+        LXUtils.lerpf(sat1, sat2, lerp),
+        LXUtils.lerpf(bright1, bright2, lerp)
       );
     });
 
