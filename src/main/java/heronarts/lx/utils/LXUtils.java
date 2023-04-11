@@ -113,7 +113,7 @@ public class LXUtils {
     return value;
   }
 
-  public static double wrapnf(float value) {
+  public static float wrapnf(float value) {
     if (value > 1f) {
       return value % 1f;
     } else if (value < 0f) {
@@ -140,7 +140,7 @@ public class LXUtils {
     return value;
   }
 
-  public static double wrapf(float value, float min, float max) {
+  public static float wrapf(float value, float min, float max) {
     if (value > max) {
       return min + (value - max) % (max - min);
     } else if (value < min) {
