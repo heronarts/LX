@@ -414,7 +414,11 @@ public class LXRegistry implements LXSerializable {
         return;
       }
       try {
-        this.instance = clazz.getConstructor().newInstance();
+        try {
+          this.instance = clazz.getConstructor(LX.class).newInstance(lx);
+        } catch (NoSuchMethodException nsmx) {
+          this.instance = clazz.getConstructor().newInstance();
+        }
         this.instance.initialize(lx);
       } catch (Exception x) {
         LX.error(x, "Unhandled exception in plugin initialize: " + clazz.getName());
