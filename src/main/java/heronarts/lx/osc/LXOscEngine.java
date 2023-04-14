@@ -281,6 +281,9 @@ public class LXOscEngine extends LXComponent {
    * @return OSC address
    */
   public static String getOscAddress(LXParameter p) {
+    if (p instanceof LXOscComponent) {
+      return ((LXOscComponent) p).getOscAddress();
+    }
     LXComponent component = p.getParent();
     if (component instanceof LXOscComponent) {
       String componentAddress = component.getOscAddress();
