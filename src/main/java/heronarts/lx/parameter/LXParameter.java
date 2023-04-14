@@ -106,7 +106,7 @@ public interface LXParameter extends LXPath {
       case MIDI_NOTE:
         return MidiNote.getPitchString((int) value);
       case DEGREES:
-        return String.format("%d", (int) value);
+        return String.format("%d\u00B0", (int) value);
       case CLOCK:
         return String.format("%02d", (int) value);
       default:
