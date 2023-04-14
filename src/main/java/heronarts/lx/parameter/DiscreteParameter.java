@@ -38,6 +38,8 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
 
   private IncrementMode incrementMode = IncrementMode.NORMALIZED;
 
+  public final MutableParameter optionsChanged = new MutableParameter();
+
   /**
    * Parameter with values from [0, range-1], 0 by default
    *
@@ -168,7 +170,9 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    */
   public DiscreteParameter setOptions(String[] options) {
     this.options = options;
-    return setRange(options.length);
+    setRange(options.length);
+    this.optionsChanged.bang();
+    return this;
   }
 
   /**

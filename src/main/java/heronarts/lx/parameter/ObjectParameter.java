@@ -47,11 +47,15 @@ public class ObjectParameter<T> extends DiscreteParameter {
    * @return this
    */
   public ObjectParameter<T> setObjects(T[] objects) {
-    this.objects = objects;
     String[] options = new String[objects.length];
     for (int i = 0; i < objects.length; ++i) {
       options[i] = (objects[i] == null) ? "null" : objects[i].toString();
     }
+    return setObjects(objects, options);
+  }
+
+  public ObjectParameter<T> setObjects(T[] objects, String[] options) {
+    this.objects = objects;
     setOptions(options);
     return this;
   }
