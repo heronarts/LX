@@ -23,8 +23,12 @@ public class ObjectParameter<T> extends DiscreteParameter {
   private T[] objects = null;
 
   public ObjectParameter(String label, T[] objects) {
+    this(label, objects, (String[]) null);
+  }
+
+  public ObjectParameter(String label, T[] objects, String[] options) {
     super(label, 0, objects.length);
-    setObjects(objects);
+    setObjects(objects, options);
     setIncrementMode(IncrementMode.RELATIVE);
     setWrappable(true);
   }
@@ -47,15 +51,17 @@ public class ObjectParameter<T> extends DiscreteParameter {
    * @return this
    */
   public ObjectParameter<T> setObjects(T[] objects) {
-    String[] options = new String[objects.length];
-    for (int i = 0; i < objects.length; ++i) {
-      options[i] = (objects[i] == null) ? "null" : objects[i].toString();
-    }
-    return setObjects(objects, options);
+    return setObjects(objects, null);
   }
 
   public ObjectParameter<T> setObjects(T[] objects, String[] options) {
     this.objects = objects;
+    if (options == null) {
+      options = new String[objects.length];
+      for (int i = 0; i < objects.length; ++i) {
+        options[i] = (objects[i] == null) ? "null" : objects[i].toString();
+      }
+    }
     setOptions(options);
     return this;
   }

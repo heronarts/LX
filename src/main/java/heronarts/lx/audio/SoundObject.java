@@ -252,7 +252,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
   public static class Selector extends ObjectParameter<SoundObject> {
 
     public Selector(String label) {
-      super(label, objects);
+      super(label, objects, options);
       selectors.add(this);
     }
 
