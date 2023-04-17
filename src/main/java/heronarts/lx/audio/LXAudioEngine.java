@@ -26,6 +26,7 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.MutableParameter;
 
 public class LXAudioEngine extends LXModulatorComponent implements LXOscComponent {
 
@@ -36,6 +37,17 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
   public final BooleanParameter expandedPerformance =
     new BooleanParameter("Enabled", true)
     .setDescription("Whether the audio pane is expanded in performance mode");
+
+  /**
+   * Sound objects are modulators, which are restored *after* the mixer and channel
+   * engines. However, patterns + effects etc. may make reference to SoundObject.Selector,
+   * which needs to know the total number of sound objects that are going to exist. So we
+   * track and restore that number here. When the sound objects are actually instantiated,
+   * their names will be restored to the selector.
+   */
+  final MutableParameter numSoundObjects = (MutableParameter)
+    new MutableParameter("Sound Objects", 0)
+    .setDescription("Number of registered sound objects");
 
   /**
    * Audio input object
@@ -58,6 +70,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     addParameter("enabled", this.enabled);
     addParameter("mode", this.mode);
     addParameter("expandedPerformance", this.expandedPerformance);
+    addInternalParameter("numSoundObjects", this.numSoundObjects);
 
     this.mode.setOptions(new String[] { "Input", "Output" });
 
@@ -109,7 +122,9 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
   @Override
   public void load(LX lx, JsonObject obj) {
     this.output.reset();
+    this.numSoundObjects.setValue(0);
     super.load(lx, obj);
+    SoundObject.updateSelectors(lx);
   }
 
 }

@@ -125,15 +125,21 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     addParameter("elevation", this.elevation);
     updateCartesian();
 
+    // A new sound object is created, register it with the audio engine
+    // as an eligible target for the sound object selectors
     soundObjects.add(this);
-    updateSelectors();
+    lx.engine.audio.numSoundObjects.setValue(LXUtils.max(
+      lx.engine.audio.numSoundObjects.getValuei(),
+      soundObjects.size()
+    ));
+    updateSelectors(lx);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.label) {
-      updateSelectors();
+      updateSelectors(this.lx);
     }
   }
 
@@ -215,31 +221,43 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
   @Override
   public void dispose() {
     soundObjects.remove(this);
-    updateSelectors();
+    int numObjects = this.lx.engine.audio.numSoundObjects.getValuei();
+    if (numObjects <= 0) {
+      LX.error("LXAidioEngine sound object count was already 0 upon disposal: " + this);
+    } else {
+      this.lx.engine.audio.numSoundObjects.setValue(numObjects-1);
+    }
+    updateSelectors(this.lx);
     super.dispose();
   }
 
-  private static final SoundObject[] NO_OBJECTS = { null };
-  private static final String[] NO_OPTIONS = { "None" };
+  private static final String NO_OBJECT = "None";
   private static List<SoundObject> soundObjects = new ArrayList<SoundObject>();
-  private static SoundObject[] objects = NO_OBJECTS;
-  private static String[] options = NO_OPTIONS;
+  private static SoundObject[] objects = { null };
+  private static String[] options = { NO_OBJECT };
   private static List<Selector> selectors = new ArrayList<Selector>();
 
-  private static void updateSelectors() {
+  static void updateSelectors(LX lx) {
     Collections.sort(soundObjects);
-    if (soundObjects.isEmpty()) {
-      objects = NO_OBJECTS;
-      options = NO_OPTIONS;
-    } else {
-      objects = soundObjects.toArray(new SoundObject[0]);
-      options = new String[objects.length];
-      for (int i = 0; i < objects.length; ++i) {
-        options[i] = objects[i].getLabel();
-      }
+
+    int numOptions = 1 + lx.engine.audio.numSoundObjects.getValuei();
+    objects = new SoundObject[numOptions];
+    options = new String[numOptions];
+    objects[0] = null;
+    options[0] = NO_OBJECT;
+    int i = 1;
+    for (SoundObject soundObject : soundObjects) {
+      objects[i] = soundObject;
+      options[i] = soundObject.getLabel();
+      ++i;
     }
+
+    // Update all of the selectors to have new range/options
     for (Selector selector : selectors) {
-      SoundObject selected = selector.getObject();
+      // Check if a selector had a non-null selection, if so
+      // it should be restored in the case of renaming/reordering
+      // where it is still in the list but its index may be different
+      final SoundObject selected = selector.getObject();
       selector.setObjects(objects, options);
       if ((selected != null) && soundObjects.contains(selected)) {
         selector.setValue(selected);

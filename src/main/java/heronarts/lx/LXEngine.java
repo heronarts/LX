@@ -376,6 +376,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addChild("clips", this.clips = new LXClipEngine(lx));
     LX.initProfiler.log("Engine: Clips");
 
+    // Audio engine
+    addChild("audio", this.audio = new LXAudioEngine(lx));
+    LX.initProfiler.log("Engine: Audio");
+
     // Mixer engine
     addChild("mixer", this.mixer = new LXMixerEngine(lx));
     LX.initProfiler.log("Engine: Mixer");
@@ -398,10 +402,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Midi engine
     addChild("midi", this.midi = new LXMidiEngine(lx));
     LX.initProfiler.log("Engine: Midi");
-
-    // Audio engine
-    addChild("audio", this.audio = new LXAudioEngine(lx));
-    LX.initProfiler.log("Engine: Audio");
 
     // OSC engine
     addChild("osc", this.osc = new LXOscEngine(lx));

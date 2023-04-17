@@ -18,6 +18,8 @@
 
 package heronarts.lx.parameter;
 
+import java.util.Objects;
+
 public class ObjectParameter<T> extends DiscreteParameter {
 
   private T[] objects = null;
@@ -79,7 +81,7 @@ public class ObjectParameter<T> extends DiscreteParameter {
       throw new UnsupportedOperationException("Cannot setValue with an object unless setObjects() was called");
     }
     for (int i = 0; i < this.objects.length; ++i) {
-      if (this.objects[i].equals(object)) {
+      if (Objects.equals(object, this.objects[i])) {
         return setValue(i);
       }
     }
