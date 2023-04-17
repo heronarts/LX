@@ -85,11 +85,20 @@ public class LXPoint {
   /**
    * Angle of this point about the origin in the x-z plane
    * (right-handed angle of rotation about the Y-axis)
+   *
+   * 0 is pointing straight ahead (+z axis)
+   * HALF_PI is to the right (+x axis)
+   * PI is backwards (-z axis)
+   * 1.5*PI is to the left (-x axis)
    */
   public float azimuth;
 
   /**
    * Angle of this point between the y-value and the x-z plane
+   *
+   * 0 is flat
+   * HALF_PI is upwards (+y axis)
+   * -HALF_PI is downwards (-y axis)
    */
   public float elevation;
 
@@ -327,8 +336,8 @@ public class LXPoint {
     this.rxy = (float) Math.sqrt(x * x + y * y);
     this.rxz = (float) Math.sqrt(x * x + z * z);
     this.theta = (float) ((LX.TWO_PI + Math.atan2(y, x)) % (LX.TWO_PI));
-    this.azimuth = (float) ((LX.TWO_PI + Math.atan2(z, x)) % (LX.TWO_PI));
-    this.elevation = (float) ((LX.TWO_PI + Math.atan2(y, rxz)) % (LX.TWO_PI));
+    this.azimuth = (float) ((LX.TWO_PI + Math.atan2(x, z)) % (LX.TWO_PI));
+    this.elevation = (float) Math.atan2(y, rxz);
     return this;
   }
 
