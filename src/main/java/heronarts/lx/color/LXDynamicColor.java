@@ -19,6 +19,7 @@
 package heronarts.lx.color;
 
 import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.color.GradientUtils.BlendMode;
 import heronarts.lx.modulator.SawLFO;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BoundedParameter;
@@ -35,9 +36,9 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
   private static final int DEFAULT_COLOR = LXColor.RED;
 
   public enum Mode {
-    FIXED("Fixed Color"),
-    OSCILLATE("Oscillate"),
-    CYCLE("Hue Cycle");
+    FIXED("Fixed"),
+    OSCILLATE("Osc"),
+    CYCLE("Cycle");
 
     public final String label;
 
@@ -51,17 +52,12 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
     }
   }
 
-  public enum BlendMode {
-    HSV,
-    RGB;
-  }
-
   public final EnumParameter<Mode> mode =
     new EnumParameter<Mode>("Mode", Mode.FIXED)
     .setDescription("The mode of this color");
 
   public final EnumParameter<BlendMode> blendMode =
-    new EnumParameter<BlendMode>("Blend", BlendMode.HSV)
+    new EnumParameter<BlendMode>("Blend", BlendMode.RGB)
     .setDescription("The blend mode when in oscillation");
 
   public final BoundedParameter period =
@@ -142,14 +138,20 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
   public double getHue() {
     switch (this.mode.getEnum()) {
     case OSCILLATE:
-      switch (this.blendMode.getEnum()) {
+      final BlendMode blendMode = this.blendMode.getEnum();
+      switch (blendMode) {
       case HSV:
-        double hue1 = this.primary.hue.getValue();
-        double hue2 = this.secondary.hue.getValue();
-        if (hue2 < hue1) {
-          hue2 += 360.;
+      case HSVM:
+      case HSVCW:
+      case HSVCCW:
+        float hue1 = this.primary.hue.getValuef();
+        float hue2 = this.secondary.hue.getValuef();
+        if (this.primary.isBlack()) {
+          return hue2;
+        } else if (this.secondary.isBlack()) {
+          return hue1;
         }
-        return LXUtils.lerp(hue1, hue2, getBasis());
+        return blendMode.hueInterpolation.lerp(hue1, hue2, (float) getBasis());
 
       default:
       case RGB:
@@ -160,9 +162,9 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
         } else {
           // 0 brightness! This means one of primary or secondary is black...
           if (getBasis() > 0.5) {
-            return this.secondary.hue.getValue();
+            return this.secondary.hue.getValuef();
           } else {
-            return this.primary.hue.getValue();
+            return this.primary.hue.getValuef();
           }
         }
       }
@@ -195,11 +197,21 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
     case OSCILLATE:
       double lerp = getBasis();
       switch (this.blendMode.getEnum()) {
-      case HSV:
-        return (float) LXUtils.lerp(this.primary.saturation.getValue(), this.secondary.saturation.getValue(), lerp);
-      default:
       case RGB:
         return LXColor.s(LXColor.lerp(this.primary.getColor(), this.secondary.getColor(), lerp));
+      default:
+      case HSV:
+      case HSVM:
+      case HSVCW:
+      case HSVCCW:
+        double sat1 = this.primary.saturation.getValue();
+        double sat2 = this.secondary.saturation.getValue();
+        if (this.primary.isBlack()) {
+          return (float) sat2;
+        } else if (this.secondary.isBlack()) {
+          return (float) sat1;
+        }
+        return (float) LXUtils.lerp(sat1, sat2, lerp);
       }
 
     case CYCLE:
@@ -223,16 +235,15 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
   public int getColor() {
     switch (this.mode.getEnum()) {
     case OSCILLATE:
-      double lerp = getBasis();
-      switch (this.blendMode.getEnum()) {
+      final double lerp = getBasis();
+      final BlendMode blendMode = this.blendMode.getEnum();
+      switch (blendMode) {
       case HSV:
-        double hue1 = this.primary.hue.getValue();
-        double hue2 = this.secondary.hue.getValue();
-        if (hue2 < hue1) {
-          hue2 += 360.;
-        }
+      case HSVM:
+      case HSVCW:
+      case HSVCCW:
         return LXColor.hsb(
-          LXUtils.lerp(hue1, hue2, lerp),
+          blendMode.hueInterpolation.lerp(this.primary.hue.getValuef(), this.secondary.hue.getValuef(), (float) lerp),
           LXUtils.lerp(this.primary.saturation.getValue(), this.secondary.saturation.getValue(), lerp),
           LXUtils.lerp(this.primary.brightness.getValue(), this.secondary.brightness.getValue(), lerp)
         );

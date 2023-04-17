@@ -242,7 +242,6 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     setGradientColor();
     setColorStops();
 
-
     final SourceFunction sourceFunction = this.source.getEnum().lerp;
     final BlendFunction blendFunction = this.blendMode.getEnum().function;
 

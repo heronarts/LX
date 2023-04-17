@@ -184,65 +184,128 @@ public class GradientUtils {
     }
   }
 
-  public interface BlendFunction {
-    public int blend(ColorStop c1, ColorStop c2, float lerp);
+  /**
+   * Hue interpolation modes. Since the hues form a color wheel, there are various
+   * strategies for moving from hue1 to hue2.
+   */
+  public interface HueInterpolation {
+
+    /**
+     * Interpolate between two values
+     *
+     * @param hue1 Source hue
+     * @param hue2 Destination hue
+     * @param lerp Interpolation amount
+     * @return A hue on a path between these two values
+     */
+    public float lerp(float hue1, float hue2, float lerp);
+
+    /**
+     * HSV path always stays within the color wheel of raw values, never crossing
+     * the 360-degree boundary
+     */
+    public static final HueInterpolation HSV = (hue1, hue2, lerp) -> {
+      return LXUtils.lerpf(hue1, hue2, lerp);
+    };
+
+    /**
+     * HSVM takes the minimum path from hue1 to hue2, wrapping around the
+     * 360-degree boundary if it makes for a shorter path
+     */
+    public static final HueInterpolation HSVM = (hue1, hue2, lerp) -> {
+      if (hue2 - hue1 > 180) {
+        hue1 += 360f;
+      } else if (hue1 - hue2 > 180) {
+        hue2 += 360f;
+      }
+      return LXUtils.lerpf(hue1, hue2, lerp);
+    };
+
+    /**
+     * HSVCW takes a clockwise path always, even if it means a longer interpolation
+     * from hue1 to hue2, e.g. [350->340] will go [350->360],[0->340]
+     */
+    public static final HueInterpolation HSVCW = (hue1, hue2, lerp) -> {
+      if (hue2 < hue1) {
+        hue2 += 360f;
+      }
+      return LXUtils.lerpf(hue1, hue2, lerp);
+    };
+
+    /**
+     * HSVCCW takes a counter-clockwise path always, even if it means a longer interpolation
+     * from hue1 to hue2, e.g. [340->350] will go [340->0],[360->350]
+     */
+    public static final HueInterpolation HSVCCW = (hue1, hue2, lerp) -> {
+      if (hue1 < hue2) {
+        hue1 += 360f;
+      }
+      return LXUtils.lerpf(hue1, hue2, lerp);
+    };
   }
 
-  public enum BlendMode {
-    RGB((c1, c2, lerp) -> {
+  /**
+   * A blend function interpolates between two colors
+   */
+  public interface BlendFunction {
+
+    public int blend(ColorStop c1, ColorStop c2, float lerp);
+
+    public static final BlendFunction RGB = (c1, c2, lerp) -> {
       int r = LXUtils.lerpi(c1.r, c2.r, lerp);
       int g = LXUtils.lerpi(c1.g, c2.g, lerp);
       int b = LXUtils.lerpi(c1.b, c2.b, lerp);
       return LXColor.rgba(r, g, b, 255);
-    }),
+    };
 
-    HSV((c1, c2, lerp) -> {
-      float hue1 = c1.hue;
-      float hue2 = c2.hue;
-      float sat1 = c1.saturation;
-      float sat2 = c2.saturation;
-      if (c1.isBlack()) {
-        hue1 = hue2;
-        sat1 = sat2;
-      } else if (c2.isBlack()) {
-        hue2 = hue1;
-        sat2 = sat1;
-      }
-      return LXColor.hsb(
-        LXUtils.lerpf(hue1, hue2, lerp),
-        LXUtils.lerpf(sat1, sat2, lerp),
-        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
-      );
-    }),
+    static BlendFunction _HSV(HueInterpolation hueLerp) {
+      return (c1, c2, lerp) -> {
+        float hue1 = c1.hue;
+        float hue2 = c2.hue;
+        float sat1 = c1.saturation;
+        float sat2 = c2.saturation;
+        if (c1.isBlack()) {
+          hue1 = hue2;
+          sat1 = sat2;
+        } else if (c2.isBlack()) {
+          hue2 = hue1;
+          sat2 = sat1;
+        }
+        return LXColor.hsb(
+          hueLerp.lerp(hue1, hue2, lerp),
+          LXUtils.lerpf(sat1, sat2, lerp),
+          LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
+        );
+      };
+    }
 
-    HSV2((c1, c2, lerp) -> {
-      float hue1 = c1.hue;
-      float hue2 = c2.hue;
-      float sat1 = c1.saturation;
-      float sat2 = c2.saturation;
-      if (hue2 - hue1 > 180) {
-        hue1 += 360;
-      } else if (hue1 - hue2 > 180) {
-        hue2 += 360;
-      }
-      if (c1.isBlack()) {
-        hue1 = hue2;
-        sat1 = sat2;
-      } else if (c2.isBlack()) {
-        hue2 = hue1;
-        sat2 = sat1;
-      }
-      return LXColor.hsb(
-        LXUtils.lerpf(hue1, hue2, lerp),
-        LXUtils.lerpf(sat1, sat2, lerp),
-        LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
-      );
-    });
+    public static final BlendFunction HSV = _HSV(HueInterpolation.HSV);
+    public static final BlendFunction HSVM = _HSV(HueInterpolation.HSVM);
+    public static final BlendFunction HSVCW = _HSV(HueInterpolation.HSVCW);
+    public static final BlendFunction HSVCCW = _HSV(HueInterpolation.HSVCCW);
+  }
 
+  public enum BlendMode {
+
+    RGB("RGB", null, BlendFunction.RGB),
+    HSV("HSV", HueInterpolation.HSV, BlendFunction.HSV),
+    HSVM("HSV-Min", HueInterpolation.HSVM, BlendFunction.HSVM),
+    HSVCW("HSV-CW", HueInterpolation.HSVCW, BlendFunction.HSVCW),
+    HSVCCW("HSV-CCW", HueInterpolation.HSVCCW, BlendFunction.HSVCCW);
+
+    public final String label;
+    public final HueInterpolation hueInterpolation;
     public final BlendFunction function;
 
-    private BlendMode(BlendFunction function) {
+    private BlendMode(String label, HueInterpolation hueInterpolation, BlendFunction function) {
+      this.label = label;
+      this.hueInterpolation = hueInterpolation;
       this.function = function;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
     }
   };
 
