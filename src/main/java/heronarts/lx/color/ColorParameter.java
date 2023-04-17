@@ -109,6 +109,10 @@ public class ColorParameter extends AggregateParameter {
     return this;
   }
 
+  public boolean isBlack() {
+    return this.brightness.getValue() == 0;
+  }
+
   public String getHexString() {
     return String.format("0x%08x", this.color);
   }
