@@ -46,6 +46,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.TriggerParameter;
+import heronarts.lx.snapshot.LXSnapshot.ParameterView;
 import heronarts.lx.snapshot.LXSnapshot.View;
 import heronarts.lx.utils.LXUtils;
 
@@ -668,6 +669,40 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return views;
   }
 
+  public List<LXSnapshot.View> findSnapshotParameterViews(LXParameter parameter) {
+    List<LXSnapshot.View> views = null;
+    for (LXGlobalSnapshot snapshot : this.snapshots) {
+      views = findSnapshotParameterViews(views, parameter, snapshot);
+    }
+    for (LXBus bus : this.lx.engine.mixer.channels) {
+      findSnapshotParameterViews(views, parameter, bus);
+    }
+    findSnapshotParameterViews(views, parameter, this.lx.engine.mixer.masterBus);
+    return views;
+  }
+
+  private List<LXSnapshot.View> findSnapshotParameterViews(List<LXSnapshot.View> views, LXParameter parameter, LXBus bus) {
+    for (LXClip clip : bus.clips) {
+      if (clip != null) {
+        views = findSnapshotParameterViews(views, parameter, clip.snapshot);
+      }
+    }
+    return views;
+  }
+
+  private List<LXSnapshot.View> findSnapshotParameterViews(List<LXSnapshot.View> views, LXParameter parameter, LXSnapshot snapshot) {
+    for (LXSnapshot.View view : snapshot.views) {
+      if ((view instanceof ParameterView) && (((ParameterView) view).getParameter() == parameter)) {
+        if (views == null) {
+          views = new ArrayList<LXSnapshot.View>();
+        }
+        views.add(view);
+      }
+    }
+    return views;
+  }
+
+
   /**
    * Remove all snapshot views that reference the given component
    *
@@ -675,6 +710,20 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
    */
   public void removeSnapshotViews(LXComponent component) {
     List<LXSnapshot.View> removeViews = findSnapshotViews(component);
+    if (removeViews != null) {
+      for (LXSnapshot.View view : removeViews) {
+        view.getSnapshot().removeView(view);
+      }
+    }
+  }
+
+  /**
+   * Remove all snapshot views that reference the given parameter
+   *
+   * @param component Component that is referenced
+   */
+  public void removeSnapshotParameterViews(LXParameter parameter) {
+    List<LXSnapshot.View> removeViews = findSnapshotParameterViews(parameter);
     if (removeViews != null) {
       for (LXSnapshot.View view : removeViews) {
         view.getSnapshot().removeView(view);

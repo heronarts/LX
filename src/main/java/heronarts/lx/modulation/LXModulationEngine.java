@@ -189,6 +189,36 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     return found;
   }
 
+  private <T extends LXParameterModulation> List<T> findParameterModulations(LXParameter parameter, List<T> modulations) {
+    List<T> found = null;
+    for (T modulation : modulations) {
+      if ((modulation.source == parameter) || (modulation.target == parameter)) {
+        if (found == null) {
+          found = new ArrayList<T>();
+        }
+        found.add(modulation);
+      }
+    }
+    return found;
+  }
+
+  public LXModulationEngine removeParameterModulations(LXParameter parameter) {
+    List<LXCompoundModulation> compounds = findParameterModulations(parameter, this.modulations);
+    if (compounds != null) {
+      for (LXCompoundModulation compound : compounds) {
+        removeModulation(compound);
+      }
+    }
+    List<LXTriggerModulation> triggers = findParameterModulations(parameter, this.triggers);
+    if (triggers != null) {
+      for (LXTriggerModulation trigger : triggers) {
+        removeTrigger(trigger);
+      }
+    }
+    return this;
+  }
+
+
   public LXModulationEngine removeModulations(LXComponent component) {
     List<LXCompoundModulation> compounds = findModulations(component, this.modulations);
     if (compounds != null) {

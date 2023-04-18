@@ -865,6 +865,19 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return this;
   }
 
+  private List<LXMidiMapping> findParameterMappings(LXParameter parameter) {
+    List<LXMidiMapping> found = null;
+    for (LXMidiMapping mapping : this.mappings) {
+      if (parameter == mapping.parameter) {
+        if (found == null) {
+          found = new ArrayList<LXMidiMapping>();
+        }
+        found.add(mapping);
+      }
+    }
+    return found;
+  }
+
   public List<LXMidiMapping> findMappings(LXComponent component) {
     List<LXMidiMapping> found = null;
     for (LXMidiMapping mapping : this.mappings) {
@@ -876,6 +889,23 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       }
     }
     return found;
+  }
+
+  /**
+   * Called when an individual parameter is disposed. Remove any
+   * midi mappings pointing to the now-nonexistent parameter.
+   *
+   * @param parameter Parameter that doesn't exist anymore
+   * @return this
+   */
+  public LXMidiEngine removeParameterMappings(LXParameter parameter) {
+    List<LXMidiMapping> remove = findParameterMappings(parameter);
+    if (remove != null) {
+      for (LXMidiMapping mapping : remove) {
+        removeMapping(mapping);
+      }
+    }
+    return this;
   }
 
   /**

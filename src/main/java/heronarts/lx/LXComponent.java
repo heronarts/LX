@@ -1074,11 +1074,23 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @return this
    */
   protected LXComponent removeParameter(String path) {
+    return removeParameter(path, false);
+  }
+
+  /**
+   * Removes a parameter from the component. The parameter will be automatically disposed
+   * and may never be used again.
+   *
+   * @param path Parameter path
+   * @param removeModulations Whether to also explicitly remove modulations to this parameter
+   * @return this
+   */
+  protected LXComponent removeParameter(String path, boolean removeModulations) {
     LXParameter parameter = this.parameters.get(path);
     if (parameter == null) {
       throw new IllegalStateException("Cannot remove parameter at non-existent path: " + path + " " + this);
     }
-    return removeParameter(parameter);
+    return removeParameter(parameter, removeModulations);
   }
 
   /**
@@ -1089,6 +1101,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @return this
    */
   protected LXComponent removeParameter(LXParameter parameter) {
+    return removeParameter(parameter, false);
+  }
+
+  protected LXComponent removeParameter(LXParameter parameter, boolean disposeModulations) {
     if (parameter.getParent() != this) {
       throw new IllegalStateException("Cannot remove parameter not owned by component");
     }
@@ -1098,6 +1114,25 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         ((LXListenableParameter) parameter).removeListener(this.oscListener);
       }
     }
+
+    // Explicitly dispose of modulations for this one off parameter
+    if (disposeModulations) {
+      // Remove modulations from any containers up the chain
+      LXComponent parent = getParent();
+      while ((parent != null) && (parent != this.lx.engine)) {
+        if (parent instanceof LXModulationContainer) {
+          ((LXModulationContainer) parent).getModulationEngine().removeParameterModulations(parameter);
+        }
+        parent = parent.getParent();
+      }
+
+      // The global midi, modulation, and snapshot engines need to know we're gone
+      this.lx.engine.midi.removeParameterMappings(parameter);
+      this.lx.engine.modulation.removeParameterModulations(parameter);
+      this.lx.engine.snapshots.removeSnapshotParameterViews(parameter);
+    }
+
+
     this.parameters.remove(parameter.getPath());
     parameter.dispose();
     return this;

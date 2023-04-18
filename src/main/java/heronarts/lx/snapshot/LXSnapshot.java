@@ -277,6 +277,10 @@ public abstract class LXSnapshot extends LXComponent {
       }
     }
 
+    public LXParameter getParameter() {
+      return this.parameter;
+    }
+
     @Override
     protected boolean isDependentOf(LXComponent component) {
       return component.contains(this.parameter);

@@ -149,6 +149,7 @@ public class LX {
     PROJECTS("Projects"),
     MODELS("Models"),
     PRESETS("Presets"),
+    SCRIPTS("Scripts"),
     LOGS("Logs"),
     DELETED("Deleted");
 
