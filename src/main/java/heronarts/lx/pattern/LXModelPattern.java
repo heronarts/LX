@@ -23,10 +23,14 @@ import heronarts.lx.LXModelComponent;
 import heronarts.lx.model.LXModel;
 
 /**
- * Templatized version of the LXPattern class, which strongly types a particular model.
+ * Templatized version of the LXPattern class, which strongly types a particular model. This class
+ * is offered for legacy support but its use is discouraged, as it does not work well with
+ * dynamic models or dynamic view selection via the LXView mechanism.
  *
  * @param <T> Type of LXModel class that is always expected
+ * @deprecated No longer recommended, does not play nicely with dynamic models and view selection
  */
+@Deprecated
 public abstract class LXModelPattern<T extends LXModel> extends LXPattern {
 
   protected T model;
