@@ -33,8 +33,7 @@ public class EnumParameter<T> extends ObjectParameter<T> {
   }
 
   public EnumParameter(String label, T t) {
-    super(label, valuesFor(t));
-    setValue(t);
+    super(label, valuesFor(t), t);
   }
 
   @Override
