@@ -22,22 +22,37 @@ import java.util.Objects;
 
 public class ObjectParameter<T> extends DiscreteParameter {
 
+  private static <T> int defaultValue(T value, T[] objects) {
+    if (value == null) {
+      return 0;
+    }
+    for (int i = 0; i < objects.length; ++i) {
+      if (value == objects[i]) {
+        return i;
+      }
+    }
+    throw new IllegalArgumentException("The ObjectParameter value is not present in the objects[]: " + value);
+  }
+
   private T[] objects = null;
 
   public ObjectParameter(String label, T[] objects) {
-    this(label, objects, (String[]) null);
-  }
-
-  public ObjectParameter(String label, T[] objects, String[] options) {
-    super(label, 0, objects.length);
-    setObjects(objects, options);
-    setIncrementMode(IncrementMode.RELATIVE);
-    setWrappable(true);
+    this(label, objects, null, (String[]) null);
   }
 
   public ObjectParameter(String label, T[] objects, T value) {
-    this(label, objects);
-    setValue(value);
+    this(label, objects, value, (String[]) null);
+  }
+
+  public ObjectParameter(String label, T[] objects, String[] options) {
+    this(label, objects, null, options);
+  }
+
+  public ObjectParameter(String label, T[] objects, T value, String[] options) {
+    super(label, defaultValue(value, objects), 0, objects.length);
+    setObjects(objects, options);
+    setIncrementMode(IncrementMode.RELATIVE);
+    setWrappable(true);
   }
 
   @Override
