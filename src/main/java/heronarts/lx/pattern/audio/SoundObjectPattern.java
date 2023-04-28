@@ -38,30 +38,47 @@ public class SoundObjectPattern extends LXPattern {
 
   public final CompoundParameter baseSize =
     new CompoundParameter("Base", .1)
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED);
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Base Size of the sound object");
 
   public final CompoundParameter fadePercent =
     new CompoundParameter("Fade", .5)
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED);
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Percentage of the size which fades out");
+
+  public final CompoundParameter modulationInput =
+    new CompoundParameter("Mod", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Manual modulation input");
+
+  public final CompoundParameter modulationAmount =
+    new CompoundParameter("M>Lev", 0, -1, 1)
+    .setPolarity(CompoundParameter.Polarity.BIPOLAR)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Amount of modulation input applied to level");
 
   public final CompoundParameter levelToSize =
     new CompoundParameter("Lev>Sz", .5)
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED);
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Amount by which signal level modulates orb size");
 
   public final CompoundParameter levelToBrt =
     new CompoundParameter("Lev>Brt", 0)
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED);
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Amount by which signal level modulates overall brightness");
 
   public final CompoundParameter scopeAmount =
     new CompoundParameter("ScpAmt", 0)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Amount of audio scope modulation");
+    .setDescription("Amount of audio scope modulation, modulating brightness by input history");
 
   public final CompoundParameter scopeTimeMs =
     new CompoundParameter("ScpTim", 2000, 100, MAX_SCOPE_MS)
-    .setUnits(CompoundParameter.Units.MILLISECONDS);
+    .setExponent(2)
+    .setUnits(CompoundParameter.Units.MILLISECONDS)
+    .setDescription("Total amount of time of scope history");
 
-  private static final int MAX_SCOPE_MS = 10000;
+  private static final int MAX_SCOPE_MS = 30000;
 
   private final double[] scope = new double[MAX_SCOPE_MS];
   private int scopeIndex = 0;
@@ -70,6 +87,8 @@ public class SoundObjectPattern extends LXPattern {
     super(lx);
     addParameter("baseSize", this.baseSize);
     addParameter("fadePercent", this.fadePercent);
+    addParameter("modulationInput", this.modulationInput);
+    addParameter("modulationAmount", this.modulationAmount);
     addParameter("levelToSize", this.levelToSize);
     addParameter("levelToBrt", this.levelToBrt);
     addParameter("scopeAmount", this.scopeAmount);
@@ -82,18 +101,20 @@ public class SoundObjectPattern extends LXPattern {
   @Override
   protected void run(double deltaMs) {
     double sx = .5, sy = .5, sz = .5;
-    double size = 0;
-    double level = 0;
+    double size = this.baseSize.getValue();
+    double level = this.modulationInput.getValue() * this.modulationAmount.getValue();
 
     // Get sound object data
     final SoundObject soundObject = this.selector.getObject();
     if (soundObject != null) {
-      level = soundObject.getValue();
-      size = this.baseSize.getValue() + this.levelToSize.getValue() * level;
+      level += soundObject.getValue();
+      size += this.levelToSize.getValue() * level;
       sx = soundObject.getX();
       sy = soundObject.getY();
       sz = soundObject.getZ();
     }
+
+    level = LXUtils.constrain(level, 0, 1);
 
     // Fill in the scope
     int scopeSteps = (int) deltaMs;
