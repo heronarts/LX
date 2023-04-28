@@ -252,7 +252,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
       }
       return Stage.OFF;
     case SUSTAIN:
-      this.releaseFrom = this.sustain.getValue();
+      this.releaseFrom = sustainValue();
       return Stage.RELEASE;
     case RELEASE:
     default:
