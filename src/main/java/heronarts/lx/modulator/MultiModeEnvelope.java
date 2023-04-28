@@ -19,6 +19,7 @@
 package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
+import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
@@ -27,6 +28,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -149,6 +151,10 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     new DiscreteParameter("Range", 127, 1, 129)
     .setDescription("MIDI note range, including the base note and above");
 
+  public final EnumParameter<LXMidiEngine.Channel> midiChannel =
+    new EnumParameter<LXMidiEngine.Channel>("MIDI Channel", LXMidiEngine.Channel.OMNI)
+    .setDescription("Determines which MIDI channels are responded to");
+
   public final BooleanParameter midiLegato =
     new BooleanParameter("Legato", false)
     .setDescription("Whether to skip retrigger on legato midi notes");
@@ -188,6 +194,7 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     addParameter("midiNoteResponse", this.midiNoteResponse);
     addParameter("midiMinNote", this.midiMinNote);
     addParameter("midiNoteRange", this.midiNoteRange);
+    addParameter("midiChannel", this.midiChannel);
     addParameter("midiLegato", this.midiLegato);
   }
 
@@ -221,7 +228,14 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     return this.targetTrigger;
   }
 
-  private boolean isValidNote(MidiNote note) {
+  private boolean isActiveMidiNote(MidiNote note) {
+    return
+      this.midiEnabled.isOn() &&
+      this.midiChannel.getEnum().matches(note) &&
+      isValidMidiNoteNumber(note);
+  }
+
+  private boolean isValidMidiNoteNumber(MidiNote note) {
     int pitch = note.getPitch();
     int min = this.midiMinNote.getValuei();
     int max = min + this.midiNoteRange.getValuei();
@@ -233,7 +247,7 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
 
   @Override
   public void noteOnReceived(MidiNoteOn note) {
-    if (this.midiEnabled.isOn() && isValidNote(note)) {
+    if (isActiveMidiNote(note)) {
       ++this.midiLegatoCount;
       boolean legato = this.midiLegato.isOn();
       if (legato && (this.midiLegatoCount > 1)) {
@@ -274,7 +288,7 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
 
   @Override
   public void noteOffReceived(MidiNote note) {
-    if (this.midiEnabled.isOn() && isValidNote(note)) {
+    if (isActiveMidiNote(note)) {
       this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
       if (this.midiLegatoCount == 0) {
         this.engage.setValue(false);
