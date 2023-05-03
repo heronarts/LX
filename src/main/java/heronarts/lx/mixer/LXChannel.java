@@ -1055,6 +1055,11 @@ public class LXChannel extends LXAbstractChannel {
   @Override
   public void dispose() {
     disposeClips();
+
+    // Clear pattern state before disposing of patterns
+    this.activePatternIndex = this.nextPatternIndex = NO_PATTERN_INDEX;
+    this.focusedPattern.setValue(0);
+
     for (LXPattern pattern : this.mutablePatterns) {
       pattern.dispose();
     }
