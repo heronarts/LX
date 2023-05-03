@@ -249,33 +249,85 @@ public class GradientUtils {
    */
   public interface BlendFunction {
 
+    /**
+     * Blend between colors specified as gradient color stops, not necessarily
+     * backed by any parameters
+     *
+     * @param c1 Source color
+     * @param c2 Destination color
+     * @param lerp Blend amount
+     * @return Blended color
+     */
     public int blend(ColorStop c1, ColorStop c2, float lerp);
 
-    public static final BlendFunction RGB = (c1, c2, lerp) -> {
-      int r = LXUtils.lerpi(c1.r, c2.r, lerp);
-      int g = LXUtils.lerpi(c1.g, c2.g, lerp);
-      int b = LXUtils.lerpi(c1.b, c2.b, lerp);
-      return LXColor.rgba(r, g, b, 255);
+    /**
+     * Blend between colors specified by color parameters.
+     *
+     * @param c1 Source color
+     * @param c2 Destination color
+     * @param lerp Blend amount
+     * @return Blended color
+     */
+    public int blend(ColorParameter c1, ColorParameter c2, float lerp);
+
+    public static final BlendFunction RGB = new BlendFunction() {
+
+      public int blend(ColorStop c1, ColorStop c2, float lerp) {
+        int r = LXUtils.lerpi(c1.r, c2.r, lerp);
+        int g = LXUtils.lerpi(c1.g, c2.g, lerp);
+        int b = LXUtils.lerpi(c1.b, c2.b, lerp);
+        return LXColor.rgba(r, g, b, 255);
+      }
+
+      @Override
+      public int blend(ColorParameter c1, ColorParameter c2, float lerp) {
+        return LXColor.lerp(c1.getColor(), c2.getColor(), lerp);
+      }
+
     };
 
     static BlendFunction _HSV(HueInterpolation hueLerp) {
-      return (c1, c2, lerp) -> {
-        float hue1 = c1.hue;
-        float hue2 = c2.hue;
-        float sat1 = c1.saturation;
-        float sat2 = c2.saturation;
-        if (c1.isBlack()) {
-          hue1 = hue2;
-          sat1 = sat2;
-        } else if (c2.isBlack()) {
-          hue2 = hue1;
-          sat2 = sat1;
+      return new BlendFunction() {
+        public int blend(ColorStop c1, ColorStop c2, float lerp) {
+          float hue1 = c1.hue;
+          float hue2 = c2.hue;
+          float sat1 = c1.saturation;
+          float sat2 = c2.saturation;
+          if (c1.isBlack()) {
+            hue1 = hue2;
+            sat1 = sat2;
+          } else if (c2.isBlack()) {
+            hue2 = hue1;
+            sat2 = sat1;
+          }
+          return LXColor.hsb(
+            hueLerp.lerp(hue1, hue2, lerp),
+            LXUtils.lerpf(sat1, sat2, lerp),
+            LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
+          );
         }
-        return LXColor.hsb(
-          hueLerp.lerp(hue1, hue2, lerp),
-          LXUtils.lerpf(sat1, sat2, lerp),
-          LXUtils.lerpf(c1.brightness, c2.brightness, lerp)
-        );
+
+        @Override
+        public int blend(ColorParameter c1, ColorParameter c2, float lerp) {
+          float hue1, hue2, sat1, sat2;
+          if (c1.isBlack()) {
+            hue1 = hue2 = c2.hue.getValuef();
+            sat1 = sat2 = c2.saturation.getValuef();
+          } else if (c2.isBlack()) {
+            hue2 = hue1 = c1.hue.getValuef();
+            sat2 = sat1 = c1.saturation.getValuef();;
+          } else {
+            hue1 = c1.hue.getValuef();
+            hue2 = c2.hue.getValuef();
+            sat1 = c1.saturation.getValuef();
+            sat2 = c2.saturation.getValuef();
+          }
+          return LXColor.hsb(
+            hueLerp.lerp(hue1, hue2, lerp),
+            LXUtils.lerpf(sat1, sat2, lerp),
+            LXUtils.lerpf(c1.brightness.getValuef(), c2.brightness.getValuef(), lerp)
+          );
+        }
       };
     }
 

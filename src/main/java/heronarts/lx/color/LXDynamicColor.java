@@ -195,11 +195,7 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
   public float getSaturation() {
     switch (this.mode.getEnum()) {
     case OSCILLATE:
-      double lerp = getBasis();
       switch (this.blendMode.getEnum()) {
-      case RGB:
-        return LXColor.s(LXColor.lerp(this.primary.getColor(), this.secondary.getColor(), lerp));
-      default:
       case HSV:
       case HSVM:
       case HSVCW:
@@ -211,8 +207,24 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
         } else if (this.secondary.isBlack()) {
           return (float) sat1;
         }
-        return (float) LXUtils.lerp(sat1, sat2, lerp);
+        return (float) LXUtils.lerp(sat1, sat2, getBasis());
+
+      default:
+      case RGB:
+        int c = getColor();
+        float b = LXColor.b(c);
+        if (b > 0) {
+          return LXColor.s(c);
+        } else {
+          // 0 brightness! This means one of primary or secondary is black...
+          if (getBasis() > 0.5) {
+            return this.secondary.saturation.getValuef();
+          } else {
+            return this.primary.saturation.getValuef();
+          }
+        }
       }
+
 
     case CYCLE:
       return this.color.saturation.getValuef();
@@ -235,22 +247,7 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
   public int getColor() {
     switch (this.mode.getEnum()) {
     case OSCILLATE:
-      final double lerp = getBasis();
-      final BlendMode blendMode = this.blendMode.getEnum();
-      switch (blendMode) {
-      case HSV:
-      case HSVM:
-      case HSVCW:
-      case HSVCCW:
-        return LXColor.hsb(
-          blendMode.hueInterpolation.lerp(this.primary.hue.getValuef(), this.secondary.hue.getValuef(), (float) lerp),
-          LXUtils.lerp(this.primary.saturation.getValue(), this.secondary.saturation.getValue(), lerp),
-          LXUtils.lerp(this.primary.brightness.getValue(), this.secondary.brightness.getValue(), lerp)
-        );
-      default:
-      case RGB:
-        return LXColor.lerp(this.primary.getColor(), this.secondary.getColor(), lerp);
-      }
+      return this.blendMode.getEnum().function.blend(this.primary, this.secondary, (float) getBasis());
 
     case CYCLE:
       return LXColor.hsb(

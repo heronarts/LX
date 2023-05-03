@@ -58,11 +58,6 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     public void swatchMoved(LXPalette palette, LXSwatch swatch);
   }
 
-  public enum TransitionMode {
-    HSV,
-    RGB
-  };
-
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXSwatch> mutableSwatches = new ArrayList<LXSwatch>();
@@ -124,8 +119,8 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     new BooleanParameter("Transitions", false)
     .setDescription("When enabled, transitions between color palettes use interpolation");
 
-  public final EnumParameter<TransitionMode> transitionMode =
-    new EnumParameter<TransitionMode>("Transition Mode", TransitionMode.RGB)
+  public final EnumParameter<GradientUtils.BlendMode> transitionMode =
+    new EnumParameter<GradientUtils.BlendMode>("Transition Mode", GradientUtils.BlendMode.RGB)
     .setDescription("Which color blending mode transitions should use.");
 
   public final BooleanParameter expandedPerformance =
@@ -498,43 +493,11 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   }
 
   private void _transitionColor(LXDynamicColor color, int i, float lerp) {
-    ColorParameter fromColor = this.transitionFrom.getColor(i).primary;
-    ColorParameter toColor = this.transitionTo.getColor(i).primary;
-
-    switch (this.transitionMode.getEnum()) {
-    case HSV:
-      float fromHue = fromColor.hue.getValuef();
-      float toHue = toColor.hue.getValuef();
-      float fromSat = fromColor.saturation.getValuef();
-      float toSat = toColor.saturation.getValuef();
-      if (toHue - fromHue > 180) {
-        fromHue += 360;
-      } else if (fromHue - toHue > 180) {
-        toHue += 360;
-      }
-      if (fromColor.isBlack()) {
-        fromHue = toHue;
-        fromSat = toSat;
-      } else if (toColor.isBlack()) {
-        toHue = fromHue;
-        toSat = fromSat;
-      }
-      color.primary.setColor(LXColor.hsb(
-        LXUtils.lerpf(fromHue, toHue, lerp),
-        LXUtils.lerpf(fromSat, toSat, lerp),
-        LXUtils.lerpf(fromColor.brightness.getValuef(), toColor.brightness.getValuef(), lerp)
-      ));
-      break;
-
-    default:
-    case RGB:
-      color.primary.setColor(LXColor.lerp(
-        fromColor.getColor(),
-        toColor.getColor(),
-        lerp
-      ));
-      break;
-    }
+    color.primary.setColor(this.transitionMode.getEnum().function.blend(
+      this.transitionFrom.getColor(i).primary,
+      this.transitionTo.getColor(i).primary,
+      lerp
+    ));
   }
 
   /**
