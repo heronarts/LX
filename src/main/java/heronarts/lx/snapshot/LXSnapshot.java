@@ -39,6 +39,7 @@ import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -71,7 +72,8 @@ public abstract class LXSnapshot extends LXComponent {
     EFFECTS,
     OUTPUT,
     MODULATION,
-    GLOBAL;
+    GLOBAL,
+    MASTER;
   }
 
   /**
@@ -519,8 +521,16 @@ public abstract class LXSnapshot extends LXComponent {
   public abstract void initialize();
 
   protected void initializeBus(LXBus bus) {
-    // Top-level bus settings
+    if (bus instanceof LXMasterBus) {
+      // The master bus fader is just like a normal parameter, but it lives
+      // in the MASTER section
+      addParameterView(ViewScope.MASTER, bus.fader);
+    }
+
     if (bus instanceof LXAbstractChannel) {
+      // But channel faders work in conjunction with the channel
+      // enabled state, which is more complex, so we use the
+      // special ChannelFaderView here
       LXAbstractChannel channel = (LXAbstractChannel) bus;
       addView(new ChannelFaderView(channel));
       addParameterView(ViewScope.MIXER, channel.crossfadeGroup);

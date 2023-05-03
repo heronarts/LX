@@ -94,6 +94,7 @@ public abstract class LXOutput extends LXComponent {
    */
   public final CompoundParameter brightness =
     new CompoundParameter("Brightness", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Level of the output");
 
   /**

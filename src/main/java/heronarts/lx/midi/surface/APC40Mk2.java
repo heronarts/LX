@@ -780,7 +780,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   public final BooleanParameter masterFaderEnabled =
     new BooleanParameter("Master Fader", true)
-    .setDescription("Whether the master fader for output brightness is enabled");
+    .setDescription("Whether the master fader is enabled");
 
   public final BooleanParameter crossfaderEnabled =
     new BooleanParameter("Crossfader", true)
@@ -1766,7 +1766,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       return;
     case MASTER_FADER:
       if (this.masterFaderEnabled.isOn()) {
-        this.lx.engine.output.brightness.setNormalized(cc.getNormalized());
+        this.lx.engine.mixer.masterBus.fader.setNormalized(cc.getNormalized());
       }
       return;
     case CROSSFADER:

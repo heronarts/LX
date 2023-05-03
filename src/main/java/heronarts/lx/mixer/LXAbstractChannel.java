@@ -33,7 +33,6 @@ import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXView;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
@@ -114,11 +113,6 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   public final BooleanParameter auxActive =
     new BooleanParameter("Aux", false)
     .setDescription("Toggles the channel AUX state, determining whether it is shown in the auxiliary window");
-
-  public final CompoundParameter fader =
-    new CompoundParameter("Fader", 1)
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Sets the alpha level of the output of this channel");
 
   /**
    * Whether this channel should listen to MIDI events
@@ -220,7 +214,6 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("enabled", this.enabled);
     addParameter("cue", this.cueActive);
     addParameter("aux", this.auxActive);
-    addParameter("fader", this.fader);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
     addParameter("midiMonitor", this.midiMonitor);

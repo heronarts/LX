@@ -145,8 +145,12 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     new BooleanParameter("Modulation", true)
     .setDescription("Whether global modulation settings are recalled");
 
+  public final BooleanParameter recallMaster =
+    new BooleanParameter("Master", true)
+    .setDescription("Whether master fader settings are recalled");
+
   public final BooleanParameter recallOutput =
-    new BooleanParameter("Output", true)
+    new BooleanParameter("Output", false)
     .setDescription("Whether output settings are recalled");
 
   public final EnumParameter<MissingChannelMode> missingChannelMode =
@@ -236,6 +240,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     addParameter("recallModulation", this.recallModulation);
     addParameter("recallPattern", this.recallPattern);
     addParameter("recallEffect", this.recallEffect);
+    addParameter("recallMaster", this.recallMaster);
     addParameter("recallOutput", this.recallOutput);
     addParameter("channelMode", this.channelMode);
     addParameter("missingChannelMode", this.missingChannelMode);
@@ -446,6 +451,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     final boolean effect = this.recallEffect.isOn();
     final boolean modulation = this.recallModulation.isOn();
     final boolean output = this.recallOutput.isOn();
+    final boolean master = this.recallMaster.isOn();
 
     boolean transition = false;
     this.autoCycleProgress = 0;
@@ -470,7 +476,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
 
     for (View view : this.recallViews) {
-      if (view.activeFlag = isValidView(view, mixer, pattern, effect, modulation, output)) {
+      if (view.activeFlag = isValidView(view, mixer, pattern, effect, modulation, output, master)) {
         if (transition) {
           view.startTransition();
         } else {
@@ -488,7 +494,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return true;
   }
 
-  private boolean isValidView(View view, boolean mixer, boolean pattern, boolean effect, boolean modulation, boolean output) {
+  private boolean isValidView(View view, boolean mixer, boolean pattern, boolean effect, boolean modulation, boolean output, boolean master) {
     if (!view.enabled.isOn()) {
       return false;
     }
@@ -505,6 +511,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       return mixer;
     case GLOBAL:
       return true;
+    case MASTER:
+      return master;
     }
     return false;
   }

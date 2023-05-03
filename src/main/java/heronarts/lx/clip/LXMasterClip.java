@@ -23,12 +23,14 @@ import heronarts.lx.LX;
 public class LXMasterClip extends LXClip {
   public LXMasterClip(LX lx, int index) {
     super(lx, lx.engine.mixer.masterBus, index);
+    lx.engine.mixer.masterBus.fader.addListener(this.parameterRecorder);
     lx.engine.mixer.crossfader.addListener(this.parameterRecorder);
     registerComponent(lx.engine.palette);
   }
 
   @Override
   public void dispose() {
+    lx.engine.mixer.masterBus.fader.removeListener(this.parameterRecorder);
     lx.engine.mixer.crossfader.removeListener(this.parameterRecorder);
     super.dispose();
   }

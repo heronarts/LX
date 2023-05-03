@@ -1041,7 +1041,7 @@ public class APCmini extends LXMidiSurface implements LXMidiSurface.Bidirectiona
     int number = cc.getCC();
     switch (number) {
     case MASTER_FADER:
-      this.lx.engine.output.brightness.setNormalized(cc.getNormalized());
+      this.lx.engine.mixer.masterBus.fader.setNormalized(cc.getNormalized());
       return;
     }
 

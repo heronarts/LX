@@ -30,6 +30,8 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.CompoundParameter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -75,6 +77,14 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   }
 
   /**
+   * Level fader for this bus
+   */
+  public final CompoundParameter fader =
+    new CompoundParameter("Fader", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Sets the alpha level of the output of this channel");
+
+  /**
    * Arms the channel for clip recording.
    */
   public final BooleanParameter arm =
@@ -112,6 +122,7 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
   LXBus(LX lx, String label) {
     super(lx, label);
     addArray("effect", this.effects);
+    addParameter("fader", this.fader);
     addArray("clip", this.clips);
     addParameter("arm", this.arm);
     addParameter("selected", this.selected);

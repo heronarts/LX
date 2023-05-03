@@ -19,6 +19,7 @@
 package heronarts.lx.mixer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -834,11 +835,15 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       this.destination = destination;
       this.output = output;
 
-      // We need to splat the output array right away. Channels may have views applied
-      // which mean blend calls might not touch all the pixels. So we've got to get them
-      // all re-initted upfront.
-      System.arraycopy(this.destination, 0, this.output, 0, this.destination.length);
-      this.destination = this.output;
+      if (this.destination == this.output) {
+        LX.error(new Exception("BlendStack initialized with the same destination/output"));
+      } else {
+        // We need to splat the output array right away. Channels may have views applied
+        // which mean blend calls might not touch all the pixels. So we've got to get them
+        // all re-initted upfront.
+        System.arraycopy(this.destination, 0, this.output, 0, this.destination.length);
+        this.destination = this.output;
+      }
     }
 
     void blend(LXBlend blend, BlendStack that, double alpha, LXModel model) {
@@ -1042,13 +1047,29 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       this.blendStackMain.blend(this.addBlend, this.blendStackRight, Math.min(1, 2. * crossfadeValue), model);
     }
 
-    // Time to apply master FX to the main blended output
+    // Step 5: Time to apply master FX to the main blended output
     long effectStart = System.nanoTime();
     for (LXEffect effect : this.masterBus.getEffects()) {
       effect.setBuffer(render);
       effect.loop(deltaMs);
     }
     ((LXBus.Profiler) this.masterBus.profiler).effectNanos = System.nanoTime() - effectStart;
+
+    // Step 6: If the master fader is PRE-visualizer/output, apply global scaling now
+    if (this.masterBus.faderMode.getEnum() == LXMasterBus.FaderMode.PRE) {
+      double fader = this.masterBus.fader.getValue();
+      if (fader == 0) {
+        // Don't multiply if it's just zero!
+        Arrays.fill(this.blendStackMain.output, LXColor.BLACK);
+      } else if (fader < 1.) {
+        // Apply a pass to scale brightness
+        final int mult = LXColor.gray(100. * fader);
+        final int[] output = this.blendStackMain.output;
+        for (int i = 0; i < output.length; ++i) {
+          output[i] = LXColor.multiply(output[i], mult, 0x100);
+        }
+      }
+    }
 
     // Mark the cue active state of the buffer
     render.setCueOn(cueBusActive);

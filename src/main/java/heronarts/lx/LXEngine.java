@@ -189,7 +189,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     @Override
     public LXOutput send(int[] colors) {
       if (!this.restricted.isOn()) {
-        super.send(colors);
+        super.send(colors, this.lx.engine.mixer.masterBus.getOutputBrightness());
       }
       return this;
     }
