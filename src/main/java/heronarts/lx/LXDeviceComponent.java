@@ -160,7 +160,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     this.remoteControlsChanged.bang();
   }
 
-  protected LXComponent removeRemoteControl(LXParameter parameter) {
+  protected LXComponent removeCustomRemoteControl(LXParameter parameter) {
     // Clear this parameter from custom remote controls
     if (this.customRemoteControls != null) {
       for (int i = 0; i < this.customRemoteControls.length; ++i) {

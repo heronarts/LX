@@ -1148,6 +1148,16 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   /**
+   * Whether this component has a parameter at the given path
+   *
+   * @param path Parameter path
+   * @return whether that parameter path is used
+   */
+  public final boolean hasParameter(String path) {
+    return this.parameters.containsKey(path);
+  }
+
+  /**
    * Accessor for parameter at a given path
    *
    * @param path Path to parameter
