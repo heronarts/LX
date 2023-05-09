@@ -728,7 +728,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   /**
    * Remove all snapshot views that reference the given parameter
    *
-   * @param component Component that is referenced
+   * @param parameter Parameter that is referenced
    */
   public void removeSnapshotParameterViews(LXParameter parameter) {
     List<LXSnapshot.View> removeViews = findSnapshotParameterViews(parameter);
