@@ -301,7 +301,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   }
 
   public boolean isDetentEnabled() {
-    return this.detentsEnabled;
+    return this.detentsEnabled && (this.detents != null);
   }
 
   public BoundedParameter setDetentsEnabled(boolean detentEnabled) {
@@ -403,7 +403,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   }
 
   private LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap, boolean detent) {
-    if (detent) {
+    if (detent && (this.detents != null)) {
       // Swallow increments and convert to ticks
       final boolean positive = (amount > 0);
       final int increment = positive ? 1 : -1;
