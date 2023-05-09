@@ -29,22 +29,23 @@ import heronarts.lx.parameter.EnumParameter;
  */
 public class LXMasterBus extends LXBus {
 
-  public enum FaderMode {
+  public enum PreviewMode {
     /**
-     * The master fader is applied by the mixer, pre-visualization and output.
-     * It will be reflected in the UI.
+     * The preview is generated before the master fader is applied by the mixer,
+     * so the UI always shows a full brightness render, even if the fader is being
+     * used to dim the whole animation.
      */
     PRE("Pre"),
 
     /**
-     * The master fader is applied after the visualizer. Its effect won't be
-     * seen in the UI, output will need to be scaled accordingly.
+     * The preview is generated after the master fader, so the UI may be dim or
+     * completely off if the master fader is reducing the animation level.
      */
     POST("Post");
 
     private final String label;
 
-    private FaderMode(String label) {
+    private PreviewMode(String label) {
       this.label = label;
     }
 
@@ -54,13 +55,13 @@ public class LXMasterBus extends LXBus {
     }
   }
 
-  public final EnumParameter<FaderMode> faderMode =
-    new EnumParameter<FaderMode>("Fader Mode", FaderMode.PRE)
-    .setDescription("Whether the master fader is applied pre or post-visualizer");
+  public final EnumParameter<PreviewMode> previewMode =
+    new EnumParameter<PreviewMode>("Preview Mode", PreviewMode.PRE)
+    .setDescription("Whether the preview is generated PRE or POST the master fader");
 
   public LXMasterBus(LX lx) {
     super(lx, "Master");
-    addParameter("faderMode", this.faderMode);
+    addParameter("previewMode", this.previewMode);
   }
 
   /**
@@ -71,13 +72,13 @@ public class LXMasterBus extends LXBus {
    * @return Brightness scaling to be applied for the output stage
    */
   public double getOutputBrightness() {
-    switch (this.faderMode.getEnum()) {
-    case POST:
-      // The mixer didn't do any master scaling anything, apply it at output
+    switch (this.previewMode.getEnum()) {
+    case PRE:
+      // Mixer scaling not yet applied, chain it to output level
       return fader.getValue();
     default:
-    case PRE:
-      // The mixer applied scaling pre-output, don't do it again
+    case POST:
+      // Mixer scaling is already applied, don't repeat it
       return 1.;
     }
   }

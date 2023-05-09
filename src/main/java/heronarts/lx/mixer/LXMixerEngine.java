@@ -1055,8 +1055,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
     ((LXBus.Profiler) this.masterBus.profiler).effectNanos = System.nanoTime() - effectStart;
 
-    // Step 6: If the master fader is PRE-visualizer/output, apply global scaling now
-    if (this.masterBus.faderMode.getEnum() == LXMasterBus.FaderMode.PRE) {
+    // Step 6: If the master fader is POST-visualizer/output, apply global scaling now
+    if (this.masterBus.previewMode.getEnum() == LXMasterBus.PreviewMode.POST) {
       double fader = this.masterBus.fader.getValue();
       if (fader == 0) {
         // Don't multiply if it's just zero!
