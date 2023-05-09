@@ -154,6 +154,18 @@ public class CompoundParameter extends BoundedParameter {
     return this;
   }
 
+  @Override
+  public CompoundParameter setDetents(double ... detents) {
+    super.setDetents(detents, false);
+    return this;
+  }
+
+  @Override
+  public CompoundParameter setDetentsNormalized(double ... detents) {
+    super.setDetents(detents, true);
+    return this;
+  }
+
   /**
    * Adds a modulation to this parameter
    *

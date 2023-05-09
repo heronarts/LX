@@ -170,6 +170,15 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    */
   private final LXListenableParameter underlying;
 
+  private static final int NO_DETENT = -1;
+  private static final int TICKS_PER_DETENT = 12;
+
+  private boolean detentsEnabled = false;
+  private double[] detents = null;
+  private boolean detentsNormalized = false;
+  private int detentIndex = NO_DETENT;
+  private int detentTicks = 0;
+
   /**
    * Labeled parameter with value of 0 and range of 0-1
    *
@@ -291,6 +300,57 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     return this.curve;
   }
 
+  public boolean isDetentEnabled() {
+    return this.detentsEnabled;
+  }
+
+  public BoundedParameter setDetentsEnabled(boolean detentEnabled) {
+    this.detentsEnabled = detentEnabled;
+    return this;
+  }
+
+  public BoundedParameter setDetents(double ... detents) {
+    return setDetents(detents, false);
+  }
+
+  public BoundedParameter setDetentsNormalized(double ... detents) {
+    return setDetents(detents, true);
+  }
+
+  protected BoundedParameter setDetents(double[] detents, boolean normalized) {
+    validateDetents(detents, normalized ? 0. : this.range.min, normalized ? 1. : this.range.max);
+    this.detents = detents;
+    this.detentsNormalized = normalized;
+    this.detentIndex = NO_DETENT;
+    this.detentTicks = 0;
+    this.detentsEnabled = true;
+    return this;
+  }
+
+  private static final void validateDetents(double[] detents, double min, double max) {
+    if (detents.length == 0) {
+      throw new IllegalArgumentException("Detents array cannot be empty");
+    }
+    double prev = Double.NEGATIVE_INFINITY;
+    for (double d : detents) {
+      if (d < min || d > max) {
+        throw new IllegalArgumentException("Invalid detent value: " + d);
+      }
+      if (d <= prev) {
+        throw new IllegalArgumentException("Detents must be in order: " + d + " is not > " + prev);
+      }
+      prev = d;
+    }
+  }
+
+  @Override
+  public BoundedParameter reset() {
+    this.detentIndex = NO_DETENT;
+    this.detentTicks = 0;
+    super.reset();
+    return this;
+  }
+
   @Override
   public BoundedParameter incrementValue(double amount) {
     return incrementValue(amount, isWrappable());
@@ -305,6 +365,8 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
         newValue = this.range.max + ((newValue - this.range.min) % this.range.range);
       }
     }
+    this.detentIndex = NO_DETENT;
+    this.detentTicks = 0;
     return (BoundedParameter) setValue(newValue);
   }
 
@@ -315,7 +377,130 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
    * @return this, for method chaining
    */
   public BoundedParameter setNormalized(double normalized) {
+    return setNormalized(normalized, false);
+  }
+
+  private BoundedParameter setNormalized(double normalized, boolean fromDetent) {
+    if (!fromDetent) {
+      this.detentIndex = NO_DETENT;
+      this.detentTicks = 0;
+    }
     setValue(this.range.normalizedToValue(normalized, getExponent(), getNormalizationCurve()));
+    return this;
+  }
+
+  public LXListenableNormalizedParameter incrementDetentTicks(boolean increase) {
+    return incrementDetentTicks(increase, isWrappable());
+  }
+
+  public LXListenableNormalizedParameter incrementDetentTicks(boolean increase, boolean wrap) {
+    return incrementNormalized(increase ? 1 : -1, wrap, true);
+  }
+
+  @Override
+  public LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap) {
+    return incrementNormalized(amount, wrap, isDetentEnabled());
+  }
+
+  private LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap, boolean detent) {
+    if (detent) {
+      // Swallow increments and convert to ticks
+      final boolean positive = (amount > 0);
+      final int increment = positive ? 1 : -1;
+      if ((this.detentTicks > 0) != positive) {
+        this.detentTicks = 0;
+      }
+      this.detentTicks += increment;
+      if (Math.abs(this.detentTicks) >= TICKS_PER_DETENT) {
+        incrementDetent(increment, wrap);
+      }
+      return this;
+    } else {
+      this.detentTicks = 0;
+      this.detentIndex = NO_DETENT;
+      return super.incrementNormalized(amount, wrap);
+    }
+  }
+
+  /**
+   * Set the parameter to the next detent value
+   *
+   * @return this
+   */
+  public BoundedParameter nextDetent() {
+    return nextDetent(isWrappable());
+  }
+
+  /**
+   * Set the parameter to the next detent value, with wrapping specified
+   *
+   * @param wrap Whether wrapping is enabled
+   * @return this
+   */
+  public BoundedParameter nextDetent(boolean wrap) {
+    return incrementDetent(1, wrap);
+  }
+
+  /**
+   * Set the parameter to the previous detent value
+   *
+   * @return this
+   */
+  public BoundedParameter prevDetent() {
+    return prevDetent(isWrappable());
+  }
+
+  /**
+   * Set the parameter to the previous detent value, with wrapping specified
+   *
+   * @param wrap Whether wrapping is enabled
+   * @return this
+   */
+  public BoundedParameter prevDetent(boolean wrap) {
+    return incrementDetent(-1, wrap);
+  }
+
+  private BoundedParameter incrementDetent(int inc, boolean wrap) {
+    this.detentTicks = 0;
+    if (this.detents == null) {
+      return this;
+    }
+    int newDetentIndex = -1;
+
+    if (this.detentIndex != NO_DETENT) {
+      // Do we have an existing detent?
+      newDetentIndex = this.detentIndex + inc;
+    } else {
+      // No existing detent, find our spot in the array
+      final double current = this.detentsNormalized ? getNormalized() : getValue();
+      newDetentIndex = 0;
+      while ((newDetentIndex < this.detents.length) && (current >= this.detents[newDetentIndex])) {
+        ++newDetentIndex;
+      }
+      // newDetentIndex is now the index of the first element strictly greater than the target value
+      // if inc is positive, that's what we want to move to. If inc is negative, we'll move down
+      // from there, either to the one prior, or two prior if we're exactly equal to the current
+      if (inc < 0) {
+        --newDetentIndex;
+        if ((newDetentIndex >= 0) && (current <= this.detents[newDetentIndex])) {
+          --newDetentIndex;
+        }
+      }
+    }
+
+    // Check the wrapping situation... if wrapping is not allowed but we're going around
+    // the bounds, then we just need to bail here
+    if (!wrap && ((newDetentIndex < 0) || (newDetentIndex >= this.detents.length))) {
+      return this;
+    }
+
+    // Wrap against the bounds and update value
+    this.detentIndex = (newDetentIndex + this.detents.length) % this.detents.length;
+    if (this.detentsNormalized) {
+      setNormalized(this.detents[this.detentIndex], true);
+    } else {
+      setValue(this.detents[this.detentIndex]);
+    }
     return this;
   }
 
