@@ -160,6 +160,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
   private static final String KEY_REPEAT = "repeat";
+  private static final String KEY_DUPLICATE = "duplicate";
   private static final String KEY_REVERSE = "reverse";
   private static final String KEY_SEGMENTS = "segments";
 
@@ -2281,7 +2282,23 @@ public class JsonFixture extends LXFixture {
       segmentByteOrder = loadByteOrder(segmentObj, null);
     }
 
-    segments.add(new JsonSegmentDefinition(start, num, stride, repeat, reverse, segmentByteOrder));
+    // The entire segment may be repeated - note that this is different from the basic
+    // repeat option which repeats every *pixel* inline. The segment repeat option duplicates
+    // output of the entire segment N times.
+    int duplicate = 1;
+    if (segmentObj.has(KEY_DUPLICATE)) {
+      duplicate = loadInt(segmentObj, KEY_DUPLICATE, true, "Output " + KEY_DUPLICATE + " must be a valid integer");
+      if (duplicate <= 0) {
+        addWarning("Output duplicate must be a positive value");
+        return;
+      }
+    }
+
+    // Duplicate the definition N times (typically 1)
+    final JsonSegmentDefinition segment = new JsonSegmentDefinition(start, num, stride, repeat, reverse, segmentByteOrder);
+    for (int i = 0; i < duplicate; ++i) {
+      segments.add(segment);
+    }
   }
 
   private JsonByteEncoderDefinition loadByteOrder(JsonObject obj, JsonByteEncoderDefinition defaultByteOrder) {
