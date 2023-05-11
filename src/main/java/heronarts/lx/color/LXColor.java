@@ -55,6 +55,7 @@ public class LXColor {
   public static final int B_MASK = 0x000000ff;
   public static final int RB_MASK = R_MASK | B_MASK;
   public static final int RGB_MASK = R_MASK | G_MASK | B_MASK;
+  public static final int AG_MASK = ALPHA_MASK | G_MASK;
 
   public static final int ALPHA_SHIFT = 24;
   public static final int R_SHIFT = 16;
@@ -76,6 +77,13 @@ public class LXColor {
 
   public static byte blue(int argb) {
     return (byte) (argb & B_MASK);
+  }
+
+  public static int toABGR(int argb) {
+    return
+      (argb & AG_MASK) |
+      ((argb << 16) & R_MASK) |
+      ((argb >> 16) & B_MASK);
   }
 
   /**
