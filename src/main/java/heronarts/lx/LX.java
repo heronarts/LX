@@ -94,6 +94,9 @@ public class LX {
   }
 
   public interface Permissions {
+
+    public static final int UNLIMITED_POINTS = -1;
+
     public boolean canSave();
     public int getMaxPoints();
     public boolean canRunPlugins();
@@ -107,7 +110,7 @@ public class LX {
 
       @Override
       public int getMaxPoints() {
-        return -1;
+        return UNLIMITED_POINTS;
       }
 
       @Override
