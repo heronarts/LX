@@ -451,15 +451,25 @@ public abstract class LXCommand {
       private final ParameterReference<DiscreteParameter> parameter;
       private final int originalValue;
       private final int amount;
+      private boolean alwaysWrap;
 
       public Increment(DiscreteParameter parameter) {
         this(parameter, 1);
       }
 
+      public Increment(DiscreteParameter parameter, boolean alwaysWrap) {
+        this(parameter, 1, alwaysWrap);
+      }
+
       public Increment(DiscreteParameter parameter, int amount) {
+        this(parameter, amount, false);
+      }
+
+      public Increment(DiscreteParameter parameter, int amount, boolean alwaysWrap) {
         this.parameter = new ParameterReference<DiscreteParameter>(parameter);
         this.originalValue = parameter.getValuei();
         this.amount = amount;
+        this.alwaysWrap = alwaysWrap;
       }
 
       @Override
@@ -469,7 +479,11 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.parameter.get().increment(this.amount);
+        if (this.alwaysWrap) {
+          this.parameter.get().increment(this.amount, true);
+        } else {
+          this.parameter.get().increment(this.amount, true);
+        }
       }
 
       @Override
