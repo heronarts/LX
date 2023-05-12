@@ -51,6 +51,18 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
     public void triggerAdded(LXModulationEngine engine, LXTriggerModulation modulation);
     public void triggerRemoved(LXModulationEngine engine, LXTriggerModulation modulation);
+
+    public interface Default extends Listener {
+      public default void modulatorAdded(LXModulationEngine engine, LXModulator modulator) {}
+      public default void modulatorRemoved(LXModulationEngine engine, LXModulator modulator) {}
+      public default void modulatorMoved(LXModulationEngine engine, LXModulator modulator) {}
+
+      public default void modulationAdded(LXModulationEngine engine, LXCompoundModulation modulation) {}
+      public default void modulationRemoved(LXModulationEngine engine, LXCompoundModulation modulation) {}
+
+      public default void triggerAdded(LXModulationEngine engine, LXTriggerModulation modulation) {}
+      public default void triggerRemoved(LXModulationEngine engine, LXTriggerModulation modulation) {}
+    }
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
