@@ -139,7 +139,12 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.label) {
-      updateSelectors(this.lx);
+      // Note: only fire after LX is set and the modulator
+      // has been added. Otherwise this is the initial
+      // constructor setting the label...
+      if (this.lx != null) {
+        updateSelectors(this.lx);
+      }
     }
   }
 
