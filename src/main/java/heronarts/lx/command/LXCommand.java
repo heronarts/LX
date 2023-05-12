@@ -482,7 +482,7 @@ public abstract class LXCommand {
         if (this.alwaysWrap) {
           this.parameter.get().increment(this.amount, true);
         } else {
-          this.parameter.get().increment(this.amount, true);
+          this.parameter.get().increment(this.amount);
         }
       }
 
