@@ -108,6 +108,7 @@ public class SparklePattern extends LXPattern {
 
     public final CompoundParameter speed =
       new CompoundParameter("Speed", 0.5)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Speed of the sparkle effect");
 
