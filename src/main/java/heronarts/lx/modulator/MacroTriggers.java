@@ -21,6 +21,7 @@ package heronarts.lx.modulator;
 import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Triggers")
 @LXCategory(LXCategory.MACRO)
@@ -51,6 +52,26 @@ public class MacroTriggers extends LXModulator implements LXOscComponent, LXTrig
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Macro control trigger");
 
+  public final StringParameter label1 =
+    new StringParameter("Label-1", "-")
+    .setDescription("Label for trigger 1");
+
+  public final StringParameter label2 =
+    new StringParameter("Label-2", "-")
+    .setDescription("Label for trigger 2");
+
+  public final StringParameter label3 =
+    new StringParameter("Label-3", "-")
+    .setDescription("Label for trigger 3");
+
+  public final StringParameter label4 =
+    new StringParameter("Label-4", "-")
+    .setDescription("Label for trigger 4");
+
+  public final StringParameter label5 =
+    new StringParameter("Label-5", "-")
+    .setDescription("Label for trigger 5");
+
   public MacroTriggers() {
     this("Triggers");
   }
@@ -62,6 +83,11 @@ public class MacroTriggers extends LXModulator implements LXOscComponent, LXTrig
     addParameter("macro3", this.macro3);
     addParameter("macro4", this.macro4);
     addParameter("macro5", this.macro5);
+    addParameter("label1", this.label1);
+    addParameter("label2", this.label2);
+    addParameter("label3", this.label3);
+    addParameter("label4", this.label4);
+    addParameter("label5", this.label5);
     setMappingSource(false);
   }
 
