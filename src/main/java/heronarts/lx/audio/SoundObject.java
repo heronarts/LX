@@ -175,9 +175,9 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     final double cosElev = Math.cos(elevation);
     final double sinElev = Math.sin(elevation);
 
-    this.x = .5 + radius * sinAzim * cosElev;
-    this.z = .5 + radius * cosAzim * cosElev;
-    this.y = .5 + radius * sinElev;
+    this.x = LXUtils.constrain(.5 + radius * sinAzim * cosElev, 0, 1);
+    this.z = LXUtils.constrain(.5 + radius * cosAzim * cosElev, 0, 1);
+    this.y = LXUtils.constrain(.5 + radius * sinElev, 0, 1);
 
     this.cartesianChanged.bang();
   }

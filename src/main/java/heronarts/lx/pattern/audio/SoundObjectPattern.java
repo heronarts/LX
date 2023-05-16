@@ -25,6 +25,7 @@ import heronarts.lx.audio.SoundObject;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
@@ -32,9 +33,29 @@ import heronarts.lx.utils.LXUtils;
 @LXComponentName("Sound Object")
 public class SoundObjectPattern extends LXPattern {
 
+  public enum CoordMode {
+    XYZ("XYZ"),
+    AE1("AE1");
+
+    public final String label;
+
+    private CoordMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   public final SoundObject.Selector selector = (SoundObject.Selector)
     new SoundObject.Selector("Object")
     .setDescription("Which sound object to render");
+
+  public final EnumParameter<CoordMode> coordMode =
+    new EnumParameter<CoordMode>("Mode", CoordMode.XYZ)
+    .setDescription("How to compute the source position");
 
   public final CompoundParameter baseSize =
     new CompoundParameter("Base", .1)
@@ -94,6 +115,7 @@ public class SoundObjectPattern extends LXPattern {
     addParameter("scopeAmount", this.scopeAmount);
     addParameter("scopeTimeMs", this.scopeTimeMs);
     addParameter("selector", this.selector);
+    addParameter("coordMode", this.coordMode);
   }
 
   private final static double INV_MAX_DISTANCE = 1 / Math.sqrt(3);
@@ -109,9 +131,26 @@ public class SoundObjectPattern extends LXPattern {
     if (soundObject != null) {
       level += soundObject.getValue();
       size += this.levelToSize.getValue() * level;
-      sx = soundObject.getX();
-      sy = soundObject.getY();
-      sz = soundObject.getZ();
+      switch (this.coordMode.getEnum()) {
+      case AE1:
+        double azim = Math.toRadians(soundObject.azimuth.getValue());
+        double elev = Math.toRadians(soundObject.elevation.getValue());
+        double sinAzim = Math.sin(azim);
+        double cosAzim = Math.cos(azim);
+        double sinElev = Math.sin(elev);
+        double cosElev = Math.cos(elev);
+        sx = .5 * (1 + cosElev * sinAzim);
+        sz = .5 * (1 + cosElev * cosAzim);
+        sy = .5 * (1 + sinElev);
+        break;
+      default:
+      case XYZ:
+        sx = soundObject.getX();
+        sy = soundObject.getY();
+        sz = soundObject.getZ();
+        break;
+
+      }
     }
 
     level = LXUtils.constrain(level, 0, 1);
