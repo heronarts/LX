@@ -97,12 +97,17 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Elevation of the sound object against the X-Z plane");
 
+  public final CompoundParameter radius =
+    new CompoundParameter("Radius", 1, 0, Math.sqrt(3))
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Radius of the sound object");
+
   public final MutableParameter cartesianChanged =
     new MutableParameter("Cartesian Changed");
 
   private double x, y, z;
 
-  private double prevAzimuth = 0, prevElevation = 0;
+  private double prevAzimuth = 0, prevElevation = 0, prevRadius = 1;
 
   public static SoundObject get(LX lx) {
     for (LXModulator modulator : lx.engine.modulation.modulators) {
@@ -123,6 +128,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     addParameter("releaseMs", this.releaseMs);
     addParameter("azimuth", this.azimuth);
     addParameter("elevation", this.elevation);
+    addParameter("radius", this.radius);
     updateCartesian();
 
     // A new sound object is created, register it with the audio engine
@@ -161,15 +167,18 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
   }
 
   public void updateCartesian() {
+    final double radius = .5 * this.radius.getValue();
     final double azimuth = Math.toRadians(this.azimuth.getValue());
     final double elevation = Math.toRadians(this.elevation.getValue());
     final double sinAzim = Math.sin(azimuth);
     final double cosAzim = Math.cos(azimuth);
     final double cosElev = Math.cos(elevation);
     final double sinElev = Math.sin(elevation);
-    this.x = .5 * (1 + sinAzim * cosElev);
-    this.z = .5 * (1 + cosAzim * cosElev);
-    this.y = .5 * (1 + sinElev);
+
+    this.x = .5 + radius * sinAzim * cosElev;
+    this.z = .5 + radius * cosAzim * cosElev;
+    this.y = .5 + radius * sinElev;
+
     this.cartesianChanged.bang();
   }
 
@@ -177,9 +186,13 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
   protected double computeValue(double deltaMs) {
     final double azimuth = this.azimuth.getValue();
     final double elevation = this.elevation.getValue();
-    if (azimuth != this.prevAzimuth || elevation != this.prevElevation) {
+    final double radius = this.radius.getValue();
+    if (azimuth != this.prevAzimuth ||
+        elevation != this.prevElevation ||
+        radius != this.prevRadius) {
       this.prevAzimuth = azimuth;
       this.prevElevation = elevation;
+      this.prevRadius = radius;
       updateCartesian();
     }
 
@@ -188,24 +201,24 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     }
     final double range = this.range.getValue();
 
-    final double input = LXUtils.constrain(
+    final double value = LXUtils.constrain(
       LXUtils.ilerp(this.input.getValue() + this.gain.getValue(), 1 - range, 1),
       0, 1
     );
 
     final double currentLevel = getValue();
-    if (input > currentLevel) {
+    if (value > currentLevel) {
       final double attackMs = this.attackMs.getValue();
       if (attackMs > 0) {
-        return LXUtils.min(input, currentLevel + deltaMs / attackMs);
+        return LXUtils.min(value, currentLevel + deltaMs / attackMs);
       }
     } else {
       final double releaseMs = this.releaseMs.getValue();
       if (releaseMs > 0) {
-        return LXUtils.max(input, currentLevel - deltaMs / releaseMs);
+        return LXUtils.max(value, currentLevel - deltaMs / releaseMs);
       }
     }
-    return input;
+    return value;
   }
 
   @Override
