@@ -21,7 +21,6 @@ package heronarts.lx.modulation;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -37,8 +36,8 @@ public class LXCompoundModulation extends LXParameterModulation {
     new EnumParameter<LXParameter.Polarity>("Polarity", LXParameter.Polarity.UNIPOLAR)
     .setDescription("Specifies whether this modulation is unipolar (one-directional) or bipolar (bi-directional)");
 
-  public final BoundedParameter range =
-    new BoundedParameter("Range", 0, -1, 1)
+  public final CompoundParameter range =
+    new CompoundParameter("Range", 0, -1, 1)
     .setDescription("Specifies the depth of this modulation, may be positive or negative")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
