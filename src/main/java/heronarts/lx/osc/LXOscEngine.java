@@ -570,7 +570,11 @@ public class LXOscEngine extends LXComponent {
         this.listenerSnapshot.addAll(this.listeners);
         for (OscMessage message : this.engineThreadEventQueue) {
           for (LXOscListener listener : this.listenerSnapshot) {
-            listener.oscMessage(message);
+            try {
+              listener.oscMessage(message);
+            } catch (Exception x) {
+              error(x, "Uncaught exception in OSC listener: " + message.getAddressPattern().getValue());
+            }
           }
         }
       }
