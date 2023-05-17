@@ -43,12 +43,12 @@ import heronarts.lx.transform.LXVector;
  *
  * This class should generally not be used directly to construct model objects.
  * It is heavily preferred to use the {@link heronarts.lx.structure.LXStructure}
- * and {@link heronarts.lx.structure.LXFixture} APIs to dynamically generate
- * a model.
- *
- * In cases where fixed-model programming is preferred, it is recommended to use
- * the {@link LXModelBuilder} class to aid in model construction.
- */
+* and {@link heronarts.lx.structure.LXFixture} APIs to dynamically generate
+* a model.
+*
+* In cases where fixed-model programming is preferred, it is recommended to use
+* the {@link LXModelBuilder} class to aid in model construction.
+*/
 public class LXModel implements LXSerializable {
 
   /**
@@ -257,10 +257,30 @@ public class LXModel implements LXSerializable {
   public float rcMax;
 
   /**
-   * Range of radial values from center of model, only validd
+   * Range of radial values from center of model, only valid
    * on the top-level LXModel
    */
   public float rcRange;
+
+  /**
+   * Angle of this model's center about the origin in the x-z plane
+   * (right-handed angle of rotation about the Y-axis)
+   *
+   * 0 is pointing straight ahead (+z axis)
+   * HALF_PI is to the right (+x axis)
+   * PI is backwards (-z axis)
+   * 1.5*PI is to the left (-x axis)
+   */
+  public float azimuth;
+
+  /**
+   * Angle of this point between the y-value and the x-z plane
+   *
+   * 0 is flat
+   * HALF_PI is upwards (+y axis)
+   * -HALF_PI is downwards (-y axis)
+   */
+  public float elevation;
 
   /**
    * Constructs a null model with no points
@@ -821,6 +841,8 @@ public class LXModel implements LXSerializable {
     this.cz = zMin + zRange / 2f;
     this.center.set(this.cx, this.cy, this.cz);
     this.average.set(this.ax, this.ay, this.az);
+    this.azimuth = (float) ((LX.TWO_PI + Math.atan2(this.cx, this.cz)) % (LX.TWO_PI));
+    this.elevation = (float) Math.atan2(this.cy, Math.sqrt(this.cx*this.cx + this.cz*this.cz));
   }
 
   /**
