@@ -72,6 +72,14 @@ public class MacroKnobs extends LXModulator implements LXOscComponent {
     new StringParameter("Label-5", "-")
     .setDescription("Label for knob 5");
 
+  public final CompoundParameter[] knobs = {
+    macro1, macro2, macro3, macro4, macro5
+  };
+
+  public final StringParameter[] labels = {
+    label1, label2, label3, label4, label5
+  };
+
   public MacroKnobs() {
     this("Knobs");
   }

@@ -67,6 +67,14 @@ public class MacroSwitches extends LXModulator implements LXOscComponent, LXTrig
     new StringParameter("Label-5", "-")
     .setDescription("Label for switch 5");
 
+  public final BooleanParameter[] switches = {
+    macro1, macro2, macro3, macro4, macro5
+  };
+
+  public final StringParameter[] labels = {
+    label1, label2, label3, label4, label5
+  };
+
   public MacroSwitches() {
     this("Switches");
   }
