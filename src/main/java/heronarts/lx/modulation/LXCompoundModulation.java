@@ -39,6 +39,7 @@ public class LXCompoundModulation extends LXParameterModulation {
   public final CompoundParameter range =
     new CompoundParameter("Range", 0, -1, 1)
     .setDescription("Specifies the depth of this modulation, may be positive or negative")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public LXCompoundModulation(LX lx, LXModulationEngine scope, JsonObject obj) throws ModulationException {
