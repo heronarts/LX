@@ -28,7 +28,10 @@ public class GradientUtils {
     private final static int SIZE = 256;
 
     private final LXNormalizedParameter invert;
-    private double previousValue = -1;
+    private final LXNormalizedParameter level;
+
+    private double previousInvert = -1;
+    private double previousLevel = -1;
     private boolean dirty = true;
 
     /**
@@ -41,19 +44,30 @@ public class GradientUtils {
     }
 
     public GrayTable(LXNormalizedParameter invert, int padding) {
+      this(invert, null, padding);
+    }
+
+    public GrayTable(LXNormalizedParameter invert, LXNormalizedParameter level) {
+      this(invert, level, 0);
+    }
+
+    public GrayTable(LXNormalizedParameter invert, LXNormalizedParameter level, int padding) {
       this.invert = invert;
+      this.level = level;
       this.lut = new int[SIZE + padding];
     }
 
     public void update() {
-      double invert = this.invert.getValue();
-      if (invert != this.previousValue) {
+      final double invert = this.invert.getNormalized();
+      final double level = (this.level != null) ? this.level.getNormalized() : 1;
+      if ((invert != this.previousInvert) || (level != this.previousLevel)) {
         this.dirty = true;
-        this.previousValue = invert;
+        this.previousInvert = invert;
+        this.previousLevel = level;
       }
       if (this.dirty) {
         for (int i = 0; i < SIZE; ++i) {
-          int b = (int) LXUtils.lerp(i, 255.9 - i, invert);
+          int b = (int) (level * LXUtils.lerp(i, 255.9 - i, invert));
           this.lut[i] = 0xff000000 | (b << 16) | (b << 8) | b;
         }
         for (int i = SIZE; i < this.lut.length; ++i) {
