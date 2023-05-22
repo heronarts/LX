@@ -32,6 +32,11 @@ public class ArtNetDatagram extends LXDatagram {
 
   private final static int DEFAULT_UNIVERSE = 0;
 
+  public final static int UNIVERSE_LSB = 14;
+  public final static int UNIVERSE_MSB = 15;
+
+  public final static byte[] HEADER = { 'A', 'r', 't', '-', 'N', 'e', 't', 0 };
+
   private boolean sequenceEnabled = false;
 
   private byte sequence = 1;
@@ -200,14 +205,7 @@ public class ArtNetDatagram extends LXDatagram {
 
     validateBufferSize();
 
-    this.buffer[0] = 'A';
-    this.buffer[1] = 'r';
-    this.buffer[2] = 't';
-    this.buffer[3] = '-';
-    this.buffer[4] = 'N';
-    this.buffer[5] = 'e';
-    this.buffer[6] = 't';
-    this.buffer[7] = 0;
+    System.arraycopy(HEADER, 0, this.buffer, 0, HEADER.length);
     this.buffer[8] = 0x00; // ArtDMX opcode
     this.buffer[9] = 0x50; // ArtDMX opcode
     this.buffer[10] = 0; // Protocol version
@@ -224,8 +222,8 @@ public class ArtNetDatagram extends LXDatagram {
 
   public ArtNetDatagram setUniverseNumber(int universeNumber) {
     this.universeNumber = universeNumber;
-    this.buffer[14] = (byte) (universeNumber & 0xff); // Universe LSB
-    this.buffer[15] = (byte) ((universeNumber >>> 8) & 0xff); // Universe MSB
+    this.buffer[UNIVERSE_LSB] = (byte) (universeNumber & 0xff); // Universe LSB
+    this.buffer[UNIVERSE_MSB] = (byte) ((universeNumber >>> 8) & 0xff); // Universe MSB
     return this;
   }
 
