@@ -122,9 +122,13 @@ public class ChasePattern extends LXPattern {
     .setUnits(BoundedParameter.Units.PERCENT)
     .setDescription("Maximum range of the shift knob");
 
-  public final BooleanParameter alternate =
+  public final BooleanParameter interlace =
+    new BooleanParameter("Interlace", false)
+    .setDescription("Whether to interlace opposite chase direction every other pixel");
+
+  public final BooleanParameter alternateChunk =
     new BooleanParameter("Alternate", false)
-    .setDescription("Whether to alternate swarm motion every other chunk");
+    .setDescription("Whether to alternate chase direction every other chunk");
 
   public final EnumParameter<WrapMode> wrap =
     new EnumParameter<WrapMode>("Wrap", WrapMode.ABS)
@@ -214,7 +218,9 @@ public class ChasePattern extends LXPattern {
     addParameter("chunkSize", this.chunkSize);
     addParameter("shift", this.shift);
     addParameter("shiftRange", this.shiftRange);
-    addParameter("alternate", this.alternate);
+    addLegacyParameter("alternate", this.interlace);
+    addParameter("interlace", this.interlace);
+    addParameter("alternateChunk", this.alternateChunk);
     addParameter("waveshape", this.waveshape);
     addParameter("skew", this.skew);
     addParameter("exp", this.exp);
@@ -299,7 +305,8 @@ public class ChasePattern extends LXPattern {
     final double sizePixels = chunkSize * size;
     final double fadePixels = chunkSize * fade;
 
-    final boolean alternate = this.alternate.isOn();
+    final boolean interlace = this.interlace.isOn();
+    final boolean alternateChunk = this.alternateChunk.isOn();
     final WrapMode wrap = this.wrap.getEnum();
 
     final boolean swarmOn = this.swarmOn.isOn();
@@ -328,7 +335,8 @@ public class ChasePattern extends LXPattern {
     for (LXPoint p : model.points) {
       int chunkIndex = i / chunkSizei;
       double pos = i % chunkSize;
-      if (even && alternate) {
+      boolean evenChunk = (chunkIndex % 2) == 0;
+      if ((even && interlace) ^ (evenChunk & alternateChunk)) {
         pos = (chunkSize - pos) % chunkSize;
       }
 
