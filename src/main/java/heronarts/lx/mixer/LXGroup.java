@@ -77,7 +77,16 @@ public class LXGroup extends LXAbstractChannel {
    * @return The last channel in this group
    */
   public LXChannel getLastChannel() {
-    return this.channels.get(this.channels.size() - 1);
+    int index = -1;
+    LXChannel last = null;
+    for (LXChannel channel : this.channels) {
+      int channelIndex = channel.getIndex();
+      if (channelIndex > index) {
+        index = channelIndex;
+        last = channel;
+      }
+    }
+    return last;
   }
 
   public void ungroup() {
