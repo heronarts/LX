@@ -142,6 +142,7 @@
 							<location>../../build/gson</location>
 						</offlineLink>
 					</offlineLinks>
+					<javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
 				</configuration>
 				<executions>
 					<execution>
