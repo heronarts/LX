@@ -39,7 +39,7 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("Damper")
 @LXModulator.Device("Damper")
 @LXCategory(LXCategory.CORE)
-public class Damper extends LXModulator implements LXNormalizedParameter, LXOscComponent {
+public class Damper extends LXModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
 
   public final BooleanParameter toggle =
     new BooleanParameter("Toggle", false)
@@ -184,6 +184,11 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXOscC
   @Override
   public double getNormalized() {
     return getValue();
+  }
+
+  @Override
+  public BooleanParameter getTriggerSource() {
+    return this.toggle;
   }
 
 }
