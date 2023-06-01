@@ -991,9 +991,13 @@ public class LXChannel extends LXAbstractChannel {
 
       // Check for transition completion
       if (this.transition != null) {
-        double transitionMs = this.lx.engine.nowMillis - this.transitionMillis;
-        double transitionDone = 1000 * this.transitionTimeSecs.getValue();
-        if (transitionMs >= transitionDone) {
+        boolean shouldFinish = !this.transitionEnabled.isOn();
+        if (!shouldFinish) {
+          double transitionMs = this.lx.engine.nowMillis - this.transitionMillis;
+          double transitionDone = 1000 * this.transitionTimeSecs.getValue();
+          shouldFinish = transitionMs >= transitionDone;
+        }
+        if (shouldFinish) {
           finishTransition();
         }
       }
