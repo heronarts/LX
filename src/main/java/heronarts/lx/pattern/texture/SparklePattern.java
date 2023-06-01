@@ -54,16 +54,13 @@ public class SparklePattern extends LXPattern {
       private int activePixels;
 
       // Each individual sparkle maintains a list of output indices that it is applied to
-      private int[] indexBuffer;
+      private final int[] indexBuffer;
 
-      private Sparkle() {
+      private Sparkle(LXModel model) {
         this.isOn = false;
         this.basis = Math.random();
         this.randomVar = Math.random();
         this.randomLevel = Math.random();
-      }
-
-      private void rebuffer(LXModel model) {
         this.indexBuffer = new int[maxPixelsPerSparkle];
         reindex(model);
       }
@@ -71,7 +68,7 @@ public class SparklePattern extends LXPattern {
       private void reindex(LXModel model) {
         // Choose a set of LED indices at random for this sparkle to point to
         for (int i = 0; i < this.indexBuffer.length; ++i) {
-          this.indexBuffer[i] = LXUtils.constrain((int) (Math.random() * model.size), 0, model.size - 1);
+          this.indexBuffer[i] = LXUtils.randomi(model.size-1);
         }
       }
     }
@@ -149,11 +146,18 @@ public class SparklePattern extends LXPattern {
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Peak sparkle brightness level");
 
+    private int currentSize = -1;
+
     public Engine(LXModel model) {
       setModel(model);
     }
 
     public void setModel(LXModel model) {
+      if (model.size == this.currentSize) {
+        return;
+      }
+      this.currentSize = model.size;
+
       // An output level for every pixel in the model
       this.outputLevels = new double[model.size];
 
@@ -164,12 +168,9 @@ public class SparklePattern extends LXPattern {
       // so each generator will address up to that many pixels
       this.maxPixelsPerSparkle = (int) Math.ceil(MAX_DENSITY * model.size / this.numSparkles);
 
-      // Make sure we have enough sparkles allocated, and reindex them all against this model
+      // Reallocate and reindex sparkles against this model
       for (int i = 0; i < this.numSparkles; ++i) {
-        if (this.sparkles[i] == null) {
-          this.sparkles[i] = new Sparkle();
-        }
-        this.sparkles[i].rebuffer(model);
+        this.sparkles[i] = new Sparkle(model);
       }
     }
 
