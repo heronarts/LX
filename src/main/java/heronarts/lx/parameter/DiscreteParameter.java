@@ -257,6 +257,9 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   public double getNormalized() {
+    if (this.range == 1) {
+      return 0;
+    }
     return (getValue() - this.minValue) / (this.range - 1);
   }
 
