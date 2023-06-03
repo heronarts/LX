@@ -31,7 +31,7 @@ public interface LXWaveshape {
   public static LXWaveshape SIN = new LXWaveshape() {
     @Override
     public double compute(double basis) {
-      return (1 + Math.sin(basis * LX.TWO_PI - LX.HALF_PI)) / 2.;
+      return .5 * (1 + Math.sin(basis * LX.TWO_PI - LX.HALF_PI));
     }
 
     @Override
