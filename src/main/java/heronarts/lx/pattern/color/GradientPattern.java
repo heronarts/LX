@@ -360,23 +360,9 @@ public class GradientPattern extends LXPattern implements GradientFunction {
       });
 
       for (LXPoint p : model.points) {
-        final float xn =
-          p.xn * this.transform.m11 +
-          p.yn * this.transform.m12 +
-          p.zn * this.transform.m13 +
-          this.transform.m14;
-
-        final float yn =
-          p.xn * this.transform.m21 +
-          p.yn * this.transform.m22 +
-          p.zn * this.transform.m23 +
-          this.transform.m24;
-
-        final float zn =
-          p.xn * this.transform.m31 +
-          p.yn * this.transform.m32 +
-          p.zn * this.transform.m33 +
-          this.transform.m34;
+        final float xn = this.transform.xn(p);
+        final float yn = this.transform.yn(p);
+        final float zn = this.transform.zn(p);
 
         float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
           xAmount * xFunction.getCoordinate(p, xn, xOffset) +

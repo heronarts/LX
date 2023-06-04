@@ -19,6 +19,7 @@
 package heronarts.lx.transform;
 
 import heronarts.lx.LX;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -164,6 +165,51 @@ public class LXMatrix {
 
   public float z() {
     return m34;
+  }
+
+  /**
+   * Returns the normalized x value after the given
+   * point is transformed by this matrix.
+   *
+   * @param p Point
+   * @return xn value after application of matrix
+   */
+  public float xn(LXPoint p) {
+    return
+      m11 * p.xn +
+      m12 * p.yn +
+      m13 * p.zn +
+      m14;
+  }
+
+  /**
+   * Returns the normalized y value after the given
+   * point is transformed by this matrix.
+   *
+   * @param p Point
+   * @return yn value after application of matrix
+   */
+  public float yn(LXPoint p) {
+    return
+      m21 * p.xn +
+      m22 * p.yn +
+      m23 * p.zn +
+      m24;
+  }
+
+  /**
+   * Returns the normalized z value after the given
+   * point is transformed by this matrix.
+   *
+   * @param p Point
+   * @return zn value after application of matrix
+   */
+  public float zn(LXPoint p) {
+    return
+      m31 * p.xn +
+      m32 * p.yn +
+      m33 * p.zn +
+      m34;
   }
 
   public LXMatrix scale(float sv) {
