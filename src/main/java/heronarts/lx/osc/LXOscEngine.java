@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.jmdns.JmDNS;
@@ -125,14 +126,16 @@ public class LXOscEngine extends LXComponent {
     new BooleanParameter("Log OSC Output", false)
     .setDescription("Whether to log all OSC output messages");
 
-  private final List<Receiver> receivers = new ArrayList<Receiver>();
+  private final List<Receiver> receivers =
+    new CopyOnWriteArrayList<Receiver>();
 
   private Receiver engineReceiver;
   private final EngineListener engineListener = new EngineListener();
 
   private EngineTransmitter engineTransmitter;
 
-  private final List<LXOscListener> listeners = new ArrayList<LXOscListener>();
+  private final List<LXOscListener> listeners =
+    new ArrayList<LXOscListener>();
 
   private final LXOscQueryServer oscQueryServer;
   private final Zeroconf zeroconf;
