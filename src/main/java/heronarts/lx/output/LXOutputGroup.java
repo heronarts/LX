@@ -77,7 +77,7 @@ public class LXOutputGroup extends LXOutput {
   }
 
   @Override
-  protected void onSend(int[] colors, byte[][] glut, double brightness) {
+  protected void onSend(int[] colors, GammaTable glut, double brightness) {
     //  Send to all children, with cascading brightness
     for (LXOutput child : this.children) {
       child.send(colors, brightness);

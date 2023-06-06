@@ -195,7 +195,7 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
    * @param brightness Brightness level to send at
    */
   @Override
-  protected void onSend(int[] colors, byte[][] glut, double brightness) {
+  protected void onSend(int[] colors, GammaTable glut, double brightness) {
     // Check for error state on this datagram's output
     ErrorState datagramErrorState = getErrorState();
     if (datagramErrorState.sendAfter >= this.lx.engine.nowMillis) {

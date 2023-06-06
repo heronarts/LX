@@ -356,7 +356,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
 
     @Override
-    protected void onSend(int[] colors, byte[][] glut, double brightness) {
+    protected void onSend(int[] colors, GammaTable glut, double brightness) {
       // Send all of the generated outputs
       for (LXOutput output : this.generatedOutputs) {
         output.setGammaDelegate(this);

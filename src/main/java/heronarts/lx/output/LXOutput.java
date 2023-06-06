@@ -24,6 +24,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.BooleanParameter;
@@ -45,6 +46,75 @@ public abstract class LXOutput extends LXComponent {
     public InetAddress getAddress();
     public InetOutput setPort(int port);
     public int getPort();
+  }
+
+  public static class GammaTable {
+
+    public static final int NUM_STEPS = 256;
+    public static final int WHITE_POINT_MAX = 255;
+
+    public static class Curve {
+
+      // Each of these is a length-255 array mapping input color
+      // byte values to output color byte values
+      public final byte[] red;
+      public final byte[] green;
+      public final byte[] blue;
+      public final byte[] white;
+
+      private Curve() {
+        this(new byte[NUM_STEPS], new byte[NUM_STEPS], new byte[NUM_STEPS], new byte[NUM_STEPS]);
+      }
+
+      private Curve(byte[] red, byte[] green, byte[] blue, byte[] white) {
+        this.red = red;
+        this.green = green;
+        this.blue = blue;
+        this.white = white;
+      }
+
+      private static final double INV_255_2 = 1. / (255. * 255.);
+      private static final double INV_255_3 = 1. / (255. * 255. * 255.);
+
+      /**
+       * Generate an output curve with the given parameters
+       *
+       * @param output Output byte lookup table
+       * @param b Brightness value 0-255
+       * @param gamma Gamma
+       * @param whitePoint White point 0-255
+       */
+      private static void generate(byte[] output, int b, double gamma, double whitePoint) {
+        if (gamma == 1) {
+          for (int in = 0; in < 256; ++in) {
+            output[in] = (byte) (0xff & (int) Math.round(in * b * whitePoint * INV_255_2));
+          }
+        } else {
+          for (int in = 0; in < 256; ++in) {
+            output[in] = (byte) (0xff & (int) Math.round(Math.pow(in * b * whitePoint * INV_255_3, gamma) * 255.f));
+          }
+        }
+      }
+    }
+
+    /**
+     * Curve lookup tables for each of 255 precomputed brightness stages,
+     * each curve contains in->out mappings for red, green, blue, and white pixels
+     */
+    public final Curve[] level = new Curve[NUM_STEPS];
+
+    public GammaTable() {
+      for (int i = 0; i < this.level.length; ++i) {
+        this.level[i] = new Curve();
+      }
+    }
+
+    @Deprecated
+    private GammaTable(byte[][] lut) {
+      for (int i = 0; i < this.level.length; ++i) {
+        this.level[i] = new Curve(lut[i], lut[i], lut[i], lut[i]);
+      }
+    }
   }
 
   public enum GammaMode {
@@ -98,6 +168,38 @@ public abstract class LXOutput extends LXComponent {
     .setDescription("Level of the output");
 
   /**
+   * White point scaling for red pixels
+   */
+  public final DiscreteParameter whitePointRed =
+    new DiscreteParameter("White Point Red", GammaTable.WHITE_POINT_MAX, 0, GammaTable.WHITE_POINT_MAX+1)
+    .setMappable(false)
+    .setDescription("White point value for red pixel output");
+
+  /**
+   * White point scaling for green pixels
+   */
+  public final DiscreteParameter whitePointGreen =
+    new DiscreteParameter("White Point Green", GammaTable.WHITE_POINT_MAX, 0, GammaTable.WHITE_POINT_MAX+1)
+    .setMappable(false)
+    .setDescription("White point value for green pixel output");
+
+  /**
+   * White point scaling for blue pixels
+   */
+  public final DiscreteParameter whitePointBlue  =
+    new DiscreteParameter("White Point Blue", GammaTable.WHITE_POINT_MAX, 0, GammaTable.WHITE_POINT_MAX+1)
+    .setMappable(false)
+    .setDescription("White point value for blue pixel output");
+
+  /**
+   * White point scaling for white pixels (if present)
+   */
+  public final DiscreteParameter whitePointWhite =
+    new DiscreteParameter("White Point White", GammaTable.WHITE_POINT_MAX, 0, GammaTable.WHITE_POINT_MAX+1)
+    .setMappable(false)
+    .setDescription("White point value for white pixel output");
+
+  /**
    * Time last frame was sent at.
    */
   private long lastFrameMillis = 0;
@@ -106,35 +208,30 @@ public abstract class LXOutput extends LXComponent {
    * A lookup table that maps brightness and index byte to output byte. For high-pixel projects
    * this avoids lots of redundant brightness multiplies at the output.
    */
-  private byte[][] gammaLut = null;
+  private GammaTable gammaLut = null;
 
   private boolean hasCustomGamma = false;
 
-  private byte[][] customGammaLut = null;
+  private GammaTable customGammaLut = null;
 
   private LXOutput gammaDelegate = null;
 
   private void buildGammaTable() {
     if (this.gammaMode.getEnum() == GammaMode.DIRECT) {
       if (this.gammaLut == null) {
-        this.gammaLut = new byte[256][256];
+        this.gammaLut = new GammaTable();
       }
 
-      double gamma = this.gamma.getValue();
-      if (gamma == 1) {
-        for (int b = 0; b < 256; ++b) {
-          int bb = b + (b > 127 ? 1 : 0);
-          for (int in = 0; in < 256; ++in) {
-            this.gammaLut[b][in] = (byte) ((in * bb) >> 8);
-          }
-        }
-      } else {
-        double maxInv = 1. / 65025.;
-        for (int b = 0; b < 256; ++b) {
-          for (int in = 0; in < 256; ++in) {
-            this.gammaLut[b][in] = (byte) (0xff & (int) Math.round(Math.pow(in * b * maxInv, gamma) * 255.f));
-          }
-        }
+      final double gamma = this.gamma.getValue();
+      final double whitePointRed = this.whitePointRed.getValue();
+      final double whitePointGreen = this.whitePointGreen.getValue();
+      final double whitePointBlue = this.whitePointBlue.getValue();
+      final double whitePointWhite = this.whitePointWhite.getValue();
+      for (int b = 0; b < 256; ++b) {
+        GammaTable.Curve.generate(this.gammaLut.level[b].red, b, gamma, whitePointRed);
+        GammaTable.Curve.generate(this.gammaLut.level[b].green, b, gamma, whitePointGreen);
+        GammaTable.Curve.generate(this.gammaLut.level[b].blue, b, gamma, whitePointBlue);
+        GammaTable.Curve.generate(this.gammaLut.level[b].white, b, gamma, whitePointWhite);
       }
     }
   }
@@ -152,6 +249,10 @@ public abstract class LXOutput extends LXComponent {
     addParameter("fps", this.framesPerSecond);
     addParameter("gamma", this.gamma);
     addParameter("gammaMode", this.gammaMode);
+    addParameter("whitePointRed", this.whitePointRed);
+    addParameter("whitePointGreen", this.whitePointGreen);
+    addParameter("whitePointBlue", this.whitePointBlue);
+    addParameter("whitePointWhite", this.whitePointWhite);
   }
 
   /**
@@ -159,7 +260,17 @@ public abstract class LXOutput extends LXComponent {
    *
    * @param gammaLut Two-dimensional array lookup of gamma curve for each precomputed brightness [0-255][0-255]
    */
+  @Deprecated
   public void setGammaTable(byte[][] gammaLut) {
+    setGammaTable(new GammaTable(gammaLut));
+  }
+
+  /**
+   * Assigns a custom gamma table to the output
+   *
+   * @param gammaLut Gamma lookup tables
+   */
+  public void setGammaTable(GammaTable gammaLut) {
     this.customGammaLut = gammaLut;
     this.hasCustomGamma = true;
   }
@@ -168,7 +279,7 @@ public abstract class LXOutput extends LXComponent {
     this.gammaDelegate = gammaDelegate;
   }
 
-  private byte[][] getGammaLut() {
+  private GammaTable getGammaLut() {
     if (this.hasCustomGamma) {
       return this.customGammaLut;
     }
@@ -188,7 +299,12 @@ public abstract class LXOutput extends LXComponent {
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (p == this.gamma || p == this.gammaMode) {
+    if (p == this.gamma ||
+        p == this.gammaMode ||
+        p == this.whitePointRed ||
+        p == this.whitePointGreen ||
+        p == this.whitePointBlue ||
+        p == this.whitePointWhite) {
       buildGammaTable();
     }
   }
@@ -235,7 +351,7 @@ public abstract class LXOutput extends LXComponent {
    * @param glut Look-up table for 0-255 brightness curves
    * @param brightness Master brightness value
    */
-  protected abstract void onSend(int[] colors, byte[][] glut, double brightness);
+  protected abstract void onSend(int[] colors, GammaTable glut, double brightness);
 
   private static final String OUTPUT_LOG_PREFIX = "[I/O] ";
 

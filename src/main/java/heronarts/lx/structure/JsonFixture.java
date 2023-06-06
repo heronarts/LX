@@ -50,6 +50,7 @@ import heronarts.lx.output.ArtSyncDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
+import heronarts.lx.output.LXOutput.GammaTable;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -246,7 +247,7 @@ public class JsonFixture extends LXFixture {
     private JsonByteEncoderDefinition(LX lx, final String className) throws NoSuchMethodException, ClassNotFoundException {
       final Class<?> cls = lx.instantiateStatic(className.replace('/', '$'));
       final Method getNumBytes = cls.getMethod("getNumBytes");
-      final Method writeBytes = cls.getMethod("writeBytes", int.class, byte[].class, byte[].class, int.class);
+      final Method writeBytes = cls.getMethod("writeBytes", int.class, GammaTable.Curve.class, byte[].class, int.class);
       this.byteEncoder = new LXBufferOutput.ByteEncoder() {
 
         @Override
@@ -260,7 +261,7 @@ public class JsonFixture extends LXFixture {
         }
 
         @Override
-        public void writeBytes(int argb, byte[] gamma, byte[] output, int offset) {
+        public void writeBytes(int argb, GammaTable.Curve gamma, byte[] output, int offset) {
           try {
             writeBytes.invoke(null, argb, gamma, output, offset);
           } catch (Throwable t) {
@@ -292,7 +293,7 @@ public class JsonFixture extends LXFixture {
       try {
         final Class<?> cls = lx.instantiateStatic(order.replace('/', '$'));
         final Method getNumBytes = cls.getMethod("getNumBytes");
-        final Method writeBytes = cls.getMethod("writeBytes", int.class, byte[].class, byte[].class, int.class);
+        final Method writeBytes = cls.getMethod("writeBytes", int.class, GammaTable.Curve.class, byte[].class, int.class);
 
         // Create a new dynamic encoder which uses reflection to call static methods
         // on the provided class
@@ -308,7 +309,7 @@ public class JsonFixture extends LXFixture {
           }
 
           @Override
-          public void writeBytes(int argb, byte[] gamma, byte[] output, int offset) {
+          public void writeBytes(int argb, GammaTable.Curve gamma, byte[] output, int offset) {
             try {
               writeBytes.invoke(null, argb, gamma, output, offset);
             } catch (Throwable t) {

@@ -172,7 +172,7 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
   }
 
   @Override
-  protected void onSend(int[] colors, byte[][] glut, double brightness) {
+  protected void onSend(int[] colors, GammaTable glut, double brightness) {
     connect();
     if (isConnected()) {
       try {
@@ -184,7 +184,7 @@ public abstract class LXSocket extends LXBufferOutput implements LXOutput.InetOu
     }
   }
 
-  protected byte[] getPacketData(int[] colors, byte[][] glut, double brightness) {
+  protected byte[] getPacketData(int[] colors, GammaTable glut, double brightness) {
     updateDataBuffer(colors, glut, brightness);
     return getDataBuffer();
   }

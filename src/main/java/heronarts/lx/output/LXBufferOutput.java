@@ -39,7 +39,7 @@ public abstract class LXBufferOutput extends LXOutput {
      * @param output Output byte array
      * @param offset Offset to write at in output array
      */
-    public void writeBytes(int argb, byte[] gamma, byte[] output, int offset);
+    public void writeBytes(int argb, GammaTable.Curve gamma, byte[] output, int offset);
 
   }
 
@@ -96,24 +96,24 @@ public abstract class LXBufferOutput extends LXOutput {
       return this.byteOffset;
     }
 
-    public void writeBytes(int color, byte[] gamma, byte[] output, int offset) {
+    public void writeBytes(int color, GammaTable.Curve gamma, byte[] output, int offset) {
       final int r = ((color >> 16) & 0xff);
       final int g = ((color >> 8) & 0xff);
       final int b = (color & 0xff);
       if (this.hasWhite) {
         if (this.byteOffset.length == 1) {
-          output[offset] = gamma[(r + b + g) / 3];
+          output[offset] = gamma.white[(r + b + g) / 3];
         } else {
           final int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
-          output[offset + this.byteOffset[0]] = gamma[r-w];
-          output[offset + this.byteOffset[1]] = gamma[g-w];
-          output[offset + this.byteOffset[2]] = gamma[b-w];
-          output[offset + this.byteOffset[3]] = gamma[w];
+          output[offset + this.byteOffset[0]] = gamma.red[r-w];
+          output[offset + this.byteOffset[1]] = gamma.green[g-w];
+          output[offset + this.byteOffset[2]] = gamma.blue[b-w];
+          output[offset + this.byteOffset[3]] = gamma.white[w];
         }
       } else {
-        output[offset + this.byteOffset[0]] = gamma[r];
-        output[offset + this.byteOffset[1]] = gamma[g];
-        output[offset + this.byteOffset[2]] = gamma[b];
+        output[offset + this.byteOffset[0]] = gamma.red[r];
+        output[offset + this.byteOffset[1]] = gamma.green[g];
+        output[offset + this.byteOffset[2]] = gamma.blue[b];
       }
     }
   };
@@ -149,12 +149,13 @@ public abstract class LXBufferOutput extends LXOutput {
    * @param brightness Master brightness
    * @return this
    */
-  protected LXBufferOutput updateDataBuffer(int[] colors, byte[][] glut, double brightness) {
+  protected LXBufferOutput updateDataBuffer(int[] colors, GammaTable glut, double brightness) {
     final byte[] buffer = getDataBuffer();
 
     for (IndexBuffer.Segment segment : this.indexBuffer.segments) {
       // Determine the appropriate gamma curve for segment brightness
-      final byte[] gamma = glut[(int) Math.round(255. * brightness * segment.brightness.getValue())];
+      final int glutIndex = (int) Math.round(255. * brightness * segment.brightness.getValue());
+      final GammaTable.Curve gamma = glut.level[glutIndex];
 
       final ByteEncoder byteEncoder = segment.byteEncoder;
       final int numBytes = byteEncoder.getNumBytes();
@@ -177,7 +178,7 @@ public abstract class LXBufferOutput extends LXOutput {
               int g = ((color >> 8) & 0xff);
               int b = (color & 0xff);
               int w = (r + b + g) / 3;
-              buffer[offset] = gamma[w];
+              buffer[offset] = gamma.white[w];
               offset += numBytes;
             }
           } else {
@@ -191,10 +192,10 @@ public abstract class LXBufferOutput extends LXOutput {
               r -= w;
               g -= w;
               b -= w;
-              buffer[offset + byteOffset[0]] = gamma[r];
-              buffer[offset + byteOffset[1]] = gamma[g];
-              buffer[offset + byteOffset[2]] = gamma[b];
-              buffer[offset + byteOffset[3]] = gamma[w];
+              buffer[offset + byteOffset[0]] = gamma.red[r];
+              buffer[offset + byteOffset[1]] = gamma.green[g];
+              buffer[offset + byteOffset[2]] = gamma.blue[b];
+              buffer[offset + byteOffset[3]] = gamma.white[w];
               offset += numBytes;
             }
           }
@@ -202,9 +203,9 @@ public abstract class LXBufferOutput extends LXOutput {
           for (int i = 0; i < segment.indices.length; ++i) {
             int index = segment.indices[i];
             int color = (index >= 0) ? colors[index] : 0;
-            buffer[offset + byteOffset[0]] = gamma[((color >> 16) & 0xff)]; // R
-            buffer[offset + byteOffset[1]] = gamma[((color >> 8) & 0xff)]; // G
-            buffer[offset + byteOffset[2]] = gamma[(color & 0xff)]; // B
+            buffer[offset + byteOffset[0]] = gamma.red[((color >> 16) & 0xff)]; // R
+            buffer[offset + byteOffset[1]] = gamma.green[((color >> 8) & 0xff)]; // G
+            buffer[offset + byteOffset[2]] = gamma.blue[(color & 0xff)]; // B
             offset += numBytes;
           }
         }
