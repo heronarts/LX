@@ -18,14 +18,21 @@
 
 package heronarts.lx.color;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
@@ -601,6 +608,32 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       }
     }
     super.load(lx, obj);
+  }
+
+  public void exportSwatches(File file) {
+    final JsonObject obj = new JsonObject();
+    obj.add(KEY_SWATCHES, LXSerializable.Utils.toArray(this.lx, this.swatches, true));
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      LX.log("Swatches saved successfully to " + file.toString());
+    } catch (IOException iox) {
+      LX.error(iox, "Could not export color swatches to file: " + file.toString());
+    }
+  }
+
+  public void importSwatches(File file) {
+    try (FileReader fr = new FileReader(file)) {
+      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      if (obj.has(KEY_SWATCHES)) {
+        JsonArray swatchArr = obj.get(KEY_SWATCHES).getAsJsonArray();
+        for (JsonElement swatchElem : swatchArr) {
+          addSwatch(swatchElem.getAsJsonObject(), -1);
+        }
+      }
+    } catch (IOException iox) {
+      LX.error(iox, "Could not import color swatches from file: " + file.toString());
+    }
   }
 
 }

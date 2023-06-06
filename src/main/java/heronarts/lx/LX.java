@@ -153,6 +153,7 @@ public class LX {
     MODELS("Models"),
     PRESETS("Presets"),
     SCRIPTS("Scripts"),
+    COLORS("Colors"),
     LOGS("Logs"),
     DELETED("Deleted");
 

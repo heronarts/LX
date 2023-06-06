@@ -320,9 +320,21 @@ public interface LXSerializable {
      * @return JsonArray representation of all subobjects
      */
     public static JsonArray toArray(LX lx, LXSerializable[] serializables) {
+      return toArray(lx, serializables, false);
+    }
+
+    /**
+     * Serializes an array of subobjects
+     *
+     * @param lx LX instance
+     * @param serializables Array of sub-objects
+     * @param stripIds Whether to strip ids in output
+     * @return JsonArray representation of all subobjects
+     */
+    public static JsonArray toArray(LX lx, LXSerializable[] serializables, boolean stripIds) {
       JsonArray arr = new JsonArray();
       for (LXSerializable serializable : serializables) {
-        arr.add(toObject(lx, serializable));
+        arr.add(toObject(lx, serializable, stripIds));
       }
       return arr;
     }
@@ -335,9 +347,21 @@ public interface LXSerializable {
      * @return JsonArray representation of collection of objects
      */
     public static JsonArray toArray(LX lx, Collection<? extends LXSerializable> serializables) {
+      return toArray(lx, serializables, false);
+    }
+
+    /**
+     * Serialized a generic collection of sub-objects, not necessarily ordered
+     *
+     * @param lx LX instance
+     * @param serializables Collection of serializable objects
+     * @param stripIds Whether to strip ids from output
+     * @return JsonArray representation of collection of objects
+     */
+    public static JsonArray toArray(LX lx, Collection<? extends LXSerializable> serializables, boolean stripIds) {
       JsonArray arr = new JsonArray();
       for (LXSerializable serializable : serializables) {
-        arr.add(toObject(lx, serializable));
+        arr.add(toObject(lx, serializable, stripIds));
       }
       return arr;
     }
