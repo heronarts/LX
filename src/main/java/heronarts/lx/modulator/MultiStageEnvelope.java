@@ -235,7 +235,6 @@ public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXT
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    super.load(lx, obj);
     if (obj.has(KEY_STAGES)) {
       JsonArray stageArr = obj.getAsJsonArray(KEY_STAGES);
       int index = 0;
@@ -251,6 +250,7 @@ public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXT
         ++index;
       }
     }
+    super.load(lx, obj);
     this.monitor.bang();
   }
 
