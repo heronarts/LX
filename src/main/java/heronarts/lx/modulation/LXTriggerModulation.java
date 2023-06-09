@@ -105,7 +105,8 @@ public class LXTriggerModulation extends LXParameterModulation {
   public enum MomentaryToggleMode {
     TOGGLE("Trigger → Toggle"),
     ON("Trigger → On"),
-    OFF("Trigger → Off");
+    OFF("Trigger → Off"),
+    DIRECT("Trigger → Direct");
 
     public final String label;
 
@@ -123,6 +124,14 @@ public class LXTriggerModulation extends LXParameterModulation {
       case TOGGLE: target.toggle(); break;
       case ON: target.setValue(true); break;
       case OFF: target.setValue(false); break;
+      case DIRECT: target.setValue(true); break;
+      }
+    }
+
+    private void onRelease(BooleanParameter target) {
+      switch (this) {
+      case DIRECT: target.setValue(false); break;
+      default: break;
       }
     }
   };
@@ -207,6 +216,8 @@ public class LXTriggerModulation extends LXParameterModulation {
           // Momentary -> Toggle
           if (this.source.isOn()) {
             this.momentaryToggleMode.getEnum().onMomentary(this.target);
+          } else {
+            this.momentaryToggleMode.getEnum().onRelease(this.target);
           }
         }
       } else {
