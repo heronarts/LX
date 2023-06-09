@@ -147,6 +147,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     new BooleanParameter("Expanded", true)
     .setDescription("Whether the modulation controls are expanded");
 
+  public final BooleanParameter modulationsExpanded =
+    new BooleanParameter("Show Modulations", true)
+    .setDescription("Whether the modulations are visible");
+
   // Prefix for internal implementation-only parameters
   private static final String INTERNAL_PREFIX = "internal/";
 
@@ -408,6 +412,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     addParameter("label", this.label);
     addInternalParameter("modulationColor", this.modulationColor);
     addInternalParameter("modulationControlsExpanded", this.modulationControlsExpanded);
+    addInternalParameter("modulationsExpanded", this.modulationsExpanded);
   }
 
   /**
