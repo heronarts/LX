@@ -38,7 +38,7 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("AHDSR")
 @LXModulator.Device("AHDSR")
 @LXCategory(LXCategory.CORE)
-public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, LXNormalizedParameter, LXTriggerSource, LXTriggerTarget, LXMidiListener {
+public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, LXNormalizedParameter, LXTriggerSource, LXMidiListener {
 
   private final static CompoundParameter initial() {
     return
@@ -221,11 +221,6 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
   @Override
   public BooleanParameter getTriggerSource() {
     return this.engage;
-  }
-
-  @Override
-  public BooleanParameter getTriggerTarget() {
-    return this.targetTrigger;
   }
 
   private boolean isActiveMidiNote(MidiNote note) {

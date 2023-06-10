@@ -30,7 +30,6 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
@@ -38,7 +37,7 @@ import heronarts.lx.utils.LXUtils;
 @LXCategory(LXCategory.CORE)
 @LXModulator.Global("Envelope")
 @LXModulator.Device("Envelope")
-public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXTriggerTarget, LXWaveshape, LXOscComponent {
+public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXWaveshape, LXOscComponent {
 
   public class Stage implements LXSerializable {
     private double basis;
@@ -252,11 +251,6 @@ public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXT
     }
     super.load(lx, obj);
     this.monitor.bang();
-  }
-
-  @Override
-  public BooleanParameter getTriggerTarget() {
-    return this.trigger;
   }
 
 }

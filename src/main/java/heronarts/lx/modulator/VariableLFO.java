@@ -20,7 +20,6 @@ package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -33,7 +32,7 @@ import heronarts.lx.parameter.ObjectParameter;
 @LXCategory(LXCategory.CORE)
 @LXModulator.Global("LFO")
 @LXModulator.Device("LFO")
-public class VariableLFO extends LXVariablePeriodModulator implements LXTriggerTarget, LXWaveshape, LXOscComponent {
+public class VariableLFO extends LXVariablePeriodModulator implements LXWaveshape, LXOscComponent {
 
   /**
    * Parameter of {@link LXWaveshape} objects that select the wave shape used by this LFO.
@@ -197,10 +196,5 @@ public class VariableLFO extends LXVariablePeriodModulator implements LXTriggerT
   public double invert(double value, double basisHint) {
     // TODO(mcslee): implement shape and bias inversion properly??
     return getWaveshape().invert(value, basisHint);
-  }
-
-  @Override
-  public BooleanParameter getTriggerTarget() {
-    return this.trigger;
   }
 }
