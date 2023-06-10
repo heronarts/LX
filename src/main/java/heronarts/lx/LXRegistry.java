@@ -151,15 +151,20 @@ public class LXRegistry implements LXSerializable {
   private static final List<Class<? extends LXModulator>> DEFAULT_MODULATORS;
   static {
     DEFAULT_MODULATORS = new ArrayList<Class<? extends LXModulator>>();
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.VariableLFO.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiStageEnvelope.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiModeEnvelope.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Interval.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Randomizer.class);
     DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
     DEFAULT_MODULATORS.add(heronarts.lx.audio.SoundObject.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Timer.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Damper.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Interval.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroSwitches.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroTriggers.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiStageEnvelope.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiModeEnvelope.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.NoiseModulator.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Randomizer.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.VariableLFO.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Timer.class);
+
   };
 
   private static final List<Class<? extends LXBlend>> DEFAULT_CHANNEL_BLENDS;
