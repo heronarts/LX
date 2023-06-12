@@ -20,6 +20,7 @@ package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -92,6 +93,10 @@ public class NoiseModulator extends LXModulator implements LXNormalizedParameter
     new BoundedParameter("Ridge", .9, 0, 2)
     .setDescription("Used to invert the feedback ridges");
 
+  public final BooleanParameter showPreview =
+    new BooleanParameter("Preview", false)
+    .setDescription("Whether the wave preview is visible in the modulator UI");
+
   private double basis = 0;
 
   public NoiseModulator() {
@@ -113,6 +118,9 @@ public class NoiseModulator extends LXModulator implements LXNormalizedParameter
     addParameter("lacunarity", this.lacunarity);
     addParameter("gain", this.gain);
     addParameter("ridgeOffset", this.ridgeOffset);
+
+    addParameter("showPreview", this.showPreview);
+
     setDescription("Noise generator that produces normalized output");
   }
 
@@ -138,15 +146,23 @@ public class NoiseModulator extends LXModulator implements LXNormalizedParameter
     }
   }
 
-  @Override
-  protected double computeValue(double deltaMs) {
-    this.basis = (256 + (this.basis + deltaMs * .001 * this.speedRange.getValue() * this.speed.getValue()) % 256.) % 256.;
+  private double _computeValue(float basis) {
     return LXUtils.clamp(
-      this.level.getValue() +
-      this.contrast.getValue() * getNoise((float) this.basis),
+      this.level.getValue() + this.contrast.getValue() * getNoise(basis),
       this.minLevel.getValue(),
       this.maxLevel.getValue()
     );
+  }
+
+  @Override
+  protected double computeValue(double deltaMs) {
+    this.basis = (256 + (this.basis + deltaMs * .001 * this.speedRange.getValue() * this.speed.getValue()) % 256.) % 256.;
+    return _computeValue((float) this.basis);
+  }
+
+  public double lookahead(double deltaMs) {
+    double basis = (256 + (this.basis + deltaMs * .001 * this.speedRange.getValue() * this.speed.getValue()) % 256.) % 256.;
+    return _computeValue((float) basis);
   }
 
   @Override
