@@ -22,8 +22,10 @@ import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
@@ -34,7 +36,27 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("Randomizer")
 @LXModulator.Device("Randomizer")
 @LXCategory(LXCategory.CORE)
-public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXTriggerTarget, LXOscComponent {
+public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
+
+  public enum TriggerMode {
+    INTERNAL("Internal"),
+    EXTERNAL("External");
+
+    public final String label;
+
+    private TriggerMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public final EnumParameter<TriggerMode> triggerMode =
+    new EnumParameter<TriggerMode>("Trig Mode", TriggerMode.INTERNAL)
+    .setDescription("Whether triggers are internally or externally generated");
 
   public final CompoundParameter periodMs =
     new CompoundParameter("Interval", 1000, 10, 1000*60)
@@ -62,7 +84,9 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
   private final FunctionalParameter totalMs = new FunctionalParameter() {
     @Override
     public double getValue() {
-      return periodMs.getValue() + randomInterval * randomMs.getValue();
+      return triggerMode.getEnum() == TriggerMode.EXTERNAL ?
+        Double.POSITIVE_INFINITY :
+        periodMs.getValue() + randomInterval * randomMs.getValue();
     }
   };
 
@@ -86,6 +110,10 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Maximum output value");
 
+  public final TriggerParameter triggerIn =
+    new TriggerParameter("Trigger In", this::onTriggerIn)
+    .setDescription("Engages the randomizer directly");
+
   public final TriggerParameter triggerOut =
     new TriggerParameter("Trigger Out")
     .setDescription("Engages when the randomizer triggers");
@@ -102,6 +130,7 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     super(label, null);
     setPeriod(this.totalMs);
 
+    addParameter("triggerMode", this.triggerMode);
     addParameter("periodMs", this.periodMs);
     addParameter("randomMs", this.randomMs);
     addParameter("chance", this.chance);
@@ -113,6 +142,7 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     addParameter("min", this.min);
     addParameter("max", this.max);
 
+    addParameter("triggerIn", this.triggerIn);
     addParameter("triggerOut", this.triggerOut);
 
     this.damper.start();
@@ -121,21 +151,44 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
   }
 
   @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (p == this.triggerMode) {
+      if (this.triggerMode.getEnum() == TriggerMode.EXTERNAL) {
+        this.tempoSync.setValue(false);
+        setBasis(0);
+      }
+    }
+  }
+
+  private void onTriggerIn() {
+    if (this.running.isOn() && (this.triggerMode.getEnum() == TriggerMode.EXTERNAL)) {
+      if (Math.random()*100 < this.chance.getValue()) {
+        fire();
+        setBasis(0);
+      }
+    }
+  }
+
+  private void fire() {
+    this.randomInterval = Math.random();
+    this.target.setValue(LXUtils.lerp(this.min.getValue(), this.max.getValue(), Math.random()));
+    this.triggerOut.trigger();
+  }
+
+  @Override
   protected double computeValue(double deltaMs, double basis) {
-    if (loop() || finished()) {
-      double d = Math.random();
-      if (d*100 < this.chance.getValue()) {
-        this.randomInterval = Math.random();
-        this.target.setValue(LXUtils.lerp(this.min.getValue(), this.max.getValue(), Math.random()));
-        this.triggerOut.trigger();
+    if (this.triggerMode.getEnum() == TriggerMode.INTERNAL) {
+      if (loop() || finished()) {
+        if (Math.random()*100 < this.chance.getValue()) {
+          fire();
+        }
       }
     }
     this.damper.loop(deltaMs);
-    if (this.damping.isOn()) {
-      return LXUtils.constrain(this.damper.getValue(), 0, 1);
-    } else {
-      return this.target.getValue();
-    }
+    return this.damping.isOn() ?
+      LXUtils.constrain(this.damper.getValue(), 0, 1) :
+      this.target.getValue();
   }
 
   @Override
@@ -152,11 +205,6 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
   @Override
   public BooleanParameter getTriggerSource() {
     return this.triggerOut;
-  }
-
-  @Override
-  public BooleanParameter getTriggerTarget() {
-    return this.trigger;
   }
 
   @Override
