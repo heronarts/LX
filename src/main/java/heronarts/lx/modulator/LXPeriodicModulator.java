@@ -78,6 +78,11 @@ public abstract class LXPeriodicModulator extends LXModulator {
   private int numLoops = 0;
 
   /**
+   * Flag set when we are in a reset operation
+   */
+  private boolean reset = false;
+
+  /**
    * Flag set when we are restarted
    */
   private boolean restarted = false;
@@ -161,7 +166,9 @@ public abstract class LXPeriodicModulator extends LXModulator {
 
   @Override
   protected void onReset() {
-    this.setBasis(0);
+    this.reset = true;
+    setBasis(0);
+    this.reset = false;
     this.needsReset = false;
   }
 
@@ -269,16 +276,19 @@ public abstract class LXPeriodicModulator extends LXModulator {
         double rawBasis = this.lx.engine.tempo.getBasis(this.tempoDivision.getEnum(), false);
         int measure = (int) rawBasis;
         this.basis = rawBasis % 1.;
-        if (this.restarted) {
+        if (this.reset) {
+          // No-op, just let the lastMeasure value be updated beneath, resets
+          // of tempo synced modulators shouldn't be treated as having finished
+          // their loop... the tempo is always running continuously in the background
+        } else if (this.restarted) {
           this.restarted = false;
         } else if (measure != this.lastMeasure) {
           if (this.looping.isOn()) {
             this.looped = true;
             this.numLoops = (measure > this.lastMeasure) ? (measure - this.lastMeasure) : 1;
           } else {
-            this.basis = 1;
-            this.finished = true;
-            this.stop();
+            this.basis = 1.;
+            // NOTE - code path below for basis >= 1 will set finished/needsReset and stop()
           }
         }
         this.lastMeasure = measure;
@@ -290,6 +300,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     } else {
       this.basis += deltaMs / this.period.getValue();
     }
+
     if (this.basis >= 1.) {
       if (this.looping.isOn()) {
         this.looped = true;
@@ -299,7 +310,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
         this.basis = 1.;
         this.finished = true;
         this.needsReset = true;
-        this.stop();
+        stop();
       }
     }
     return computeValue(deltaMs, this.basis);
