@@ -27,7 +27,7 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.TimeParameter;
 
 @LXModulator.Global("Timer")
-@LXCategory(LXCategory.CORE)
+@LXCategory(LXCategory.TRIGGER)
 public class Timer extends LXModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
 
   public final TimeParameter time =

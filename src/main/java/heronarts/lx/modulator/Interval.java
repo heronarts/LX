@@ -30,7 +30,7 @@ import heronarts.lx.parameter.TriggerParameter;
  */
 @LXModulator.Global("Interval")
 @LXModulator.Device("Interval")
-@LXCategory(LXCategory.CORE)
+@LXCategory(LXCategory.TRIGGER)
 public class Interval extends LXPeriodicModulator implements LXTriggerSource, LXOscComponent {
 
   public final CompoundParameter periodMs =
