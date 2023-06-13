@@ -166,8 +166,11 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
       this.runMs += deltaMs;
       run(deltaMs);
     }
+    postRun(deltaMs);
   }
 
   protected abstract void run(double deltaMs);
+
+  protected void postRun(double deltaMs) {}
 
 }

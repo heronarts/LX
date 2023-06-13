@@ -185,10 +185,17 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
         }
       }
     }
-    this.damper.loop(deltaMs);
     return this.damping.isOn() ?
       LXUtils.constrain(this.damper.getValue(), 0, 1) :
       this.target.getValue();
+  }
+
+  @Override
+  protected void postRun(double deltaMs) {
+    this.damper.loop(deltaMs);
+    if (this.damping.isOn()) {
+      updateValue(LXUtils.constrain(this.damper.getValue(), 0, 1));
+    }
   }
 
   @Override
