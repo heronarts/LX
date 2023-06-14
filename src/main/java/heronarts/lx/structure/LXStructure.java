@@ -447,6 +447,14 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public final StringParameter outputError =
     new StringParameter("Output Error", null);
 
+  public final BooleanParameter allWhite =
+    new BooleanParameter("White", false)
+    .setDescription("Output full white to all pixels");
+
+  public final BooleanParameter mute =
+    new BooleanParameter("Mute", false)
+    .setDescription("Send black to all pixels");
+
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
@@ -470,6 +478,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public LXStructure(LX lx, LXModel immutable) {
     super(lx);
     addParameter("syncModelFile", this.syncModelFile);
+    addParameter("allWhite", this.allWhite);
+    addParameter("mute", this.mute);
+
     if (immutable != null) {
       this.isImmutable = true;
       this.staticModel = this.model = immutable.normalizePoints();

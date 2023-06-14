@@ -43,6 +43,7 @@ import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -1113,6 +1114,17 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
             }
           }
         }
+      }
+
+      // Finally, structure-level edits
+      if (this.lx.structure.mute.isOn()) {
+        Arrays.fill(this.buffer.render.main, LXColor.BLACK);
+        Arrays.fill(this.buffer.render.cue, LXColor.BLACK);
+        Arrays.fill(this.buffer.render.aux, LXColor.BLACK);
+      } else if (this.lx.structure.allWhite.isOn()) {
+        Arrays.fill(this.buffer.render.main, LXColor.WHITE);
+        Arrays.fill(this.buffer.render.cue, LXColor.WHITE);
+        Arrays.fill(this.buffer.render.aux, LXColor.WHITE);
       }
     }
 
