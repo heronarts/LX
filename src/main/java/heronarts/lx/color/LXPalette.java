@@ -598,6 +598,9 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
 
   @Override
   public void load(LX lx, JsonObject obj) {
+    // Kill any transition
+    finishTransition();
+
     while (!this.swatches.isEmpty()) {
       removeSwatch(this.swatches.get(this.swatches.size() - 1));
     }
