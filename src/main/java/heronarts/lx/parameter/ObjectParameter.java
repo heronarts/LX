@@ -27,7 +27,7 @@ public class ObjectParameter<T> extends DiscreteParameter {
       return 0;
     }
     for (int i = 0; i < objects.length; ++i) {
-      if (value == objects[i]) {
+      if (Objects.equals(value, objects[i])) {
         return i;
       }
     }
