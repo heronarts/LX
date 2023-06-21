@@ -526,7 +526,7 @@ public class LX {
     if (!this.listeners.contains(listener)) {
       throw new IllegalStateException("May not remove non-registered LX.Listener: " + listener);
     }
-    this.listeners.add(listener);
+    this.listeners.remove(listener);
     return this;
   }
 

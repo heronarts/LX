@@ -1072,6 +1072,9 @@ public class LXChannel extends LXAbstractChannel {
       this.thread.interrupt();
     }
     this.listeners.clear();
+
+    this.renderBuffer.dispose();
+
     super.dispose();
   }
 
