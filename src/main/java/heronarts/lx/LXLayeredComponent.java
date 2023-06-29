@@ -178,6 +178,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       layer.dispose();
     }
     this.mutableLayers.clear();
+    this.buffer = null;
     super.dispose();
   }
 
