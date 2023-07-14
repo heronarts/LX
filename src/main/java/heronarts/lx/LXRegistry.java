@@ -828,12 +828,24 @@ public class LXRegistry implements LXSerializable {
   }
 
   /**
-   * Register an modulator class with the engine
+   * Register an array of modulator classes with the engine
+   *
+   * @param modulators List of modulator classes
+   * @return this
+   * @deprecated Use addModulators without typo
+   */
+  @Deprecated
+  public LXRegistry addModulataors(Class<? extends LXModulator>[] modulators) {
+    return addModulators(modulators);
+  }
+
+  /**
+   * Register an array of modulator classes with the engine
    *
    * @param modulators List of modulator classes
    * @return this
    */
-  public LXRegistry addModulataors(Class<? extends LXModulator>[] modulators) {
+  public LXRegistry addModulators(Class<? extends LXModulator>[] modulators) {
     checkRegistration();
     for (Class<? extends LXModulator> modulator : modulators) {
       addModulator(modulator);
