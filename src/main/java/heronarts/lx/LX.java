@@ -864,6 +864,10 @@ public class LX {
       projectListener.projectChanged(file, change);
     }
     this.preferences.setProject(file);
+
+    // NOTE(mcslee): This is a great opportunity to reclaim memory from
+    // a previously open project
+    System.gc();
   }
 
   public File getProject() {
@@ -978,6 +982,11 @@ public class LX {
       pushError(x, "Exception in openProject: " + x.getLocalizedMessage());
     } finally {
       this.componentRegistry.projectLoading = false;
+
+      // NOTE(mcslee): discovered that often heap is not reclaimed automatically
+      // when you might think it is. Try a collection whether or not project
+      // opening succeeded.
+      System.gc();
     }
   }
 
