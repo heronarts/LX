@@ -130,6 +130,7 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   public final CompoundParameter gradientHue =
     new CompoundParameter("H-Offset", 0, -360, 360)
+    .setUnits(CompoundParameter.Units.DEGREES)
     .setDescription("Amount of hue gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
@@ -141,6 +142,24 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   public final CompoundParameter gradientBrightness =
     new CompoundParameter("B-Offset", 0, -100, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Amount of brightness gradient")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter primaryHue =
+    new CompoundParameter("H-Primary", 0, -360, 360)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Amount of hue gradient")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter primarySaturation =
+    new CompoundParameter("S-Primary", 0, -100, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Amount of saturation gradient")
+    .setPolarity(LXParameter.Polarity.BIPOLAR);
+
+  public final CompoundParameter primaryBrightness =
+    new CompoundParameter("B-Primary", 0, -100, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount of brightness gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
@@ -165,6 +184,9 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     addParameter("color2", this.color2);
     addParameter("paletteIndex", this.paletteIndex);
     addParameter("paletteStops", this.paletteStops);
+    addParameter("primaryHue", this.primaryHue);
+    addParameter("primarySaturation", this.primarySaturation);
+    addParameter("primaryBrightness", this.primaryBrightness);
   }
 
   @Override
@@ -173,7 +195,12 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
         p == this.color1 ||
         p == this.gradientHue ||
         p == this.gradientSaturation ||
-        p == this.gradientBrightness) {
+        p == this.gradientBrightness ||
+        p == this.primaryHue ||
+        p == this.primarySaturation ||
+        p == this.primaryBrightness) {
+      // We want to do this onParameterChanged so that the UI indicator
+      // updates properly, whether or not this pattern is actually running
       setGradientColor();
     }
   }
@@ -187,6 +214,10 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       this.color2.hue.setValue((360 + this.color1.hue.getValue() + this.gradientHue.getValue()) % 360);
     } else if (this.colorMode.getEnum() == ColorMode.PRIMARY) {
       LXDynamicColor swatchColor = getSwatchColor();
+      this.color1.brightness.setValue(swatchColor.getBrightness() + this.primaryBrightness.getValue());
+      this.color1.saturation.setValue(swatchColor.getSaturation() + this.primarySaturation.getValue());
+      this.color1.hue.setValue((360 + swatchColor.getHue() + this.primaryHue.getValue()) % 360);
+
       this.color2.brightness.setValue(swatchColor.getBrightness() + this.gradientBrightness.getValue());
       this.color2.saturation.setValue(swatchColor.getSaturation() + this.gradientSaturation.getValue());
       this.color2.hue.setValue((360 + swatchColor.getHue() + this.gradientHue.getValue()) % 360);
@@ -208,7 +239,11 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
     case PRIMARY:
       LXDynamicColor swatchColor = getSwatchColor();
-      this.colorStops.stops[0].set(swatchColor);
+      this.colorStops.stops[0].set(swatchColor,
+        this.primaryHue.getValuef(),
+        this.primarySaturation.getValuef(),
+        this.primaryBrightness.getValuef()
+      );
       this.colorStops.stops[1].set(swatchColor,
         this.gradientHue.getValuef(),
         this.gradientSaturation.getValuef(),
@@ -226,6 +261,7 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       );
       this.colorStops.setNumStops(2);
       break;
+
     case PALETTE:
       this.colorStops.setPaletteGradient(this.lx.engine.palette, this.paletteIndex.getValuei() - 1, this.paletteStops.getValuei());
       break;
