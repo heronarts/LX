@@ -739,4 +739,73 @@ public class LXColor {
     return (a > b) ? a : b;
   }
 
+  /**
+   * Map a pixel buffer onto a buffer of different size
+   *
+   * @param src Source buffer
+   * @param srcNum Number of source pixels
+   * @param dst Destination buffer
+   * @param dstNum Number of destination pixels
+   */
+  public static void map(int[] src, int srcNum, int[] dst, int dstNum) {
+    map(src, 0, srcNum, dst, 0, dstNum);
+  }
+
+  /**
+   * Map a pixel buffer onto a buffer of different size
+   *
+   * @param src Source buffer
+   * @param srcOffset Offset in source buffer
+   * @param srcNum Number of source pixels
+   * @param dst Destination buffer
+   * @param dstOffset Offset in destination buffer
+   * @param dstNum Number of destination pixels
+   */
+  public static void map(int[] src, int srcOffset, int srcNum, int[] dst, int dstOffset, int dstNum) {
+    for (int i = 0; i < dstNum; ++i) {
+      int srcIndex = (int) ((srcNum - 1.) * (i / (dstNum - 1.)));
+      dst[dstOffset + i] = src[srcOffset + srcIndex];
+    }
+  }
+
+  /**
+   * Map a pixel buffer onto a buffer of different size, with color interpolation
+   *
+   * @param src Source buffer
+   * @param srcNum Number of source pixels
+   * @param dst Destination buffer
+   * @param dstNum Number of destination pixels
+   */
+  public static void maplerp(int[] src, int srcNum, int[] dst, int dstNum) {
+    maplerp(src, 0, srcNum, dst, 0, dstNum);
+  }
+
+  /**
+   * Map a pixel buffer onto a buffer of different size, with color interpolation
+   *
+   * @param src Source buffer
+   * @param srcOffset Offset in source buffer
+   * @param srcNum Number of source pixels
+   * @param dst Destination buffer
+   * @param dstOffset Offset in destination buffer
+   * @param dstNum Number of destination pixels
+   */
+  public static void maplerp(int[] src, int srcOffset, int srcNum, int[] dst, int dstOffset, int dstNum) {
+    for (int i = 0; i < dstNum; ++i) {
+      double srcIndex = (int) ((srcNum - 1.) * (i / (dstNum - 1.)));
+      int srcInt = (int) srcIndex;
+      double lerp = srcIndex - srcInt;
+      if ((lerp > 0) && (srcInt < srcNum - 1)) {
+        dst[dstOffset + i] = LXColor.lerp(
+          src[srcOffset + srcInt],
+          src[srcOffset + srcInt + 1],
+          lerp
+        );
+      } else {
+        dst[dstOffset + i] = src[srcOffset + srcInt];
+      }
+    }
+  }
+
+
 }
