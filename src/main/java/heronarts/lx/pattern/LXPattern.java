@@ -18,19 +18,28 @@
 
 package heronarts.lx.pattern;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.LXTime;
 import heronarts.lx.blend.LXBlend;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.LXOscEngine;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -99,6 +108,33 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   }
 
+  /**
+   * Listener interface for objects which want to be notified when the pattern's
+   * set of effects are modified
+   */
+  public interface Listener {
+    public void effectAdded(LXPattern pattern, LXEffect effect);
+    public void effectRemoved(LXPattern pattern, LXEffect effect);
+    public void effectMoved(LXPattern pattern, LXEffect effect);
+  }
+
+  private final List<Listener> listeners = new ArrayList<Listener>();
+
+  public final void addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXPattern.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXPattern.Listener: " + listener);
+    }
+    this.listeners.add(listener);
+  }
+
+  public final void removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered Bus.Listener: " + listener);
+    }
+    this.listeners.remove(listener);
+  }
+
   private int index = -1;
 
   private int intervalBegin = -1;
@@ -156,11 +192,18 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   public class Profiler {
     public long runNanos = 0;
+    public long effectNanos = 0;
   }
+
+  protected final List<LXEffect> mutableEffects = new ArrayList<LXEffect>();
+
+  public final List<LXEffect> effects = Collections.unmodifiableList(mutableEffects);
 
   protected LXPattern(LX lx) {
     super(lx);
     this.label.setDescription("The name of this pattern");
+
+    addArray("effect", this.effects);
 
     // NOTE: this used to be internal, but it's not anymore...
     addLegacyInternalParameter("autoCycleEligible", this.enabled);
@@ -352,6 +395,117 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this.compositeDampingLevel;
   }
 
+  public final LXPattern addEffect(LXEffect effect) {
+    return addEffect(effect, -1);
+  }
+
+  public final LXPattern addEffect(LXEffect effect, int index) {
+    if (index > this.mutableEffects.size()) {
+      throw new IllegalArgumentException("Illegal effect index: " + index);
+    }
+    if (index < 0) {
+      index = this.mutableEffects.size();
+    }
+    this.mutableEffects.add(index, effect);
+    effect.setPattern(this);
+    effect.setModel(getModel());
+    _reindexEffects();
+    for (Listener listener : this.listeners) {
+      listener.effectAdded(this, effect);
+    }
+    return this;
+  }
+
+  public final LXPattern removeEffect(LXEffect effect) {
+    int index = this.mutableEffects.indexOf(effect);
+    if (index >= 0) {
+      effect.setIndex(-1);
+      this.mutableEffects.remove(index);
+      while (index < this.mutableEffects.size()) {
+        this.mutableEffects.get(index).setIndex(index);
+        ++index;
+      }
+      for (Listener listener : this.listeners) {
+        listener.effectRemoved(this, effect);
+      }
+      effect.dispose();
+    }
+    return this;
+  }
+
+  public LXPattern reloadEffect(LXEffect effect) {
+    if (!this.effects.contains(effect)) {
+      throw new IllegalStateException("Cannot reload effect not on a pattern");
+    }
+    int index = effect.getIndex();
+    JsonObject effectObj = new JsonObject();
+    effect.save(getLX(), effectObj);
+    removeEffect(effect);
+    loadEffect(effectObj, index);
+    return this;
+  }
+
+  private void _reindexEffects() {
+    int i = 0;
+    for (LXEffect e : this.mutableEffects) {
+      e.setIndex(i++);
+    }
+  }
+
+  public LXPattern moveEffect(LXEffect effect, int index) {
+    if (index < 0 || index >= this.mutableEffects.size()) {
+      throw new IllegalArgumentException("Cannot move effect to invalid index: " + index);
+    }
+    if (!this.mutableEffects.contains(effect)) {
+      throw new IllegalStateException("Cannot move effect that is not on pattern: " + this + " " + effect);
+    }
+    this.mutableEffects.remove(effect);
+    this.mutableEffects.add(index, effect);
+    _reindexEffects();
+    for (Listener listener : this.listeners) {
+      listener.effectMoved(this, effect);
+    }
+    return this;
+  }
+
+  public final List<LXEffect> getEffects() {
+    return this.effects;
+  }
+
+  public LXEffect getEffect(int i) {
+    return this.effects.get(i);
+  }
+
+  public LXEffect getEffect(String label) {
+    for (LXEffect effect : this.effects) {
+      if (effect.getLabel().equals(label)) {
+        return effect;
+      }
+    }
+    return null;
+  }
+
+  public static final String PATH_EFFECT = "effect";
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    String path = parts[index];
+    if (path.equals(PATH_EFFECT)) {
+      String effectId = parts[index+1];
+      if (effectId.matches("\\d+")) {
+        return this.effects.get(Integer.parseInt(effectId) - 1).handleOscMessage(message, parts, index+2);
+      }
+      for (LXEffect effect : this.effects) {
+        if (effect.getOscLabel().equals(effectId)) {
+          return effect.handleOscMessage(message, parts, index+2);
+        }
+      }
+      LXOscEngine.error("Pattern " + getLabel() + " does not have effect at path: " + effectId + " (" + message + ")");
+      return false;
+    }
+    return super.handleOscMessage(message, parts, index);
+  }
+
   @Override
   protected final void onLoop(double deltaMs) {
     if (!this.isActive) {
@@ -362,6 +516,18 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.runMs += deltaMs;
     this.run(deltaMs);
     this.profiler.runNanos = System.nanoTime() - runStart;
+
+    long effectStart = System.nanoTime();
+    if (!this.mutableEffects.isEmpty()) {
+      for (LXEffect effect : this.mutableEffects) {
+        // TODO(mcslee): update this model in the future... it will be
+        // possible that the effect uses a different view than its parent pattern
+        effect.setModel(getModel());
+        effect.setBuffer(getBuffer());
+        effect.loop(deltaMs);
+      }
+    }
+    this.profiler.effectNanos = System.nanoTime() - effectStart;
   }
 
   /**
@@ -437,10 +603,48 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   public/* abstract */void onTransitionEnd() {
   }
 
+  private static final String KEY_EFFECTS = "effects";
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
+    obj.add(KEY_EFFECTS, LXSerializable.Utils.toArray(lx, this.mutableEffects));
+  }
+
   @Override
   public void load(LX lx, JsonObject obj) {
+    // Remove effects
+    for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
+      removeEffect(this.mutableEffects.get(i));
+    }
+
+    // Add the effects
+    if (obj.has(KEY_EFFECTS)) {
+      JsonArray effectsArray = obj.getAsJsonArray(KEY_EFFECTS);
+      for (JsonElement effectElement : effectsArray) {
+        JsonObject effectObj = (JsonObject) effectElement;
+        loadEffect(effectObj, -1);
+      }
+    }
+
     super.load(lx, obj);
+
     this.compositeDampingLevel = this.enabled.isOn() ? 1 : 0;
+  }
+
+  private LXEffect loadEffect(JsonObject effectObj, int index) {
+    String effectClass = effectObj.get("class").getAsString();
+    LXEffect effect;
+    try {
+      effect = this.lx.instantiateEffect(effectClass);
+    } catch (LX.InstantiationException x) {
+      LX.error("Using placeholder class for missing effect: " + effectClass);
+      effect = new LXEffect.Placeholder(this.lx, x);
+      this.lx.pushError(x, effectClass + " could not be loaded. " + x.getMessage());
+    }
+    effect.load(this.lx, effectObj);
+    addEffect(effect, index);
+    return effect;
   }
 
   @Override

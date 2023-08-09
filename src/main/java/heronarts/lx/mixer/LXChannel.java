@@ -1047,7 +1047,7 @@ public class LXChannel extends LXAbstractChannel {
 
     // Apply effects
     long effectStart = System.nanoTime();
-    if (this.mutableEffects.size() > 0) {
+    if (!this.mutableEffects.isEmpty()) {
       for (LXEffect effect : this.mutableEffects) {
         effect.setBuffer(this.blendBuffer);
         effect.loop(deltaMs);

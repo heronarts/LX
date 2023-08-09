@@ -807,19 +807,26 @@ public abstract class LXCommand {
       }
     }
 
+    private static ComponentReference<LXComponent> validateEffectParent(LXComponent parent) {
+      if (! ((parent instanceof LXBus) || (parent instanceof LXPattern))) {
+        throw new IllegalArgumentException("Parent of an LXEffect must be an LXBus or LXPattern");
+      }
+      return new ComponentReference<LXComponent>(parent);
+    }
+
     public static class AddEffect extends LXCommand {
 
-      private final ComponentReference<LXBus> channel;
+      private final ComponentReference<LXComponent> parent;
       private final Class<? extends LXEffect> effectClass;
       private ComponentReference<LXEffect> effect = null;
       private JsonObject effectObj = null;
 
-      public AddEffect(LXBus channel, Class<? extends LXEffect> effectClass) {
-        this(channel, effectClass, null);
+      public AddEffect(LXComponent parent, Class<? extends LXEffect> effectClass) {
+        this(parent, effectClass, null);
       }
 
-      public AddEffect(LXBus channel, Class<? extends LXEffect> effectClass, JsonObject effectObj) {
-        this.channel = new ComponentReference<LXBus>(channel);
+      public AddEffect(LXComponent parent, Class<? extends LXEffect> effectClass, JsonObject effectObj) {
+        this.parent = validateEffectParent(parent);
         this.effectClass = effectClass;
         this.effectObj = effectObj;
       }
@@ -837,7 +844,12 @@ public abstract class LXCommand {
             instance.load(lx, this.effectObj);
           }
           this.effectObj = LXSerializable.Utils.toObject(instance);
-          this.channel.get().addEffect(instance);
+          LXComponent parent = this.parent.get();
+          if (parent instanceof LXBus) {
+            ((LXBus) parent).addEffect(instance);
+          } else if (parent instanceof LXPattern) {
+            ((LXPattern) parent).addEffect(instance);
+          }
           this.effect = new ComponentReference<LXEffect>(instance);
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
@@ -849,20 +861,25 @@ public abstract class LXCommand {
         if (this.effect == null) {
           throw new IllegalStateException("Effect was not successfully added, cannot undo");
         }
-        this.channel.get().removeEffect(this.effect.get());
+        LXComponent parent = this.parent.get();
+        if (parent instanceof LXBus) {
+          ((LXBus) parent).removeEffect(this.effect.get());
+        } else if (parent instanceof LXPattern) {
+          ((LXPattern) parent).removeEffect(this.effect.get());
+        }
       }
     }
 
     public static class RemoveEffect extends RemoveComponent {
 
-      private final ComponentReference<LXBus> channel;
+      private final ComponentReference<LXComponent> parent;
       private final ComponentReference<LXEffect> effect;
       private final JsonObject effectObj;
       private final int effectIndex;
 
-      public RemoveEffect(LXBus channel, LXEffect effect) {
+      public RemoveEffect(LXComponent parent, LXEffect effect) {
         super(effect);
-        this.channel = new ComponentReference<LXBus>(channel);
+        this.parent = validateEffectParent(parent);
         this.effect = new ComponentReference<LXEffect>(effect);
         this.effectObj = LXSerializable.Utils.toObject(effect);
         this.effectIndex = effect.getIndex();
@@ -875,16 +892,25 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.channel.get().removeEffect(this.effect.get());
+        LXComponent parent = this.parent.get();
+        if (parent instanceof LXBus) {
+          ((LXBus) parent).removeEffect(this.effect.get());
+        } else if (parent instanceof LXPattern) {
+          ((LXPattern) parent).removeEffect(this.effect.get());
+        }
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        LXBus channel = this.channel.get();
         try {
           LXEffect effect = lx.instantiateEffect(this.effectObj.get(LXComponent.KEY_CLASS).getAsString());
           effect.load(lx, effectObj);
-          channel.addEffect(effect, this.effectIndex);
+          LXComponent parent = this.parent.get();
+          if (parent instanceof LXBus) {
+            ((LXBus) parent).addEffect(effect, this.effectIndex);
+          } else if (parent instanceof LXPattern) {
+            ((LXPattern) parent).addEffect(effect, this.effectIndex);
+          }
           super.undo(lx);
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
@@ -894,13 +920,13 @@ public abstract class LXCommand {
 
     public static class MoveEffect extends LXCommand {
 
-      private final ComponentReference<LXBus> channel;
+      private final ComponentReference<LXComponent> parent;
       private final ComponentReference<LXEffect> effect;
       private final int fromIndex;
       private final int toIndex;
 
-      public MoveEffect(LXBus channel, LXEffect effect, int toIndex) {
-        this.channel = new ComponentReference<LXBus>(channel);
+      public MoveEffect(LXComponent parent, LXEffect effect, int toIndex) {
+        this.parent = validateEffectParent(parent);
         this.effect = new ComponentReference<LXEffect>(effect);
         this.fromIndex = effect.getIndex();
         this.toIndex = toIndex;
@@ -913,12 +939,22 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.channel.get().moveEffect(this.effect.get(), this.toIndex);
+        LXComponent parent = this.parent.get();
+        if (parent instanceof LXBus) {
+          ((LXBus) parent).moveEffect(this.effect.get(), this.toIndex);
+        } else if (parent instanceof LXPattern) {
+          ((LXPattern) parent).moveEffect(this.effect.get(), this.toIndex);
+        }
       }
 
       @Override
       public void undo(LX lx) {
-        this.channel.get().moveEffect(this.effect.get(), this.fromIndex);
+        LXComponent parent = this.parent.get();
+        if (parent instanceof LXBus) {
+          ((LXBus) parent).moveEffect(this.effect.get(), this.fromIndex);
+        } else if (parent instanceof LXPattern) {
+          ((LXPattern) parent).moveEffect(this.effect.get(), this.fromIndex);
+        }
       }
     }
 

@@ -168,6 +168,10 @@ public class FocusedDevice {
     registerBus(getFocusedChannel());
   }
 
+  private boolean isBusEffect(LXDeviceComponent device) {
+    return (device instanceof LXEffect) && ((LXEffect) device).isBusEffect();
+  }
+
   private void registerBus(LXBus bus) {
     if (this.bus != bus) {
       unregisterBus();
@@ -177,9 +181,9 @@ public class FocusedDevice {
           LXChannel channel = (LXChannel) bus;
           channel.addListener(this.channelListener);
           addListener(channel.focusedPattern, p -> {
-            // Switch to focused pattern only if focus is not on the
-            // effect chain
-            if ((this.device == null) || (this.device instanceof LXPattern)) {
+            // Switch to focused pattern unless focus was on
+            // a bus effect
+            if (!isBusEffect(this.device)) {
               registerDevice(channel.getFocusedPattern());
             }
           });
@@ -206,15 +210,14 @@ public class FocusedDevice {
 
   private void registerDefaultBusDevice() {
     if (this.bus instanceof LXChannel) {
-      LXChannel channel = (LXChannel) bus;
-      LXPattern focusedPattern = channel.getFocusedPattern();
+      final LXPattern focusedPattern = ((LXChannel) this.bus).getFocusedPattern();
       if (focusedPattern != null) {
         registerDevice(focusedPattern);
         return;
       }
     }
     if (!this.bus.effects.isEmpty()) {
-      registerDevice(bus.effects.get(0));
+      registerDevice(this.bus.effects.get(0));
     } else {
       registerDevice(null);
     }
@@ -252,15 +255,26 @@ public class FocusedDevice {
       return;
     }
     if (this.device instanceof LXEffect) {
-      LXEffect effect = (LXEffect) this.device;
-      int effectIndex = effect.getIndex();
+      final LXEffect effect = (LXEffect) this.device;
+      final int effectIndex = effect.getIndex();
       if (effectIndex > 0) {
-        registerDevice(effect.getBus().getEffect(effectIndex - 1));
+        if (effect.isBusEffect()) {
+          registerDevice(effect.getBus().getEffect(effectIndex - 1));
+        } else {
+          registerDevice(effect.getPattern().getEffect(effectIndex - 1));
+        }
       } else if (this.bus instanceof LXChannel) {
         LXChannel channel = (LXChannel) this.bus;
         LXPattern pattern = channel.getFocusedPattern();
         if (pattern != null) {
-          registerDevice(pattern);
+          if (effect.isBusEffect() && !pattern.effects.isEmpty()) {
+            // We've fallen off the first bus effect and should land on the
+            // final pattern effect
+            registerDevice(pattern.effects.get(pattern.effects.size() - 1));
+          } else {
+            // Fallen off bus effects onto the pattern
+            registerDevice(pattern);
+          }
         }
       }
     }
@@ -274,13 +288,34 @@ public class FocusedDevice {
       return;
     }
     if (this.device instanceof LXEffect) {
-      LXEffect effect = (LXEffect) this.device;
-      int nextIndex = effect.getIndex() + 1;
-      if (nextIndex < this.bus.effects.size()) {
+      final LXEffect effect = (LXEffect) this.device;
+      final int nextIndex = effect.getIndex() + 1;
+      if (effect.isPatternEffect()) {
+        final LXPattern pattern = effect.getPattern();
+        if (nextIndex < pattern.effects.size()) {
+          // There are more pattern effects
+          registerDevice(pattern.effects.get(nextIndex));
+        } else if (!this.bus.effects.isEmpty()) {
+          // Go to the first bus effect
+          registerDevice(this.bus.effects.get(0));
+        }
+      } else if (nextIndex < this.bus.effects.size()) {
+        // Go to the next bus effect
         registerDevice(this.bus.effects.get(nextIndex));
       }
-    } else if (!this.bus.effects.isEmpty()) {
-      registerDevice(this.bus.effects.get(0));
+    } else {
+      if (this.bus instanceof LXChannel) {
+        // We're focused on the pattern, move to its first effect, or the first bus effect
+        final LXPattern focusedPattern = ((LXChannel) this.bus).getFocusedPattern();
+        if ((focusedPattern != null) && !focusedPattern.effects.isEmpty()) {
+          registerDevice(focusedPattern.effects.get(0));
+        } else if (!this.bus.effects.isEmpty()) {
+          registerDevice(this.bus.effects.get(0));
+        }
+      } else if (!this.bus.effects.isEmpty()) {
+        // Focus first bus effect
+        registerDevice(this.bus.effects.get(0));
+      }
     }
   }
 

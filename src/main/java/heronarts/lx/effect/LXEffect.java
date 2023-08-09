@@ -33,6 +33,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.pattern.LXPattern;
 
 /**
  * Class to represent an effect that may be applied to the color array. Effects
@@ -215,8 +216,25 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     return this;
   }
 
+  public boolean isBusEffect() {
+    return getParent() instanceof LXBus;
+  }
+
+  public boolean isPatternEffect() {
+    return getParent() instanceof LXPattern;
+  }
+
   public LXBus getBus() {
     return (LXBus) getParent();
+  }
+
+  public final LXEffect setPattern(LXPattern pattern) {
+    setParent(pattern);
+    return this;
+  }
+
+  public LXPattern getPattern() {
+    return (LXPattern) getParent();
   }
 
   /**
