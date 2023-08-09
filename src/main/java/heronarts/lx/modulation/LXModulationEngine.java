@@ -294,7 +294,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
    */
   public void midiDispatch(LXShortMessage message) {
     for (LXModulator modulator : this.modulators) {
-      if ((modulator instanceof LXMidiListener) && modulator.running.isOn()) {
+      if ((modulator instanceof LXMidiListener) && modulator.running.isOn() && modulator.midiFilter.filter(message)) {
         message.dispatch((LXMidiListener) modulator);
       }
     }

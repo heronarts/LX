@@ -978,7 +978,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
     if (input == null || input.channelEnabled.isOn()) {
       for (LXAbstractChannel channelBus : this.lx.engine.mixer.channels) {
-        if (channelBus.midiMonitor.isOn() && channelBus.midiChannel.getEnum().matches(message)) {
+        if (channelBus.midiFilter.filter(message)) {
           channelBus.midiMessage(message);
         }
       }

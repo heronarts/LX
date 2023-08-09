@@ -396,7 +396,7 @@ public class LXChannel extends LXAbstractChannel {
   public void midiDispatch(LXShortMessage message) {
     switch (this.compositeMode.getEnum()) {
     case PLAYLIST:
-      LXPattern activePattern = getActivePattern();
+      final LXPattern activePattern = getActivePattern();
       activePattern.midiDispatch(message);
       LXPattern nextPattern = getNextPattern();
       if (nextPattern != null && nextPattern != activePattern) {

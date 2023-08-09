@@ -28,8 +28,8 @@ import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXView;
 import heronarts.lx.parameter.BooleanParameter;
@@ -114,19 +114,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     new BooleanParameter("Aux", false)
     .setDescription("Toggles the channel AUX state, determining whether it is shown in the auxiliary window");
 
-  /**
-   * Whether this channel should listen to MIDI events
-   */
-  public final BooleanParameter midiMonitor =
-    new BooleanParameter("MIDI Monitor", false)
-    .setDescription("Enables or disables monitoring of live MIDI input on this channel");
-
-  /**
-   * Which channel MIDI messages this channel observes
-   */
-  public final EnumParameter<LXMidiEngine.Channel> midiChannel =
-    new EnumParameter<LXMidiEngine.Channel>("MIDI Channel", LXMidiEngine.Channel.OMNI)
-    .setDescription("Determines which MIDI channel is responded to");
+  public final MidiFilterParameter midiFilter =
+    new MidiFilterParameter("MIDI Filter", false)
+    .setDescription("Filter controls for incoming MIDI messages");
 
   public final ObjectParameter<LXBlend> blendMode;
 
@@ -216,8 +206,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("aux", this.auxActive);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
-    addParameter("midiMonitor", this.midiMonitor);
-    addParameter("midiChannel", this.midiChannel);
+    addParameter("midiFilter", this.midiFilter);
+    addLegacyParameter("midiMonitor", this.midiFilter.enabled);
+    addLegacyParameter("midiChannel", this.midiFilter.channel);
     addParameter("viewEnabled", this.viewEnabled);
     addParameter("viewSelector", this.viewSelector);
     addParameter("viewNormalization", this.viewNormalization);

@@ -39,6 +39,7 @@ import com.google.gson.stream.JsonWriter;
 
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
@@ -107,6 +108,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     new StringParameter("Preset", null)
     .setDescription("Name of last preset file that has been loaded/saved");
 
+  public final MidiFilterParameter midiFilter =
+    new MidiFilterParameter("MIDI Filter", true)
+    .setDescription("MIDI filter settings for this device");
+
   /**
    * A semaphore used to keep count of how many remote control surfaces may be
    * controlling this component. This may be used by UI implementations to indicate
@@ -132,6 +137,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     addInternalParameter("expandedAux", this.controlsExpandedAux);
     addInternalParameter("modulationExpanded", this.modulationExpanded);
     addInternalParameter("presetFile", this.presetFile);
+    addInternalParameter("midiFilter", this.midiFilter);
   }
 
   private void validateRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
@@ -299,9 +305,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @param message Message
    */
   public void midiDispatch(LXShortMessage message) {
-    message.dispatch(this);
-    getModulationEngine().midiDispatch(message);
-
+    if (this.midiFilter.filter(message)) {
+      message.dispatch(this);
+      getModulationEngine().midiDispatch(message);
+    }
   }
 
   protected static final String KEY_DEVICE_VERSION = "deviceVersion";
