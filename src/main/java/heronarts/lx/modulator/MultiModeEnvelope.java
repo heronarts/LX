@@ -19,7 +19,6 @@
 package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
-import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
@@ -27,8 +26,6 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.DiscreteParameter;
-import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -128,10 +125,6 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     new TriggerParameter("Trigger")
     .setDescription("Engage the gate from a trigger");
 
-  public final BooleanParameter midiEnabled =
-    new BooleanParameter("MIDI", false)
-    .setDescription("Whether to gate on MIDI notes");
-
   public final BoundedParameter midiVelocityResponse =
     new BoundedParameter("Velocity", 25, -100, 100)
     .setUnits(BoundedParameter.Units.PERCENT)
@@ -141,19 +134,6 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     new BoundedParameter("Note Response", 0, -100, 100)
     .setUnits(BoundedParameter.Units.PERCENT)
     .setDescription("Degree to which MIDI note influences ceiling level");
-
-  public final DiscreteParameter midiMinNote =
-    new DiscreteParameter("Base Note", 0, 128)
-    .setUnits(DiscreteParameter.Units.MIDI_NOTE)
-    .setDescription("Base MIDI note");
-
-  public final DiscreteParameter midiNoteRange =
-    new DiscreteParameter("Range", 127, 1, 129)
-    .setDescription("MIDI note range, including the base note and above");
-
-  public final EnumParameter<LXMidiEngine.Channel> midiChannel =
-    new EnumParameter<LXMidiEngine.Channel>("MIDI Channel", LXMidiEngine.Channel.OMNI)
-    .setDescription("Determines which MIDI channels are responded to");
 
   public final BooleanParameter midiLegato =
     new BooleanParameter("Legato", false)
@@ -189,19 +169,21 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     addParameter("manualTrigger", this.manualTrigger);
     addParameter("targetTrigger", this.targetTrigger);
 
-    addParameter("midiEnabled", this.midiEnabled);
+    addLegacyInternalParameter("midiEnabled", this.midiFilter.enabled);
     addParameter("midiVelocityResponse", this.midiVelocityResponse);
     addParameter("midiNoteResponse", this.midiNoteResponse);
-    addParameter("midiMinNote", this.midiMinNote);
-    addParameter("midiNoteRange", this.midiNoteRange);
-    addParameter("midiChannel", this.midiChannel);
+    addLegacyInternalParameter("midiMinNote", this.midiFilter.minNote);
+    addLegacyInternalParameter("midiNoteRange", this.midiFilter.noteRange);
+    addLegacyInternalParameter("midiChannel", this.midiFilter.channel);
     addParameter("midiLegato", this.midiLegato);
+
+    this.midiFilter.enabled.addListener(this);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
-    if (p == this.midiEnabled) {
+    if (p == this.midiFilter.enabled) {
       // Reset MIDI anytime this is toggled
       this.midiLegatoCount = 0;
       this.engage.setValue(false);
@@ -211,10 +193,6 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     } else if (p == this.targetTrigger) {
       this.peak.setValue(1);
       this.engage.setValue(this.targetTrigger.isOn());
-    } else if (p == this.midiEnabled) {
-      if (!this.midiEnabled.isOn() && !this.manualTrigger.isOn()) {
-        this.engage.setValue(false);
-      }
     }
   }
 
@@ -223,26 +201,11 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     return this.engage;
   }
 
-  private boolean isActiveMidiNote(MidiNote note) {
-    return
-      this.midiEnabled.isOn() &&
-      this.midiChannel.getEnum().matches(note) &&
-      isValidMidiNoteNumber(note);
-  }
-
-  private boolean isValidMidiNoteNumber(MidiNote note) {
-    int pitch = note.getPitch();
-    int min = this.midiMinNote.getValuei();
-    int max = min + this.midiNoteRange.getValuei();
-    return (pitch >= min) && (pitch < max);
-  }
-
   private int midiLegatoCount = 0;
-
 
   @Override
   public void noteOnReceived(MidiNoteOn note) {
-    if (isActiveMidiNote(note)) {
+    if (this.midiFilter.filter(note)) {
       ++this.midiLegatoCount;
       boolean legato = this.midiLegato.isOn();
       if (legato && (this.midiLegatoCount > 1)) {
@@ -259,10 +222,10 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
 
       float noteResponse = this.midiNoteResponse.getValuef() / 100;
       if (noteResponse >= 0) {
-        float noteVelocity = (note.getPitch() - this.midiMinNote.getValuef() + 1) / this.midiNoteRange.getValuef();
+        float noteVelocity = (note.getPitch() - this.midiFilter.minNote.getValuef() + 1) / this.midiFilter.noteRange.getValuef();
         this.peak.setValue(velocity * LXUtils.lerpf(1, noteVelocity, noteResponse));
       } else {
-        float noteVelocity = (this.midiMinNote.getValuef() + this.midiNoteRange.getValuef() + 1 - note.getPitch()) / this.midiNoteRange.getValuef();
+        float noteVelocity = (this.midiFilter.minNote.getValuef() + this.midiFilter.noteRange.getValuef() + 1 - note.getPitch()) / this.midiFilter.noteRange.getValuef();
         this.peak.setValue(velocity * LXUtils.lerpf(1, noteVelocity, -noteResponse));
       }
 
@@ -283,12 +246,18 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
 
   @Override
   public void noteOffReceived(MidiNote note) {
-    if (isActiveMidiNote(note)) {
+    if (this.midiFilter.filter(note)) {
       this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
       if (this.midiLegatoCount == 0) {
         this.engage.setValue(false);
       }
     }
+  }
+
+  @Override
+  public void dispose() {
+    this.midiFilter.enabled.removeListener(this);
+    super.dispose();
   }
 
 }
