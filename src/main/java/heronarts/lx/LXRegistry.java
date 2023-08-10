@@ -158,6 +158,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroSwitches.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroTriggers.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MidiNoteTrigger.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiStageEnvelope.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiModeEnvelope.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.NoiseModulator.class);
