@@ -51,7 +51,7 @@ public class MidiFilterParameter extends AggregateParameter {
 
   public final DiscreteParameter velocityRange =
     new DiscreteParameter("Velocity Range", 127, 0, 128)
-    .setDescription("MIDI Note Range");
+    .setDescription("MIDI Velocity Range");
 
   private final byte[] filteredNoteOnCount = new byte[128];
 
