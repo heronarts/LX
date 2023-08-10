@@ -35,6 +35,7 @@ import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXGlobalSnapshot;
 import heronarts.lx.structure.LXFixture;
+import heronarts.lx.structure.view.LXViewDefinition;
 
 public class LXClipboardComponent<T extends LXComponent> implements LXClipboardItem {
 
@@ -79,6 +80,12 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
   public static class Swatch extends LXClipboardComponent<LXSwatch> {
     public Swatch(LXSwatch swatch) {
       super(LXSwatch.class, swatch);
+    }
+  }
+
+  public static class View extends LXClipboardComponent<LXViewDefinition> {
+    public View(LXViewDefinition view) {
+      super(LXViewDefinition.class, view);
     }
   }
 

@@ -51,6 +51,7 @@ import heronarts.lx.output.OPCSocket;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.structure.view.LXViewEngine;
 import heronarts.lx.utils.LXUtils;
 
 public class LXStructure extends LXComponent implements LXFixtureContainer {
@@ -471,6 +472,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   public final Output output;
 
+  public final LXViewEngine views;
+
   public LXStructure(LX lx) {
     this(lx, null);
   }
@@ -480,6 +483,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     addParameter("syncModelFile", this.syncModelFile);
     addParameter("allWhite", this.allWhite);
     addParameter("mute", this.mute);
+
+    addChild("views", this.views = new LXViewEngine(lx));
 
     if (immutable != null) {
       this.isImmutable = true;
@@ -871,6 +876,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   private LXStructure reset(boolean fromSync) {
+    this.views.reset();
     this.staticModel = null;
     removeAllFixtures();
     if (!fromSync) {
