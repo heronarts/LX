@@ -57,6 +57,11 @@ import heronarts.lx.parameter.StringParameter;
  */
 public abstract class LXDeviceComponent extends LXLayeredComponent implements LXModulationContainer, LXOscComponent, LXMidiListener {
 
+  /**
+   * Marker interface that indicates this device implements MIDI functionality
+   */
+  public interface Midi {}
+
   public static final Comparator<Class<? extends LXDeviceComponent>> DEVICE_CATEGORY_NAME_SORT =
     new Comparator<Class<? extends LXDeviceComponent>>() {
       public int compare(Class<? extends LXDeviceComponent> cls1, Class<? extends LXDeviceComponent> cls2) {
@@ -307,8 +312,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   public void midiDispatch(LXShortMessage message) {
     if (this.midiFilter.filter(message)) {
       message.dispatch(this);
-      getModulationEngine().midiDispatch(message);
     }
+    getModulationEngine().midiDispatch(message);
   }
 
   protected static final String KEY_DEVICE_VERSION = "deviceVersion";

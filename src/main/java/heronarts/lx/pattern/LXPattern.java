@@ -35,6 +35,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.LXTime;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -601,6 +602,14 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * into this pattern is complete.
    */
   public/* abstract */void onTransitionEnd() {
+  }
+
+  @Override
+  public void midiDispatch(LXShortMessage message) {
+    super.midiDispatch(message);
+    for (LXEffect effect : this.effects) {
+      effect.midiDispatch(message);
+    }
   }
 
   private static final String KEY_EFFECTS = "effects";
