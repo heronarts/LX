@@ -110,7 +110,7 @@ public class LXView extends LXModel {
 
     if (views.length == 0) {
       // Empty view!
-      return new LXView(model, normalization, clonedPoints, new ArrayList<LXPoint>(), new LXModel[] {});
+      return new LXView(model, normalization, clonedPoints, new ArrayList<LXPoint>(), new LXModel[0]);
     } else if (views.length == 1) {
       // Just a single view, that'll do it!
       return views[0];

@@ -171,7 +171,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
       devices.add(new Device.Unavailable());
     }
 
-    this.device = new ObjectParameter<Device>("Device", devices.toArray(new Device[] {}));
+    this.device = new ObjectParameter<Device>("Device", devices.toArray(new Device[0]));
     addParameter("device", this.device);
 
   }
