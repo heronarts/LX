@@ -27,6 +27,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 
 @LXModulator.Global("MIDI Note")
+@LXModulator.Device("MIDI Note")
 @LXCategory(LXCategory.TRIGGER)
 public class MidiNoteTrigger extends LXModulator implements LXTriggerSource, LXOscComponent, LXMidiListener {
 
