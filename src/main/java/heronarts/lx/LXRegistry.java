@@ -118,7 +118,7 @@ public class LXRegistry implements LXSerializable {
     if (!this.listeners.contains(listener)) {
       throw new IllegalStateException("Trying to remove non-registered LXRegistry.Listener: " + listener);
     }
-    this.listeners.add(listener);
+    this.listeners.remove(listener);
     return this;
   }
 

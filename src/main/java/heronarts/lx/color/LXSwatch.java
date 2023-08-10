@@ -242,7 +242,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     if (!this.listeners.contains(listener)) {
       throw new IllegalStateException("May not remove non-registered LXSwatch.Listener: " + listener);
     }
-    this.listeners.add(listener);
+    this.listeners.remove(listener);
     return this;
   }
 
