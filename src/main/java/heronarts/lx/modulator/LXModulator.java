@@ -155,7 +155,7 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    */
   protected LXModulator(String label) {
     super(label);
-    addInternalParameter("midiFilter", this.midiFilter);
+    addParameter("midiFilter", this.midiFilter);
   }
 
   public Throwable getCrash() {

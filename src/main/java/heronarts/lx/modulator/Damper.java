@@ -23,6 +23,9 @@ import java.util.Calendar;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.Tempo;
+import heronarts.lx.midi.LXMidiListener;
+import heronarts.lx.midi.MidiNote;
+import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -39,7 +42,7 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("Damper")
 @LXModulator.Device("Damper")
 @LXCategory(LXCategory.CORE)
-public class Damper extends LXModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
+public class Damper extends LXModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent, LXMidiListener {
 
   public final BooleanParameter toggle =
     new BooleanParameter("Toggle", false)
@@ -101,6 +104,9 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXTrig
 
   private Damper(String label) {
     super(label);
+
+    this.midiFilter.enabled.setValue(false);
+
     addParameter("toggle", this.toggle);
     addParameter("triggerEngage", this.triggerEngage);
     addParameter("triggerRelease", this.triggerRelease);
@@ -189,6 +195,16 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXTrig
   @Override
   public BooleanParameter getTriggerSource() {
     return this.toggle;
+  }
+
+  @Override
+  public void noteOnReceived(MidiNoteOn note) {
+    this.toggle.setValue(true);
+  }
+
+  @Override
+  public void noteOffReceived(MidiNote note) {
+    this.toggle.setValue(false);
   }
 
 }

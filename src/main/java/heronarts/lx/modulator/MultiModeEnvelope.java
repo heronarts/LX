@@ -169,15 +169,13 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
     addParameter("manualTrigger", this.manualTrigger);
     addParameter("targetTrigger", this.targetTrigger);
 
-    addLegacyInternalParameter("midiEnabled", this.midiFilter.enabled);
+    addLegacyParameter("midiEnabled", this.midiFilter.enabled);
     addParameter("midiVelocityResponse", this.midiVelocityResponse);
     addParameter("midiNoteResponse", this.midiNoteResponse);
-    addLegacyInternalParameter("midiMinNote", this.midiFilter.minNote);
-    addLegacyInternalParameter("midiNoteRange", this.midiFilter.noteRange);
-    addLegacyInternalParameter("midiChannel", this.midiFilter.channel);
+    addLegacyParameter("midiMinNote", this.midiFilter.minNote);
+    addLegacyParameter("midiNoteRange", this.midiFilter.noteRange);
+    addLegacyParameter("midiChannel", this.midiFilter.channel);
     addParameter("midiLegato", this.midiLegato);
-
-    this.midiFilter.enabled.addListener(this);
   }
 
   @Override
@@ -205,59 +203,50 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
 
   @Override
   public void noteOnReceived(MidiNoteOn note) {
-    if (this.midiFilter.filter(note)) {
-      ++this.midiLegatoCount;
-      boolean legato = this.midiLegato.isOn();
-      if (legato && (this.midiLegatoCount > 1)) {
-        return;
-      }
+    ++this.midiLegatoCount;
+    boolean legato = this.midiLegato.isOn();
+    if (legato && (this.midiLegatoCount > 1)) {
+      return;
+    }
 
-      float velocity = 0;
-      float velResponse = this.midiVelocityResponse.getValuef() / 100;
-      if (velResponse >= 0) {
-        velocity = LXUtils.lerpf(1, note.getVelocity() / 127f, velResponse);
-      } else {
-        velocity = LXUtils.lerpf(1, 1 - (note.getVelocity() / 127f), -velResponse);
-      }
+    float velocity = 0;
+    float velResponse = this.midiVelocityResponse.getValuef() / 100;
+    float scaleVelocity = (note.getVelocity() - this.midiFilter.minVelocity.getValuef() + 1) / this.midiFilter.velocityRange.getValuef();
+    if (velResponse >= 0) {
+      velocity = LXUtils.lerpf(1, scaleVelocity, velResponse);
+    } else {
+      velocity = LXUtils.lerpf(1, 1 - scaleVelocity, -velResponse);
+    }
 
-      float noteResponse = this.midiNoteResponse.getValuef() / 100;
-      if (noteResponse >= 0) {
-        float noteVelocity = (note.getPitch() - this.midiFilter.minNote.getValuef() + 1) / this.midiFilter.noteRange.getValuef();
-        this.peak.setValue(velocity * LXUtils.lerpf(1, noteVelocity, noteResponse));
-      } else {
-        float noteVelocity = (this.midiFilter.minNote.getValuef() + this.midiFilter.noteRange.getValuef() + 1 - note.getPitch()) / this.midiFilter.noteRange.getValuef();
-        this.peak.setValue(velocity * LXUtils.lerpf(1, noteVelocity, -noteResponse));
-      }
+    float noteResponse = this.midiNoteResponse.getValuef() / 100;
+    if (noteResponse >= 0) {
+      float noteVelocity = (note.getPitch() - this.midiFilter.minNote.getValuef() + 1) / this.midiFilter.noteRange.getValuef();
+      this.peak.setValue(velocity * LXUtils.lerpf(1, noteVelocity, noteResponse));
+    } else {
+      float noteVelocity = (this.midiFilter.minNote.getValuef() + this.midiFilter.noteRange.getValuef() + 1 - note.getPitch()) / this.midiFilter.noteRange.getValuef();
+      this.peak.setValue(velocity * LXUtils.lerpf(1, noteVelocity, -noteResponse));
+    }
 
-      if (this.engage.isOn()) {
-        if (!legato) {
-          if (this.resetMode.isOn()) {
-            this.engage.setValue(false);
-            this.engage.setValue(true);
-          } else {
-            this.retrig.setValue(true);
-          }
+    if (this.engage.isOn()) {
+      if (!legato) {
+        if (this.resetMode.isOn()) {
+          this.engage.setValue(false);
+          this.engage.setValue(true);
+        } else {
+          this.retrig.setValue(true);
         }
-      } else {
-        this.engage.setValue(true);
       }
+    } else {
+      this.engage.setValue(true);
     }
   }
 
   @Override
   public void noteOffReceived(MidiNote note) {
-    if (this.midiFilter.filter(note)) {
-      this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
-      if (this.midiLegatoCount == 0) {
-        this.engage.setValue(false);
-      }
+    this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
+    if (this.midiLegatoCount == 0) {
+      this.engage.setValue(false);
     }
-  }
-
-  @Override
-  public void dispose() {
-    this.midiFilter.enabled.removeListener(this);
-    super.dispose();
   }
 
 }

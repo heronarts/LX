@@ -28,7 +28,6 @@ import heronarts.lx.modulator.AHDSREnvelope;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -36,7 +35,7 @@ import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.MIDI)
-public class GateEffect extends LXEffect {
+public class GateEffect extends LXEffect implements LXEffect.Midi {
 
   public enum EnvelopeMode {
     GATE("Gate", AHDSREnvelope.StageMode.AHDSR, false),
@@ -143,10 +142,6 @@ public class GateEffect extends LXEffect {
     new TriggerParameter("Trigger")
     .setDescription("Engage the gate from a trigger");
 
-  public final BooleanParameter midiEnabled =
-    new BooleanParameter("MIDI", false)
-    .setDescription("Whether to gate on MIDI notes");
-
   public final BoundedParameter midiVelocityResponse =
     new BoundedParameter("Velocity", 25, -100, 100)
     .setUnits(BoundedParameter.Units.PERCENT)
@@ -156,15 +151,6 @@ public class GateEffect extends LXEffect {
     new BoundedParameter("Note Response", 0, -100, 100)
     .setUnits(BoundedParameter.Units.PERCENT)
     .setDescription("Degree to which MIDI note influences ceiling level");
-
-  public final DiscreteParameter midiMinNote =
-    new DiscreteParameter("Base Note", 0, 128)
-    .setUnits(DiscreteParameter.Units.MIDI_NOTE)
-    .setDescription("Base MIDI note");
-
-  public final DiscreteParameter midiNoteRange =
-    new DiscreteParameter("Range", 127, 1, 129)
-    .setDescription("MIDI note range, including the base note and above");
 
   private final FunctionalParameter effectivePeak = new FunctionalParameter("Peak") {
     @Override
@@ -204,35 +190,35 @@ public class GateEffect extends LXEffect {
     addParameter("triggerMode", this.triggerMode);
     addParameter("manualTrigger", this.manualTrigger);
     addParameter("targetTrigger", this.targetTrigger);
-    addParameter("midiEnabled", this.midiEnabled);
+    addLegacyInternalParameter("midiEnabled", this.midiFilter.enabled);
     addParameter("midiVelocityResponse", this.midiVelocityResponse);
     addParameter("midiNoteResponse", this.midiNoteResponse);
-    addParameter("midiMinNote", this.midiMinNote);
-    addParameter("midiNoteRange", this.midiNoteRange);
+    addLegacyInternalParameter("minNote", this.midiFilter.minNote);
+    addLegacyInternalParameter("noteRange", this.midiFilter.noteRange);
 
     startModulator(this.env);
 
     onParameterChanged(this.envelopeMode);
     onParameterChanged(this.triggerMode);
+
+    this.midiFilter.enabled.addListener(this);
   }
 
   private float amount = 1;
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (p == this.midiEnabled) {
+    if (p == this.midiFilter.enabled) {
       // Reset MIDI anytime this is toggled
       this.midiLegatoCount = 0;
-      this.env.engage.setValue(false);
+      if (!this.midiFilter.enabled.isOn() && !this.manualTrigger.isOn()) {
+        this.env.engage.setValue(false);
+      }
     } else if (p == this.manualTrigger) {
       this.amount = 1;
       this.env.engage.setValue(this.manualTrigger.isOn());
     } else if (p == this.targetTrigger) {
       this.env.engage.setValue(this.targetTrigger.isOn());
-    } else if (p == this.midiEnabled) {
-      if (!this.midiEnabled.isOn() && !this.manualTrigger.isOn()) {
-        this.env.engage.setValue(false);
-      }
     } else if (p == this.envelopeMode) {
       EnvelopeMode triggerMode = this.envelopeMode.getEnum();
       this.env.stageMode.setValue(triggerMode.stageMode);
@@ -255,67 +241,63 @@ public class GateEffect extends LXEffect {
     }
   }
 
-  private boolean isValidNote(MidiNote note) {
-    int pitch = note.getPitch();
-    int min = this.midiMinNote.getValuei();
-    int max = min + this.midiNoteRange.getValuei();
-    return (pitch >= min) && (pitch < max);
-  }
-
   private int midiLegatoCount = 0;
 
   @Override
   public void noteOnReceived(MidiNoteOn note) {
-    if (this.midiEnabled.isOn() && isValidNote(note)) {
-      ++this.midiLegatoCount;
-      TriggerMode triggerMode = this.triggerMode.getEnum();
-      if ((triggerMode == TriggerMode.LEGATO) && (this.midiLegatoCount > 1)) {
-        return;
-      }
+    ++this.midiLegatoCount;
+    TriggerMode triggerMode = this.triggerMode.getEnum();
+    if ((triggerMode == TriggerMode.LEGATO) && (this.midiLegatoCount > 1)) {
+      return;
+    }
 
-      float velocity = 0;
-      float velResponse = this.midiVelocityResponse.getValuef() / 100;
-      if (velResponse >= 0) {
-        velocity = LXUtils.lerpf(1, note.getVelocity() / 127f, velResponse);
-      } else {
-        velocity = LXUtils.lerpf(1, 1 - (note.getVelocity() / 127f), -velResponse);
-      }
+    float velocity = 0;
+    float velResponse = this.midiVelocityResponse.getValuef() / 100;
+    float scaleVelocity = (note.getVelocity() - this.midiFilter.minVelocity.getValuef() + 1) / this.midiFilter.velocityRange.getValuef();
+    if (velResponse >= 0) {
+      velocity = LXUtils.lerpf(1, scaleVelocity, velResponse);
+    } else {
+      velocity = LXUtils.lerpf(1, 1 - scaleVelocity, -velResponse);
+    }
 
-      float noteResponse = this.midiNoteResponse.getValuef() / 100;
-      if (noteResponse >= 0) {
-        float noteVelocity = (note.getPitch() - this.midiMinNote.getValuef() + 1) / this.midiNoteRange.getValuef();
-        this.amount = velocity * LXUtils.lerpf(1, noteVelocity, noteResponse);
-      } else {
-        float noteVelocity = (this.midiMinNote.getValuef() + this.midiNoteRange.getValuef() + 1 - note.getPitch()) / this.midiNoteRange.getValuef();
-        this.amount = velocity * LXUtils.lerpf(1, noteVelocity, -noteResponse);
-      }
+    float noteResponse = this.midiNoteResponse.getValuef() / 100;
+    if (noteResponse >= 0) {
+      float noteVelocity = (note.getPitch() - this.midiFilter.minNote.getValuef() + 1) / this.midiFilter.noteRange.getValuef();
+      this.amount = velocity * LXUtils.lerpf(1, noteVelocity, noteResponse);
+    } else {
+      float noteVelocity = (this.midiFilter.minNote.getValuef() + this.midiFilter.noteRange.getValuef() + 1 - note.getPitch()) / this.midiFilter.noteRange.getValuef();
+      this.amount = velocity * LXUtils.lerpf(1, noteVelocity, -noteResponse);
+    }
 
-      if (this.env.engage.isOn()) {
-        switch (triggerMode) {
-        case RETRIG:
-          this.env.retrig.setValue(true);
-          break;
-        case RESET:
-          this.env.engage.setValue(false);
-          this.env.engage.setValue(true);
-          break;
-        case LEGATO:
-          break;
-        }
-      } else {
+    if (this.env.engage.isOn()) {
+      switch (triggerMode) {
+      case RETRIG:
+        this.env.retrig.setValue(true);
+        break;
+      case RESET:
+        this.env.engage.setValue(false);
         this.env.engage.setValue(true);
+        break;
+      case LEGATO:
+        break;
       }
+    } else {
+      this.env.engage.setValue(true);
     }
   }
 
   @Override
   public void noteOffReceived(MidiNote note) {
-    if (this.midiEnabled.isOn() && isValidNote(note)) {
-      this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
-      if (this.midiLegatoCount == 0) {
-        this.env.engage.setValue(false);
-      }
+    this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
+    if (this.midiLegatoCount == 0) {
+      this.env.engage.setValue(false);
     }
+  }
+
+  @Override
+  public void dispose() {
+    this.midiFilter.enabled.removeListener(this);
+    super.dispose();
   }
 
 }
