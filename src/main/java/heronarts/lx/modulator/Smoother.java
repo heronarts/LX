@@ -31,6 +31,7 @@ public class Smoother extends LXModulator implements LXNormalizedParameter {
 
   public final CompoundParameter input =
     new CompoundParameter("Input", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Input value to the smoother");
 
   public final CompoundParameter window =
