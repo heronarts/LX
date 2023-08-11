@@ -19,6 +19,7 @@
 package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
@@ -26,7 +27,7 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("Spring")
 @LXModulator.Device("Spring")
 @LXCategory(LXCategory.CORE)
-public class Spring extends LXModulator implements LXNormalizedParameter {
+public class Spring extends LXModulator implements LXOscComponent, LXNormalizedParameter {
 
   public final CompoundParameter position =
     new CompoundParameter("Position", 0)

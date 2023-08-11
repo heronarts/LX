@@ -19,6 +19,7 @@
 package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -27,7 +28,7 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("Smoother")
 @LXModulator.Device("Smoother")
 @LXCategory(LXCategory.CORE)
-public class Smoother extends LXModulator implements LXNormalizedParameter {
+public class Smoother extends LXModulator implements LXOscComponent, LXNormalizedParameter {
 
   public final CompoundParameter input =
     new CompoundParameter("Input", 0)
