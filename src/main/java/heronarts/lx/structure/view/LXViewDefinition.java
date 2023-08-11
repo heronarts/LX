@@ -44,6 +44,10 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     new EnumParameter<LXView.Normalization>("View Normalization", LXView.Normalization.RELATIVE)
     .setDescription("Whether view coordinates are normalized relative to the view, or absolute model");
 
+  public final BooleanParameter priority =
+    new BooleanParameter("Priority", true)
+    .setDescription("Whether this view is enabled on the priority view knob");
+
   private LXView view = null;
 
   private int index = 0;
@@ -54,6 +58,7 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     addParameter("enabled", this.enabled);
     addParameter("selector", this.selector);
     addParameter("normalization", this.normalization);
+    addParameter("priority", this.priority);
 
     this.modulationColor.addListener(this);
   }
@@ -69,6 +74,8 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
       this.lx.structure.views.viewRenamed(this);
     } else if (p == this.modulationColor) {
       this.lx.structure.views.viewStateChanged(this);
+    } else if (p == this.priority) {
+      this.lx.structure.views.viewPriorityChanged(this);
     }
   }
 

@@ -194,36 +194,69 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
   }
 
   private final String DEFAULT_VIEW = "Default";
-  private LXViewDefinition[] selectorObjects = { null };
-  private String[] selectorOptions = { DEFAULT_VIEW };
+  private LXViewDefinition[] selectorObjectsNormal = { null };
+  private String[] selectorOptionsNormal = { DEFAULT_VIEW };
 
-  private final List<Selector> selectors = new ArrayList<Selector>();
+  private LXViewDefinition[] selectorObjectsPriority = { null };
+  private String[] selectorOptionsPriority = { DEFAULT_VIEW };
+
+  private final List<Selector> selectorsNormal = new ArrayList<Selector>();
+  private final List<Selector> selectorsPriority = new ArrayList<Selector>();
 
   private void updateSelectors() {
+    updatePrioritySelectors();
+
     int numOptions = 1 + this.views.size();
-    this.selectorObjects = new LXViewDefinition[numOptions];
-    this.selectorOptions = new String[numOptions];
-    this.selectorObjects[0] = null;
-    this.selectorOptions[0] = DEFAULT_VIEW;
+    this.selectorObjectsNormal = new LXViewDefinition[numOptions];
+    this.selectorOptionsNormal = new String[numOptions];
+    this.selectorObjectsNormal[0] = null;
+    this.selectorOptionsNormal[0] = DEFAULT_VIEW;
 
     int i = 1;
     for (LXViewDefinition view : this.views) {
-      this.selectorObjects[i] = view;
-      this.selectorOptions[i] = view.getLabel();
+      this.selectorObjectsNormal[i] = view;
+      this.selectorOptionsNormal[i] = view.getLabel();
       ++i;
     }
 
     // Update all of the selectors to have new range/options
-    for (Selector selector : this.selectors) {
+    for (Selector selector : this.selectorsNormal) {
       // Check if a selector had a non-null selection, if so
       // it should be restored in the case of renaming/reordering
       // where it is still in the list but its index may be different
       final LXViewDefinition selected = selector.getObject();
-      selector.setObjects(this.selectorObjects, this.selectorOptions);
-      if ((selected != null) && this.views.contains(selected)) {
+      selector.setObjects(this.selectorObjectsNormal, this.selectorOptionsNormal);
+      if ((selected != selector.getObject()) && this.views.contains(selected)) {
         selector.setValue(selected);
-      } else {
-        selector.bang();
+      }
+    }
+  }
+
+  private void updatePrioritySelectors() {
+    List<LXViewDefinition> validObjects = new ArrayList<LXViewDefinition>();
+    List<String> validOptions = new ArrayList<String>();
+    validObjects.add(null);
+    validOptions.add(DEFAULT_VIEW);
+
+    for (LXViewDefinition view : this.views) {
+      if (view.priority.isOn()) {
+        validObjects.add(view);
+        validOptions.add(view.getLabel());
+      }
+    }
+
+    this.selectorObjectsPriority = validObjects.toArray(new LXViewDefinition[0]);
+    this.selectorOptionsPriority = validOptions.toArray(new String[0]);
+
+    // Update all of the priority selectors to have new range/options
+    for (Selector selector : this.selectorsPriority) {
+      // Check if a selector had a non-null selection, if so
+      // it should be restored in the case of renaming/reordering
+      // where it is still in the list but its index may be different
+      final LXViewDefinition selected = selector.getObject();
+      selector.setObjects(this.selectorObjectsPriority, this.selectorOptionsPriority);
+      if ((selected != null) && selected.priority.isOn() && this.views.contains(selected)) {
+        selector.setValue(selected);
       }
     }
   }
@@ -235,28 +268,63 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
   }
 
   void viewStateChanged(LXViewDefinition view) {
-    for (Selector selector : this.selectors) {
+    for (Selector selector : this.selectorsNormal) {
+      if (selector.getObject() == view) {
+        selector.bang();
+      }
+    }
+    for (Selector selector : this.selectorsPriority) {
       if (selector.getObject() == view) {
         selector.bang();
       }
     }
   }
 
-  public Selector newViewSelector(String label, String description) {
-    return (Selector)
-      new Selector(label)
-      .setDescription(description);
+  void viewPriorityChanged(LXViewDefinition view) {
+    if (this.views.contains(view)) {
+      updatePrioritySelectors();
+    }
   }
 
-  public class Selector extends ObjectParameter<LXViewDefinition> {
-    public Selector(String label) {
-      super(label, selectorObjects, selectorOptions);
-      selectors.add(this);
+  public SelectorNormal newViewSelector(String label, String description) {
+    return (SelectorNormal) new SelectorNormal(label).setDescription(description);
+  }
+
+  public SelectorPriority newViewSelectorPriority(String label, String description) {
+    return (SelectorPriority) new SelectorPriority(label).setDescription(description);
+  }
+
+  public static class Selector extends ObjectParameter<LXViewDefinition> {
+
+    private Selector(String label, LXViewDefinition[] objects, String[] options) {
+      super(label, objects, options);
+    }
+  }
+
+  public class SelectorNormal extends Selector {
+
+    public SelectorNormal(String label) {
+      super(label, selectorObjectsNormal, selectorOptionsNormal);
+      selectorsNormal.add(this);
     }
 
     @Override
     public void dispose() {
-      selectors.remove(this);
+      selectorsNormal.remove(this);
+      super.dispose();
+    }
+  }
+
+  public class SelectorPriority extends Selector {
+
+    public SelectorPriority(String label) {
+      super(label, selectorObjectsPriority, selectorOptionsPriority);
+      selectorsPriority.add(this);
+    }
+
+    @Override
+    public void dispose() {
+      selectorsPriority.remove(this);
       super.dispose();
     }
   }

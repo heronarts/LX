@@ -321,7 +321,7 @@ public class LXChannel extends LXAbstractChannel {
 
   @Override
   public LXModel getModelView() {
-    if ((this.group != null) && this.viewSelector.isDefault()) {
+    if ((this.group != null) && this.view.isDefault()) {
       return this.group.getModelView();
     }
     return super.getModelView();

@@ -135,7 +135,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   /**
    * View selector for this abstract channel
    */
-  public final LXViewEngine.Selector viewSelector;
+  public final LXViewEngine.Selector view;
 
   final ChannelThread thread = new ChannelThread();
 
@@ -201,7 +201,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("midiFilter", this.midiFilter);
     addLegacyParameter("midiMonitor", this.midiFilter.enabled);
     addLegacyParameter("midiChannel", this.midiFilter.channel);
-    addParameter("viewSelector", this.viewSelector = lx.structure.views.newViewSelector("View", "Model view selector for this channel"));
+    addParameter("view", this.view = lx.structure.views.newViewSelector("View", "Model view selector for this channel"));
   }
 
   public LXAbstractChannel addMidiListener(MidiListener listener) {
@@ -233,7 +233,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   }
 
   public LXModel getModelView() {
-    LXViewDefinition view = this.viewSelector.getObject();
+    LXViewDefinition view = this.view.getObject();
     if (view != null) {
       return view.getModelView();
     }

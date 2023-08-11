@@ -50,6 +50,7 @@ import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.structure.view.LXViewDefinition;
@@ -124,7 +125,11 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   /**
    * View selector for this device
    */
-  public final LXViewEngine.Selector viewSelector;
+  public final LXViewEngine.Selector view;
+  public final LXViewEngine.Selector viewPriority;
+
+  private final LXParameterListener viewListener;
+  private final LXParameterListener viewPriorityListener;
 
   /**
    * A semaphore used to keep count of how many remote control surfaces may be
@@ -153,11 +158,23 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     addInternalParameter("presetFile", this.presetFile);
     addInternalParameter("midiFilter", this.midiFilter);
 
-    addParameter("viewSelector", this.viewSelector = lx.structure.views.newViewSelector("View", "Model view selector for this device"));
+    addParameter("view", this.view = lx.structure.views.newViewSelector("View", "Model view selector for this device"));
+    addParameter("viewPriority", this.viewPriority = lx.structure.views.newViewSelectorPriority("View", "Priority model view selector for this device"));
+
+    this.view.addListener(this.viewListener = p -> {
+      LXViewDefinition view = this.view.getObject();
+      if ((view == null) || view.priority.isOn()) {
+        this.viewPriority.setValue(view);
+      }
+    });
+
+    this.viewPriority.addListener(this.viewPriorityListener = p -> {
+      this.view.setValue(this.viewPriority.getObject());
+    });
   }
 
   public LXModel getModelView() {
-    LXViewDefinition view = this.viewSelector.getObject();
+    LXViewDefinition view = this.view.getObject();
     if (view != null) {
       return view.getModelView();
     }
@@ -218,7 +235,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @return true if this should be hidden by default
    */
   public boolean isHiddenControl(LXParameter parameter) {
-    return (parameter == this.viewSelector);
+    return (parameter == this.view);
   }
 
   protected LXDeviceComponent resetRemoteControls() {
@@ -339,6 +356,13 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
       message.dispatch(this);
     }
     getModulationEngine().midiDispatch(message);
+  }
+
+  @Override
+  public void dispose() {
+    this.view.removeListener(this.viewListener);
+    this.viewPriority.removeListener(this.viewPriorityListener);
+    super.dispose();
   }
 
   protected static final String KEY_DEVICE_VERSION = "deviceVersion";

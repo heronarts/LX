@@ -190,7 +190,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
 
   @Override
   public LXModel getModelView() {
-    LXViewDefinition view = this.viewSelector.getObject();
+    LXViewDefinition view = this.view.getObject();
     if (view != null) {
       return view.getModelView();
     }
