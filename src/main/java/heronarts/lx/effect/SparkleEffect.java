@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.pattern.texture.SparklePattern;
 import heronarts.lx.utils.LXUtils;
@@ -67,8 +68,9 @@ public class SparkleEffect extends LXEffect {
 
     // But no need to multiply if amount is 0
     if (amount > 0) {
-      for (int i = 0; i < colors.length; ++i) {
-        colors[i] = LXColor.multiply(colors[i], LXColor.gray(LXUtils.clamp(engine.outputLevels[i], 0, 100)), 0x100);
+      int i = 0;
+      for (LXPoint p : model.points) {
+        colors[p.index] = LXColor.multiply(colors[p.index], LXColor.gray(LXUtils.clamp(engine.outputLevels[i++], 0, 100)), 0x100);
       }
     }
   }
