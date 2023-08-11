@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.Tempo;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulator.LXWaveshape;
 import heronarts.lx.modulator.SawLFO;
 import heronarts.lx.parameter.BooleanParameter;
@@ -136,8 +137,8 @@ public class StrobeEffect extends LXEffect {
           setColors(LXColor.BLACK);
         } else {
           int src = LXColor.gray(100 * strobe);
-          for (int i = 0; i < this.colors.length; ++i) {
-            this.colors[i] = LXColor.multiply(this.colors[i], src, 0x100);
+          for (LXPoint p : model.points) {
+            this.colors[p.index] = LXColor.multiply(this.colors[p.index], src, 0x100);
           }
         }
       }

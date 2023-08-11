@@ -298,8 +298,8 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
    * @return this
    */
   protected final LXLayeredComponent setColors(int c) {
-    for (int i = 0; i < colors.length; ++i) {
-      this.colors[i] = c;
+    for (LXPoint p : model.points) {
+      this.colors[p.index] = c;
     }
     return this;
   }
