@@ -981,6 +981,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   private boolean isLoading = false;
 
   private static final String KEY_FIXTURES = "fixtures";
+  private static final String KEY_VIEWS = "views";
   private static final String KEY_STATIC_MODEL = "staticModel";
   private static final String KEY_FILE = "file";
 
@@ -1018,7 +1019,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     // Reset everything to complete scratch!
     reset(false);
 
-    // Load parameter values
+    // Load parameter values, this is also where views will get loaded
     super.load(lx, obj);
 
     // Are we in static model mode? Load that.
@@ -1129,7 +1130,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.lx.setModelImportFlag(true);
     try (FileReader fr = new FileReader(file)) {
       reset(fromSync);
-      loadFixtures(this.lx, new Gson().fromJson(fr, JsonObject.class));
+      final JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      loadFixtures(this.lx, obj);
+      LXSerializable.Utils.loadObject(this.lx, this.views, obj, KEY_VIEWS);
       this.modelFile = file;
       this.modelName.setValue(file.getName());
       this.isStatic.bang();
@@ -1160,6 +1163,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     obj.addProperty(LX.KEY_VERSION, LX.VERSION);
     obj.addProperty(LX.KEY_TIMESTAMP, System.currentTimeMillis());
     saveFixtures(this.lx, obj);
+    obj.add(KEY_VIEWS, LXSerializable.Utils.toObject(lx, this.views));
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
