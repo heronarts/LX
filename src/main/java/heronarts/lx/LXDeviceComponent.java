@@ -235,7 +235,9 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @return true if this should be hidden by default
    */
   public boolean isHiddenControl(LXParameter parameter) {
-    return (parameter == this.view);
+    return
+      (parameter == this.view) ||
+      (parameter == this.viewPriority);
   }
 
   protected LXDeviceComponent resetRemoteControls() {
