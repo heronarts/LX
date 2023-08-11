@@ -27,7 +27,6 @@ import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXGroupClip;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.LXParameter;
 
 public class LXGroup extends LXAbstractChannel {
@@ -110,17 +109,6 @@ public class LXGroup extends LXAbstractChannel {
     }
   }
 
-  @Override
-  protected void onModelViewChanged(LXModel view) {
-    super.onModelViewChanged(view);
-
-    for (LXChannel channel : this.channels) {
-      // This doesn't necessarily apply to every single channel, if they have
-      // their own custom view set, but generally speaking it does
-      channel.onModelViewChanged(channel.getModelView());
-    }
-  }
-
   void afterLoop(double deltaMs) {
     // Composite all the channels in this group
     long compositeStart = System.nanoTime();
@@ -149,6 +137,7 @@ public class LXGroup extends LXAbstractChannel {
     if (this.effects.size() > 0) {
       for (LXEffect effect : this.effects) {
         effect.setBuffer(this.blendBuffer);
+        effect.setModel(effect.getModelView());
         effect.loop(deltaMs);
       }
     }

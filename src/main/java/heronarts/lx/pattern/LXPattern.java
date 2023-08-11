@@ -227,7 +227,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       parameter == this.recall ||
       parameter == this.compositeMode ||
       parameter == this.compositeLevel ||
-      parameter == this.enabled;
+      parameter == this.enabled ||
+      super.isHiddenControl(parameter);
   }
 
   @Override
@@ -409,7 +410,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     }
     this.mutableEffects.add(index, effect);
     effect.setPattern(this);
-    effect.setModel(getModel());
     _reindexEffects();
     for (Listener listener : this.listeners) {
       listener.effectAdded(this, effect);
@@ -521,10 +521,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     long effectStart = System.nanoTime();
     if (!this.mutableEffects.isEmpty()) {
       for (LXEffect effect : this.mutableEffects) {
-        // TODO(mcslee): update this model in the future... it will be
-        // possible that the effect uses a different view than its parent pattern
-        effect.setModel(getModel());
         effect.setBuffer(getBuffer());
+        effect.setModel(effect.getModelView());
         effect.loop(deltaMs);
       }
     }

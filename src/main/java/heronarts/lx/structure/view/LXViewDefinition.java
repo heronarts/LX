@@ -18,6 +18,8 @@
 
 package heronarts.lx.structure.view;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
@@ -52,14 +54,21 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     addParameter("enabled", this.enabled);
     addParameter("selector", this.selector);
     addParameter("normalization", this.normalization);
+
+    this.modulationColor.addListener(this);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     if (p == this.enabled || p == this.selector || p == this.normalization) {
       rebuild();
+      if (p == this.enabled) {
+        this.lx.structure.views.viewStateChanged(this);
+      }
     } else if (p == this.label) {
-      this.lx.structure.views.updateSelectors();
+      this.lx.structure.views.viewRenamed(this);
+    } else if (p == this.modulationColor) {
+      this.lx.structure.views.viewStateChanged(this);
     }
   }
 
@@ -85,18 +94,53 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     return this.view;
   }
 
-  void rebuild() {
+  private void disposeView() {
     if (this.view != null) {
       this.view.dispose();
+      this.view = null;
     }
+  }
+
+  void rebuild() {
+    if (this.inLoad) {
+      // Avoid spurious rebuilds when loading, which may touch
+      // multiple parameters. Set a flag to do *one* rebuild
+      // after the full load finishes.
+      this.needsRebuild = true;
+      return;
+    }
+
+    disposeView();
     final String viewSelector = this.selector.getString();
-    if (this.enabled.isOn() && !LXUtils.isEmpty(viewSelector)) {
+    final LXModel model = this.lx.getModel();
+    if (model.size > 0 && this.enabled.isOn() && !LXUtils.isEmpty(viewSelector)) {
       this.view = LXView.create(
         this.lx.getModel(),
         viewSelector,
         this.normalization.getEnum()
       );
     }
+  }
+
+  private boolean inLoad = false;
+  private boolean needsRebuild = false;
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    this.inLoad = true;
+    super.load(lx, obj);
+    this.inLoad = false;
+    if (this.needsRebuild) {
+      this.needsRebuild = false;
+      rebuild();
+    }
+  }
+
+  @Override
+  public void dispose() {
+    disposeView();
+    this.modulationColor.removeListener(this);
+    super.dispose();
   }
 
 }

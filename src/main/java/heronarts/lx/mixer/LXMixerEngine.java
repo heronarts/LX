@@ -1051,6 +1051,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     long effectStart = System.nanoTime();
     for (LXEffect effect : this.masterBus.getEffects()) {
       effect.setBuffer(render);
+      effect.setModel(effect.getModelView());
       effect.loop(deltaMs);
     }
     ((LXBus.Profiler) this.masterBus.profiler).effectNanos = System.nanoTime() - effectStart;

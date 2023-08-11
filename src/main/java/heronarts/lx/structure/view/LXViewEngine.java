@@ -60,10 +60,6 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
   }
 
   @Override
-  public void modelChanged(LX lx, LXModel model) {
-    rebuildViews();
-  }
-
   public void modelGenerationChanged(LX lx, LXModel model) {
     rebuildViews();
   }
@@ -105,6 +101,7 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
   public LXViewDefinition addView() {
     LXViewDefinition view = new LXViewDefinition(this.lx);
     view.label.setValue("View-" + (views.size() + 1));
+    view.modulationColor.setValue(views.size());
     return addView(view, -1);
   }
 
@@ -202,7 +199,7 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
 
   private final List<Selector> selectors = new ArrayList<Selector>();
 
-  void updateSelectors() {
+  private void updateSelectors() {
     int numOptions = 1 + this.views.size();
     this.selectorObjects = new LXViewDefinition[numOptions];
     this.selectorOptions = new String[numOptions];
@@ -217,7 +214,7 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
     }
 
     // Update all of the selectors to have new range/options
-    for (Selector selector : selectors) {
+    for (Selector selector : this.selectors) {
       // Check if a selector had a non-null selection, if so
       // it should be restored in the case of renaming/reordering
       // where it is still in the list but its index may be different
@@ -229,6 +226,26 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
         selector.bang();
       }
     }
+  }
+
+  void viewRenamed(LXViewDefinition view) {
+    if (this.views.contains(view)) {
+      updateSelectors();
+    }
+  }
+
+  void viewStateChanged(LXViewDefinition view) {
+    for (Selector selector : this.selectors) {
+      if (selector.getObject() == view) {
+        selector.bang();
+      }
+    }
+  }
+
+  public Selector newViewSelector(String label, String description) {
+    return (Selector)
+      new Selector(label)
+      .setDescription(description);
   }
 
   public class Selector extends ObjectParameter<LXViewDefinition> {

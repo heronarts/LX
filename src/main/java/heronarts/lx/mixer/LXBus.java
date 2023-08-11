@@ -25,7 +25,6 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
@@ -134,26 +133,6 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
 
   protected void setMixer(LXMixerEngine mixer) {
     setParent(mixer);
-  }
-
-  @Override
-  protected final void onModelChanged(LXModel model) {
-    super.onModelChanged(model);
-    updateModelView();
-  }
-
-  protected void updateModelView() {
-    onModelViewChanged(getModelView());
-  }
-
-  protected void onModelViewChanged(LXModel view) {
-    for (LXEffect effect : this.mutableEffects) {
-      effect.setModel(view);
-    }
-  }
-
-  public LXModel getModelView() {
-    return this.model;
   }
 
   public final void addListener(Listener listener) {
@@ -268,7 +247,6 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     }
     this.mutableEffects.add(index, effect);
     effect.setBus(this);
-    effect.setModel(getModelView());
     _reindexEffects();
     for (Listener listener : this.listeners) {
       listener.effectAdded(this, effect);

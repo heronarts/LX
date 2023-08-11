@@ -41,6 +41,8 @@ import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.midi.surface.LXMidiSurface;
+import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.model.LXModel;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -50,6 +52,8 @@ import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.structure.view.LXViewDefinition;
+import heronarts.lx.structure.view.LXViewEngine;
 
 /**
  * A component which may have its own scoped user-level modulators. The concrete subclasses
@@ -118,6 +122,11 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     .setDescription("MIDI filter settings for this device");
 
   /**
+   * View selector for this device
+   */
+  public final LXViewEngine.Selector viewSelector;
+
+  /**
    * A semaphore used to keep count of how many remote control surfaces may be
    * controlling this component. This may be used by UI implementations to indicate
    * to the user that this component is under remote control.
@@ -143,6 +152,20 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     addInternalParameter("modulationExpanded", this.modulationExpanded);
     addInternalParameter("presetFile", this.presetFile);
     addInternalParameter("midiFilter", this.midiFilter);
+
+    addParameter("viewSelector", this.viewSelector = lx.structure.views.newViewSelector("View", "Model view selector for this device"));
+  }
+
+  public LXModel getModelView() {
+    LXViewDefinition view = this.viewSelector.getObject();
+    if (view != null) {
+      return view.getModelView();
+    }
+    LXComponent parent = getParent();
+    if (parent instanceof LXAbstractChannel) {
+      return ((LXAbstractChannel) parent).getModelView();
+    }
+    return getModel();
   }
 
   private void validateRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
@@ -194,7 +217,9 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @param parameter Parameter to check
    * @return true if this should be hidden by default
    */
-  public abstract boolean isHiddenControl(LXParameter parameter);
+  public boolean isHiddenControl(LXParameter parameter) {
+    return (parameter == this.viewSelector);
+  }
 
   protected LXDeviceComponent resetRemoteControls() {
     this.defaultRemoteControls = null;

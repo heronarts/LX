@@ -321,21 +321,10 @@ public class LXChannel extends LXAbstractChannel {
 
   @Override
   public LXModel getModelView() {
-    if (this.view != null) {
-      return this.view;
-    }
-    if (this.group != null) {
+    if ((this.group != null) && this.viewSelector.isDefault()) {
       return this.group.getModelView();
     }
     return super.getModelView();
-  }
-
-  @Override
-  protected void onModelViewChanged(LXModel view) {
-    super.onModelViewChanged(view);
-    for (LXPattern pattern : this.mutablePatterns) {
-      pattern.setModel(view);
-    }
   }
 
   public final void addListener(Listener listener) {
@@ -417,7 +406,6 @@ public class LXChannel extends LXAbstractChannel {
   LXChannel setGroup(LXGroup group) {
     if (this.group != group) {
       this.group = group;
-      onModelViewChanged(getModelView());
       for (Listener listener : this.listeners) {
         listener.groupChanged(this, group);
       }
@@ -494,7 +482,6 @@ public class LXChannel extends LXAbstractChannel {
       throw new IllegalArgumentException("Invalid pattern index: " + index);
     }
     pattern.setChannel(this);
-    pattern.setModel(getModelView());
 
     // Make sure focused pattern doesn't change
     final LXPattern focusedPattern = getFocusedPattern();
@@ -955,16 +942,19 @@ public class LXChannel extends LXAbstractChannel {
       return;
     }
 
-    // Initialize colors
+    // Initialize buffer colors
     this.colors = this.blendBuffer.getArray();
+
+    // Initialize colors to transparent. This needs to be done no matter
+    // what the mixing mode is, because sub-patterns/effects may render
+    // to views that only touch a subset of the channel's view. We don't
+    // want to leave old frame cruft in the channel buffer in that case
+    this.blendBuffer.copyFrom(this.lx.engine.mixer.backgroundTransparent);
 
     if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
 
       // Blend mode, this channel is like a mini-mixer
       final LXModel modelView = getModelView();
-
-      // Initialize colors to transparent
-      this.blendBuffer.copyFrom(this.lx.engine.mixer.backgroundTransparent);
 
       // Damping mode
       final boolean dampingEnabled = this.compositeDampingEnabled.isOn();
@@ -977,6 +967,7 @@ public class LXChannel extends LXAbstractChannel {
           continue;
         }
         pattern.setBuffer(this.renderBuffer);
+        pattern.setModel(pattern.getModelView());
         pattern.loop(deltaMs);
         pattern.compositeMode.getObject().blend(
           this.colors,
@@ -1017,6 +1008,7 @@ public class LXChannel extends LXAbstractChannel {
       final LXPattern activePattern = getActivePattern();
       if (activePattern != null) {
         activePattern.setBuffer(this.blendBuffer);
+        activePattern.setModel(activePattern.getModelView());
         activePattern.loop(deltaMs);
       } else {
         // No active pattern, black it out!
@@ -1029,6 +1021,7 @@ public class LXChannel extends LXAbstractChannel {
         this.transitionProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.transitionTimeSecs.getValue());
         final LXPattern nextPattern = getNextPattern();
         nextPattern.setBuffer(this.renderBuffer);
+        nextPattern.setModel(nextPattern.getModelView());
         nextPattern.loop(deltaMs);
         this.transition.loop(deltaMs);
         this.transition.lerp(
@@ -1050,6 +1043,7 @@ public class LXChannel extends LXAbstractChannel {
     if (!this.mutableEffects.isEmpty()) {
       for (LXEffect effect : this.mutableEffects) {
         effect.setBuffer(this.blendBuffer);
+        effect.setModel(effect.getModelView());
         effect.loop(deltaMs);
       }
     }
