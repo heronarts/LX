@@ -187,6 +187,7 @@ public class LXView extends LXModel {
       // If this index selection syntax gets more complex, should clean it up to use regex matching
       int rangeStart = tag.indexOf('[');
       int startIndex = 0, endIndex = -1;
+      int increment = 1;
       if (rangeStart >= 0) {
         tag = selector.substring(0, rangeStart);
         int rangeEnd = selector.indexOf(']');
@@ -195,19 +196,26 @@ public class LXView extends LXModel {
         } else {
           // Range can be specified either as [n] or [n-m] (inclusive)
           String range = selector.substring(rangeStart+1, rangeEnd);
-          int dash = range.indexOf('-');
-          if (dash < 0) {
-            try {
-              startIndex = endIndex = Integer.parseInt(range.trim());
-            } catch (NumberFormatException nfx) {
-              LX.error("Bad number in view selection range: " + selector);
-            }
+          if ("even".equals(range)) {
+            increment = 2;
+          } else if ("odd".equals(range)) {
+            startIndex = 1;
+            increment = 2;
           } else {
-            try {
-              startIndex = Integer.parseInt(range.substring(0, dash).trim());
-              endIndex = Integer.parseInt(range.substring(dash+1).trim());
-            } catch (NumberFormatException nfx) {
-              LX.error("Bad value in view selection range: " + selector);
+            int dash = range.indexOf('-');
+            if (dash < 0) {
+              try {
+                startIndex = endIndex = Integer.parseInt(range.trim());
+              } catch (NumberFormatException nfx) {
+                LX.error("Bad number in view selection range: " + selector);
+              }
+            } else {
+              try {
+                startIndex = Integer.parseInt(range.substring(0, dash).trim());
+                endIndex = Integer.parseInt(range.substring(dash+1).trim());
+              } catch (NumberFormatException nfx) {
+                LX.error("Bad value in view selection range: " + selector);
+              }
             }
           }
         }
@@ -229,7 +237,7 @@ public class LXView extends LXModel {
         if ((endIndex < 0) || (endIndex >= subs.size())) {
           endIndex = subs.size() - 1;
         }
-        for (int i = startIndex; i <= endIndex; ++i) {
+        for (int i = startIndex; i <= endIndex; i += increment) {
           LXModel sub = subs.get(i);
 
           // Has this candidate *already* been found? Then there is no point
