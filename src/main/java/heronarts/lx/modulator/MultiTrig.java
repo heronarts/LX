@@ -140,7 +140,11 @@ public class MultiTrig extends LXModulator implements LXOscComponent, LXTriggerS
       return;
     }
     this.inputIndicator.trigger();
+
     final int numOutputs = this.numOutputs.getValuei();
+    if (numOutputs == 0) {
+      return;
+    }
 
     switch (this.mode.getEnum()) {
     case ALL:
