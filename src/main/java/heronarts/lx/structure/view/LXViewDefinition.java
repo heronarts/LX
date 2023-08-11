@@ -42,7 +42,7 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
 
   public final EnumParameter<LXView.Normalization> normalization =
     new EnumParameter<LXView.Normalization>("View Normalization", LXView.Normalization.RELATIVE)
-    .setDescription("Whether view coordinates are noramlized relative to the view, or absolute model");
+    .setDescription("Whether view coordinates are normalized relative to the view, or absolute model");
 
   private LXView view = null;
 
