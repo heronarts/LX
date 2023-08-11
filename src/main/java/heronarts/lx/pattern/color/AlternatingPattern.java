@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LinkedColorParameter;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.pattern.LXPattern;
 
@@ -64,9 +65,11 @@ public class AlternatingPattern extends LXPattern {
     int stripeLength = this.stripeLength.getValuei();
     int color1 = this.firstColor.calcColor();
     int color2 = this.secondColor.calcColor();
-    for (int i = 0; i < colors.length; ++i) {
+    int i = 0;
+    for (LXPoint p : model.points) {
       int phase = (i / stripeLength) % 2;
-      this.colors[i] = (phase == 0) ? color1 : color2;
+      this.colors[p.index] = (phase == 0) ? color1 : color2;
+      ++i;
     }
   }
 }

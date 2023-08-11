@@ -23,6 +23,7 @@ import java.util.List;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
@@ -242,7 +243,8 @@ public class DynamicsEffect extends LXEffect {
       // Extra lerping required here, keep this out of the code
       // path when fully enabled...
       float enabledf = (float) enabledAmount;
-      for (int i = 0; i < colors.length; ++i) {
+      for (LXPoint p : model.points) {
+        int i = p.index;
         int c = colors[i];
         int a = (c & LXColor.ALPHA_MASK);
         int r = (c & LXColor.R_MASK) >> LXColor.R_SHIFT;
@@ -261,7 +263,8 @@ public class DynamicsEffect extends LXEffect {
 
     } else {
 
-      for (int i = 0; i < colors.length; ++i) {
+      for (LXPoint p : model.points) {
+        int i = p.index;
         int c = colors[i];
         int a = (c & LXColor.ALPHA_MASK);
         int r = (c & LXColor.R_MASK) >> LXColor.R_SHIFT;

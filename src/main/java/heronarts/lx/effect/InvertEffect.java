@@ -21,6 +21,7 @@ package heronarts.lx.effect;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -94,8 +95,8 @@ public class InvertEffect extends LXEffect {
       buildLookupTable(this.blueLUT, this.pBlueAmount = blueAmount);
     }
 
-    for (int i = 0; i < this.colors.length; ++i) {
-      int c = this.colors[i];
+    for (LXPoint p : model.points) {
+      int c = this.colors[p.index];
       int a = c & LXColor.ALPHA_MASK;
       int r = (c & LXColor.R_MASK) >> LXColor.R_SHIFT;
       int g = (c & LXColor.G_MASK) >> LXColor.G_SHIFT;
@@ -103,7 +104,7 @@ public class InvertEffect extends LXEffect {
       r = this.redLUT[r];
       g = this.greenLUT[g];
       b = this.blueLUT[b];
-      this.colors[i] = a | (r << LXColor.R_SHIFT) | (g << LXColor.G_SHIFT) | b;
+      this.colors[p.index] = a | (r << LXColor.R_SHIFT) | (g << LXColor.G_SHIFT) | b;
     }
   }
 }

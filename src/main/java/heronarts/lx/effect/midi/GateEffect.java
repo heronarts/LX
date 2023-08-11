@@ -24,6 +24,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulator.AHDSREnvelope;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -232,11 +233,13 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
   protected void run(double deltaMs, double enabledAmount) {
     // double level = LXUtils.lerp(100, LXUtils.lerp(this.floor.getValue(), this.ceiling.getValue(), this.amount * this.env.getValue()), enabledAmount);
     double level = LXUtils.lerp(100, 100 * this.env.getValue(), enabledAmount);
-    if (level < 100) {
+    if (level == 0) {
+      setColors(LXColor.BLACK);
+    } else if (level < 100) {
       int mask = LXColor.gray(level);
       int alpha = 0x100;
-      for (int i = 0; i < colors.length; ++i) {
-        colors[i] = LXColor.multiply(colors[i], mask, alpha);
+      for (LXPoint p : model.points) {
+        colors[p.index] = LXColor.multiply(colors[p.index], mask, alpha);
       }
     }
   }

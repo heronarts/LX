@@ -29,6 +29,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -282,7 +283,8 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     final BlendFunction blendFunction = this.blendMode.getEnum().function;
 
     if (enabledAmount < 1) {
-      for (int i = 0; i < colors.length; ++i) {
+      for (LXPoint p : model.points) {
+        int i = p.index;
         int c2 = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
         colors[i] = LXColor.lerp(
           colors[i],
@@ -291,7 +293,8 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
         );
       }
     } else {
-      for (int i = 0; i < colors.length; ++i) {
+      for (LXPoint p : model.points) {
+        int i = p.index;
         int c2 = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
         colors[i] = (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK);
       }

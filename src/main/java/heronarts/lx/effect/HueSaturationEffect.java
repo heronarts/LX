@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -61,7 +62,8 @@ public class HueSaturationEffect extends LXEffect {
     float amountf = (float) amount;
 
     if (amount < 1) {
-      for (int i = 0; i < colors.length; ++i) {
+      for (LXPoint p : model.points) {
+        int i = p.index;
         int c = colors[i];
         float h = LXColor.h(c);
         float s = LXColor.s(c);
@@ -73,7 +75,8 @@ public class HueSaturationEffect extends LXEffect {
         );
       }
     } else {
-      for (int i = 0; i < colors.length; ++i) {
+      for (LXPoint p : model.points) {
+        int i = p.index;
         int c = colors[i];
         float h = LXColor.h(c);
         float s = LXColor.s(c);
