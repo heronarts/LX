@@ -76,24 +76,36 @@ public abstract class LXParameterModulation extends LXComponent {
     new BooleanParameter("Enabled", true)
     .setDescription("Whether this modulation is enabled");
 
-  private static Map<LXParameter, List<LXParameter>> modulationGraph = new HashMap<LXParameter, List<LXParameter>>();
+  // Forward-connectivity map from parameter to list of all parameters that it directly modulates
+  private static Map<LXParameter, List<LXParameter>> modulationGraph =
+    new HashMap<LXParameter, List<LXParameter>>();
 
-  private static void checkForCycles(LXParameter source, LXParameter target, List<LXParameter> targets) throws CircularDependencyException {
-    if (targets == null) {
-      return;
+  private static void checkForCycles(LXParameter source, LXParameter target, LXParameter candidate) throws CircularDependencyException {
+    if (source == candidate) {
+      throw new CircularDependencyException("Mapping from " + source.getLabel() + " to " + target.getLabel() + " is not allowed because it would create a circular dependency.");
     }
-    // Perform depth-first-search of all the dependencies of each target... if any of them wind up
+
+    // Are we modifying a property of a modulation itself? e.g. modulation depth?
+    // Whoa-nellie, better check that we don't make a loop from the source that modulation
+    // belongs to, e.g. if candidate is the depth of modulation from an LFO to a knob,
+    // we need to check everything that the LFO itself modulates!
+    final LXComponent candidateParent = candidate.getParent();
+    if (candidateParent instanceof LXParameterModulation) {
+      checkForCycles(source, target, ((LXParameterModulation) candidateParent).source);
+    }
+
+    // Next, depth-first-search of all the dependencies of this candidate, if any of them wind up
     // back at source, then we've got issues...
-    for (LXParameter target2 : targets) {
-      if (target2 == source) {
-        throw new CircularDependencyException("Mapping from " + source.getLabel() + " to " + target.getLabel() + " is not allowed because it would create a circular dependency.");
+    final List<LXParameter> candidates = modulationGraph.get(candidate);
+    if (candidates != null) {
+      for (LXParameter candidate2 : candidates) {
+        checkForCycles(source, target, candidate2);
       }
-      checkForCycles(source, target, modulationGraph.get(target2));
     }
   }
 
   private static void registerModulation(LXParameter source, LXParameter target) throws CircularDependencyException {
-    checkForCycles(source, target, modulationGraph.get(target));
+    checkForCycles(source, target, target);
     if (!modulationGraph.containsKey(source)) {
       modulationGraph.put(source, new ArrayList<LXParameter>());
     }
