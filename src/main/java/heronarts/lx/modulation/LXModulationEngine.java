@@ -302,10 +302,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   @Override
   public void dispose() {
-    for (LXCompoundModulation modulation : this.mutableModulations) {
-      modulation.dispose();
-    }
-    this.mutableModulations.clear();
+    clear();
     super.dispose();
   }
 
