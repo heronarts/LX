@@ -625,14 +625,14 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
   private void _reindexChannels() {
     int i = 0;
-    for (LXAbstractChannel channelBus : this.mutableChannels) {
+    for (LXAbstractChannel channelBus : this.channels) {
       channelBus.setIndex(i++);
     }
   }
 
   public void removeSelectedChannels() {
     List<LXAbstractChannel> toRemove = new ArrayList<LXAbstractChannel>();
-    for (LXAbstractChannel channel : this.mutableChannels) {
+    for (LXAbstractChannel channel : this.channels) {
       if (channel.selected.isOn() && !toRemove.contains(channel.getGroup())) {
         toRemove.add(channel);
       }
@@ -713,19 +713,26 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     channel.dispose();
   }
 
+  /**
+   * Move a channel by a relative increment. Handles group overlap moves automatically.
+   *
+   * @param channel Channel to move
+   * @param delta Relative amount to move by
+   */
   public void moveChannel(LXAbstractChannel channel, int delta) {
     if (delta != 1 && delta != -1) {
       throw new IllegalArgumentException("moveChannel() may only be called with delta of -1 or 1");
     }
-    LXBus focused = getFocusedChannel();
-    LXBus focusedAux = getFocusedChannelAux();
 
-    int index = channel.getIndex() + delta;
+    final int index = channel.getIndex() + delta;
     if (index < 0 || index >= this.mutableChannels.size()) {
       return;
     }
 
-    LXGroup group = channel.getGroup();
+    final LXBus focused = getFocusedChannel();
+    final LXBus focusedAux = getFocusedChannelAux();
+
+    final LXGroup group = channel.getGroup();
     if (group != null) {
       // Channel is within a group, cannot be moved out of it
       if (index <= group.getIndex() || index > (group.getIndex() + group.channels.size())) {
@@ -799,6 +806,83 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
     for (Listener listener : this.listeners) {
       listener.channelMoved(this, channel);
+    }
+  }
+
+  /**
+   * Move a channel to a specified index, possibly adding or removing to a group
+   *
+   * @param bus Channel to move
+   * @param index Index position to move to
+   * @param group Group the channel should belong to, or null
+   */
+  public void moveChannel(LXAbstractChannel bus, int index, LXGroup group) {
+    if (index < 0 || index >= this.channels.size()) {
+      throw new IllegalArgumentException("Cannot move a channel to illegal index outside of mixer bounds: " + index);
+    }
+
+    final LXBus focused = getFocusedChannel();
+    final LXBus focusedAux = getFocusedChannelAux();
+    List<LXAbstractChannel> members = null;
+
+    if (bus.isGroup()) {
+      if (group != null) {
+        throw new IllegalArgumentException("Cannot place a group into another group: " + bus + " -> " + group);
+      }
+
+      // Move the group *and* all its sub-channels
+      this.mutableChannels.remove(bus);
+
+      members = new ArrayList<LXAbstractChannel>();
+      for (LXAbstractChannel candidate : this.channels) {
+        if (candidate.getGroup() == bus) {
+          members.add(candidate);
+        }
+      }
+      for (LXAbstractChannel member : members) {
+        this.mutableChannels.remove(member);
+      }
+      if (index > bus.getIndex()) {
+        index -= members.size();
+      }
+
+      // Move all the sub-channels along
+      this.mutableChannels.add(index++, bus);
+      for (LXAbstractChannel member : members) {
+        this.mutableChannels.add(index++, member);
+      }
+
+    } else if (bus instanceof LXChannel) {
+      final LXChannel channel = (LXChannel) bus;
+      if (channel.getGroup() != group) {
+        if (channel.getGroup() != null) {
+          channel.getGroup().removeChannel(channel);
+        }
+        if (group != null) {
+          group.addChannel(channel);
+        }
+      }
+      this.mutableChannels.remove(channel);
+      this.mutableChannels.add(index, channel);
+    } else {
+      throw new IllegalStateException("Bus is neither a group nor a channel: " + bus);
+    }
+
+    // Fix indexing on all channels
+    _reindexChannels();
+
+    // Focused channel may have moved
+    this.focusedChannel.setValue(focused.getIndex());
+    this.focusedChannelAux.setValue(focusedAux.getIndex());
+
+    // Fire listeners for channels that have moved
+    for (Listener listener : this.listeners) {
+      listener.channelMoved(this, bus);
+      if (members != null) {
+        for (LXAbstractChannel member : members) {
+          listener.channelMoved(this, member);
+        }
+      }
     }
   }
 
