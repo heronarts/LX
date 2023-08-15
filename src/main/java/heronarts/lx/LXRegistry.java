@@ -125,6 +125,7 @@ public class LXRegistry implements LXSerializable {
   private static final List<Class<? extends LXPattern>> DEFAULT_PATTERNS;
   static {
     DEFAULT_PATTERNS = new ArrayList<Class<? extends LXPattern>>();
+    DEFAULT_PATTERNS.add(heronarts.lx.dmx.DmxPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.audio.SoundObjectPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.GradientPattern.class);
     DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.SolidPattern.class);
@@ -153,6 +154,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_MODULATORS = new ArrayList<Class<? extends LXModulator>>();
     DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
     DEFAULT_MODULATORS.add(heronarts.lx.audio.SoundObject.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.dmx.DmxModulator.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Damper.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Interval.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);

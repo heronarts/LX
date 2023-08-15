@@ -35,6 +35,9 @@ public class ArtNetDatagram extends LXDatagram {
   public final static int UNIVERSE_LSB = 14;
   public final static int UNIVERSE_MSB = 15;
 
+  public final static int DATA_LENGTH_MSB = 16;
+  public final static int DATA_LENGTH_LSB = 17;
+
   public final static byte[] HEADER = { 'A', 'r', 't', '-', 'N', 'e', 't', 0 };
 
   private boolean sequenceEnabled = false;
@@ -215,8 +218,8 @@ public class ArtNetDatagram extends LXDatagram {
 
     setUniverseNumber(universeNumber);
 
-    this.buffer[16] = (byte) ((this.dataLength >>> 8) & 0xff);
-    this.buffer[17] = (byte) (this.dataLength & 0xff);
+    this.buffer[DATA_LENGTH_MSB] = (byte) ((this.dataLength >>> 8) & 0xff);
+    this.buffer[DATA_LENGTH_LSB] = (byte) (this.dataLength & 0xff);
 
   }
 
