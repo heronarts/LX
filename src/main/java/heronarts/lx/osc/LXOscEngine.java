@@ -368,6 +368,12 @@ public class LXOscEngine extends LXComponent {
     public void setAddress(InetAddress host) {
       this.packet.setAddress(host);
     }
+
+    public void dispose() {
+      if (this.socket != null) {
+        this.socket.close();
+      }
+    }
   }
 
   private class EngineTransmitter extends Transmitter implements LXParameterListener {
@@ -380,9 +386,13 @@ public class LXOscEngine extends LXComponent {
     private final OscInt oscInt = new OscInt(0);
     private final OscString oscString = new OscString("");
 
+    private boolean isActive() {
+      return transmitActive.isOn() && (transmitState.getEnum() == IOState.BOUND);
+    }
+
     @Override
     public void onParameterChanged(LXParameter parameter) {
-      if (transmitActive.isOn() && (transmitState.getEnum() == IOState.BOUND)) {
+      if (isActive()) {
         // TODO(mcslee): contemplate accumulating OscMessages into OscBundle
         // and sending once per engine loop?? Probably a bad tradeoff since
         // it would require dynamic memory allocations that we can skip here...
@@ -422,36 +432,46 @@ public class LXOscEngine extends LXComponent {
             oscFloat.setValue(parameter.getValuef());
             oscMessage.add(oscFloat);
           }
-          sendMessage(oscMessage);
+          _sendMessage(oscMessage);
         }
       }
     }
 
     private void sendMessage(String address, int value) {
-      oscMessage.clearArguments();
-      oscMessage.setAddressPattern(address);
-      oscInt.setValue(value);
-      oscMessage.add(oscInt);
-      sendMessage(oscMessage);
+      if (isActive()) {
+        oscMessage.clearArguments();
+        oscMessage.setAddressPattern(address);
+        oscInt.setValue(value);
+        oscMessage.add(oscInt);
+        _sendMessage(oscMessage);
+      }
     }
 
     private void sendMessage(String address, float value) {
-      oscMessage.clearArguments();
-      oscMessage.setAddressPattern(address);
-      oscFloat.setValue(value);
-      oscMessage.add(oscFloat);
-      sendMessage(oscMessage);
+      if (isActive()) {
+        oscMessage.clearArguments();
+        oscMessage.setAddressPattern(address);
+        oscFloat.setValue(value);
+        oscMessage.add(oscFloat);
+        _sendMessage(oscMessage);
+      }
     }
 
     private void sendMessage(String address, String value) {
-      oscMessage.clearArguments();
-      oscMessage.setAddressPattern(address);
-      oscString.setValue(value);
-      oscMessage.add(oscString);
-      sendMessage(oscMessage);
+      if (isActive()) {
+        oscMessage.clearArguments();
+        oscMessage.setAddressPattern(address);
+        oscString.setValue(value);
+        oscMessage.add(oscString);
+        _sendMessage(oscMessage);
+      }
     }
 
-    private void sendMessage(OscMessage message) {
+    // Internal helper, this should not be used directly as
+    // it does not redundantly check for isActive(), which all
+    // the above helpers will have done before constructing
+    // OscMessage objects.
+    private void _sendMessage(OscMessage message) {
       try {
         if (logOutput.isOn()) {
           log("[TX] " + message.toString());
@@ -714,18 +734,15 @@ public class LXOscEngine extends LXComponent {
     }
   }
 
-  public Receiver receiver(int port, String host)
-    throws SocketException, UnknownHostException {
+  public Receiver receiver(int port, String host) throws SocketException, UnknownHostException {
     return receiver(port, InetAddress.getByName(host));
   }
 
-  public Receiver receiver(int port, InetAddress address)
-    throws SocketException {
+  public Receiver receiver(int port, InetAddress address) throws SocketException {
     return receiver(port, address, DEFAULT_MAX_PACKET_SIZE);
   }
 
-  public Receiver receiver(int port, InetAddress address, int bufferSize)
-    throws SocketException {
+  public Receiver receiver(int port, InetAddress address, int bufferSize) throws SocketException {
     Receiver receiver = new Receiver(port, address, bufferSize);
     this.receivers.add(receiver);
     return receiver;
@@ -741,18 +758,15 @@ public class LXOscEngine extends LXComponent {
     return receiver;
   }
 
-  public Transmitter transmitter(String host, int port)
-    throws SocketException, UnknownHostException {
+  public Transmitter transmitter(String host, int port) throws SocketException, UnknownHostException {
     return transmitter(InetAddress.getByName(host), port);
   }
 
-  public Transmitter transmitter(InetAddress address, int port)
-    throws SocketException {
+  public Transmitter transmitter(InetAddress address, int port) throws SocketException {
     return transmitter(address, port, DEFAULT_MAX_PACKET_SIZE);
   }
 
-  public Transmitter transmitter(InetAddress address, int port, int bufferSize)
-    throws SocketException {
+  public Transmitter transmitter(InetAddress address, int port, int bufferSize) throws SocketException {
     return new Transmitter(address, port, bufferSize);
   }
 
@@ -778,6 +792,9 @@ public class LXOscEngine extends LXComponent {
   public void dispose() {
     super.dispose();
     this.listeners.clear();
+    if (this.engineTransmitter != null) {
+      this.engineTransmitter.dispose();
+    }
     if (this.oscQueryServer != null) {
       this.oscQueryServer.unbind();
     }
