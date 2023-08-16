@@ -817,7 +817,7 @@ public class LXOscEngine extends LXComponent {
     LX.error(OSC_LOG_PREFIX + message);
   }
 
-  public static final void error(Exception x, String message) {
+  public static final void error(Throwable x, String message) {
     LX.error(x, OSC_LOG_PREFIX + message);
   }
 

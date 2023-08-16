@@ -42,6 +42,8 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
+
+import java.io.File;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1276,12 +1278,34 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     frame.copyFrom(this.buffer.render);
   }
 
+  public static final String PATH_FRAMERATE = "framerate";
+  public static final String PATH_OPEN_PROJECT = "openProject";
+
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
     String path = parts[index];
-    if (path.equals("framerate")) {
-      this.osc.sendMessage("/lx/framerate", this.actualFrameRate);
+    if (path.equals(PATH_FRAMERATE)) {
+      this.osc.sendMessage(getOscAddress() + "/" + PATH_FRAMERATE, this.actualFrameRate);
       return true;
+    } else if (path.equals(PATH_OPEN_PROJECT)) {
+      final String fileName = message.getString();
+      final File projectFile = this.lx.getMediaFile(LX.Media.PROJECTS, fileName);
+      if (!projectFile.exists()) {
+        LXOscEngine.error("Requested non-existent project file: " + projectFile);
+        return false;
+      }
+      if (projectFile.equals(this.lx.getProject())) {
+        LXOscEngine.log("Requested project file is already open, ignoring: " + projectFile);
+        return false;
+      }
+      try {
+        LXOscEngine.log("Opening project file: " + projectFile);
+        this.lx.openProject(projectFile);
+        return true;
+      } catch (Throwable x) {
+        LXOscEngine.error(x, "Error opening project \"" + projectFile + "\": " + x.getMessage());
+      }
+      return false;
     }
     return super.handleOscMessage(message, parts, index);
   }
