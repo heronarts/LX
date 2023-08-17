@@ -39,7 +39,8 @@ public class OperatorModulator extends LXModulator implements LXNormalizedParame
     DIVIDE("Divide"),
     RATIO("Ratio"),
     MIN("Min"),
-    MAX("Max");
+    MAX("Max"),
+    INVERT("Invert");
 
     public final String label;
 
@@ -77,6 +78,8 @@ public class OperatorModulator extends LXModulator implements LXNormalizedParame
           return 0;
         }
         return (left < right) ? (left / right) : (right / left);
+      case INVERT:
+        return 1 - left;
       }
       return 0;
     }
