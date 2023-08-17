@@ -53,33 +53,29 @@ public class OperatorModulator extends LXModulator implements LXNormalizedParame
       return this.label;
     }
 
-    public double operate(double left, double right) {
+    public double operate(double left, double right, double amount) {
       switch (this) {
       case LERP:
-        return right;
+        return LXUtils.lerp(left, right, amount);
       case MULTIPLY:
-        return left * right;
+        return left * LXUtils.lerp(1, right, amount);
       case ADD:
-        return left + right;
+        return LXUtils.min(1, left + right * amount);
       case SUBTRACT:
-        return left - right;
+        return LXUtils.max(0, left - right * amount);
       case DIFFERENCE:
-        return Math.abs(left - right);
+        return LXUtils.lerp(left, Math.abs(left - right), amount);
       case MIN:
-        return Math.min(left, right);
+        return LXUtils.lerp(left, Math.min(left, right), amount);
       case MAX:
-        return Math.max(left, right);
+        return LXUtils.lerp(left, Math.max(left, right), amount);
       case DIVIDE:
-        return (right == 0) ? 1 : left / right;
+        return LXUtils.min(1, LXUtils.lerp(left, left / right, amount));
       case RATIO:
-        if (left == right) {
-          return 1;
-        } else if ((left == 0) || (right == 0)) {
-          return 0;
-        }
-        return (left < right) ? (left / right) : (right / left);
+        double ratio = (left < right) ? left / right : right / left;
+        return LXUtils.lerp(left, LXUtils.constrain(ratio, 0, 1), amount);
       case INVERT:
-        return 1 - left;
+        return LXUtils.lerp(left, 1 - left, amount);
       }
       return 0;
     }
@@ -118,12 +114,9 @@ public class OperatorModulator extends LXModulator implements LXNormalizedParame
 
   @Override
   protected double computeValue(double deltaMs) {
-    final double in1 = this.in1.getValue();
-    final double in2 = this.in2.getValue();
-    final double result = this.operation.getEnum().operate(in1, in2);
-    return LXUtils.lerp(
-      in1,
-      LXUtils.constrain(result, 0, 1),
+    return this.operation.getEnum().operate(
+      this.in1.getValue(),
+      this.in2.getValue(),
       this.amount.getValue()
     );
   }
