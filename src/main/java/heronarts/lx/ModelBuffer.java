@@ -18,6 +18,8 @@
 
 package heronarts.lx;
 
+import java.util.Arrays;
+
 import heronarts.lx.model.LXModel;
 
 public class ModelBuffer implements LXBuffer {
@@ -48,9 +50,7 @@ public class ModelBuffer implements LXBuffer {
 
   private void initArray(LXModel model) {
     this.array = new int[model.size];
-    for (int i = 0; i < this.array.length; ++i) {
-      this.array[i] = this.defaultColor;
-    }
+    Arrays.fill(this.array, this.defaultColor);
   }
 
   public int[] getArray() {

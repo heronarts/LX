@@ -51,13 +51,18 @@ public class BlurEffect extends LXEffect {
   public final CompoundParameter level =
     new CompoundParameter("Level", 0, 0, 1)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Sets the level of the blur relative to original signal");
+    .setDescription("Level of the blur relative to original signal");
 
   public final CompoundParameter decay =
     new CompoundParameter("Decay", 1, 0.01, 60)
-    .setDescription("Sets the decay of the motion blur, time to half brightness")
+    .setDescription("Decay time for the motion blur to diminish to decay factor")
     .setExponent(3)
     .setUnits(CompoundParameter.Units.SECONDS);
+
+  public final CompoundParameter decayFactor =
+    new CompoundParameter("Factor", .5, 0.01, 1)
+    .setDescription("Decay factor, the level reached in decay time (e.g. half-life if at 50%)")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED);
 
   public final EnumParameter<Mode> mode =
     new EnumParameter<Mode>("Mode", Mode.MIX)
@@ -67,13 +72,10 @@ public class BlurEffect extends LXEffect {
 
   public BlurEffect(LX lx) {
     super(lx);
-    this.blurBuffer = new ModelBuffer(lx);
-    int[] blurArray = blurBuffer.getArray();
-    for (int i = 0; i < blurArray.length; ++i) {
-      blurArray[i] = LXColor.BLACK;
-    }
+    this.blurBuffer = new ModelBuffer(lx, LXColor.BLACK);
     addParameter("level", this.level);
     addParameter("decay", this.decay);
+    addParameter("decayFactor", this.decayFactor);
     addParameter("mode", this.mode);
   }
 
@@ -87,13 +89,14 @@ public class BlurEffect extends LXEffect {
 
   @Override
   public void run(double deltaMs, double amount) {
-    float blurf = (float) (amount * this.level.getValuef());
-    int[] blurColors = this.blurBuffer.getArray();
+    final int blurAlpha = (int) (0x100 * amount * this.level.getValue());
+    final int[] blurColors = this.blurBuffer.getArray();
 
-    double decayFactor = Math.pow(.5, deltaMs / (1000 * this.decay.getValue()));
-    int decayColor = LXColor.gray(decayFactor * 100);
+    final double decayScale = Math.pow(this.decayFactor.getValue(), deltaMs / (1000 * this.decay.getValue()));
+    final int decayColor = LXColor.grayn(decayScale);
 
-    for (int i = 0; i < blurColors.length; ++i) {
+    for (LXPoint p : model.points) {
+      int i = p.index;
       // Apply exponential decay to the blur
       blurColors[i] = LXColor.multiply(blurColors[i], decayColor, 0x100);
       // Add the new blur buffer frame
@@ -101,8 +104,7 @@ public class BlurEffect extends LXEffect {
     }
 
     // If blur value is present, blend the blur value into the color buffer
-    if (blurf > 0) {
-      int blurAlpha = (int) (0x100 * blurf);
+    if (blurAlpha > 0) {
       switch (this.mode.getEnum()) {
       case MIX:
         for (LXPoint p : model.points) {
