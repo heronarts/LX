@@ -93,7 +93,7 @@ public class LXDmxEngine extends LXComponent {
   }
 
   public double getNormalized(int universe, int channel) {
-    return this.data[universe][channel] / 255.;
+    return (this.data[universe][channel] & 0xff) / 255.;
   }
 
   private class ArtNetReceiver extends Thread {
@@ -141,8 +141,8 @@ public class LXDmxEngine extends LXComponent {
           }
 
           final int dataLength =
-            dmxData[ArtNetDatagram.DATA_LENGTH_MSB] << 8 |
-            dmxData[ArtNetDatagram.DATA_LENGTH_LSB];
+            (dmxData[offset + ArtNetDatagram.DATA_LENGTH_LSB] & 0xff) |
+            ((dmxData[offset + ArtNetDatagram.DATA_LENGTH_MSB] & 0xff) << 8);
 
           System.arraycopy(dmxData, dmxOffset, data[universe], 0, dataLength);
 
