@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 
@@ -104,27 +105,32 @@ public class BlurEffect extends LXEffect {
       int blurAlpha = (int) (0x100 * blurf);
       switch (this.mode.getEnum()) {
       case MIX:
-        for (int i = 0; i < blurColors.length; ++i) {
+        for (LXPoint p : model.points) {
+          int i = p.index;
           this.colors[i] = LXColor.lerp(this.colors[i], blurColors[i], blurAlpha);
         }
         break;
       case ADD:
-        for (int i = 0; i < blurColors.length; ++i) {
+        for (LXPoint p : model.points) {
+          int i = p.index;
           this.colors[i] = LXColor.add(this.colors[i], blurColors[i], blurAlpha);
         }
         break;
       case SCREEN:
-        for (int i = 0; i < blurColors.length; ++i) {
+        for (LXPoint p : model.points) {
+          int i = p.index;
           this.colors[i] = LXColor.screen(this.colors[i], blurColors[i], blurAlpha);
         }
         break;
       case MULTIPLY:
-        for (int i = 0; i < blurColors.length; ++i) {
+        for (LXPoint p : model.points) {
+          int i = p.index;
           this.colors[i] = LXColor.multiply(this.colors[i], blurColors[i], blurAlpha);
         }
         break;
       case LIGHTEST:
-        for (int i = 0; i < blurColors.length; ++i) {
+        for (LXPoint p : model.points) {
+          int i = p.index;
           this.colors[i] = LXColor.lightest(this.colors[i], blurColors[i], blurAlpha);
         }
         break;
