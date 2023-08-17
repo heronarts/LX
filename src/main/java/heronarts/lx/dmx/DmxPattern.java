@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.pattern.LXPattern;
 
 @LXComponentName("DMX")
@@ -35,18 +36,24 @@ public class DmxPattern extends LXPattern {
     new DiscreteParameter("Channel", 0, 510)
     .setDescription("Starting channel");
 
+  public final EnumParameter<LXDmxEngine.ByteOrder> byteOrder =
+    new EnumParameter<LXDmxEngine.ByteOrder>("Byte Order", LXDmxEngine.ByteOrder.RGB)
+    .setDescription("DMX input byte order");
+
   public DmxPattern(LX lx) {
     super(lx);
     addParameter("universe", this.universe);
     addParameter("channel", this.channel);
+    addParameter("byteOrder", this.byteOrder);
   }
 
   @Override
   protected void run(double deltaMs) {
+    final LXDmxEngine.ByteOrder byteOrder = this.byteOrder.getEnum();
     int universe = this.universe.getValuei();
     int channel = this.channel.getValuei();
     for (LXPoint p : model.points) {
-      colors[p.index] = lx.engine.dmx.getColor(universe, channel);
+      colors[p.index] = lx.engine.dmx.getColor(universe, channel, byteOrder);
       channel += 3;
       if (channel >= 510) {
         channel = 0;

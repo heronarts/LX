@@ -33,6 +33,23 @@ import heronarts.lx.parameter.LXParameter;
 
 public class LXDmxEngine extends LXComponent {
 
+  public enum ByteOrder {
+    RGB(0,1,2),
+    RBG(0,2,1),
+    GRB(1,0,2),
+    GBR(2,0,1),
+    BRG(1,2,0),
+    BGR(2,1,0);
+
+    public final int r, g, b;
+
+    private ByteOrder(int r, int g, int b) {
+      this.r = r;
+      this.g = g;
+      this.b = b;
+    }
+  }
+
   public final BooleanParameter artNetReceiveActive =
     new BooleanParameter("Art-Net Active", false)
     .setMappable(false)
@@ -80,10 +97,14 @@ public class LXDmxEngine extends LXComponent {
   }
 
   public int getColor(int universe, int channel) {
+    return getColor(universe, channel, ByteOrder.RGB);
+  }
+
+  public int getColor(int universe, int channel, ByteOrder byteOrder) {
     return LXColor.rgba(
-      this.data[universe][channel],
-      this.data[universe][channel+1],
-      this.data[universe][channel+2],
+      this.data[universe][channel + byteOrder.r],
+      this.data[universe][channel + byteOrder.g],
+      this.data[universe][channel + byteOrder.b],
       0xff
     );
   }
