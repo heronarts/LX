@@ -42,6 +42,7 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
@@ -162,6 +163,19 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     new CompoundParameter("Composite Level", 1)
     .setDescription("Alpha level to composite pattern at when in channel blend mode");
 
+
+  public final BooleanParameter hasCustomCycleTime =
+    new BooleanParameter("Custom Cycle", false)
+    .setDescription("When enabled, this pattern uses its own custom duration rather than the default cycle time");
+
+  /**
+   * Custom time for this pattern to cycle
+   */
+  public final BoundedParameter customCycleTimeSecs =
+    new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
+    .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
+    .setUnits(LXParameter.Units.SECONDS);
+
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
     final LXChannel channel = getChannel();
@@ -213,6 +227,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     addParameter("recall", this.recall);
     addParameter("compositeMode", this.compositeMode);
     addParameter("compositeLevel", this.compositeLevel);
+    addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
+    addParameter("customCycleTimeSecs", this.customCycleTimeSecs);
 
     updateCompositeBlendOptions();
     this.compositeMode.addListener(this.onCompositeMode);
@@ -228,6 +244,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       parameter == this.compositeMode ||
       parameter == this.compositeLevel ||
       parameter == this.enabled ||
+      parameter == this.hasCustomCycleTime ||
+      parameter == this.customCycleTimeSecs ||
       super.isHiddenControl(parameter);
   }
 

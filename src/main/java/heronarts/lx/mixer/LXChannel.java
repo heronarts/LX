@@ -993,9 +993,21 @@ public class LXChannel extends LXAbstractChannel {
         }
       }
 
+
+      final LXPattern activePattern = getActivePattern();
+
       // Auto-cycle if appropriate
       if (this.transition == null) {
-        this.autoCycleProgress = (this.lx.engine.nowMillis - this.transitionMillis) / (1000 * this.autoCycleTimeSecs.getValue());
+
+        // Check for a custom pattern cycle time
+        BoundedParameter autoCycleTimeParam = this.autoCycleTimeSecs;
+        if ((activePattern != null) && activePattern.hasCustomCycleTime.isOn()) {
+          autoCycleTimeParam = activePattern.customCycleTimeSecs;
+        }
+
+        this.autoCycleProgress = (this.lx.engine.nowMillis - this.transitionMillis) /
+          (1000 * autoCycleTimeParam.getValue());
+
         if (this.autoCycleProgress >= 1) {
           this.autoCycleProgress = 1;
           if (this.autoCycleEnabled.isOn()) {
@@ -1005,7 +1017,6 @@ public class LXChannel extends LXAbstractChannel {
       }
 
       // Run active pattern
-      final LXPattern activePattern = getActivePattern();
       if (activePattern != null) {
         activePattern.setBuffer(this.blendBuffer);
         activePattern.setModel(activePattern.getModelView());
