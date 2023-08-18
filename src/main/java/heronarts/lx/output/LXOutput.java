@@ -362,7 +362,6 @@ public abstract class LXOutput extends LXComponent {
       this.brightness.reset();
       this.framesPerSecond.reset();
       this.gamma.reset();
-      this.gammaMode.reset();
       this.whitePointRed.reset();
       this.whitePointGreen.reset();
       this.whitePointBlue.reset();
