@@ -1323,9 +1323,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       if (children.has(path)) {
         child.load(lx, children.getAsJsonObject(path));
       } else {
-        final JsonObject reset = new JsonObject();
-        reset.addProperty(KEY_RESET, KEY_RESET);
-        child.load(lx, reset);
+        LXSerializable.Utils.resetObject(lx, child);
       }
     }
   }

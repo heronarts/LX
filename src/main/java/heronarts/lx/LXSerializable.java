@@ -213,6 +213,18 @@ public interface LXSerializable {
     }
 
     /**
+     * Reset an object by loading an empty dictionary with the reset key
+     *
+     * @param lx LX instance
+     * @param serializable Object to reset
+     */
+    public static void resetObject(LX lx, LXSerializable serializable) {
+      final JsonObject reset = new JsonObject();
+      reset.addProperty(LXComponent.KEY_RESET, LXComponent.KEY_RESET);
+      serializable.load(lx, reset);
+    }
+
+    /**
      * Loads an array of sub-objects from the given key, if it is found
      *
      * @param lx LX instance

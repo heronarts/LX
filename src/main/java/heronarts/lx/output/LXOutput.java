@@ -20,6 +20,8 @@ package heronarts.lx.output;
 
 import java.net.InetAddress;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.BoundedParameter;
@@ -352,6 +354,21 @@ public abstract class LXOutput extends LXComponent {
    * @param brightness Master brightness value
    */
   protected abstract void onSend(int[] colors, GammaTable glut, double brightness);
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    if (obj.has(LXComponent.KEY_RESET)) {
+      this.brightness.reset();
+      this.framesPerSecond.reset();
+      this.gamma.reset();
+      this.gammaMode.reset();
+      this.whitePointRed.reset();
+      this.whitePointGreen.reset();
+      this.whitePointBlue.reset();
+      this.whitePointWhite.reset();
+    }
+  }
 
   private static final String OUTPUT_LOG_PREFIX = "[I/O] ";
 

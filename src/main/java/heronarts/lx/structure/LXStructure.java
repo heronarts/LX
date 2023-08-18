@@ -1073,7 +1073,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     regenerateOutputs();
 
     if (this.output != null) {
-      LXSerializable.Utils.loadObject(lx, this.output, obj, KEY_OUTPUT);
+      if (obj.has(KEY_OUTPUT)) {
+        LXSerializable.Utils.loadObject(lx, this.output, obj, KEY_OUTPUT);
+      } else {
+        LXSerializable.Utils.resetObject(lx, this.output);
+      }
     }
 
   }
