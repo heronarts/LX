@@ -27,9 +27,13 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
+import heronarts.lx.osc.LXOscEngine.IOState;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 public class LXDmxEngine extends LXComponent {
 
@@ -50,10 +54,26 @@ public class LXDmxEngine extends LXComponent {
     }
   }
 
+  public final EnumParameter<IOState> artNetReceiveState =
+    new EnumParameter<IOState>("Art-Net RX State", IOState.STOPPED)
+    .setMappable(false)
+    .setDescription("The state of the Art-Net receiver");
+
   public final BooleanParameter artNetReceiveActive =
     new BooleanParameter("Art-Net Active", false)
     .setMappable(false)
     .setDescription("Enables or disables Art-Net DMX input");
+
+  public final DiscreteParameter artNetReceivePort =
+    new DiscreteParameter("Art-Net RX Port", ArtNetDatagram.ARTNET_PORT, 1, 65535)
+    .setDescription("UDP port on which the engine listens for Art-Net")
+    .setMappable(false)
+    .setUnits(LXParameter.Units.INTEGER);
+
+  public final TriggerParameter artNetActivity = (TriggerParameter)
+    new TriggerParameter("Art-Net Activity")
+    .setMappable(false)
+    .setDescription("Triggers when art-net input is received");
 
   private ArtNetReceiver artNetReceiver = null;
 
@@ -65,34 +85,52 @@ public class LXDmxEngine extends LXComponent {
 
   public LXDmxEngine(LX lx) {
     super(lx);
+    addParameter("artNetReceivePort", this.artNetReceivePort);
     addParameter("artNetReceiveActive", this.artNetReceiveActive);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     if (p == this.artNetReceiveActive) {
-      stopReceiver();
+      stopReceiver(IOState.STOPPED);
+      if (this.artNetReceiveActive.isOn()) {
+        startReceiver();
+      }
+    } else if (p == this.artNetReceivePort) {
       if (this.artNetReceiveActive.isOn()) {
         startReceiver();
       }
     }
   }
 
-  private void stopReceiver() {
+  private void stopReceiver(IOState state) {
     if (this.artNetReceiver != null) {
       this.artNetReceiver.interrupt();
       this.artNetReceiver.socket.close();
       this.artNetReceiver = null;
     }
+    this.artNetReceiveState.setValue(state);
   }
 
   private void startReceiver() {
+    if (this.artNetReceiver != null) {
+      stopReceiver(IOState.STOPPED);
+    }
+    this.artNetReceiveState.setValue(IOState.BINDING);
+    final int artNetPort = this.artNetReceivePort.getValuei();
     try {
-      final DatagramSocket socket = new DatagramSocket(ArtNetDatagram.ARTNET_PORT);
+      final DatagramSocket socket = new DatagramSocket(artNetPort);
       this.artNetReceiver = new ArtNetReceiver(socket);
       this.artNetReceiver.start();
+      this.artNetReceiveState.setValue(IOState.BOUND);
     } catch (SocketException sx) {
       error(sx, "Could not create Art-Net listener socket: " + sx.getMessage());
+      this.lx.pushError("Failed to start Art-Net receiver on port " + artNetPort + "\n" + sx.getLocalizedMessage());
+      this.artNetReceiveState.setValue(IOState.SOCKET_ERROR);
+    } catch (Throwable x) {
+      error(x, "Unknown error starting art-net receiver: " + x.getMessage());
+      this.lx.pushError("Uknown error starting Art-Net receiver on port " + artNetPort + "\n" + x.getLocalizedMessage());
+      this.artNetReceiveState.setValue(IOState.SOCKET_ERROR);
     }
   }
 
@@ -145,6 +183,7 @@ public class LXDmxEngine extends LXComponent {
       while (!isInterrupted()) {
         try {
           this.socket.receive(packet);
+          artNetActivity.trigger();
           final byte[] dmxData = packet.getData();
           final int offset = packet.getOffset();
           final int dmxOffset = offset + ArtNetDatagram.ARTNET_HEADER_LENGTH;
@@ -189,13 +228,14 @@ public class LXDmxEngine extends LXComponent {
   public void load(LX lx, JsonObject obj) {
     super.load(lx, obj);
     if (obj.has(LXComponent.KEY_RESET)) {
-      this.artNetReceiveActive.setValue(false);
+      this.artNetReceiveActive.reset();
+      this.artNetReceivePort.reset();
     }
   }
 
   @Override
   public void dispose() {
-    stopReceiver();
+    stopReceiver(IOState.STOPPED);
     super.dispose();
   }
 
