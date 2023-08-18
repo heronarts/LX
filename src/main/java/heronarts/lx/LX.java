@@ -946,6 +946,9 @@ public class LX {
         this.structure.load(this, new JsonObject());
       }
       this.engine.load(this, new JsonObject());
+      for (LXSerializable external : this.externals.values()) {
+        LXSerializable.Utils.resetObject(this, external);
+      }
 
       LXChannel channel = this.engine.mixer.addChannel(new LXPattern[] { new SolidPattern(this, 0xffff0000) });
       channel.fader.setValue(1);
@@ -969,7 +972,11 @@ public class LX {
       this.engine.load(this, obj.getAsJsonObject(KEY_ENGINE));
       JsonObject externalsObj = obj.has(KEY_EXTERNALS) ? obj.getAsJsonObject(KEY_EXTERNALS) : new JsonObject();
       for (String key : this.externals.keySet()) {
-        this.externals.get(key).load(this, externalsObj.has(key) ? externalsObj.getAsJsonObject(key) : new JsonObject());
+        if (externalsObj.has(key)) {
+          LXSerializable.Utils.loadObject(this, this.externals.get(key), externalsObj, key);
+        } else {
+          LXSerializable.Utils.resetObject(this, this.externals.get(key));
+        }
       }
       this.componentRegistry.projectLoading = false;
       setProject(file, ProjectListener.Change.OPEN);
