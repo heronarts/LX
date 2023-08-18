@@ -720,7 +720,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       if ((this.label == parameter) && !(this instanceof Renamable)) {
         continue;
       }
-      contents.add(parameterEntry.getKey(), toOscQuery(parameter));
+      JsonObject parameterOscQuery = toOscQuery(parameter, null);
+      if (parameterOscQuery != null) {
+        contents.add(parameterEntry.getKey(), parameterOscQuery);
+      }
     }
     for (Map.Entry<String, LXComponent> childEntry : this.mutableChildren.entrySet()) {
       LXComponent child = childEntry.getValue();
@@ -749,17 +752,34 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   public JsonObject toOscQuery(LXParameter parameter) {
+    return toOscQuery(parameter, parameter.getParentParameter());
+  }
+
+  public JsonObject toOscQuery(LXParameter parameter, LXParameter parent) {
     if (!(this instanceof LXOscComponent)) {
       return null;
     }
+    if (parameter.getParentParameter() != parent) {
+      return null;
+    }
+
     JsonObject obj = new JsonObject();
     obj.addProperty("FULL_PATH", parameter.getCanonicalPath());
     obj.addProperty("DESCRIPTION", parameter.getDescription());
 
     JsonObject range = null;
 
-    // TODO(mcslee): handle aggregate parameter in here
-    if (parameter instanceof BooleanParameter) {
+    if (parameter instanceof AggregateParameter) {
+      final AggregateParameter aggregate = (AggregateParameter) parameter;
+      final JsonObject contents = new JsonObject();
+      for (Map.Entry<String, LXListenableParameter> parameterEntry : aggregate.subparameters.entrySet()) {
+        JsonObject subparameterOscQuery = toOscQuery(parameterEntry.getValue(), aggregate);
+        if (subparameterOscQuery != null) {
+          contents.add(parameterEntry.getKey(), subparameterOscQuery);
+        }
+      }
+      obj.add("CONTENTS", contents);
+    } else if (parameter instanceof BooleanParameter) {
       boolean isOn = ((BooleanParameter) parameter).isOn();
       obj.addProperty("VALUE", isOn);
       obj.addProperty("TYPE", isOn ? "T" : "F");
