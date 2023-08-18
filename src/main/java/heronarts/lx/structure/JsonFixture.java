@@ -1342,7 +1342,7 @@ public class JsonFixture extends LXFixture {
       fixture.addTransform(new Transform(Transform.Type.SCALE_Y, loadFloat(obj, KEY_SCALE_Y, true)));
     }
     if (obj.has(KEY_SCALE_Z)) {
-      fixture.addTransform(new Transform(Transform.Type.SCALE_Z, loadFloat(obj, KEY_ROTATE_Z, true)));
+      fixture.addTransform(new Transform(Transform.Type.SCALE_Z, loadFloat(obj, KEY_SCALE_Z, true)));
     }
   }
 
