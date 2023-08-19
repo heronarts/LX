@@ -18,9 +18,6 @@
 
 package heronarts.lx.transform;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import heronarts.lx.parameter.LXParameter;
 
 public class LXParameterizedMatrix extends LXMatrix {
@@ -29,31 +26,18 @@ public class LXParameterizedMatrix extends LXMatrix {
     public void updateMatrix(LXMatrix matrix);
   }
 
-  private class Parameter {
-    private final LXParameter parameter;
-    private double previousValue = -1;
-
-    private Parameter(LXParameter parameter) {
-      this.parameter = parameter;
-    }
-  }
-
-  private final List<Parameter> parameters = new ArrayList<Parameter>();
+  private final LXParameter.MultiMonitor monitor = new LXParameter.MultiMonitor();
 
   private boolean dirty = true;
 
   public LXParameterizedMatrix addParameter(LXParameter parameter) {
-    this.parameters.add(new Parameter(parameter));
+    this.monitor.addParameter(parameter);
     return this;
   }
 
   public void update(UpdateFunction update) {
-    for (Parameter parameter : this.parameters) {
-      double value = parameter.parameter.getValue();
-      if (value != parameter.previousValue) {
-        this.dirty = true;
-        parameter.previousValue = value;
-      }
+    if (this.monitor.changed()) {
+      this.dirty = true;
     }
     if (this.dirty) {
       update.updateMatrix(identity());

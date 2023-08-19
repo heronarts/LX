@@ -22,12 +22,61 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.midi.MidiNote;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * This class provides a common interface for system components to have
  * parameters that can modify their operation. Any LXComponent can have
  * parameters, such as a pattern, effect, or transition.
  */
 public interface LXParameter extends LXPath {
+
+  public static class Monitor {
+
+    private final LXParameter parameter;
+    private double lastValue;
+
+    public Monitor(LXParameter parameter) {
+      if (parameter == null) {
+        throw new IllegalArgumentException("Cannot create LXParameter.Monitor for null");
+      }
+      this.parameter = parameter;
+      this.lastValue = parameter.getValue();
+    }
+
+    public boolean changed() {
+      double value = this.parameter.getValue();
+      boolean changed = (value != this.lastValue);
+      this.lastValue = value;
+      return changed;
+    }
+  }
+
+  public static class MultiMonitor {
+
+    private final List<Monitor> monitors = new ArrayList<Monitor>();
+
+    public MultiMonitor(LXParameter ... parameters) {
+      for (LXParameter parameter : parameters) {
+        addParameter(parameter);
+      }
+    }
+
+    public MultiMonitor addParameter(LXParameter parameter) {
+      this.monitors.add(new Monitor(parameter));
+      return this;
+    }
+
+    public boolean changed() {
+      for (Monitor monitor : this.monitors) {
+        if (monitor.changed()) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
 
   public enum Polarity {
     UNIPOLAR,
