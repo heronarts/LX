@@ -61,17 +61,21 @@ public class Accumulator extends LXModulator {
 
   @Override
   protected double computeValue(double deltaMs) {
-    float currentValue = getValuef();
+    final float currentValue = getValuef();
     float amount = (float) (deltaMs * this.velocity.getValue());
+    if (amount == 0) {
+      return currentValue;
+    }
     float newValue = currentValue + this.sign * amount;
-    if (currentValue == newValue || Float.isInfinite(newValue)) {
+    if ((currentValue == newValue) || Float.isInfinite(newValue)) {
       if (++this.collisions > 3) {
         this.collisions = 0;
         this.sign = -this.sign;
+        int i = 0;
         do {
           newValue = currentValue + this.sign * amount;
           amount *= 10;
-        } while (newValue == currentValue);
+        } while ((newValue == currentValue) && (i++ < 10));
       }
     }
     return newValue;
