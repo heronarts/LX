@@ -199,7 +199,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     new EnumParameter<KnobClickMode>("Knob Click", KnobClickMode.RESET)
     .setDescription("How to edit parameters when a knob is pressed");
 
-
   public final EnumParameter<FocusMode> focusMode =
     new EnumParameter<FocusMode>("Focus Buttons", FocusMode.DEVICE)
     .setDescription("How to change focus on bottom side button press");
@@ -899,8 +898,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     this.deviceListener = new DeviceListener(lx);
     addSetting("knobClickMode", this.knobClickMode);
     addSetting("focusMode", this.focusMode);
-    addState("currentBank", this.currentBank);
-    addState("isAux", this.isAux);
+    addSetting("isAux", this.isAux);
+    addSetting("currentBank", this.currentBank);
   }
 
   @Override
