@@ -56,7 +56,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     .setDescription("Whether Cue selection applies to live output, not just the preview window");
 
   public final DiscreteParameter uiZoom =
-    new DiscreteParameter("UI Scale", 100, 100, 201)
+    new DiscreteParameter("UI Scale", 100, 50, 201)
     .setDescription("Percentage by which the UI should be scaled")
     .setUnits(LXParameter.Units.PERCENT)
     .setMappable(false);

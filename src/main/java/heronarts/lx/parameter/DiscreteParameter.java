@@ -18,6 +18,8 @@
 
 package heronarts.lx.parameter;
 
+import heronarts.lx.utils.LXUtils;
+
 /**
  * Parameter type with a discrete set of possible integer values.
  */
@@ -192,11 +194,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     this.minValue = minValue;
     this.maxValue = maxValue - 1;
     this.range = maxValue - minValue;
-    int value = getValuei();
-    if (value > this.maxValue) {
-      value = this.maxValue;
-    }
-    setValue(updateValue(value));
+    setValue(LXUtils.constrain(getValuei(), this.minValue, this.maxValue));
     return this;
   }
 
