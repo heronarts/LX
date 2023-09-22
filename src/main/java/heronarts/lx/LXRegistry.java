@@ -189,6 +189,8 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_CHANNEL_BLENDS.add(BurnBlend.class);
     DEFAULT_CHANNEL_BLENDS.add(HighlightBlend.class);
     DEFAULT_CHANNEL_BLENDS.add(SpotlightBlend.class);
+    DEFAULT_CHANNEL_BLENDS.add(LightestBlend.class);
+    DEFAULT_CHANNEL_BLENDS.add(DarkestBlend.class);
 
   }
 
