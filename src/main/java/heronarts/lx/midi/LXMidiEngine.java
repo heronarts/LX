@@ -830,6 +830,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
     // Bada-boom, add it!
     this.lx.command.perform(new LXCommand.Midi.AddMapping(message, parameter));
+
+    // Clear the control target now that it's mapped
+    this.lx.engine.mapping.setControlTarget(null);
   }
 
   private boolean applyMapping(LXShortMessage message) {
