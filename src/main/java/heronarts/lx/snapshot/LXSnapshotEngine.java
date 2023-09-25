@@ -158,7 +158,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     .setDescription("How to handle channels that are not present in the snapshot");
 
   public final EnumParameter<ChannelMode> channelMode =
-    new EnumParameter<ChannelMode>("Channel Mode", ChannelMode.TOGGLE)
+    new EnumParameter<ChannelMode>("Channel Mode", ChannelMode.FADE)
     .setDescription("How to handle turning channels on/off");
 
   /**
