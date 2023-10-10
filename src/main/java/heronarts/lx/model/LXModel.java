@@ -69,7 +69,7 @@ public class LXModel implements LXSerializable {
 
     public final static String VALID_TAG_REGEX = "[A-Za-z0-9_\\.\\-/]+";
 
-    public final static String VALID_TEXT_FIELD_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.- ,";
+    public final static String VALID_TEXT_FIELD_CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.-/ ,";
 
     public static boolean isValid(String tag) {
       return tag.matches(VALID_TAG_REGEX);
