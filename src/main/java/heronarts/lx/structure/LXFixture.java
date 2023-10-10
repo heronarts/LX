@@ -103,6 +103,17 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       this.maxChannels = maxChannels;
     }
 
+    public boolean isDMX() {
+      switch (this) {
+      case ARTNET:
+      case SACN:
+      case KINET:
+        return true;
+      default:
+        return false;
+      }
+    }
+
     @Override
     public String toString() {
       return this.label;
