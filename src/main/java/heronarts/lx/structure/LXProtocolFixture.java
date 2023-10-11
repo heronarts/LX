@@ -27,6 +27,7 @@ import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.OPCOutput;
+import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -77,6 +78,10 @@ public abstract class LXProtocolFixture extends LXFixture {
   public final BooleanParameter artNetSequenceEnabled =
     new BooleanParameter("ArtNet Sequence", false)
     .setDescription("Whether ArtNet sequence numbers are used");
+
+  public final DiscreteParameter sacnPriority =
+    new DiscreteParameter("sACN Priority", StreamingACNDatagram.DEFAULT_PRIORITY, 0, StreamingACNDatagram.MAX_PRIORITY+1)
+    .setDescription("sACN Priority Value (0-" + StreamingACNDatagram.MAX_PRIORITY + ")");
 
   public final DiscreteParameter opcChannel =
     new DiscreteParameter("OPC Channel", 0, 0, 256)
@@ -182,6 +187,15 @@ public abstract class LXProtocolFixture extends LXFixture {
       return this.artNetSequenceEnabled.isOn();
     default:
       return false;
+    }
+  }
+
+  protected int getProtocolPriority() {
+    switch (this.protocol.getEnum()) {
+    case SACN:
+      return this.sacnPriority.getValuei();
+    default:
+      return 0;
     }
   }
 }

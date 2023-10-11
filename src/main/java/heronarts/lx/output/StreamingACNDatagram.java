@@ -40,8 +40,9 @@ public class StreamingACNDatagram extends LXDatagram {
   public final static int DEFAULT_PORT = 5568;
 
   private final static int DEFAULT_UNIVERSE_NUMBER = 1;
-  private final static int DEFAULT_PRIORITY = 100;
-  private final static int MAX_PRIORITY = 200;
+
+  public final static int DEFAULT_PRIORITY = 100;
+  public final static int MAX_PRIORITY = 200;
 
   /**
    * The universe number that this packet sends to.
@@ -283,7 +284,7 @@ public class StreamingACNDatagram extends LXDatagram {
    */
   public StreamingACNDatagram setPriority(int priority) {
     if (priority < 0 || priority > MAX_PRIORITY) {
-      throw new IllegalArgumentException("sACN priority must be 0-200");
+      throw new IllegalArgumentException("sACN priority must be 0-" + MAX_PRIORITY);
     }
     this.priority = priority;
     this.buffer[OFFSET_PRIORITY] = (byte) (0xff & this.priority);

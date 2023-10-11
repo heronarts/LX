@@ -51,6 +51,7 @@ import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutput.GammaTable;
+import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -153,6 +154,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_KINET_PORT = "kinetPort";
   private static final String KEY_OPC_CHANNEL = "channel";
   private static final String KEY_CHANNEL = "channel";
+  private static final String KEY_PRIORITY = "priority";
   private static final String KEY_SEQUENCE_ENABLED = "sequenceEnabled";
   private static final String KEY_OFFSET = "offset";
   private static final String KEY_START = "start";
@@ -488,11 +490,12 @@ public class JsonFixture extends LXFixture {
     private final int port;
     private final int universe;
     private final int channel;
+    private final int priority;
     private final boolean sequenceEnabled;
     private final float fps;
     private final List<JsonSegmentDefinition> segments;
 
-    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteEncoderDefinition byteOrder, InetAddress address, int port, int universe, int channel, boolean sequenceEnabled, float fps, List<JsonSegmentDefinition> segments) {
+    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteEncoderDefinition byteOrder, InetAddress address, int port, int universe, int channel, int priority, boolean sequenceEnabled, float fps, List<JsonSegmentDefinition> segments) {
       this.fixture = fixture;
       this.protocol = protocol;
       this.transport = transport;
@@ -501,6 +504,7 @@ public class JsonFixture extends LXFixture {
       this.port = port;
       this.universe = universe;
       this.channel = channel;
+      this.priority = priority;
       this.sequenceEnabled = sequenceEnabled;
       this.fps = fps;
       this.segments = segments;
@@ -2111,6 +2115,16 @@ public class JsonFixture extends LXFixture {
       return;
     }
 
+    int priority = StreamingACNDatagram.DEFAULT_PRIORITY;
+    if (outputObj.has(KEY_PRIORITY)) {
+      final int jsonPriority = loadInt(outputObj, KEY_PRIORITY, true, "Output " + KEY_PRIORITY + " must be a valid integer");
+      if (jsonPriority < 0 || jsonPriority > StreamingACNDatagram.MAX_PRIORITY) {
+        addWarning("Output " + KEY_PRIORITY + " must be within range [0-200], ignoring value: " + jsonPriority);
+      } else {
+        priority = jsonPriority;
+      }
+    }
+
     final boolean sequenceEnabled = loadBoolean(outputObj, KEY_SEQUENCE_ENABLED, true, "Output " + KEY_SEQUENCE_ENABLED + " must be a valid boolean");
 
     // Top level output byte-order
@@ -2120,7 +2134,7 @@ public class JsonFixture extends LXFixture {
     List<JsonSegmentDefinition> segments = new ArrayList<JsonSegmentDefinition>();
     loadSegments(fixture, segments, outputObj, byteOrder);
 
-    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, sequenceEnabled, fps, segments));
+    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, priority, sequenceEnabled, fps, segments));
   }
 
   private void loadBrightness(LXFixture child, JsonObject childObj) {
@@ -2383,6 +2397,7 @@ public class JsonFixture extends LXFixture {
       (output.port == JsonOutputDefinition.DEFAULT_PORT) ? output.protocol.protocol.defaultPort : output.port,
       output.universe,
       output.channel,
+      output.priority,
       output.sequenceEnabled,
       output.fps,
       segments.toArray(new Segment[0])
