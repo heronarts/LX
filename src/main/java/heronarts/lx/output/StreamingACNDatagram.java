@@ -30,20 +30,25 @@ import heronarts.lx.model.LXModel;
  */
 public class StreamingACNDatagram extends LXDatagram {
 
-  public final static int OFFSET_DMX_DATA = 126;
+  public final static int OFFSET_PRIORITY = 108;
   public final static int OFFSET_SEQUENCE_NUMBER = 111;
   public final static int OFFSET_UNIVERSE_NUMBER = 113;
+  public final static int OFFSET_DMX_DATA = 126;
 
   public final static int MAX_DATA_LENGTH = 512;
 
   public final static int DEFAULT_PORT = 5568;
 
   private final static int DEFAULT_UNIVERSE_NUMBER = 1;
+  private final static int DEFAULT_PRIORITY = 100;
+  private final static int MAX_PRIORITY = 200;
 
   /**
    * The universe number that this packet sends to.
    */
   private int universeNumber;
+
+  private int priority = DEFAULT_PRIORITY;
 
   /**
    * Creates a StreamingACNDatagram for the given model
@@ -159,6 +164,7 @@ public class StreamingACNDatagram extends LXDatagram {
     super(lx, indexBuffer, OFFSET_DMX_DATA + dataSize);
     setPort(DEFAULT_PORT);
     setUniverseNumber(universeNumber);
+    setPriority(this.priority);
 
     validateBufferSize();
 
@@ -226,14 +232,14 @@ public class StreamingACNDatagram extends LXDatagram {
     }
 
     // Priority
-    this.buffer[108] = 100;
+    // Handled in setPriority()
 
     // Reserved
     this.buffer[109] = 0x00;
     this.buffer[110] = 0x00;
 
     // Sequence Number
-    this.buffer[111] = 0x00;
+    this.buffer[OFFSET_SEQUENCE_NUMBER] = 0x00;
 
     // Options
     this.buffer[112] = 0x00;
@@ -267,6 +273,30 @@ public class StreamingACNDatagram extends LXDatagram {
 
     // DMX Start
     this.buffer[125] = 0x00;
+  }
+
+  /**
+   * Sets the priority for this datagram
+   *
+   * @param priority sACN priority level, 0-200
+   * @return this
+   */
+  public StreamingACNDatagram setPriority(int priority) {
+    if (priority < 0 || priority > MAX_PRIORITY) {
+      throw new IllegalArgumentException("sACN priority must be 0-200");
+    }
+    this.priority = priority;
+    this.buffer[OFFSET_PRIORITY] = (byte) (0xff & this.priority);
+    return this;
+  }
+
+  /**
+   * Priority for this sACN datagram
+   *
+   * @return Priority level
+   */
+  public int getPriority() {
+    return this.priority;
   }
 
   /**
