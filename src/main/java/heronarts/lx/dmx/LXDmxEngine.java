@@ -151,6 +151,10 @@ public class LXDmxEngine extends LXComponent {
     return this.data[universe][channel];
   }
 
+  public int getValuei(int universe, int channel) {
+    return this.data[universe][channel] & 0xff;
+  }
+
   public double getNormalized(int universe, int channel) {
     return (this.data[universe][channel] & 0xff) / 255.;
   }
