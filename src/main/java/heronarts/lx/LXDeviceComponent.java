@@ -156,8 +156,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     addInternalParameter("expandedAux", this.controlsExpandedAux);
     addInternalParameter("modulationExpanded", this.modulationExpanded);
     addInternalParameter("presetFile", this.presetFile);
-    addInternalParameter("midiFilter", this.midiFilter);
 
+    addParameter("midiFilter", this.midiFilter);
     addParameter("view", this.view = lx.structure.views.newViewSelector("View", "Model view selector for this device"));
     addParameter("viewPriority", this.viewPriority = lx.structure.views.newViewSelectorPriority("View", "Priority model view selector for this device"));
 
@@ -236,6 +236,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    */
   public boolean isHiddenControl(LXParameter parameter) {
     return
+      (parameter == this.midiFilter) ||
       (parameter == this.view) ||
       (parameter == this.viewPriority);
   }
@@ -259,6 +260,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     if (this.defaultRemoteControls == null) {
       List<LXListenableNormalizedParameter> remoteControls = new ArrayList<LXListenableNormalizedParameter>();
       for (LXParameter parameter : getParameters()) {
+        // No hidden controls please!
+        if (isHiddenControl(parameter)) {
+          continue;
+        }
         // Do not include subparams of AggregateParameter
         if (parameter.getParentParameter() != null) {
           continue;
@@ -271,9 +276,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
           }
         } else if (parameter instanceof LXListenableNormalizedParameter) {
           // Otherwise include any parameter of a knob-able type
-          if (!isHiddenControl(parameter)) {
-            remoteControls.add((LXListenableNormalizedParameter) parameter);
-          }
+          remoteControls.add((LXListenableNormalizedParameter) parameter);
         }
       }
       this.defaultRemoteControls = remoteControls.toArray(new LXListenableNormalizedParameter[0]);
