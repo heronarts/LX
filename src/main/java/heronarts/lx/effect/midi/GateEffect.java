@@ -202,7 +202,6 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
     onParameterChanged(this.envelopeMode);
     onParameterChanged(this.triggerMode);
 
-    this.midiFilter.enabled.addListener(this);
   }
 
   private float amount = 1;
@@ -295,12 +294,6 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
     if (this.midiLegatoCount == 0) {
       this.env.engage.setValue(false);
     }
-  }
-
-  @Override
-  public void dispose() {
-    this.midiFilter.enabled.removeListener(this);
-    super.dispose();
   }
 
 }
