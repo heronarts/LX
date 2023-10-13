@@ -113,8 +113,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     @Override
     public String toString() {
       switch (this) {
-      case MIDI: return "Midi";
-      case OSC: return "Osc";
+      case MIDI: return "MIDI";
+      case OSC: return "OSC";
       default: case INTERNAL: return "Int";
       }
     }
