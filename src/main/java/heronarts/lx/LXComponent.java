@@ -42,6 +42,7 @@ import heronarts.lx.osc.OscInt;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableParameter;
@@ -795,12 +796,28 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       range = new JsonObject();
       range.addProperty("MIN", ((DiscreteParameter) parameter).getMinValue());
       range.addProperty("MAX", ((DiscreteParameter) parameter).getMaxValue());
-    } else if (parameter instanceof CompoundParameter) {
-      obj.addProperty("VALUE", ((CompoundParameter) parameter).getBaseNormalizedf());
+    } else if (parameter instanceof BoundedParameter) {
+      BoundedParameter boundedParameter = (BoundedParameter) parameter;
       obj.addProperty("TYPE", "f");
       range = new JsonObject();
-      range.addProperty("MIN", 0f);
-      range.addProperty("MAX", 1f);
+      if (boundedParameter.getOscMode() == CompoundParameter.OscMode.ABSOLUTE) {
+        range.addProperty("MIN", (float) boundedParameter.range.min);
+        range.addProperty("MAX", (float) boundedParameter.range.max);
+        if (parameter instanceof CompoundParameter) {
+          obj.addProperty("VALUE", ((CompoundParameter) parameter).getBaseValuef());
+        } else {
+          obj.addProperty("VALUE", boundedParameter.getValuef());
+        }
+      } else {
+        range.addProperty("MIN", 0f);
+        range.addProperty("MAX", 1f);
+        if (parameter instanceof CompoundParameter) {
+          obj.addProperty("VALUE", ((CompoundParameter) parameter).getBaseNormalizedf());
+        } else {
+          obj.addProperty("VALUE", boundedParameter.getNormalizedf());
+        }
+
+      }
     } else if (parameter instanceof LXNormalizedParameter) {
       obj.addProperty("VALUE", ((LXNormalizedParameter) parameter).getNormalizedf());
       obj.addProperty("TYPE", "f");
