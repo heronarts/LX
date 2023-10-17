@@ -63,6 +63,16 @@ public class LinkedColorParameter extends ColorParameter {
     return (LinkedColorParameter) super.setDescription(description);
   }
 
+  public LinkedColorParameter setMode(Mode mode) {
+    this.mode.setValue(mode);
+    return this;
+  }
+
+  public LinkedColorParameter setIndex(int index) {
+    this.index.setValue(index);
+    return this;
+  }
+
   public LXDynamicColor getPaletteColor() {
     return getParent().getLX().engine.palette.swatch.getColor(this.index.getValuei() - 1);
   }
@@ -78,6 +88,7 @@ public class LinkedColorParameter extends ColorParameter {
 
   // Returns the real-time value of the color, which may be different from what
   // getColor() returns if there are LFOs/etc being applied.
+  @Override
   public int calcColor() {
     switch (this.mode.getEnum()) {
     case PALETTE:
