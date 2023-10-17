@@ -26,7 +26,7 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 
 @LXModulator.Global("DMX")
 @LXModulator.Device("DMX")
-@LXCategory(LXCategory.CORE)
+@LXCategory(LXCategory.DMX)
 public class DmxModulator extends LXModulator implements LXOscComponent, LXNormalizedParameter {
 
   public final DiscreteParameter universe =

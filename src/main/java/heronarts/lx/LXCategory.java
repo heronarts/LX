@@ -44,6 +44,7 @@ public @interface LXCategory {
   public static final String OTHER = "Other";
   public static final String AUDIO = "Audio";
   public static final String MACRO = "Macro";
+  public static final String DMX = "DMX";
 
   String value();
 
