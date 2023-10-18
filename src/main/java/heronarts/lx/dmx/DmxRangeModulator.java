@@ -84,7 +84,7 @@ public class DmxRangeModulator extends DmxModulator {
     final int min = this.min.getValuei();
     final int max = this.max.getValuei();
 
-    final int dmx = getDmxValuei(
+    final int dmx = this.lx.engine.dmx.getValuei(
         this.universe.getValuei(),
         this.channel.getValuei()
         );
@@ -99,9 +99,5 @@ public class DmxRangeModulator extends DmxModulator {
       this.active.setValue(false);
       return 0;
     }
-  }
-
-  protected int getDmxValuei(int universe, int channel) {
-    return this.lx.engine.dmx.getByte(universe, channel) & 0xff;
   }
 }
