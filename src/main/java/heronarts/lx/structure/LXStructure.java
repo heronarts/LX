@@ -1018,6 +1018,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   @Override
   public void load(LX lx, JsonObject obj) {
     if (this.isImmutable) {
+      // When the model is immutable, clear/load the views
+      this.views.reset();
+      LXSerializable.Utils.loadObject(this.lx, this.views, obj, KEY_VIEWS);
       return;
     }
 
