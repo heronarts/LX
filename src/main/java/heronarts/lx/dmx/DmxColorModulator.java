@@ -32,8 +32,8 @@ import heronarts.lx.parameter.EnumParameter;
 /**
  * Extracts a color from three DMX channels starting at a given address.
  */
-@LXModulator.Global("DMX Color")
-@LXModulator.Device("DMX Color")
+@LXModulator.Global("Color")
+@LXModulator.Device("Color")
 @LXCategory(LXCategory.DMX)
 public class DmxColorModulator extends DmxModulator {
 

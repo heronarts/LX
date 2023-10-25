@@ -31,8 +31,8 @@ import heronarts.lx.parameter.LXParameter;
  * Outputs a normalized value and a boolean indicator of whether
  * the DMX value is within the range.
  */
-@LXModulator.Global("DMX Range")
-@LXModulator.Device("DMX Range")
+@LXModulator.Global("Range")
+@LXModulator.Device("Range")
 @LXCategory(LXCategory.DMX)
 public class DmxRangeModulator extends DmxModulator implements LXTriggerSource {
 

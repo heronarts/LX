@@ -25,8 +25,8 @@ import heronarts.lx.modulator.LXModulator;
 /**
  * A modulator using two channels of DMX data for high resolution
  */
-@LXModulator.Global("DMX 16-bit")
-@LXModulator.Device("DMX 16-bit")
+@LXModulator.Global("16-bit")
+@LXModulator.Device("16-bit")
 @LXCategory(LXCategory.DMX)
 public class Dmx16bitModulator extends DmxModulator {
 

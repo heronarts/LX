@@ -24,8 +24,8 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 
-@LXModulator.Global("DMX")
-@LXModulator.Device("DMX")
+@LXModulator.Global("Channel")
+@LXModulator.Device("Channel")
 @LXCategory(LXCategory.DMX)
 public class DmxModulator extends LXModulator implements LXOscComponent, LXNormalizedParameter {
 
@@ -38,7 +38,7 @@ public class DmxModulator extends LXModulator implements LXOscComponent, LXNorma
     .setDescription("DMX channel");
 
   public DmxModulator() {
-    this("DMX");
+    this("DMX Channel");
   }
 
   public DmxModulator(String label) {
