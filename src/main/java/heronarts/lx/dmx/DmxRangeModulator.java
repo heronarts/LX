@@ -21,17 +21,20 @@ package heronarts.lx.dmx;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.modulator.LXModulator;
+import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 
 /**
  * Modulator receiving a range from [min] to [max] within a DMX channel.
+ * Outputs a normalized value and a boolean indicator of whether
+ * the DMX value is within the range.
  */
 @LXModulator.Global("DMX Range")
 @LXModulator.Device("DMX Range")
 @LXCategory(LXCategory.DMX)
-public class DmxRangeModulator extends DmxModulator {
+public class DmxRangeModulator extends DmxModulator implements LXTriggerSource {
 
   public final DiscreteParameter min =
     new DiscreteParameter("Min", 0, 256)
@@ -41,9 +44,9 @@ public class DmxRangeModulator extends DmxModulator {
     new DiscreteParameter("Max", 255, 0, 256)
     .setDescription("Maximum input value for range");
 
-  public final BooleanParameter active =
-    new BooleanParameter("Active", false)
-    .setDescription("Active: TRUE when DMX value is within the range [min, max], inclusive");
+  public final BooleanParameter out =
+    new BooleanParameter("Out", false)
+    .setDescription("TRUE when DMX value is within the range [min, max], inclusive");
 
   public DmxRangeModulator() {
     this("DMX Range");
@@ -53,7 +56,7 @@ public class DmxRangeModulator extends DmxModulator {
     super(label);
     addParameter("min", this.min);
     addParameter("max", this.max);
-    addParameter("active", this.active);
+    addParameter("out", this.out);
   }
 
   private boolean internal = false;
@@ -90,14 +93,19 @@ public class DmxRangeModulator extends DmxModulator {
         );
 
     if (dmx >= min && dmx <= max) {
-      this.active.setValue(true);
+      this.out.setValue(true);
       if (max == min) {
         return 1;
       }
       return ((double) dmx - min) / (max - min);
     } else {
-      this.active.setValue(false);
+      this.out.setValue(false);
       return 0;
     }
+  }
+
+  @Override
+  public BooleanParameter getTriggerSource() {
+    return this.out;
   }
 }
