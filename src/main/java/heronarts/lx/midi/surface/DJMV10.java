@@ -561,7 +561,7 @@ public class DJMV10 extends LXMidiSurface {
 
   public final EnumParameter<XFMode> xfMode =
     new EnumParameter<XFMode>("Crossfader Sync", XFMode.OFF)
-    .setDescription("Mode for following DJM900nxs2 crossfader with LX");
+    .setDescription("Mode for following DJM-V10 crossfader with LX");
 
   public DJMV10(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
