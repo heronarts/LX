@@ -1,5 +1,5 @@
 /**
- * Copyright 2019- Justin Belcher, Mark C. Slee, Heron Arts LLC
+ * Copyright 2023- Justin Belcher, Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -14,6 +14,7 @@
  * PURPOSE, WITH RESPECT TO THE SOFTWARE.
  *
  * @author Mark C. Slee <mark@heronarts.com>
+ * @author Justin K. Belcher <justin@jkb.studio>
  */
 
 package heronarts.lx.midi.surface;
@@ -33,9 +34,56 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.LXParameter.Polarity;
 import heronarts.lx.utils.LXUtils;
 
-public class DJM900nxs2 extends LXMidiSurface {
+/**
+ * DJM-A9 INSTRUCTIONS
+ *
+ * On the mixer, under My Settings > MIDI:
+ *  -Button Type MUST be set to "Toggle". Otherwise only the
+ *   button state is sent to midi instead of function state.
+ *  -Any midi channel is usable, just set this class' midiChannel parameter to match.
+ */
+public class DJMA9 extends LXMidiSurface {
 
-  public static final String DEVICE_NAME = "DJM-900NXS2";
+  public static final String DEVICE_NAME = "DJM-A9";
+
+  public enum MidiChannel {
+    CH1(0),
+    CH2(1),
+    CH3(2),
+    CH4(3),
+    CH5(4),
+    CH6(5),
+    CH7(6),
+    CH8(7),
+    CH9(8),
+    CH10(9),
+    CH11(10),
+    CH12(11),
+    CH13(12),
+    CH14(13),
+    CH15(14),
+    CH16(15),
+    ANY(99);
+
+    private final int index;
+    private final String label;
+
+    private MidiChannel(int index) {
+      this.index = index;
+      this.label = index == 99 ? "Any" : Integer.toString(this.index + 1);
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+
+    public int getIndex() {
+      return this.index;
+    }
+  }
+
+  public final EnumParameter<MidiChannel> midiChannel = new EnumParameter<MidiChannel>("MIDI Channel", MidiChannel.CH1);
 
   public enum Channel {
     ONE(0),
@@ -64,9 +112,58 @@ public class DJM900nxs2 extends LXMidiSurface {
   public static final Channel[] ALL_CHANNELS = Channel.values();
 
   // MIDI ControlChanges
+
   public static final int MASTER_FADER = 24;
-  public static final int BALANCE = 23;
   public static final int BOOTH_FADER = 25;
+  public static final int BOOTH_EQ_HI = 109;
+  public static final int BOOTH_EQ_LOW = 110;
+
+  public static final int MULTIIO_SENDCH_1 = 34;
+  public static final int MULTIIO_SENDCH_2 = 35;
+  public static final int MULTIIO_SENDCH_3 = 36;
+  public static final int MULTIIO_SENDCH_4 = 37;
+  public static final int MULTIIO_SENDCH_MIC = 38;
+  public static final int MULTIIO_SENDCH_CFA = 39;
+  public static final int MULTIIO_SENDCH_CFB = 40;
+  public static final int MULTIIO_SENDCH_MASTER = 41;
+  public static final int MULTIIO_LEVEL = 113;
+
+  public static final int XPAD_SLIDER = 116;
+
+  public static final int BEAT_LEFT = 76;
+  public static final int BEAT_RIGHT = 77;
+  public static final int AUTO_TAP = 69;
+  public static final int BEAT_TAP_TEMPO = 78;
+  public static final int TIME_MSB = 13;
+  public static final int TIME_LSB = 45;
+
+  public static final int FX_LOW = 104;
+  public static final int FX_MID = 103;
+  public static final int FX_HIGH = 102;
+
+  public static final int FX_TYPE_DELAY = 42;
+  public static final int FX_TYPE_ECHO = 55;
+  public static final int FX_TYPE_PINGPONG = 51;
+  public static final int FX_TYPE_SPIRAL = 43;
+  public static final int FX_TYPE_HELIX = 62;
+  public static final int FX_TYPE_REVERB = 54;
+  public static final int FX_TYPE_FLANGER = 50;
+  public static final int FX_TYPE_PHASER = 57;
+  public static final int FX_TYPE_FILTER = 59;
+  public static final int FX_TYPE_TRIPLETFILTER = 58;
+  public static final int FX_TYPE_TRANS = 53;
+  public static final int FX_TYPE_ROLL = 46;
+  public static final int FX_TYPE_TRIPLETROLL = 47;
+  public static final int FX_TYPE_MOBIUS = 61;
+
+  public static final int FX_LEVEL = 91;
+  public static final int FX_ONOFF = 114;
+
+  // Three-position slide values
+  public static final int SLIDE_LEFT = 0;
+  public static final int SLIDE_CENTER = 64;
+  public static final int SLIDE_RIGHT = 127;
+
   public static final int CROSSFADER = 11;
 
   public static final int EQ_CURVE = 33;
@@ -109,72 +206,59 @@ public class DJM900nxs2 extends LXMidiSurface {
   public static final int COLOR4 = 83;
 
   public static final int COLOR_PARAMETER = 108;
-  public static final int COLOR_FX_SPACE = 105;
-  public static final int COLOR_FX_DUBECHO = 107;
-  public static final int COLOR_FX_SWEEP = 106;
-  public static final int COLOR_FX_NOISE = 85;
-  public static final int COLOR_FX_CRUSH = 86;
-  public static final int COLOR_FX_FILTER = 87;
 
+  public static final int PHONES_MIX_A = 27;
+  public static final int PHONES_LEVEL_A = 26;
+  public static final int PHONES_MIX_B = 85;
+  public static final int PHONES_LEVEL_B = 86;
 
-  public static final int CUE1 = 70;
-  public static final int CUE2 = 71;
-  public static final int CUE3 = 72;
-  public static final int CUE4 = 73;
-  public static final int CUE_MASTER = 74;
-  public static final int CUE_LINK = 115;
-
-  public static final int PHONES_MIXING = 27;
-  public static final int PHONES_LEVEL = 26;
-
-
-  public static final int SENDRETURN_SOURCE = 111;
-  public static final int SENDRETURN_TYPE = 112;
-  public static final int SENDRETURN_LEVEL = 113;
-  public static final int SENDRETURN_ONOFF = 64;
-
-
-  public static final int PITCH_SOMETHING1 = 13;
-  public static final int PITCH_SOMETHING2 = 45;
-  public static final int BEAT_LOWER = 76;
-  public static final int BEAT_HIGHER = 77;
-  public static final int AUTO_TAP = 69;
-  public static final int TAP_TEMPO = 78;
-
-
-  public static final int FX_LOW = 104;
-  public static final int FX_MID = 103;
-  public static final int FX_HIGH = 102;
-
-  public static final int FX_TYPE_DELAY = 42;
-  public static final int FX_TYPE_ECHO = 55;
-  public static final int FX_TYPE_PINGPONG = 51;
-  public static final int FX_TYPE_SPIRAL = 43;
-  public static final int FX_TYPE_REVERB = 45;
-  public static final int FX_TYPE_TRANS = 54; //?
-  public static final int FX_TYPE_FILTER = 59;
-  public static final int FX_TYPE_FLANGER = 50;
-  public static final int FX_TYPE_PHASER = 57;
-  public static final int FX_TYPE_PITCH = 47; //?
-  public static final int FX_TYPE_SLIPROLL = 58; //?
-  public static final int FX_TYPE_ROLL = 46; //?
-  public static final int FX_TYPE_VINYLBRAKE = 61; //?
-  public static final int FX_TYPE_HELIX = 62; //?
-
-  public static final int FX_TARGET_CROSSFADER_B = 40;
-  public static final int FX_TARGET_CROSSFADER_A = 39;
-  public static final int FX_TARGET_MIC = 38;
-  public static final int FX_TARGET_CHANNEL1 = 34;
-  public static final int FX_TARGET_CHANNEL2 = 35;
-  public static final int FX_TARGET_CHANNEL3 = 36;
-  public static final int FX_TARGET_CHANNEL4 = 37;
-  public static final int FX_TARGET_MASTER = 41;
-
-  public static final int FX_LEVEL = 91;
-  public static final int FX_ONOFF = 114;
+  public static final int MIC_EQ_HIGH = 30;
+  public static final int MIC_EQ_LOW = 31;
+  public static final int MIC_FX_ECHO = 97;
+  public static final int MIC_FX_PITCH = 98;
+  public static final int MIC_FX_MEGAPHONE = 99;
+  public static final int MIC_FX_PARAMETER = 100;
+  public static final int MIC_REVERB_PARAMETER = 101;
 
   // MIDI Notes
+  public static final int MULTIIO_INSERT_SOURCE = 111;
+
   public static final int QUANTIZE = 118;
+
+  public static final int BEAT_FX_ASSIGN1 = 1;
+  public static final int BEAT_FX_ASSIGN2 = 2;
+  public static final int BEAT_FX_ASSIGN3 = 3;
+  public static final int BEAT_FX_ASSIGN4 = 4;
+  public static final int BEAT_FX_ASSIGN_MIC = 5;
+  public static final int BEAT_FX_ASSIGN_CFA = 6;
+  public static final int BEAT_FX_ASSIGN_CFB = 7;
+  public static final int BEAT_FX_ASSIGN_MASTER = 8;
+
+  public static final int COLOR_FX_SPACE = 85;
+  public static final int COLOR_FX_DUBECHO = 105;
+  public static final int COLOR_FX_CRUSH = 106;
+  public static final int COLOR_FX_SWEEP = 107;
+  public static final int COLOR_FX_NOISE = 86;
+  public static final int COLOR_FX_FILTER = 87;
+
+  public static final int CUE1_A = 10;
+  public static final int CUE2_A = 11;
+  public static final int CUE3_A = 12;
+  public static final int CUE4_A = 13;
+  public static final int CUE_MASTER_A = 14;
+  public static final int CUE_LINK_A = 15;
+  public static final int PHONES_MONO_SPLIT_A = 33;
+  public static final int CUE1_B = 16;
+  public static final int CUE2_B = 17;
+  public static final int CUE3_B = 18;
+  public static final int CUE4_B = 19;
+  public static final int CUE_MASTER_B = 20;
+  public static final int CUE_LINK_B = 21;
+  public static final int PHONES_MONO_SPLIT_B = 34;
+
+  public static final int MIC_TALKOVER = 97;
+  public static final int MIC_REVERB = 96;
+  public static final int MIC_ON = 98;
 
   // Raw knob positions from MIDI
   public final BoundedParameter low1raw = new BoundedParameter("low1raw");
@@ -316,10 +400,11 @@ public class DJM900nxs2 extends LXMidiSurface {
 
   public final EnumParameter<XFMode> xfMode =
     new EnumParameter<XFMode>("Crossfader Sync", XFMode.OFF)
-    .setDescription("Mode for following DJM-900nxs2 crossfader with LX");
+    .setDescription("Mode for following DJM-A9 crossfader with LX");
 
-  public DJM900nxs2(LX lx, LXMidiInput input, LXMidiOutput output) {
+  public DJMA9(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
+    addSetting("midiChannel", this.midiChannel);
     addSetting("xfMode", this.xfMode);
     addSetting("aChannel", this.aChannel);
     addSetting("bChannel", this.bChannel);
@@ -567,99 +652,105 @@ public class DJM900nxs2 extends LXMidiSurface {
 
   @Override
   public void controlChangeReceived(MidiControlChange cc) {
-    int number = cc.getCC();
+    MidiChannel midiChannel = this.midiChannel.getEnum();
+    if (cc.getChannel() == midiChannel.index || midiChannel == MidiChannel.ANY) {
+      int number = cc.getCC();
 
-    switch (number) {
-    case LOW1:
-      updateLow(Channel.ONE, cc.getNormalized());
-      return;
-    case LOW2:
-      updateLow(Channel.TWO, cc.getNormalized());
-      return;
-    case LOW3:
-      updateLow(Channel.THREE, cc.getNormalized());
-      return;
-    case LOW4:
-      updateLow(Channel.FOUR, cc.getNormalized());
-      return;
-    case MID1:
-      updateMid(Channel.ONE, cc.getNormalized());
-      return;
-    case MID2:
-      updateMid(Channel.TWO, cc.getNormalized());
-      return;
-    case MID3:
-      updateMid(Channel.THREE, cc.getNormalized());
-      return;
-    case MID4:
-      updateMid(Channel.FOUR, cc.getNormalized());
-      return;
-    case HIGH1:
-      updateHigh(Channel.ONE, cc.getNormalized());
-      return;
-    case HIGH2:
-      updateHigh(Channel.TWO, cc.getNormalized());
-      return;
-    case HIGH3:
-      updateHigh(Channel.THREE, cc.getNormalized());
-      return;
-    case HIGH4:
-      updateHigh(Channel.FOUR, cc.getNormalized());
-      return;
-    case CHANNEL_FADER1:
-      updateFade(Channel.ONE, cc.getNormalized());
-      return;
-    case CHANNEL_FADER2:
-      updateFade(Channel.TWO, cc.getNormalized());
-      return;
-    case CHANNEL_FADER3:
-      updateFade(Channel.THREE, cc.getNormalized());
-      return;
-    case CHANNEL_FADER4:
-      updateFade(Channel.FOUR, cc.getNormalized());
-      return;
-    case MASTER_FADER:
-      this.masterFader.setNormalized(cc.getNormalized());
-      return;
-    case BOOTH_FADER:
-      this.boothMonitor.setNormalized(cc.getNormalized());
-      return;
-    case CROSSFADER:
-      this.crossfader.setNormalized(cc.getNormalized());
-      if (this.xfMode.getEnum() == XFMode.DIRECT) {
-        this.lx.engine.mixer.crossfader.setNormalized(cc.getNormalized());
+      switch (number) {
+      case LOW1:
+        updateLow(Channel.ONE, cc.getNormalized());
+        return;
+      case LOW2:
+        updateLow(Channel.TWO, cc.getNormalized());
+        return;
+      case LOW3:
+        updateLow(Channel.THREE, cc.getNormalized());
+        return;
+      case LOW4:
+        updateLow(Channel.FOUR, cc.getNormalized());
+        return;
+      case MID1:
+        updateMid(Channel.ONE, cc.getNormalized());
+        return;
+      case MID2:
+        updateMid(Channel.TWO, cc.getNormalized());
+        return;
+      case MID3:
+        updateMid(Channel.THREE, cc.getNormalized());
+        return;
+      case MID4:
+        updateMid(Channel.FOUR, cc.getNormalized());
+        return;
+      case HIGH1:
+        updateHigh(Channel.ONE, cc.getNormalized());
+        return;
+      case HIGH2:
+        updateHigh(Channel.TWO, cc.getNormalized());
+        return;
+      case HIGH3:
+        updateHigh(Channel.THREE, cc.getNormalized());
+        return;
+      case HIGH4:
+        updateHigh(Channel.FOUR, cc.getNormalized());
+        return;
+      case CHANNEL_FADER1:
+        updateFade(Channel.ONE, cc.getNormalized());
+        return;
+      case CHANNEL_FADER2:
+        updateFade(Channel.TWO, cc.getNormalized());
+        return;
+      case CHANNEL_FADER3:
+        updateFade(Channel.THREE, cc.getNormalized());
+        return;
+      case CHANNEL_FADER4:
+        updateFade(Channel.FOUR, cc.getNormalized());
+        return;
+      case MASTER_FADER:
+        this.masterFader.setNormalized(cc.getNormalized());
+        return;
+      case BOOTH_FADER:
+        this.boothMonitor.setNormalized(cc.getNormalized());
+        return;
+      case CROSSFADER:
+        this.crossfader.setNormalized(cc.getNormalized());
+        if (this.xfMode.getEnum() == XFMode.DIRECT) {
+          this.lx.engine.mixer.crossfader.setNormalized(cc.getNormalized());
+        }
+        return;
+      case COLOR1:
+        updateColor(Channel.ONE, cc.getNormalized());
+        return;
+      case COLOR2:
+        updateColor(Channel.TWO, cc.getNormalized());
+        return;
+      case COLOR3:
+        updateColor(Channel.THREE, cc.getNormalized());
+        return;
+      case COLOR4:
+        updateColor(Channel.FOUR, cc.getNormalized());
+        return;
+      case COLOR_PARAMETER:
+        this.colorParameter.setNormalized(cc.getNormalized());
+        recalculateAllColors();
+        return;
       }
-      return;
-    case COLOR1:
-      updateColor(Channel.ONE, cc.getNormalized());
-      return;
-    case COLOR2:
-      updateColor(Channel.TWO, cc.getNormalized());
-      return;
-    case COLOR3:
-      updateColor(Channel.THREE, cc.getNormalized());
-      return;
-    case COLOR4:
-      updateColor(Channel.FOUR, cc.getNormalized());
-      return;
-    case COLOR_PARAMETER:
-      this.colorParameter.setNormalized(cc.getNormalized());
-      recalculateAllColors();
-      return;
-    }
 
-    // LXMidiEngine.error("DJM-900NXS2 UNMAPPED CC: " + cc);
+      // LXMidiEngine.error("DJM-A9 UNMAPPED CC: " + cc);
+    }
   }
 
   private void noteReceived(MidiNote note, boolean on) {
-    int pitch = note.getPitch();
+    MidiChannel midiChannel = this.midiChannel.getEnum();
+    if (note.getChannel() == midiChannel.index || midiChannel == MidiChannel.ANY) {
+      int pitch = note.getPitch();
 
-    switch (pitch) {
-    case QUANTIZE:
-      return;
+      switch (pitch) {
+      case QUANTIZE:
+        return;
+      }
+
+      // LXMidiEngine.error("DJM-A9 UNMAPPED Note: " + note + " " + on);
     }
-
-    // LXMidiEngine.error("DJM-900NXS2 UNMAPPED Note: " + note + " " + on);
   }
 
   @Override
