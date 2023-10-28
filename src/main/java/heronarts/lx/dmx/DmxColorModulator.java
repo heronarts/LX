@@ -25,6 +25,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.modulator.LXModulator;
+import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -35,7 +36,7 @@ import heronarts.lx.parameter.EnumParameter;
 @LXModulator.Global("Color")
 @LXModulator.Device("Color")
 @LXCategory(LXCategory.DMX)
-public class DmxColorModulator extends DmxModulator {
+public class DmxColorModulator extends DmxBasicModulator implements LXOscComponent {
 
   public final EnumParameter<LXDmxEngine.ByteOrder> byteOrder =
     new EnumParameter<LXDmxEngine.ByteOrder>("Byte Order", LXDmxEngine.ByteOrder.RGB);
@@ -59,8 +60,7 @@ public class DmxColorModulator extends DmxModulator {
   }
 
   public DmxColorModulator(String label) {
-    super(label);
-    this.channel.setRange(0, LXDmxEngine.MAX_CHANNEL - 2);
+    super(label, 3);
     addParameter("byteOrder", this.byteOrder);
     addParameter("sendToPalette", this.sendToPalette);
     addParameter("paletteIndex", this.paletteIndex);
@@ -73,9 +73,9 @@ public class DmxColorModulator extends DmxModulator {
     final LXDmxEngine.ByteOrder byteOrder = this.byteOrder.getEnum();
 
     final int color = this.lx.engine.dmx.getColor(
-        this.universe.getValuei(),
-        this.channel.getValuei(),
-        byteOrder);
+      this.universe.getValuei(),
+      this.channel.getValuei(),
+      byteOrder);
 
     // Store color locally for preview
     this.color.setColor(color);
@@ -92,7 +92,7 @@ public class DmxColorModulator extends DmxModulator {
       }
     }
 
-    return LXColor.luminosity(color) / 100.;
+    return color;
   }
 
 }
