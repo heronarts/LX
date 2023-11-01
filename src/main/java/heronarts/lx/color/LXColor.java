@@ -398,6 +398,28 @@ public class LXColor {
   }
 
   /**
+   * Scales brightness of the color by a fixed amount
+   *
+   * @param src Source color
+   * @param amount Amount to scale brightness (0-1)
+   * @return Color with brightness adjusted
+   */
+  public static int scaleBrightness(int src, float amount) {
+    return multiply(src, grayn(amount), 0x100);
+  }
+
+  /**
+   * Scales brightness of the color by a fixed amount
+   *
+   * @param src Source color
+   * @param amount Amount to scale brightness (0-1)
+   * @return Color with brightness adjusted
+   */
+  public static int scaleBrightness(int src, double amount) {
+    return multiply(src, grayn(amount), 0x100);
+  }
+
+  /**
    * Blends the two colors using specified blend based on the alpha channel of c2
    *
    * @param dst Background color
