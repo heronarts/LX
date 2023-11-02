@@ -155,6 +155,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
     DEFAULT_MODULATORS.add(heronarts.lx.audio.SoundObject.class);
     DEFAULT_MODULATORS.add(heronarts.lx.dmx.DmxModulator.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.dmx.DmxColorModulator.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.BooleanLogic.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.ComparatorModulator.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Damper.class);
