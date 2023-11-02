@@ -954,7 +954,6 @@ public class LXChannel extends LXAbstractChannel {
     if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
 
       // Blend mode, this channel is like a mini-mixer
-      final LXModel modelView = getModelView();
 
       // Damping mode
       final boolean dampingEnabled = this.compositeDampingEnabled.isOn();
@@ -966,15 +965,16 @@ public class LXChannel extends LXAbstractChannel {
         if (patternDamping == 0) {
           continue;
         }
+        final LXModel patternView = pattern.getModelView();
         pattern.setBuffer(this.renderBuffer);
-        pattern.setModel(pattern.getModelView());
+        pattern.setModel(patternView);
         pattern.loop(deltaMs);
         pattern.compositeMode.getObject().blend(
           this.colors,
           pattern.getColors(),
           patternDamping * pattern.compositeLevel.getValue(),
           this.colors,
-          modelView
+          patternView
         );
       }
 
