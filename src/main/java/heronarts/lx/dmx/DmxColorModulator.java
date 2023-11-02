@@ -46,7 +46,7 @@ public class DmxColorModulator extends AbstractDmxModulator implements LXOscComp
     .setDescription("Updates the global palette's active swatch with the DMX color");
 
   public final DiscreteParameter paletteIndex =
-    new DiscreteParameter("Index", 0, LXSwatch.MAX_COLORS)
+    new DiscreteParameter("Index", 1, LXSwatch.MAX_COLORS + 1)
     .setDescription("Target index in the global palette's active swatch");
 
   public final BooleanParameter setPaletteFixed =
@@ -86,7 +86,7 @@ public class DmxColorModulator extends AbstractDmxModulator implements LXOscComp
 
     // Send to target color in global palette
     if (this.updatePalette.isOn()) {
-      final int index = this.paletteIndex.getValuei();
+      final int index = this.paletteIndex.getValuei() - 1;
       while (this.lx.engine.palette.swatch.colors.size() <= index) {
         this.lx.engine.palette.swatch.addColor().primary.setColor(LXColor.BLACK);
       }
