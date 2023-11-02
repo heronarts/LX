@@ -36,14 +36,14 @@ import heronarts.lx.parameter.LXParameter;
  *          Outputs a normalized value and a boolean indicator of whether
  *          the DMX value is within the range.
  */
-@LXModulator.Global("DMX")
-@LXModulator.Device("DMX")
+@LXModulator.Global("DMX Channel")
+@LXModulator.Device("DMX Channel")
 @LXCategory(LXCategory.DMX)
-public class DmxModulator extends DmxBasicModulator implements LXOscComponent, LXNormalizedParameter, LXTriggerSource {
+public class DmxModulator extends AbstractDmxModulator implements LXOscComponent, LXNormalizedParameter, LXTriggerSource {
 
   public enum Mode {
-    BIT_8("8-bit", 1),
-    BIT_16("16-bit", 2),
+    CHANNEL_8("8-bit", 1),
+    CHANNEL_16("16-bit", 2),
     RANGE("Range", 1);
 
     public final String label;
@@ -61,7 +61,7 @@ public class DmxModulator extends DmxBasicModulator implements LXOscComponent, L
   }
 
   public final EnumParameter<Mode> mode =
-    new EnumParameter<Mode>("Mode", Mode.BIT_8)
+    new EnumParameter<Mode>("Mode", Mode.CHANNEL_8)
     .setDescription("8-bit = one DMX channel, 16-bit = two DMX channels, Range = part of one DMX channel");
 
   public final DiscreteParameter min =
@@ -72,9 +72,9 @@ public class DmxModulator extends DmxBasicModulator implements LXOscComponent, L
     new DiscreteParameter("Max", 255, 0, 256)
     .setDescription("Maximum input value for range");
 
-  public final BooleanParameter out =
-    new BooleanParameter("Out", false)
-    .setDescription("In Range mode, TRUE when DMX value is within the range [min, max], inclusive");
+  public final BooleanParameter rangeActive =
+    new BooleanParameter("Range Active", false)
+    .setDescription("True in range mode when DMX value is within [min-max] inclusive");
 
   public DmxModulator() {
     this("DMX");
@@ -85,7 +85,7 @@ public class DmxModulator extends DmxBasicModulator implements LXOscComponent, L
     addParameter("mode", this.mode);
     addParameter("min", this.min);
     addParameter("max", this.max);
-    addParameter("out", this.out);
+    addParameter("rangeActive", this.rangeActive);
   }
 
   private boolean internal = false;
@@ -95,9 +95,7 @@ public class DmxModulator extends DmxBasicModulator implements LXOscComponent, L
     if (p == this.mode) {
       final Mode mode = this.mode.getEnum();
       setBytes(mode.bytes);
-      if (mode != Mode.RANGE) {
-        this.out.setValue(false);
-      }
+      this.rangeActive.setValue(false);
     }
 
     // Changes to min or max will push the other value if needed
@@ -126,7 +124,7 @@ public class DmxModulator extends DmxBasicModulator implements LXOscComponent, L
     final int channel = this.channel.getValuei();
 
     switch (mode) {
-    case BIT_16:
+    case CHANNEL_16:
       final byte byte1 = this.lx.engine.dmx.getByte(universe, channel);
       final byte byte2 = this.lx.engine.dmx.getByte(universe, channel + 1);
       return (((byte1 & 0xff) << 8) | (byte2 & 0xff)) / 65535.;
@@ -135,30 +133,28 @@ public class DmxModulator extends DmxBasicModulator implements LXOscComponent, L
       final int max = this.max.getValuei();
       final int dmx = this.lx.engine.dmx.getValuei(universe, channel);
 
-      if (dmx >= min && dmx <= max) {
-        this.out.setValue(true);
-        if (max == min) {
-          return 1;
-        }
-        return ((double) dmx - min) / (max - min);
-      } else {
-        this.out.setValue(false);
-        return 0;
+      final boolean active = dmx >= min && dmx <= max;
+      this.rangeActive.setValue(active);
+
+      if (active) {
+        return (max == min) ? 1 : ((double) dmx - min) / (max - min);
       }
+      return 0;
+
     default:
-    case BIT_8:
+    case CHANNEL_8:
       return lx.engine.dmx.getNormalized(universe, channel);
     }
   }
 
   @Override
   public BooleanParameter getTriggerSource() {
-    return this.out;
+    return this.rangeActive;
   }
 
   @Override
   public LXNormalizedParameter setNormalized(double value) {
-    throw new UnsupportedOperationException("May not setNormalized on DMX Modulator");
+    throw new UnsupportedOperationException("May not setNormalized on DmxModulator");
   }
 
   @Override

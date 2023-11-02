@@ -33,27 +33,29 @@ import heronarts.lx.parameter.EnumParameter;
 /**
  * Extracts a color from three DMX channels starting at a given address.
  */
-@LXModulator.Global("Color")
-@LXModulator.Device("Color")
+@LXModulator.Global("DMX Color")
+@LXModulator.Device("DMX Color")
 @LXCategory(LXCategory.DMX)
-public class DmxColorModulator extends DmxBasicModulator implements LXOscComponent {
+public class DmxColorModulator extends AbstractDmxModulator implements LXOscComponent {
 
   public final EnumParameter<LXDmxEngine.ByteOrder> byteOrder =
     new EnumParameter<LXDmxEngine.ByteOrder>("Byte Order", LXDmxEngine.ByteOrder.RGB);
 
-  public final BooleanParameter sendToPalette =
+  public final BooleanParameter updatePalette =
     new BooleanParameter("Palette", false)
-    .setDescription("Sends the DMX color to the specified index in the global palette's active swatch");
+    .setDescription("Updates the global palette's active swatch with the DMX color");
 
   public final DiscreteParameter paletteIndex =
     new DiscreteParameter("Index", 0, LXSwatch.MAX_COLORS)
     .setDescription("Target index in the global palette's active swatch");
 
-  public final BooleanParameter fixed =
+  public final BooleanParameter setPaletteFixed =
     new BooleanParameter("Fixed", true)
     .setDescription("When sending DMX color to the palette, also set the target color mode to Fixed");
 
-  public final ColorParameter color = new ColorParameter("Color", LXColor.BLACK);
+  public final ColorParameter color =
+    new ColorParameter("Color", LXColor.BLACK)
+    .setDescription("Color received by DMX");
 
   public DmxColorModulator() {
     this("DMX Color");
@@ -62,10 +64,11 @@ public class DmxColorModulator extends DmxBasicModulator implements LXOscCompone
   public DmxColorModulator(String label) {
     super(label, 3);
     addParameter("byteOrder", this.byteOrder);
-    addParameter("sendToPalette", this.sendToPalette);
+    addParameter("updatePalette", this.updatePalette);
     addParameter("paletteIndex", this.paletteIndex);
-    addParameter("fixed", this.fixed);
+    addParameter("setPaletteFixed", this.setPaletteFixed);
     addParameter("color", this.color);
+    setMappingSource(false);
   }
 
   @Override
@@ -75,24 +78,29 @@ public class DmxColorModulator extends DmxBasicModulator implements LXOscCompone
     final int color = this.lx.engine.dmx.getColor(
       this.universe.getValuei(),
       this.channel.getValuei(),
-      byteOrder);
+      byteOrder
+    );
 
     // Store color locally for preview
     this.color.setColor(color);
 
     // Send to target color in global palette
-    if (this.sendToPalette.isOn()) {
+    if (this.updatePalette.isOn()) {
       final int index = this.paletteIndex.getValuei();
       while (this.lx.engine.palette.swatch.colors.size() <= index) {
         this.lx.engine.palette.swatch.addColor().primary.setColor(LXColor.BLACK);
       }
       this.lx.engine.palette.swatch.getColor(index).primary.setColor(color);
-      if (this.fixed.isOn()) {
+      if (this.setPaletteFixed.isOn()) {
         this.lx.engine.palette.swatch.getColor(index).mode.setValue(LXDynamicColor.Mode.FIXED);
       }
     }
 
-    return color;
+    return this.color.getValue();
+  }
+
+  public int getColor() {
+    return this.color.getColor();
   }
 
 }
