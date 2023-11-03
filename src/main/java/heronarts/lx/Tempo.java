@@ -178,6 +178,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
+  private boolean resetOnNextBeat = false;
   private boolean doTrigger = false;
   private boolean running = true;
 
@@ -512,6 +513,17 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   /**
+   * When in interneal clock mode, the next beat will reset the
+   * beat count to 0.
+   */
+  public Tempo resetOnNextBeat() {
+    if (this.clockSource.getEnum() == ClockSource.INTERNAL) {
+      this.resetOnNextBeat = true;
+    }
+    return this;
+  }
+
+  /**
    * Re-triggers the metronome, so that it immediately beats. Also resetting the
    * beat count to be at the beginning of a measure.
    */
@@ -602,6 +614,11 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     }
 
     if (this.isBeat = isBeat) {
+      if (this.resetOnNextBeat) {
+        this.resetOnNextBeat = false;
+        this.beatCount = 0;
+      }
+
       int beatsPerBar = this.beatsPerBar.getValuei();
       int beatIndex = this.beatCount % beatsPerBar;
       int barIndex = this.beatCount / beatsPerBar;
