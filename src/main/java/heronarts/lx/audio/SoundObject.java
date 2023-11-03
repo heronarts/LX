@@ -97,17 +97,15 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     .setPolarity(CompoundParameter.Polarity.BIPOLAR)
     .setDescription("Elevation of the sound object against the X-Z plane");
 
-  public final CompoundParameter radius =
-    new CompoundParameter("Radius", 1, 0, 2)
+  public final CompoundParameter distance =
+    new CompoundParameter("Distance", 1, 0, 2)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Radius of the sound object");
+    .setDescription("Distance of the sound object");
 
   public final MutableParameter cartesianChanged =
     new MutableParameter("Cartesian Changed");
 
   private double x, y, z;
-
-  private double prevAzimuth = 0, prevElevation = 0, prevRadius = 1;
 
   public static SoundObject get(LX lx) {
     for (LXModulator modulator : lx.engine.modulation.modulators) {
@@ -128,7 +126,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     addParameter("releaseMs", this.releaseMs);
     addParameter("azimuth", this.azimuth);
     addParameter("elevation", this.elevation);
-    addParameter("radius", this.radius);
+    addParameter("distance", this.distance);
     updateCartesian();
 
     // A new sound object is created, register it with the audio engine
@@ -177,7 +175,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
   }
 
   public void updateCartesian() {
-    final double radius = .5 * this.radius.getValue();
+    final double distance = .5 * this.distance.getValue();
     final double azimuth = Math.toRadians(this.azimuth.getValue());
     final double elevation = Math.toRadians(this.elevation.getValue());
     final double sinAzim = Math.sin(azimuth);
@@ -185,24 +183,19 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     final double cosElev = Math.cos(elevation);
     final double sinElev = Math.sin(elevation);
 
-    this.x = LXUtils.constrain(.5 + radius * sinAzim * cosElev, 0, 1);
-    this.z = LXUtils.constrain(.5 + radius * cosAzim * cosElev, 0, 1);
-    this.y = LXUtils.constrain(.5 + radius * sinElev, 0, 1);
+    this.x = LXUtils.constrain(.5 + distance * sinAzim * cosElev, 0, 1);
+    this.z = LXUtils.constrain(.5 + distance * cosAzim * cosElev, 0, 1);
+    this.y = LXUtils.constrain(.5 + distance * sinElev, 0, 1);
 
     this.cartesianChanged.bang();
   }
 
+  private final LXParameter.MultiMonitor aedMonitor =
+    new LXParameter.MultiMonitor(this.azimuth, this.elevation, this.distance);
+
   @Override
   protected double computeValue(double deltaMs) {
-    final double azimuth = this.azimuth.getValue();
-    final double elevation = this.elevation.getValue();
-    final double radius = this.radius.getValue();
-    if (azimuth != this.prevAzimuth ||
-        elevation != this.prevElevation ||
-        radius != this.prevRadius) {
-      this.prevAzimuth = azimuth;
-      this.prevElevation = elevation;
-      this.prevRadius = radius;
+    if (this.aedMonitor.changed()) {
       updateCartesian();
     }
 
