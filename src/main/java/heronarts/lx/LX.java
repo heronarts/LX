@@ -890,6 +890,10 @@ public class LX {
   }
 
   public void autoSaveProject() {
+    if (!this.permissions.canSave()) {
+      return;
+    }
+
     final File autosave = getAutoSaveFile();
     if (autosave != null) {
       // Need to serialize the data here on the engine thread
