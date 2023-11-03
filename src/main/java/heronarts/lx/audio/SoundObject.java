@@ -64,15 +64,15 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     new NormalizedParameter("Input", 0)
     .setDescription("Raw input level of the sound object");
 
-  public final BoundedParameter gain =
-    new BoundedParameter("Gain", 0, -1, 1)
+  public final BoundedParameter meterFloor =
+    new BoundedParameter("Floor", 0)
     .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Meter gain");
+    .setDescription("Specifies the floor of the active meter range");
 
-  public final BoundedParameter range =
-    new BoundedParameter("Range", 1)
+  public final BoundedParameter meterCeiling =
+    new BoundedParameter("Ceiling", 1)
     .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Range of meter sensitivity");
+    .setDescription("Specifies the ceiling of the active meter range");
 
   public final BoundedParameter attackMs =
     new BoundedParameter("Attack", 0, 0, 1000)
@@ -98,7 +98,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     .setDescription("Elevation of the sound object against the X-Z plane");
 
   public final CompoundParameter radius =
-    new CompoundParameter("Radius", 1, 0, Math.sqrt(3))
+    new CompoundParameter("Radius", 1, 0, 2)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Radius of the sound object");
 
@@ -122,8 +122,8 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     super("Sound Object");
     addParameter("sourceMode", this.sourceMode);
     addParameter("input", this.input);
-    addParameter("gain", this.gain);
-    addParameter("range", this.range);
+    addParameter("meterFloor", this.meterFloor);
+    addParameter("meterCeiling", this.meterCeiling);
     addParameter("attackMs", this.attackMs);
     addParameter("releaseMs", this.releaseMs);
     addParameter("azimuth", this.azimuth);
@@ -150,6 +150,16 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
       // constructor setting the label...
       if (this.lx != null) {
         updateSelectors(this.lx);
+      }
+    } else if (p == this.meterFloor) {
+      final double floor = this.meterFloor.getValue();
+      if (this.meterCeiling.getValue() < floor) {
+        this.meterCeiling.setValue(floor);
+      }
+    } else if (p == this.meterCeiling) {
+      final double ceiling = this.meterFloor.getValue();
+      if (this.meterFloor.getValue() > ceiling) {
+        this.meterFloor.setValue(ceiling);
       }
     }
   }
@@ -199,10 +209,9 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     if (this.sourceMode.getEnum() == Source.AUDIO) {
       this.input.setValue(getLX().engine.audio.meter.getNormalized());
     }
-    final double range = this.range.getValue();
 
     final double value = LXUtils.constrain(
-      LXUtils.ilerp(this.input.getValue() + this.gain.getValue(), 1 - range, 1),
+      LXUtils.ilerp(this.input.getValue(), this.meterFloor.getValue(), this.meterCeiling.getValue()),
       0, 1
     );
 
@@ -218,6 +227,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
         return LXUtils.max(value, currentLevel - deltaMs / releaseMs);
       }
     }
+
     return value;
   }
 
