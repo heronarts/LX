@@ -346,6 +346,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private static final long INIT_RUN = -1;
   private long lastMillis = INIT_RUN;
+  private long autoSaveMillis = INIT_RUN;
 
   private double fixedDeltaMs = 0;
 
@@ -1004,6 +1005,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     if (this.lastMillis == INIT_RUN) {
       // Initial frame is set to be the framerate
       this.lastMillis = this.nowMillis - (long) (1000f / framesPerSecond.getValuef());
+      this.autoSaveMillis = this.lastMillis;
     }
     double deltaMs = this.nowMillis - this.lastMillis;
 
@@ -1174,6 +1176,14 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     if (this.logProfiler) {
       _logProfiler();
       this.logProfiler = false;
+    }
+
+    // Perform an auto-save if there are modifications to the project
+    if (this.lx.flags.autosave && ((this.nowMillis - this.autoSaveMillis) > this.lx.flags.autosaveIntervalMs)) {
+      if (this.lx.command.isDirty(this.autoSaveMillis)) {
+        this.lx.autoSaveProject();
+      }
+      this.autoSaveMillis = this.nowMillis;
     }
   }
 

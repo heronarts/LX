@@ -135,6 +135,8 @@ public class LX {
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
     public boolean sendCueToOutput = false;
+    public boolean autosave = false;
+    public long autosaveIntervalMs = 15000;
     public boolean zeroconf = false;
     public String zeroconfServiceName = "LX";
     public LXEngine.ThreadMode threadMode = LXEngine.ThreadMode.SCHEDULED_EXECUTOR_SERVICE;
@@ -155,6 +157,7 @@ public class LX {
     SCRIPTS("Scripts"),
     COLORS("Colors"),
     LOGS("Logs"),
+    AUTOSAVE("Autosave"),
     DELETED("Deleted");
 
     private final String dirName;
@@ -168,7 +171,11 @@ public class LX {
     }
 
     private boolean isBootstrap() {
-      return (this != DELETED);
+      switch (this) {
+      case AUTOSAVE: return false;
+      case DELETED: return false;
+      default: return true;
+      }
     }
   }
 
@@ -874,6 +881,33 @@ public class LX {
     return this.file;
   }
 
+  private File getAutoSaveFile() {
+    if (this.file != null) {
+      return getMediaFile(Media.AUTOSAVE, this.file.getName());
+    } else {
+      return getMediaFile(Media.AUTOSAVE, "default.lxp");
+    }
+  }
+
+  public void autoSaveProject() {
+    final File autosave = getAutoSaveFile();
+    if (autosave != null) {
+      // Need to serialize the data here on the engine thread
+      final JsonObject obj = saveProjectJson();
+
+      // Write the file on another thread to avoid main thread jitter
+      new Thread(() -> {
+        try (JsonWriter writer = new JsonWriter(new FileWriter(autosave))) {
+          writer.setIndent("  ");
+          new GsonBuilder().create().toJson(obj, writer);
+          LX.log("Project auto-saved successfully to " + autosave.toString());
+        } catch (IOException iox) {
+          LX.error(iox, "Could not auto-save project to output file: " + autosave.toString());
+        }
+      }).start();
+    }
+  }
+
   public void saveProject() {
     if (this.file != null) {
       saveProject(this.file);
@@ -885,16 +919,7 @@ public class LX {
       return;
     }
 
-    JsonObject obj = new JsonObject();
-    obj.addProperty(KEY_VERSION, LX.VERSION);
-    obj.addProperty(KEY_TIMESTAMP, System.currentTimeMillis());
-    obj.add(KEY_MODEL, LXSerializable.Utils.toObject(this, this.structure));
-    obj.add(KEY_ENGINE, LXSerializable.Utils.toObject(this, this.engine));
-    JsonObject externalsObj = new JsonObject();
-    for (String key : this.externals.keySet()) {
-      externalsObj.add(key, LXSerializable.Utils.toObject(this, this.externals.get(key)));
-    }
-    obj.add(KEY_EXTERNALS, externalsObj);
+    JsonObject obj = saveProjectJson();
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
       new GsonBuilder().create().toJson(obj, writer);
@@ -905,6 +930,20 @@ public class LX {
     } catch (IOException iox) {
       LX.error(iox, "Could not write project to output file: " + file.toString());
     }
+  }
+
+  private JsonObject saveProjectJson() {
+    JsonObject obj = new JsonObject();
+    obj.addProperty(KEY_VERSION, LX.VERSION);
+    obj.addProperty(KEY_TIMESTAMP, System.currentTimeMillis());
+    obj.add(KEY_MODEL, LXSerializable.Utils.toObject(this, this.structure));
+    obj.add(KEY_ENGINE, LXSerializable.Utils.toObject(this, this.engine));
+    JsonObject externalsObj = new JsonObject();
+    for (String key : this.externals.keySet()) {
+      externalsObj.add(key, LXSerializable.Utils.toObject(this, this.externals.get(key)));
+    }
+    obj.add(KEY_EXTERNALS, externalsObj);
+    return obj;
   }
 
   public LX registerExternal(String key, LXSerializable serializable) {

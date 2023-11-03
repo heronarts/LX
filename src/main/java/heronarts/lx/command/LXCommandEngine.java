@@ -43,6 +43,8 @@ public class LXCommandEngine {
   private final Stack<LXCommand> undoStack = new Stack<LXCommand>();
   private final Stack<LXCommand> redoStack = new Stack<LXCommand>();
 
+  private long dirtyTimeMs = -1;
+
   public final BooleanParameter dirty =
     new BooleanParameter("Dirty", false)
     .setDescription("Whether the project has unsaved changes");
@@ -82,7 +84,7 @@ public class LXCommandEngine {
       clear();
     }
 
-    this.dirty.setValue(true);
+    setDirty(true);
     return this;
   }
 
@@ -98,8 +100,13 @@ public class LXCommandEngine {
     return this.dirty.isOn();
   }
 
+  public boolean isDirty(long sinceMs) {
+    return (this.dirtyTimeMs > sinceMs) && isDirty();
+  }
+
   public LXCommandEngine setDirty(boolean dirty) {
     this.dirty.setValue(dirty);
+    this.dirtyTimeMs = this.lx.engine.nowMillis;
     return this;
   }
 
@@ -142,7 +149,7 @@ public class LXCommandEngine {
         LX.error(x, "Unhandled exception on undo " + command + " - bad internal state?");
         clear();
       }
-      this.dirty.setValue(true);
+      setDirty(true);
     }
     return this;
   }
@@ -169,7 +176,7 @@ public class LXCommandEngine {
         LX.error(x, "Unhandled exception on redo " + command + " - bad internal state?");
         clear();
       }
-      this.dirty.setValue(true);
+      setDirty(true);
     }
     return this;
   }
