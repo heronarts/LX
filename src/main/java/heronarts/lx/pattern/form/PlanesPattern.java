@@ -38,6 +38,7 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.transform.LXParameterizedMatrix;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.FORM)
@@ -93,7 +94,7 @@ public class PlanesPattern extends LXPattern {
     }),
 
     RC("R-center", (p, a) -> {
-      return p.rcn - a.d;
+      return LXUtils.distf(p.xn, p.yn, p.zn, .5f, .5f, .5f) - a.d;
     }),
 
     RO("R-origin", (p, a) -> {
@@ -296,7 +297,12 @@ public class PlanesPattern extends LXPattern {
 
       float level = this.level.getValuef();
       for (LXPoint p : model.points) {
-        float d = Math.abs(function.getDistance(p, args));
+        point.set(p);
+        point.xn = transform.xn(p);
+        point.yn = transform.yn(p);
+        point.zn = transform.zn(p);
+
+        float d = Math.abs(function.getDistance(point, args));
         float bn = LXUtils.minf(1, 1 - (d - width) * fade);
         if (bn > 0) {
           addColor(p.index, LXColor.grayn(level * bn));
@@ -308,8 +314,38 @@ public class PlanesPattern extends LXPattern {
 
   public final List<Plane> planes;
 
+  private final LXPoint point = new LXPoint();
+
+  public final CompoundParameter yaw =
+    new CompoundParameter("Yaw", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Yaw rotation");
+
+  public final CompoundParameter pitch =
+    new CompoundParameter("Pitch", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Pitch rotation");
+
+  public final CompoundParameter roll =
+    new CompoundParameter("Roll", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Roll rotation");
+
+  private final LXParameterizedMatrix transform = new LXParameterizedMatrix();
+
   public PlanesPattern(LX lx) {
     super(lx);
+
+    addParameter("yaw", this.yaw);
+    addParameter("pitch", this.pitch);
+    addParameter("roll", this.roll);
+    this.transform.addParameter(this.yaw);
+    this.transform.addParameter(this.pitch);
+    this.transform.addParameter(this.roll);
+
     List<Plane> mutablePlanes = new ArrayList<Plane>();
     for (int i = 0; i < MAX_PLANES; ++i) {
       Plane plane = new Plane(lx, i);
@@ -341,6 +377,15 @@ public class PlanesPattern extends LXPattern {
   @Override
   public void run(double deltaMs) {
     setColors(LXColor.BLACK);
+
+    this.transform.update(matrix -> {
+      matrix
+        .translate(.5f, .5f, .5f)
+        .rotateZ((float) Math.toRadians(-this.roll.getValue()))
+        .rotateX((float) Math.toRadians(-this.pitch.getValue()))
+        .rotateY((float) Math.toRadians(-this.yaw.getValue()))
+        .translate(-.5f, -.5f, -.5f);
+    });
   }
 
   @Override

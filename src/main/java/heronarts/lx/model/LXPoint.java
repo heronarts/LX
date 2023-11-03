@@ -290,6 +290,9 @@ public class LXPoint {
     this.zn = that.zn;
     this.rn = that.rn;
 
+    this.rc = that.rc;
+    this.rcn = that.rcn;
+
     return this;
   }
 
