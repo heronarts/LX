@@ -122,28 +122,35 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
   public interface Listener {
     public default void onBeat(Tempo tempo, int beat) {};
+
+    public default void onBar(Tempo tempo, int bar) { onMeasure(tempo); }
+
+    @Deprecated
     public default void onMeasure(Tempo tempo) {};
+
   }
 
   private final static double MS_PER_MINUTE = 60000;
   private final static double DEFAULT_BPM = 120;
+  private final static int MAX_BEATS_PER_BAR = 16;
 
   public final EnumParameter<ClockSource> clockSource =
     new EnumParameter<ClockSource>("Clock", ClockSource.INTERNAL)
     .setMappable(false)
     .setDescription("Source of the tempo clock");
 
-  public final DiscreteParameter beatsPerMeasure = new DiscreteParameter("Beats", 4, 1, 9)
-    .setDescription("Beats per measure");
+  public final DiscreteParameter beatsPerBar =
+    new DiscreteParameter("Time Signature", 4, 1, MAX_BEATS_PER_BAR + 1)
+    .setDescription("Beats per bar");
 
   public final BoundedParameter bpm = (BoundedParameter)
     new BoundedParameter("BPM", DEFAULT_BPM, this.minOscBpm, this.maxOscBpm)
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
-    .setDescription("Beats per minute of the master tempo object");
+    .setDescription("Beats per minute of the master tempo");
 
   public final TriggerParameter trigger =
     new TriggerParameter("Trigger", () -> {
-      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_BEAT, 1 + (this.beatCount % this.beatsPerMeasure.getValuei()));
+      this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_BEAT, 1 + beatCountWithinBar());
     })
     .setDescription("Listeable trigger which is set on each beat");
 
@@ -194,10 +201,12 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     addParameter("tap", this.tap);
     addParameter("nudgeUp", this.nudgeUp);
     addParameter("nudgeDown", this.nudgeDown);
-    addParameter("beatsPerMeasure", this.beatsPerMeasure);
+    addParameter("beatsPerBar", this.beatsPerBar);
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
     addModulator("nudge", this.nudge);
+
+    addLegacyParameter("beatsPerMeasure", this.beatsPerBar);
   }
 
   private static final String PATH_BEAT = "beat";
@@ -333,12 +342,31 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   /**
-   * Gets the count of the current beat we are on
+   * Returns the count of what bar number we are on
+   *
+   * @return Bar count
+   */
+  public int barCount() {
+    return this.beatCount / this.beatsPerBar.getValuei();
+  }
+
+  /**
+   * Gets the count of the current beat we are on, 0-indexed and absolute
    *
    * @return Beat count
    */
   public int beatCount() {
     return this.beatCount;
+  }
+
+  /**
+   * Gets the count of the current beat we are on, 0-indexed and within the
+   * range [0, beatsPerBar-1]
+   *
+   * @return Beat count within bar
+   */
+  public int beatCountWithinBar() {
+    return this.beatCount % this.beatsPerBar.getValuei();
   }
 
   /**
@@ -378,10 +406,21 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   /**
    * Method to indicate the start of a measure.
    *
+   * @deprecated Use bar()
    * @return true if we are on a measure-beat
    */
+  @Deprecated
   public boolean measure() {
-    return beat() && (this.beatCount % this.beatsPerMeasure.getValuei() == 0);
+    return bar();
+  }
+
+  /**
+   * Method to indicate the start of a bar.
+   *
+   * @return true if we are on a bar-beat
+   */
+  public boolean bar() {
+    return beat() && (0 == beatCountWithinBar());
   }
 
   /**
@@ -528,7 +567,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       double beatPeriod = (this.lastTap - this.firstTap) / (double) (this.tapCount - 1);
       setBpm(MS_PER_MINUTE / beatPeriod);
     }
-    trigger();
+    trigger(this.tapCount - 1);
   }
 
   @Override
@@ -563,10 +602,12 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     }
 
     if (this.isBeat = isBeat) {
-      int beatIndex = this.beatCount % this.beatsPerMeasure.getValuei();
+      int beatsPerBar = this.beatsPerBar.getValuei();
+      int beatIndex = this.beatCount % beatsPerBar;
+      int barIndex = this.beatCount / beatsPerBar;
       if (beatIndex == 0) {
         for (Listener listener : this.listeners) {
-          listener.onMeasure(this);
+          listener.onBar(this, barIndex);
         }
       }
       for (Listener listener : this.listeners) {
@@ -577,6 +618,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       }
     }
   }
+
   @Override
   public BooleanParameter getTriggerSource() {
     return this.trigger;
