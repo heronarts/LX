@@ -25,6 +25,7 @@ import java.util.Objects;
 import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -211,6 +212,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   private static final String PATH_BEAT = "beat";
+  private static final String PATH_BEAT_WITHIN_BAR = "beat-within-bar";
   private static final String PATH_SET_BPM = "setBPM";
 
   public Tempo setOscBpmRange(double min, double max) {
@@ -240,7 +242,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     } else if (parts[index].equals(PATH_BEAT)) {
       if (this.clockSource.getObject() == Tempo.ClockSource.OSC) {
         if (message.size() > 0) {
-          // Message specifies a beat count
+          // Message specifies an absolute 1-indexed beat count
           trigger(message.getInt()-1);
         } else {
           // Message is a raw trigger only
@@ -248,6 +250,26 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
         }
       }
       return true;
+    } else if (parts[index].equals(PATH_BEAT_WITHIN_BAR)) {
+      if (this.clockSource.getObject() == Tempo.ClockSource.OSC) {
+        if (message.size() > 0) {
+          // Message specifies a relative 1-indexed beat count within the bar
+          final int currentBeat = beatCountWithinBar();
+          final int nextBeat = message.getInt() - 1;
+          final int currentBar = barCount();
+          if (nextBeat <= currentBeat) {
+            // The beat has wrapped around, e.g. 2, 3, 4 -> 1
+            // We are moving onto the next bar!
+            trigger((currentBar+1) * this.beatsPerBar.getValuei() + nextBeat);
+          } else {
+            // We are still in the same bar
+            trigger(this.beatCount + (nextBeat - currentBeat));
+          }
+        } else {
+          LXOscEngine.error(PATH_BEAT_WITHIN_BAR + " message missing argument: " + message.toString());
+        }
+        return true;
+      }
     }
     return super.handleOscMessage(message, parts, index);
   }
