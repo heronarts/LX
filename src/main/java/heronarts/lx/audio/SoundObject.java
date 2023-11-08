@@ -259,7 +259,17 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
 
     switch (this.meterSource.getEnum()) {
     case AUDIO:
-      this.input.setValue(this.lx.engine.audio.meter.getNormalized());
+      switch (this.audioMeterSource.getEnum()) {
+      case MIX:
+        this.input.setValue(this.lx.engine.audio.meter.getNormalized());
+        break;
+      case LEFT:
+        this.input.setValue(this.lx.engine.audio.meter.left.getNormalized());
+        break;
+      case RIGHT:
+        this.input.setValue(this.lx.engine.audio.meter.right.getNormalized());
+        break;
+      }
       break;
     case ENVELOP:
       this.input.setValue(this.lx.engine.audio.envelop.source.channels[this.envelopSource.getValuei() - 1].getNormalized());

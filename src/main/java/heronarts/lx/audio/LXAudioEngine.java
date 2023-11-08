@@ -56,7 +56,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   public final LXAudioOutput output;
 
-  public final GraphicMeter meter;
+  public final Meter meter;
 
   public final ADM adm;
 
@@ -75,6 +75,57 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     new BooleanParameter("I/O Expanded", false)
     .setDescription("Show I/O section in the UI");
 
+  public class Meter extends GraphicMeter {
+
+    /**
+     * Metering of the left channel only
+     */
+    public final DecibelMeter left;
+
+    /**
+     * Metering of the right channel only
+     */
+    public final DecibelMeter right;
+
+    private Meter() {
+      super("Meter", input.mix);
+      this.left = new DecibelMeter("Left", input.left, this.gain, this.range, this.attack, this.release);
+      this.right = new DecibelMeter("Right", input.right, this.gain, this.range, this.attack, this.release);
+    }
+
+    public Meter setBuffer(LXAudioComponent device) {
+      setBuffer(device.mix);
+      this.left.setBuffer(device.left);
+      this.right.setBuffer(device.right);
+      return this;
+    }
+
+    @Override
+    public void onStart() {
+      this.left.start();
+      this.right.start();
+    }
+
+    @Override
+    public void onStop() {
+      this.left.stop();
+      this.right.stop();
+    }
+
+    @Override
+    public double computeValue(double deltaMs) {
+      double value = super.computeValue(deltaMs);
+
+      // Run the left and right meters
+      this.left.loop(deltaMs);
+      this.right.loop(deltaMs);
+
+      return value;
+    }
+
+
+  }
+
   public LXAudioEngine(LX lx) {
     super(lx, "Audio");
     addParameter("enabled", this.enabled);
@@ -91,7 +142,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     addChild("envelop", this.envelop = new Envelop(lx));
     addChild("reaper", this.reaper = new Reaper(lx));
 
-    addModulator("meter", this.meter = new GraphicMeter("Meter", this.input.mix));
+    addModulator("meter", this.meter = new Meter());
   }
 
   @Override
@@ -115,8 +166,8 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
       this.meter.running.setValue(this.enabled.isOn());
     } else if (p == this.mode) {
       switch (this.mode.getEnum()) {
-      case INPUT: this.meter.setBuffer(this.input.mix); break;
-      case OUTPUT: this.meter.setBuffer(this.output.mix); break;
+      case INPUT: this.meter.setBuffer(this.input); break;
+      case OUTPUT: this.meter.setBuffer(this.output); break;
       }
     }
   }
