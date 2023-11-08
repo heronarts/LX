@@ -17,6 +17,8 @@
  */
 package heronarts.lx.audio;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXRunnableComponent;
 import heronarts.lx.osc.LXOscEngine;
@@ -196,6 +198,16 @@ public class Reaper extends LXRunnableComponent {
       }
     }
     return true;
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    if (obj.has(KEY_RESET)) {
+      this.foldMode.reset();
+      this.metersExpanded.setValue(false);
+      stop();
+    }
   }
 
 }
