@@ -460,33 +460,33 @@ public abstract class LXSnapshot extends LXComponent {
   public class ActivePatternView extends View {
 
     private final LXChannel channel;
-    private final int activePatternIndex;
+    private final LXPattern pattern;
 
     private ActivePatternView(LXChannel channel) {
       super(ViewScope.PATTERNS, ViewType.ACTIVE_PATTERN);
       this.channel = channel;
-      this.activePatternIndex = channel.getActivePatternIndex();
+      this.pattern = channel.getActivePattern();
     }
 
     private ActivePatternView(LX lx, JsonObject obj) {
       super(lx, obj);
       this.channel = (LXChannel) LXPath.get(lx, obj.get(KEY_CHANNEL_PATH).getAsString());
-      this.activePatternIndex = obj.get(KEY_ACTIVE_PATTERN_INDEX).getAsInt();
+      this.pattern = this.channel.patterns.get(obj.get(KEY_ACTIVE_PATTERN_INDEX).getAsInt());
     }
 
     @Override
     public LXCommand getCommand() {
-      return new LXCommand.Channel.GoPattern(this.channel, channel.getPattern(this.activePatternIndex));
+      return new LXCommand.Channel.GoPattern(this.channel, this.pattern);
     }
 
     @Override
     protected boolean isDependentOf(LXComponent component) {
-      return component.contains(this.channel);
+      return component.contains(this.pattern);
     }
 
     @Override
     protected void recall() {
-      this.channel.goPatternIndex(this.activePatternIndex);
+      this.channel.goPattern(this.pattern);
     }
 
     private static final String KEY_CHANNEL_PATH = "channelPath";
@@ -496,7 +496,7 @@ public abstract class LXSnapshot extends LXComponent {
     public void save(LX lx, JsonObject obj) {
       super.save(lx, obj);
       obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath());
-      obj.addProperty(KEY_ACTIVE_PATTERN_INDEX, this.activePatternIndex);
+      obj.addProperty(KEY_ACTIVE_PATTERN_INDEX, this.pattern.getIndex());
     }
   }
 

@@ -650,9 +650,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       views = findSnapshotViews(views, component, snapshot);
     }
     for (LXBus bus : this.lx.engine.mixer.channels) {
-      findSnapshotViews(views, component, bus);
+      views = findSnapshotViews(views, component, bus);
     }
-    findSnapshotViews(views, component, this.lx.engine.mixer.masterBus);
+    views = findSnapshotViews(views, component, this.lx.engine.mixer.masterBus);
     return views;
   }
 
@@ -683,9 +683,9 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       views = findSnapshotParameterViews(views, parameter, snapshot);
     }
     for (LXBus bus : this.lx.engine.mixer.channels) {
-      findSnapshotParameterViews(views, parameter, bus);
+      views = findSnapshotParameterViews(views, parameter, bus);
     }
-    findSnapshotParameterViews(views, parameter, this.lx.engine.mixer.masterBus);
+    views = findSnapshotParameterViews(views, parameter, this.lx.engine.mixer.masterBus);
     return views;
   }
 
