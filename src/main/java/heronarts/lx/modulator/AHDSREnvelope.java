@@ -284,6 +284,13 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     }
   }
 
+  /**
+   * Current stage of the envelope.
+   */
+  public Stage getStage() {
+    return this.stage;
+  }
+
   @Override
   public LXNormalizedParameter setNormalized(double value) {
     throw new UnsupportedOperationException("Cannot setNormalized on AHDSREnvelope");
