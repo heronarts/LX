@@ -258,6 +258,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       System.arraycopy(that.aux, 0, this.aux, 0, this.aux.length);
     }
 
+    public int[] getColors(boolean aux) {
+      return aux ? getAuxColors() : getColors();
+    }
+
     public int[] getColors() {
       return this.cueOn ? this.cue : this.main;
     }
