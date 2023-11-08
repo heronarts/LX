@@ -40,6 +40,9 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.audio.ADM;
+import heronarts.lx.audio.Envelop;
+import heronarts.lx.audio.Reaper;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
@@ -321,6 +324,12 @@ public class LXOscEngine extends LXComponent {
         String[] parts = trim.split("/");
         if (parts[1].equals(lx.engine.getPath())) {
           lx.engine.handleOscMessage(message, parts, 2);
+        } else if (parts[1].equals(ADM.ADM_OSC_PATH)) {
+          lx.engine.audio.adm.handleAdmOscMessage(message, parts, 1);
+        } else if (parts[1].equals(Envelop.ENVELOP_OSC_PATH)) {
+          lx.engine.audio.envelop.handleEnvelopOscMessage(message, parts, 1);
+        }  else if (parts[1].equals(Reaper.REAPER_OSC_PATH)) {
+          lx.engine.audio.reaper.handleReaperOscMessage(message, parts, 1);
         } else if (LXOscEngine.this.listeners.isEmpty()) {
           throw new OscException();
         }

@@ -26,8 +26,10 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -40,13 +42,15 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("Sound Object")
 public class SoundObject extends LXModulator implements Comparable<SoundObject>, LXOscComponent, LXNormalizedParameter {
 
-  public enum Source {
-    OSC("OSC"),
-    AUDIO("Audio");
+  public enum MeterSource {
+    NONE("None"),
+    AUDIO("Audio"),
+    ENVELOP("Envelop"),
+    REAPER("Reaper");
 
     public final String label;
 
-    private Source(String label) {
+    private MeterSource(String label) {
       this.label = label;
     }
 
@@ -56,13 +60,50 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     }
   };
 
-  public final EnumParameter<Source> sourceMode =
-    new EnumParameter<Source>("Source", Source.OSC)
-    .setDescription("Source of the sound object data");
+  public enum AudioMeterSource {
+    MIX("Mix"),
+    LEFT("L"),
+    RIGHT("R");
+
+    public final String label;
+
+    private AudioMeterSource(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public final BooleanParameter admSync =
+    new BooleanParameter("ADM Sync", false)
+    .setDescription("Pull sound object position data from ADM-OSC input");
+
+  public final DiscreteParameter admObjId =
+    new DiscreteParameter("Object ID", 1, ADM.MAX_ADM_OBJECTS+1)
+    .setDescription("ADM sound object ID");
+
+  public final EnumParameter<MeterSource> meterSource =
+    new EnumParameter<MeterSource>("Meter Source", MeterSource.NONE)
+    .setDescription("Source of the sound object meter data");
+
+  public final EnumParameter<AudioMeterSource> audioMeterSource =
+    new EnumParameter<AudioMeterSource>("Audio Meter Source", AudioMeterSource.MIX)
+    .setDescription("Source of the audio meter data");
+
+  public final DiscreteParameter envelopSource =
+    new DiscreteParameter("Envelop Source Channel", 1, Envelop.Source.NUM_CHANNELS+1)
+    .setDescription("Which Envelop source channel to meter");
+
+  public final DiscreteParameter reaperSource =
+    new DiscreteParameter("Reaper Source Channel", 1, Reaper.MAX_METERS+1)
+    .setDescription("Which Reaper source channel to meter");
 
   public final NormalizedParameter input =
     new NormalizedParameter("Input", 0)
-    .setDescription("Raw input level of the sound object");
+    .setDescription("Raw input level of the sound object meter");
 
   public final BoundedParameter meterFloor =
     new BoundedParameter("Floor", 0)
@@ -75,12 +116,12 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     .setDescription("Specifies the ceiling of the active meter range");
 
   public final BoundedParameter attackMs =
-    new BoundedParameter("Attack", 0, 0, 1000)
+    new BoundedParameter("Attack", 10, 0, 1000)
     .setDescription("Attack time of the smoothed meter in milliseconds")
     .setUnits(BoundedParameter.Units.MILLISECONDS_RAW);
 
   public final BoundedParameter releaseMs =
-    new BoundedParameter("Release", 500, 0, 10000)
+    new BoundedParameter("Release", 50, 0, 10000)
     .setDescription("Release time of the smoothed meter in milliseconds")
     .setUnits(BoundedParameter.Units.MILLISECONDS_RAW);
 
@@ -105,6 +146,10 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
   public final MutableParameter cartesianChanged =
     new MutableParameter("Cartesian Changed");
 
+  public final BooleanParameter controlsExpanded =
+    new BooleanParameter("Controls Expanded", true)
+    .setDescription("Whether the full controls are expanded");
+
   private double x, y, z;
 
   public static SoundObject get(LX lx) {
@@ -118,7 +163,12 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
 
   public SoundObject(LX lx) {
     super("Sound Object");
-    addParameter("sourceMode", this.sourceMode);
+    addParameter("admSync", this.admSync);
+    addParameter("admObjId", this.admObjId);
+    addParameter("meterSource", this.meterSource);
+    addParameter("audioMeterSource", this.audioMeterSource);
+    addParameter("envelopSource", this.envelopSource);
+    addParameter("reaperSource", this.reaperSource);
     addParameter("input", this.input);
     addParameter("meterFloor", this.meterFloor);
     addParameter("meterCeiling", this.meterCeiling);
@@ -127,6 +177,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     addParameter("azimuth", this.azimuth);
     addParameter("elevation", this.elevation);
     addParameter("distance", this.distance);
+    addInternalParameter("controlsExpanded", this.controlsExpanded);
     updateCartesian();
 
     // A new sound object is created, register it with the audio engine
@@ -199,29 +250,46 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
       updateCartesian();
     }
 
-    if (this.sourceMode.getEnum() == Source.AUDIO) {
-      this.input.setValue(getLX().engine.audio.meter.getNormalized());
+    if (this.admSync.isOn()) {
+      final ADM.Obj obj = this.lx.engine.audio.adm.obj.get(this.admObjId.getValuei() - 1);
+      this.azimuth.setValue(-obj.azimuth.getValue());
+      this.elevation.setValue(obj.elevation.getValue());
+      this.distance.setValue(obj.distance.getValue());
     }
 
-    final double value = LXUtils.constrain(
+    switch (this.meterSource.getEnum()) {
+    case AUDIO:
+      this.input.setValue(this.lx.engine.audio.meter.getNormalized());
+      break;
+    case ENVELOP:
+      this.input.setValue(this.lx.engine.audio.envelop.source.channels[this.envelopSource.getValuei() - 1].getNormalized());
+      break;
+    case REAPER:
+      this.input.setValue(this.lx.engine.audio.reaper.meters[this.reaperSource.getValuei() - 1].level.getNormalized());
+      break;
+    default:
+      break;
+    }
+
+    final double targetValue = LXUtils.constrain(
       LXUtils.ilerp(this.input.getValue(), this.meterFloor.getValue(), this.meterCeiling.getValue()),
       0, 1
     );
 
     final double currentLevel = getValue();
-    if (value > currentLevel) {
+    if (targetValue > currentLevel) {
       final double attackMs = this.attackMs.getValue();
       if (attackMs > 0) {
-        return LXUtils.min(value, currentLevel + deltaMs / attackMs);
+        return LXUtils.min(targetValue, currentLevel + deltaMs / attackMs);
       }
     } else {
       final double releaseMs = this.releaseMs.getValue();
       if (releaseMs > 0) {
-        return LXUtils.max(value, currentLevel - deltaMs / releaseMs);
+        return LXUtils.max(targetValue, currentLevel - deltaMs / releaseMs);
       }
     }
 
-    return value;
+    return targetValue;
   }
 
   @Override
@@ -244,7 +312,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     soundObjects.remove(this);
     int numObjects = this.lx.engine.audio.numSoundObjects.getValuei();
     if (numObjects <= 0) {
-      LX.error("LXAidioEngine sound object count was already 0 upon disposal: " + this);
+      LX.error("LXAudioEngine sound object count was already 0 upon disposal: " + this);
     } else {
       this.lx.engine.audio.numSoundObjects.setValue(numObjects-1);
     }

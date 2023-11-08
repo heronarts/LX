@@ -58,6 +58,12 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   public final GraphicMeter meter;
 
+  public final ADM adm;
+
+  public final Envelop envelop;
+
+  public final Reaper reaper;
+
   public enum Mode {
     INPUT,
     OUTPUT
@@ -65,22 +71,34 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   public final EnumParameter<Mode> mode = new EnumParameter<Mode>("Mode", Mode.INPUT);
 
+  public final BooleanParameter ioExpanded =
+    new BooleanParameter("I/O Expanded", false)
+    .setDescription("Show I/O section in the UI");
+
   public LXAudioEngine(LX lx) {
     super(lx, "Audio");
     addParameter("enabled", this.enabled);
     addParameter("mode", this.mode);
     addParameter("expandedPerformance", this.expandedPerformance);
+    addInternalParameter("ioExpanded", this.ioExpanded);
     addInternalParameter("numSoundObjects", this.numSoundObjects);
 
     this.mode.setOptions(new String[] { "Input", "Output" });
 
-    this.input = new LXAudioInput(lx);
-    this.output = new LXAudioOutput(lx);
-    this.meter = new GraphicMeter("Meter", this.input.mix);
+    addChild("input", this.input = new LXAudioInput(lx));
+    addChild("output", this.output = new LXAudioOutput(lx));
+    addChild("adm", this.adm = new ADM(lx));
+    addChild("envelop", this.envelop = new Envelop(lx));
+    addChild("reaper", this.reaper = new Reaper(lx));
 
-    addChild("input", this.input);
-    addChild("output", this.output);
-    addModulator("meter", this.meter);
+    addModulator("meter", this.meter = new GraphicMeter("Meter", this.input.mix));
+  }
+
+  @Override
+  public void loop(double deltaMs) {
+    super.loop(deltaMs);
+    this.envelop.loop(deltaMs);
+    this.reaper.loop(deltaMs);
   }
 
   @Override
