@@ -544,13 +544,13 @@ public abstract class LXSnapshot extends LXComponent {
         LXPattern pattern = channel.getActivePattern();
         if (pattern != null) {
           addView(new ActivePatternView(channel));
-          addLayeredView(ViewScope.PATTERNS, pattern);
+          addPatternView(pattern);
         }
       } else {
         for (LXPattern pattern : channel.patterns) {
           if (pattern.enabled.isOn()) {
             // Store all settings for any pattern that is active (including enabled state)
-            addLayeredView(ViewScope.PATTERNS, pattern);
+            addPatternView(pattern);
           } else {
             // Just store enabled (disabled) state for a pattern that's off
             addParameterView(ViewScope.PATTERNS, pattern.enabled);
@@ -561,13 +561,24 @@ public abstract class LXSnapshot extends LXComponent {
 
     // Effect settings
     for (LXEffect effect : bus.effects) {
-      if (effect.enabled.isOn()) {
-        // If the effect is on, store all its parameters (including that it's enabled)
-        addLayeredView(ViewScope.EFFECTS, effect);
-      } else {
-        // If the effect is off, then we only recall that it is off
-        addParameterView(ViewScope.EFFECTS, effect.enabled);
-      }
+      addEffectView(effect);
+    }
+  }
+
+  protected void addEffectView(LXEffect effect) {
+    if (effect.enabled.isOn()) {
+      // If the effect is on, store all its parameters (including that it's enabled)
+      addLayeredView(ViewScope.EFFECTS, effect);
+    } else {
+      // If the effect is off, then we only recall that it is off
+      addParameterView(ViewScope.EFFECTS, effect.enabled);
+    }
+  }
+
+  protected void addPatternView(LXPattern pattern) {
+    addLayeredView(ViewScope.PATTERNS, pattern);
+    for (LXEffect effect : pattern.effects) {
+      addEffectView(effect);
     }
   }
 
