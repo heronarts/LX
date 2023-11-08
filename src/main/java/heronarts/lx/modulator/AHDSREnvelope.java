@@ -128,6 +128,20 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     this.decayFrom = this.releaseFrom = peak.getValue();
   }
 
+  private void setStage(Stage stage) {
+    if (this.stage != stage) {
+      this.stage = stage;
+      onStageChanged(this.stage);
+    }
+  }
+
+  /**
+   * A subclass may override to perform custom logic in this method
+   *
+   * @param stage Stage that is now active
+   */
+  protected void onStageChanged(Stage stage) {}
+
   public AHDSREnvelope setShape(LXParameter shape) {
     this.shape = shape;
     return this;
@@ -143,14 +157,14 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
         StageMode stageMode = this.stageMode.getEnum();
         if (!stageMode.has(this.stage) || !this.engage.isOn()) {
           this.stageBasis = 0;
-          this.stage = stageMode.endStage();
+          setStage(stageMode.endStage());
           this.decayFrom = this.releaseFrom = getValue();
         }
       }
     } else if (p == this.retrig) {
       if (this.retrig.isOn()) {
         this.stageBasis = 0;
-        this.stage = this.stageMode.getEnum().firstStage();
+        setStage(this.stageMode.getEnum().firstStage());
         this.attackFrom = getValue();
       }
     } else if (p == this.engage) {
@@ -162,7 +176,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
           // When retrigger is on, we ALWAYS go hard back to the
           // very start of the envelope
           this.stageBasis = 0;
-          this.stage = firstStage;
+          setStage(firstStage);
           this.attackFrom = this.initial.getValue();
         } else {
           // Re-trigger off? Check if we were in a different stage,
@@ -170,7 +184,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
           // wherever we were at
           if (this.stage != firstStage) {
             this.stageBasis = 0;
-            this.stage = firstStage;
+            setStage(firstStage);
             this.attackFrom = getValue();
           }
         }
@@ -182,7 +196,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
           Stage endStage = this.stageMode.getEnum().endStage();
           if (this.stage != endStage) {
             this.stageBasis = 0;
-            this.stage = endStage;
+            setStage(endStage);
             this.decayFrom = this.releaseFrom = getValue();
           }
         }
@@ -209,7 +223,7 @@ public class AHDSREnvelope extends LXModulator implements LXNormalizedParameter 
     double stageRemainingMs = (1-this.stageBasis) * stageMs;
     if ((stageMs <= 0) || (deltaMs >= stageRemainingMs)) {
       // We are done with this stage, consume appropriate amount of time
-      this.stage = nextStage();
+      setStage(nextStage());
       this.stageBasis = 0;
       deltaMs -= stageRemainingMs;
       return deltaMs;
