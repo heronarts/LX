@@ -160,6 +160,13 @@ public class LXVector {
     return this;
   }
 
+  public LXVector mult(LXVector that) {
+    this.x *= that.x;
+    this.y *= that.y;
+    this.z *= that.z;
+    return this;
+  }
+
   public LXVector div(float n) {
     this.x /= n;
     this.y /= n;
