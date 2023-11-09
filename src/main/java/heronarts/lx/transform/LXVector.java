@@ -47,6 +47,13 @@ public class LXVector {
   public final int index;
 
   /**
+   * Construct a mutable vector
+   */
+  public LXVector() {
+    this(0, 0, 0);
+  }
+
+  /**
    * Construct a mutable vector based on an LXPoint
    *
    * @param point Point with index reference
