@@ -58,6 +58,8 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   public final Meter meter;
 
+  public final SoundStage soundStage;
+
   public final ADM adm;
 
   public final Envelop envelop;
@@ -138,6 +140,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
     addChild("input", this.input = new LXAudioInput(lx));
     addChild("output", this.output = new LXAudioOutput(lx));
+    addChild("soundStage", this.soundStage = new SoundStage(lx));
     addChild("adm", this.adm = new ADM(lx));
     addChild("envelop", this.envelop = new Envelop(lx));
     addChild("reaper", this.reaper = new Reaper(lx));

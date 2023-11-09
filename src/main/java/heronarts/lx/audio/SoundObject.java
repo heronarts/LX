@@ -150,7 +150,7 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     new BooleanParameter("Controls Expanded", true)
     .setDescription("Whether the full controls are expanded");
 
-  private double x, y, z;
+  private double xn, yn, zn, xr, yr, zr;
 
   public static SoundObject get(LX lx) {
     for (LXModulator modulator : lx.engine.modulation.modulators) {
@@ -213,16 +213,43 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     }
   }
 
+  /**
+   * Gets the normalized X position of the sound object, clamped to [0,1]
+   *
+   * @return Normalized X position of the sound object, clamped to [0,1]
+   */
   public double getX() {
-    return this.x;
+    return this.xn;
   }
 
+  /**
+   * Gets the normalized Y position of the sound object, clamped to [0,1]
+   *
+   * @return Normalized Y position of the sound object, clamped to [0,1]
+   */
   public double getY() {
-    return this.y;
+    return this.yn;
   }
 
+  /**
+   * Gets the normalized Z position of the sound object, clamped to [0,1]
+   *
+   * @return Normalized Z position of the sound object, clamped to [0,1]
+   */
   public double getZ() {
-    return this.z;
+    return this.zn;
+  }
+
+  public double getXRaw() {
+    return this.xr;
+  }
+
+  public double getYRaw() {
+    return this.yr;
+  }
+
+  public double getZRaw() {
+    return this.zr;
   }
 
   public void updateCartesian() {
@@ -234,9 +261,9 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     final double cosElev = Math.cos(elevation);
     final double sinElev = Math.sin(elevation);
 
-    this.x = LXUtils.constrain(.5 + distance * sinAzim * cosElev, 0, 1);
-    this.z = LXUtils.constrain(.5 + distance * cosAzim * cosElev, 0, 1);
-    this.y = LXUtils.constrain(.5 + distance * sinElev, 0, 1);
+    this.xn = LXUtils.constrain(this.xr = .5 + distance * sinAzim * cosElev, 0, 1);
+    this.zn = LXUtils.constrain(this.zr = .5 + distance * cosAzim * cosElev, 0, 1);
+    this.yn = LXUtils.constrain(this.yr = .5 + distance * sinElev, 0, 1);
 
     this.cartesianChanged.bang();
   }

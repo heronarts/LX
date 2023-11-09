@@ -285,7 +285,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
   }
 
-  private static final double POSITION_RANGE = 1000000;
+  public static final double POSITION_RANGE = 1000000;
 
   public final BooleanParameter selected =
     new BooleanParameter("Selected", false)
