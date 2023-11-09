@@ -29,6 +29,7 @@ import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.transform.LXVector;
+import heronarts.lx.utils.LXUtils;
 
 public class SoundStage extends LXComponent implements LXOscComponent {
 
@@ -57,6 +58,23 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     public final String label;
 
     private MeterMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public enum ObjectPositionMode {
+    ABSOLUTE("Abs"),
+    RADIAL("Radial"),
+    BOX("Box");
+
+    public final String label;
+
+    private ObjectPositionMode(String label) {
       this.label = label;
     }
 
@@ -129,7 +147,7 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     .setDescription("Relative depth of the sound stage");
 
   public final BooleanParameter showSoundStage =
-    new BooleanParameter("Show Sound Stage", true)
+    new BooleanParameter("Show Sound Stage", false)
     .setDescription("Render sound stage in the UI");
 
   public final BooleanParameter showSoundObjects =
@@ -220,6 +238,67 @@ public class SoundStage extends LXComponent implements LXOscComponent {
       );
       break;
     }
+  }
+
+  /**
+   * For the given sound object, determine its position using the given mode of placement
+   * in the sound stage, and then re-normalized it against the bounds of the reference model.
+   * Note that this version of the method allocates memory.
+   *
+   * @param object Sound object
+   * @param mode Sound stage positioning mode
+   * @param reference Reference model
+   * @return The position vector
+   */
+  public LXVector getNormalizedObjectPosition(SoundObject object, ObjectPositionMode mode, LXModel reference) {
+    return getNormalizedObjectPosition(object, mode, reference, null);
+  }
+
+  /**
+   * For the given sound object, determine its position using the given mode of placement
+   * in the sound stage, and then re-normalized it against the bounds of the reference model
+   *
+   * @param object Sound object
+   * @param mode Sound stage positioning mode
+   * @param reference Reference model
+   * @param position Position vector to fill
+   * @return The position vector
+   */
+  public LXVector getNormalizedObjectPosition(SoundObject object, ObjectPositionMode mode, LXModel reference, LXVector position) {
+    if (position == null) {
+      position = new LXVector();
+    }
+    switch (mode) {
+    case ABSOLUTE:
+      position.set(-.5f, -.5f, -.5f).add(object.position);
+      break;
+    case BOX:
+      // We pin to the outside of the box, scaling up by whatever's needed for the absolute
+      // value of the largest dimension to reach 1
+      position.set(object.normalized);
+      final float scale = LXUtils.maxf(Math.abs(position.x), Math.abs(position.y), Math.abs(position.z));
+      position.mult(.5f / scale);
+      break;
+    case RADIAL:
+      // Scale the normalized [-1,1] vectors by half
+      position.set(object.normalized).mult(.5f);
+      break;
+    default:
+      break;
+    }
+
+    // At this point the vector values are in range [-.5f,.5f] (possibly exceeding in ABSOLUTE)
+    position.mult(this.size).add(this.center);
+
+    // Now the values are in the sound stage, we need to normalized them to the reference model
+    // by doing an inverse interpolation
+    position.set(
+      LXUtils.ilerpf(position.x, reference.xMin, reference.xMax),
+      LXUtils.ilerpf(position.y, reference.yMin, reference.yMax),
+      LXUtils.ilerpf(position.z, reference.zMin, reference.zMax)
+    );
+
+    return position;
   }
 
 }

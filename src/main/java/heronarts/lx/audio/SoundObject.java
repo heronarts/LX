@@ -36,6 +36,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.NormalizedParameter;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.transform.LXVector;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.AUDIO)
@@ -150,7 +151,20 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     new BooleanParameter("Controls Expanded", true)
     .setDescription("Whether the full controls are expanded");
 
-  private double xn, yn, zn, xr, yr, zr;
+  /**
+   * Holds the position of the sound object in coordinate
+   * space where (.5, .5, .5) is the center. For distance
+   * values larger than 100%, values may fall outside
+   * of the bounds [0,1]
+   */
+  public final LXVector position = new LXVector();
+
+  /**
+   * Holds the normalized position of the sound object, assuming
+   * that distance is set to 100%. All values will fall in the
+   * range [-1,1] and the amplitude of this vector will be 1.
+   */
+  public final LXVector normalized = new LXVector();
 
   public static SoundObject get(LX lx) {
     for (LXModulator modulator : lx.engine.modulation.modulators) {
@@ -213,57 +227,26 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     }
   }
 
-  /**
-   * Gets the normalized X position of the sound object, clamped to [0,1]
-   *
-   * @return Normalized X position of the sound object, clamped to [0,1]
-   */
-  public double getX() {
-    return this.xn;
-  }
-
-  /**
-   * Gets the normalized Y position of the sound object, clamped to [0,1]
-   *
-   * @return Normalized Y position of the sound object, clamped to [0,1]
-   */
-  public double getY() {
-    return this.yn;
-  }
-
-  /**
-   * Gets the normalized Z position of the sound object, clamped to [0,1]
-   *
-   * @return Normalized Z position of the sound object, clamped to [0,1]
-   */
-  public double getZ() {
-    return this.zn;
-  }
-
-  public double getXRaw() {
-    return this.xr;
-  }
-
-  public double getYRaw() {
-    return this.yr;
-  }
-
-  public double getZRaw() {
-    return this.zr;
-  }
-
   public void updateCartesian() {
-    final double distance = .5 * this.distance.getValue();
+    final float distance = .5f * this.distance.getValuef();
     final double azimuth = Math.toRadians(this.azimuth.getValue());
     final double elevation = Math.toRadians(this.elevation.getValue());
-    final double sinAzim = Math.sin(azimuth);
-    final double cosAzim = Math.cos(azimuth);
-    final double cosElev = Math.cos(elevation);
-    final double sinElev = Math.sin(elevation);
+    final float sinAzim = (float) Math.sin(azimuth);
+    final float cosAzim = (float) Math.cos(azimuth);
+    final float cosElev = (float) Math.cos(elevation);
+    final float sinElev = (float) Math.sin(elevation);
 
-    this.xn = LXUtils.constrain(this.xr = .5 + distance * sinAzim * cosElev, 0, 1);
-    this.zn = LXUtils.constrain(this.zr = .5 + distance * cosAzim * cosElev, 0, 1);
-    this.yn = LXUtils.constrain(this.yr = .5 + distance * sinElev, 0, 1);
+    this.position.set(
+      .5f + distance * sinAzim * cosElev,
+      .5f + distance * sinElev,
+      .5f + distance * cosAzim * cosElev
+    );
+
+    this.normalized.set(
+      sinAzim * cosElev,
+      sinElev,
+      cosAzim * cosElev
+    );
 
     this.cartesianChanged.bang();
   }
