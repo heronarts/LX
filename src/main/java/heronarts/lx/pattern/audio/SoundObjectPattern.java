@@ -36,6 +36,39 @@ import heronarts.lx.utils.LXUtils;
 @LXComponentName("Sound Object")
 public class SoundObjectPattern extends LXPattern {
 
+  public interface ShapeFunction {
+    public float getDistance(LXPoint p, LXVector so);
+
+    public static ShapeFunction NONE = (p, so) -> { return 0f; };
+  }
+
+  public enum ShapeMode {
+    ORB("Orb", (p, so) -> { return LXUtils.distf(p.xn, p.yn, p.zn, so.x, so.y, so.z); }),
+    BOX("Box", (p, so) -> {
+      return LXUtils.maxf(
+        Math.abs(p.xn - so.x),
+        Math.abs(p.yn - so.y),
+        Math.abs(p.zn - so.z)
+      );
+    }),
+    X("X", (p, so) -> { return Math.abs(p.xn - so.x); }),
+    Y("Y", (p, so) -> { return Math.abs(p.yn - so.y); }),
+    Z("Z", (p, so) -> { return Math.abs(p.zn - so.z); });
+
+    private final String label;
+    private final ShapeFunction function;
+
+    private ShapeMode(String label, ShapeFunction function) {
+      this.label = label;
+      this.function = function;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   public final SoundObject.Selector selector = (SoundObject.Selector)
     new SoundObject.Selector("Object")
     .setDescription("Which sound object to render");
@@ -43,6 +76,19 @@ public class SoundObjectPattern extends LXPattern {
   public final EnumParameter<SoundStage.ObjectPositionMode> positionMode =
     new EnumParameter<SoundStage.ObjectPositionMode>("Position Mode", SoundStage.ObjectPositionMode.ABSOLUTE)
     .setDescription("How to calculate the sound object position");
+
+  public final EnumParameter<ShapeMode> shapeMode1 =
+    new EnumParameter<ShapeMode>("Shape Mode 1", ShapeMode.ORB)
+    .setDescription("How to render the sound object shape");
+
+  public final EnumParameter<ShapeMode> shapeMode2 =
+    new EnumParameter<ShapeMode>("Shape Mode 2", ShapeMode.BOX)
+    .setDescription("How to render the sound object shape");
+
+  public final CompoundParameter shapeLerp =
+    new CompoundParameter("Shaper Lerp")
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Blending between two object shapes");
 
   public final CompoundParameter baseSize =
     new CompoundParameter("Size", .1)
@@ -113,10 +159,15 @@ public class SoundObjectPattern extends LXPattern {
     addParameter("modulationToSize", this.modulationToSize);
     addParameter("modulationToBrt", this.modulationToLevel);
     addParameter("signalToBrt", this.signalToLevel);
-    addParameter("scopeAmount", this.scopeAmount);
-    addParameter("scopeTimeMs", this.scopeTimeMs);
+
     addParameter("selector", this.selector);
     addParameter("positionMode", this.positionMode);
+    addParameter("shapeMode1", this.shapeMode1);
+    addParameter("shapeMode2", this.shapeMode2);
+    addParameter("shapeLerp", this.shapeLerp);
+
+    addParameter("scopeAmount", this.scopeAmount);
+    addParameter("scopeTimeMs", this.scopeTimeMs);
   }
 
   private final static double INV_MAX_DISTANCE = 1 / Math.sqrt(3);
@@ -131,7 +182,6 @@ public class SoundObjectPattern extends LXPattern {
       return LXUtils.lerp(1, 1-value, -lerp);
     }
   }
-
 
   @Override
   protected void run(double deltaMs) {
@@ -176,8 +226,16 @@ public class SoundObjectPattern extends LXPattern {
 
     final double fadeStart = size - fadePercent;
 
+    final float shapeLerp = this.shapeLerp.getValuef();
+    final ShapeFunction distance1 = (shapeLerp < 1) ? this.shapeMode1.getEnum().function : ShapeFunction.NONE;
+    final ShapeFunction distance2 = (shapeLerp > 0) ? this.shapeMode2.getEnum().function : ShapeFunction.NONE;
+
     for (LXPoint p : model.points) {
-      final double dist = LXUtils.distance(p.xn, p.yn, p.zn, so.x, so.y, so.z);
+      final float dist = LXUtils.lerpf(
+        distance1.getDistance(p, so),
+        distance2.getDistance(p, so),
+        shapeLerp
+      );
       final int scopeOffset = (int) (dist * INV_MAX_DISTANCE * scopeTimeMs);
       double scopeFactor = 1;
       if (scopeOffset < this.scope.length) {
