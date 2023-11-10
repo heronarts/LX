@@ -262,11 +262,11 @@ public class SoundStage extends LXComponent implements LXOscComponent {
    *
    * @param object Sound object
    * @param mode Sound stage positioning mode
-   * @param reference Reference model
+   * @param model Model being rendered to
    * @param position Position vector to fill
    * @return The position vector
    */
-  public LXVector getNormalizedObjectPosition(SoundObject object, ObjectPositionMode mode, LXModel reference, LXVector position) {
+  public LXVector getNormalizedObjectPosition(SoundObject object, ObjectPositionMode mode, LXModel model, LXVector position) {
     if (position == null) {
       position = new LXVector();
     }
@@ -294,6 +294,7 @@ public class SoundStage extends LXComponent implements LXOscComponent {
 
     // Now the values are in the sound stage, we need to normalized them to the reference model
     // by doing an inverse interpolation
+    final LXModel reference = model.getNormalizationSpace();
     position.set(
       (reference.xRange == 0) ? .5f : LXUtils.ilerpf(position.x, reference.xMin, reference.xMax),
       (reference.yRange == 0) ? .5f : LXUtils.ilerpf(position.y, reference.yMin, reference.yMax),
