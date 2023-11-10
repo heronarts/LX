@@ -45,13 +45,13 @@ public abstract class LXVariablePeriodModulator extends LXRangeModulator {
     .setDescription("Clock mode of the modulator");
 
   public final CompoundParameter periodFast =
-    (CompoundParameter) new CompoundParameter("Period", 1000, 100, 60000)
+    new CompoundParameter("Period", 1000, 100, 60000)
     .setDescription("Sets the period of the modulator in msecs")
     .setExponent(4)
     .setUnits(LXParameter.Units.MILLISECONDS);
 
   public final CompoundParameter periodSlow =
-    (CompoundParameter) new CompoundParameter("Period", 10000, 1000, 900000)
+    new CompoundParameter("Period", 10000, 1000, 900000)
     .setDescription("Sets the period of the modulator in msecs")
     .setExponent(4)
     .setUnits(LXParameter.Units.MILLISECONDS);
@@ -63,10 +63,13 @@ public abstract class LXVariablePeriodModulator extends LXRangeModulator {
     addParameter("periodSlow", this.periodSlow);
   }
 
+  private boolean inClockUpdate = false;
+
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.clockMode) {
+      this.inClockUpdate = true;
       switch (this.clockMode.getEnum()) {
       case FAST:
         setPeriod(this.periodFast);
@@ -80,8 +83,13 @@ public abstract class LXVariablePeriodModulator extends LXRangeModulator {
         this.tempoSync.setValue(true);
         break;
       }
+      this.inClockUpdate = false;
     } else if (p == this.tempoSync) {
-      this.clockMode.setValue(this.tempoSync.isOn() ? ClockMode.SYNC : ClockMode.FAST);
+      if (this.tempoSync.isOn()) {
+        this.clockMode.setValue(ClockMode.SYNC);
+      } else if (!this.inClockUpdate) {
+        this.clockMode.setValue(ClockMode.FAST);
+      }
     }
   }
 
