@@ -203,9 +203,45 @@ public class Envelop extends LXRunnableComponent {
       ADM.Obj obj = this.lx.engine.audio.adm.obj.get(sourceIndex);
       final String sourceFormat = message.getString();
       if (ENVELOP_SOURCE_AED.equals(sourceFormat)) {
-        obj.azimuth.setValue(-message.getFloat());
-        obj.elevation.setValue(message.getFloat());
-        obj.distance.setValue(message.getFloat());
+
+        float azimuth = message.getFloat();
+        float elevation = message.getFloat();
+        float distance = message.getFloat();
+
+        // Let's handle normalizing values that might be out of strict range
+        float sign = (elevation > 0) ? 1 : -1;
+        boolean flipAzimuth = false;
+
+        // Elevation values that go beyond 90 degrees will require adjusting
+        // the elevation value and possibly a 180 degree azimuth rotation to
+        // get back into normalized polar coordinate space.
+        final float absElevation = Math.abs(elevation);
+        if (elevation >= 270f) {
+          // We're flipped 3/4 way around, top/bottom are flipped but
+          // azimuth is unchanged
+          elevation = absElevation - sign*360f;
+        } else if (absElevation > 90f) {
+          // We're flipped onto the other lateral "side" of the sphere,
+          // where azimuth is 180 degrees opposite but top stays top
+          // and bottom stays bottom
+          flipAzimuth = true;
+          elevation = sign*180f - absElevation;
+        }
+
+        // The azimuth may need a 180 degree rotation if elevation put us
+        // on the other side of the sphere
+        if (flipAzimuth) {
+          azimuth += 180f;
+        }
+
+        // Squash azimuth into [-180,180] bounds
+        azimuth = ((azimuth + 540f) % 360f) - 180f;
+
+        // Set values
+        obj.azimuth.setValue(-azimuth);
+        obj.elevation.setValue(elevation);
+        obj.distance.setValue(distance);
+
       } else if (ENVELOP_SOURCE_XYZ.equals(sourceFormat)) {
         obj.x.setValue(message.getFloat());
         obj.y.setValue(message.getFloat());

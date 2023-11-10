@@ -31,7 +31,9 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Implementation of Audio Definition Model data
+ * Implementation of Audio Definition Model data. This class does not do any processing,
+ * it merely holds data that was received via the ADM-OSC protocol.
+ *
  * https://github.com/immersive-audio-live/ADM-OSC
  */
 public class ADM extends LXComponent {
@@ -178,7 +180,7 @@ public class ADM extends LXComponent {
           obj.updatePolar();
         } else if (ADM_CONFIG_PATH.equals(field)) {
           if (ADM_CARTESIAN_PATH.equals(parts[5])) {
-            obj.cartesian.setValue(message.getInt() > 0);
+            obj.cartesian.setValue(message.getBoolean());
           }
         }
         return true;

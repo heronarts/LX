@@ -262,6 +262,9 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
 
     if (this.admSync.isOn()) {
       final ADM.Obj obj = this.lx.engine.audio.adm.obj.get(this.admObjId.getValuei() - 1);
+
+      // NOTE: ADM azimuth is counter-clockwise, but
+      // Chromatik/Envelop/SPATRevolution use clockwise
       this.azimuth.setValue(-obj.azimuth.getValue());
       this.elevation.setValue(obj.elevation.getValue());
       this.distance.setValue(obj.distance.getValue());
