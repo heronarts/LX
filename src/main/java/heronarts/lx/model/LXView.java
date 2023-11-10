@@ -62,12 +62,12 @@ public class LXView extends LXModel {
   /**
    * Constructs a view of the given model object
    *
-   * @param model Model
+   * @param model Model Parent model to create view of
    * @param viewSelector View selection string
    * @param normalization What normalization mode to use for this view
    * @return A view of the model that selects the elements in the selector string
    */
-  public static LXView create(LXModel model, String viewSelector, Normalization normalization) {
+  public static LXView create(final LXModel model, String viewSelector, Normalization normalization) {
     ParseState state = new ParseState(model);
 
     // Split at top-level by groups, separated by ;
@@ -81,9 +81,9 @@ public class LXView extends LXModel {
     // Construct a new list of a copy of all the points from all the models
     // in the view. We need a copy because these will all be re-normalized
     // with xn/yn/zn values relative to this view
-    Map<Integer, LXPoint> clonedPoints = new HashMap<Integer, LXPoint>();
-    LXView[] views = new LXView[state.groups.size()];
-    List<LXPoint> allPoints = new ArrayList<LXPoint>();
+    final Map<Integer, LXPoint> clonedPoints = new HashMap<Integer, LXPoint>();
+    final LXView[] views = new LXView[state.groups.size()];
+    final List<LXPoint> allPoints = new ArrayList<LXPoint>();
     int g = 0;
     for (List<LXModel> group : state.groups) {
       List<LXPoint> groupPoints = new ArrayList<LXPoint>();
@@ -404,19 +404,36 @@ public class LXView extends LXModel {
 
   private final LXModel model;
 
+  private final LXModel normalizationSpace;
+
   final Normalization normalization;
 
   final Map<Integer, LXPoint> clonedPoints;
 
+  /**
+   * Constructs a view of the given model
+   *
+   * @param model Parent model that view is of
+   * @param normalization Normalization mode
+   * @param clonedPoints Map of points cloned from parent model into this view
+   * @param points Points in this view
+   * @param children Child models
+   */
   private LXView(LXModel model, Normalization normalization, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children) {
     super(points, children, LXModel.Tag.VIEW);
     this.model = model;
     this.normalization = normalization;
+    this.normalizationSpace = (normalization == Normalization.RELATIVE) ? this : model;
     this.clonedPoints = java.util.Collections.unmodifiableMap(clonedPoints);
     model.derivedViews.add(this);
     if (normalization == Normalization.RELATIVE) {
       normalizePoints();
     }
+  }
+
+  @Override
+  public LXModel getNormalizationSpace() {
+    return this.normalizationSpace;
   }
 
   @Override

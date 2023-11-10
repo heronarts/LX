@@ -490,6 +490,22 @@ public class LXModel implements LXSerializable {
     return Collections.unmodifiableList(_tags);
   }
 
+  /**
+   * Returns the model which defines the space in which this model's points are
+   * normalized, based upon the xMin/xMax/xRange etc. By default, this is the
+   * model itself.
+   *
+   * @return Model that defines normalization ranges for points
+   */
+  public LXModel getNormalizationSpace() {
+    return this;
+  }
+
+  /**
+   * Returns the larger model which contains this model, if there is one. May be null.
+   *
+   * @return Model containing this model, or null
+   */
   public LXModel getParent() {
     return this.parent;
   }
