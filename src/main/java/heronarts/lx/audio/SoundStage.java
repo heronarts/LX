@@ -18,6 +18,8 @@
 
 package heronarts.lx.audio;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
@@ -293,12 +295,22 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     // Now the values are in the sound stage, we need to normalized them to the reference model
     // by doing an inverse interpolation
     position.set(
-      LXUtils.ilerpf(position.x, reference.xMin, reference.xMax),
-      LXUtils.ilerpf(position.y, reference.yMin, reference.yMax),
-      LXUtils.ilerpf(position.z, reference.zMin, reference.zMax)
+      (reference.xRange == 0) ? .5f : LXUtils.ilerpf(position.x, reference.xMin, reference.xMax),
+      (reference.yRange == 0) ? .5f : LXUtils.ilerpf(position.y, reference.yMin, reference.yMax),
+      (reference.zRange == 0) ? .5f : LXUtils.ilerpf(position.z, reference.zMin, reference.zMax)
     );
 
     return position;
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    if (obj.has(KEY_RESET)) {
+      for (LXParameter p : getParameters()) {
+        p.reset();
+      }
+    }
+    super.load(lx, obj);
   }
 
 }
