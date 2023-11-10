@@ -247,7 +247,7 @@ public abstract class LXSnapshot extends LXComponent {
       }
       this.component = this.parameter.getParent();
       if (this.component == null) {
-        throw new IllegalStateException("Cannot store a snapshot view of a parameter with no parent");
+        throw new IllegalStateException("Cannot restore a snapshot view of a parameter with no parent");
       }
       if (this.parameter instanceof AggregateParameter) {
         throw new IllegalStateException("Cannot restore a snapshot view of an AggregateParameter");
@@ -390,7 +390,11 @@ public abstract class LXSnapshot extends LXComponent {
 
     private ChannelFaderView(LX lx, JsonObject obj) {
       super(ViewScope.MIXER, ViewType.CHANNEL_FADER);
-      this.channel = (LXAbstractChannel) LXPath.get(lx, obj.get(KEY_CHANNEL_PATH).getAsString());
+      final String channelPath = obj.get(KEY_CHANNEL_PATH).getAsString();
+      this.channel = (LXAbstractChannel) LXPath.get(lx, channelPath);
+      if (this.channel == null) {
+        throw new IllegalStateException("Cannot create ChannelFaderView of non-existent channel: " + channelPath);
+      }
       this.enabled = obj.get(KEY_CHANNEL_ENABLED).getAsBoolean();
       this.fader = obj.get(KEY_CHANNEL_FADER).getAsDouble();
     }
@@ -470,8 +474,16 @@ public abstract class LXSnapshot extends LXComponent {
 
     private ActivePatternView(LX lx, JsonObject obj) {
       super(lx, obj);
-      this.channel = (LXChannel) LXPath.get(lx, obj.get(KEY_CHANNEL_PATH).getAsString());
-      this.pattern = this.channel.patterns.get(obj.get(KEY_ACTIVE_PATTERN_INDEX).getAsInt());
+      final String channelPath = obj.get(KEY_CHANNEL_PATH).getAsString();
+      this.channel = (LXChannel) LXPath.get(lx, channelPath);
+      if (this.channel == null) {
+        throw new IllegalStateException("Cannot restore ActivePatternView for non-existent channel: " + channelPath);
+      }
+      final int patternIndex = obj.get(KEY_ACTIVE_PATTERN_INDEX).getAsInt();
+      this.pattern = this.channel.patterns.get(patternIndex);
+      if (this.pattern == null) {
+        throw new IllegalStateException("Cannot restore ActivePatternView for missing pattern index: " + channelPath + "/pattern/" + patternIndex);
+      }
     }
 
     @Override
