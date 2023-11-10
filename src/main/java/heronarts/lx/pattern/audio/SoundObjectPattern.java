@@ -96,7 +96,7 @@ public class SoundObjectPattern extends LXPattern {
     .setDescription("Base Size of the sound object");
 
   public final CompoundParameter baseLevel =
-    new CompoundParameter("Level", .5)
+    new CompoundParameter("Level", 1)
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Base brightness level");
 
