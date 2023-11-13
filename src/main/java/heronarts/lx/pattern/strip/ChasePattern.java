@@ -38,12 +38,12 @@ import heronarts.lx.utils.LXUtils;
 public class ChasePattern extends LXPattern {
 
   public interface DistanceFunction {
-    public double compute(double pos, double motion, double chunkSize);
+    public float compute(float pos, float motion, float chunkSize);
   }
 
   public enum WrapMode {
     ABS("Abs", (pos, motion, chunkSize) -> {
-      return 2 * LXUtils.wrapdist(pos, motion, chunkSize);
+      return 2 * LXUtils.wrapdistf(pos, motion, chunkSize);
     }),
 
     POS("Pos", (pos, motion, chunkSize) -> {
@@ -59,11 +59,11 @@ public class ChasePattern extends LXPattern {
     }),
 
     CLIP_POS("Clip+", (pos, motion, chunkSize) -> {
-      return (pos > motion) ? pos - motion : Double.MAX_VALUE;
+      return (pos > motion) ? pos - motion : Float.MAX_VALUE;
     }),
 
     CLIP_NEG("Clip-", (pos, motion, chunkSize) -> {
-      return (motion > pos) ? motion - pos: Double.MAX_VALUE;
+      return (motion > pos) ? motion - pos: Float.MAX_VALUE;
     });
 
     private final String label;
@@ -294,35 +294,35 @@ public class ChasePattern extends LXPattern {
     }
 
     // Now work on the chase chunks
-    final double chunkSize = LXUtils.lerp(this.minChunk.getValue(), this.maxChunk.getValue(), this.chunkSize.getValue() * .01);
+    final float chunkSize = LXUtils.lerpf(this.minChunk.getValuef(), this.maxChunk.getValuef(), this.chunkSize.getValuef() * .01f);
     final int chunkSizei = (int) chunkSize;
-    final double motion = wave * chunkSize;
+    final float motion = (float) wave * chunkSize;
 
-    final double size = this.size.getValue() * .01;
-    final double fade = this.fade.getValue() * .01;
-    final double invert = this.invert.getValue() * .01;
+    final float size = this.size.getValuef() * .01f;
+    final float fade = this.fade.getValuef() * .01f;
+    final float invert = this.invert.getValuef() * .01f;
 
-    final double sizePixels = chunkSize * size;
-    final double fadePixels = chunkSize * fade;
+    final float sizePixels = chunkSize * size;
+    final float fadePixels = chunkSize * fade;
 
     final boolean interlace = this.interlace.isOn();
     final boolean alternateChunk = this.alternateChunk.isOn();
     final WrapMode wrap = this.wrap.getEnum();
 
     final boolean swarmOn = this.swarmOn.isOn();
-    final double swarmSize = .01 + this.swarmSize.getValue();
-    final double swarmX = this.swarmX.getValue();
-    final double swarmY = this.swarmY.getValue();
-    final double swarmFade = this.swarmFade.getValue() * .01;
-    final double swarmFadeAbs = Math.abs(swarmFade);
-    final double swarmBrightness = this.swarmBrightness.getValue() * .01;
-    final double swarmBrightnessAbs = Math.abs(swarmBrightness);
-    final double shift = this.shift.getValue() * .01 * this.shiftRange.getValue() * .01 * chunkSize;
+    final float swarmSize = .01f + this.swarmSize.getValuef();
+    final float swarmX = this.swarmX.getValuef();
+    final float swarmY = this.swarmY.getValuef();
+    final float swarmFade = this.swarmFade.getValuef() * .01f;
+    final float swarmFadeAbs = Math.abs(swarmFade);
+    final float swarmBrightness = this.swarmBrightness.getValuef() * .01f;
+    final float swarmBrightnessAbs = Math.abs(swarmBrightness);
+    final float shift = this.shift.getValuef() * .01f * this.shiftRange.getValuef() * .01f * chunkSize;
 
-    final double level = this.level.getValue();
+    final float level = this.level.getValuef();
 
-    double minSizePixels = LXUtils.lerp(0, chunkSize + sizePixels, invert);
-    double minFadePixels = LXUtils.lerp(0, chunkSize + sizePixels, invert);
+    float minSizePixels = LXUtils.lerpf(0, chunkSize + sizePixels, invert);
+    float minFadePixels = LXUtils.lerpf(0, chunkSize + sizePixels, invert);
 
     if (swarmFade < 0) {
       minSizePixels = chunkSize - minSizePixels;
@@ -334,38 +334,38 @@ public class ChasePattern extends LXPattern {
     int i = 0;
     for (LXPoint p : model.points) {
       int chunkIndex = i / chunkSizei;
-      double pos = i % chunkSize;
+      float pos = i % chunkSize;
       boolean evenChunk = (chunkIndex % 2) == 0;
       if ((even && interlace) ^ (evenChunk & alternateChunk)) {
         pos = (chunkSize - pos) % chunkSize;
       }
 
       // Apply shift to motion
-      double motion2 = (motion + chunkIndex * shift) % chunkSize;
+      float motion2 = (motion + chunkIndex * shift) % chunkSize;
 
       // Distance application
-      double dist = wrap.distance.compute(pos, motion2, chunkSize);
+      float dist = wrap.distance.compute(pos, motion2, chunkSize);
 
-      double swarmDistance = swarmOn ? LXUtils.dist(swarmX, swarmY, p.xn, p.yn) / swarmSize : 0;
+      float swarmDistance = swarmOn ? LXUtils.distf(swarmX, swarmY, p.xn, p.yn) / swarmSize : 0;
 
       // Swarm modifies size and falloff
-      double swarmFadeLerp = LXUtils.min(1, swarmDistance * swarmFadeAbs);
-      double sizePixels2 = LXUtils.lerp(sizePixels, minSizePixels, swarmFadeLerp);
-      double fadePixels2 =  LXUtils.lerp(fadePixels, minFadePixels, swarmFadeLerp);
+      float swarmFadeLerp = LXUtils.minf(1, swarmDistance * swarmFadeAbs);
+      float sizePixels2 = LXUtils.lerpf(sizePixels, minSizePixels, swarmFadeLerp);
+      float fadePixels2 =  LXUtils.lerpf(fadePixels, minFadePixels, swarmFadeLerp);
 
-      double falloff = 100 / fadePixels2;
-      double btop = LXUtils.constrain((sizePixels2 + fadePixels2 - 1)*100, 0, 100);
+      float falloff = 100 / fadePixels2;
+      float btop = LXUtils.constrainf((sizePixels2 + fadePixels2 - 1)*100, 0, 100);
 
-      double b = (dist <= sizePixels2) ? btop : LXUtils.max(0, btop - falloff * (dist - sizePixels2));
-      b = LXUtils.lerp(b, 100-b, invert);
+      float b = (dist <= sizePixels2) ? btop : LXUtils.maxf(0, btop - falloff * (dist - sizePixels2));
+      b = LXUtils.lerpf(b, 100-b, invert);
 
       // Swarm modifies brightness
       if (swarmBrightness >= 0) {
-        double swarmBrightnessLerp = LXUtils.constrain(swarmDistance * swarmBrightnessAbs, 0, 1);
-        b = LXUtils.lerp(b, 0, swarmBrightnessLerp);
+        float swarmBrightnessLerp = LXUtils.constrainf(swarmDistance * swarmBrightnessAbs, 0, 1);
+        b = LXUtils.lerpf(b, 0, swarmBrightnessLerp);
       } else {
-        double swarmBrightnessLerp = LXUtils.constrain((1.414-swarmDistance) * swarmBrightnessAbs, 0, 1);
-        b = LXUtils.lerp(b, 0, swarmBrightnessLerp);
+        float swarmBrightnessLerp = LXUtils.constrainf((1.414f-swarmDistance) * swarmBrightnessAbs, 0, 1);
+        b = LXUtils.lerpf(b, 0, swarmBrightnessLerp);
       }
 
       colors[p.index] = LXColor.gray(level * b);
