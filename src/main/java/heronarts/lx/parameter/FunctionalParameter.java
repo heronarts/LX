@@ -26,6 +26,19 @@ import heronarts.lx.LXComponent;
  */
 public abstract class FunctionalParameter implements LXParameter {
 
+  public interface Interface {
+    public double getValue();
+  }
+
+  public static FunctionalParameter create(Interface iface) {
+    return new FunctionalParameter() {
+      @Override
+      public double getValue() {
+        return iface.getValue();
+      }
+    };
+  }
+
   private final String label;
   protected String description = null;
 
