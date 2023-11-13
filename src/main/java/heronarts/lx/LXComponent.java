@@ -563,6 +563,20 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   /**
+   * Whether a parameter is a valid OSC target, this component must be
+   * an instance of LXOscComponent and the parameters needs to be in the
+   * normal parameters array, e.g. not an internal parameter
+   *
+   * @param parameter Parameter to check
+   * @return If this is a valid OSC parameter
+   */
+  public boolean isValidOscParameter(LXParameter parameter) {
+    return
+      (this instanceof LXOscComponent) &&
+      this.parameters.containsKey(parameter.getPath());
+  }
+
+  /**
    * Determines whether the given LX object is contained by this
    * parent, at any depth in the tree of child components and parameters.
    *
