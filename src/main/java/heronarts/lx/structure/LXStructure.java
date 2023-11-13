@@ -1031,8 +1031,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.model = new LXModel(submodels, generateManualNormalizationBounds()).normalizePoints();
     this.modelListener.structureChanged(this.model);
 
-    if ((this.modelFile != null) && !fromLoad) {
-      this.modelName.setValue(this.modelFile.getName() + "*");
+    if (!fromLoad) {
+      setDirty();
     }
   }
 
@@ -1062,21 +1062,24 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     // We need to re-normalize our model, things have changed
     this.model.update(true, true);
     this.modelListener.structureGenerationChanged(this.model);
-
-    // Denote that file is modified
-    if (this.modelFile != null) {
-      this.modelName.setValue(this.modelFile.getName() + "*");
-    }
+    setDirty();
   }
 
   @Override
   public void fixtureOutputChanged(LXFixture fixture) {
     regenerateOutputs();
+    setDirty();
   }
 
   @Override
   public void fixtureTagsChanged(LXFixture fixture) {
     regenerateModel(false);
+  }
+
+  private void setDirty() {
+    if (this.modelFile != null) {
+      this.modelName.setValue(this.modelFile.getName() + "*");
+    }
   }
 
   private boolean isLoading = false;
