@@ -49,7 +49,7 @@ import heronarts.lx.transform.LXVector;
 * In cases where fixed-model programming is preferred, it is recommended to use
 * the {@link LXModelBuilder} class to aid in model construction.
 */
-public class LXModel implements LXSerializable {
+public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
   /**
    * A collection of helpful pre-defined constants for the most common model
@@ -147,27 +147,14 @@ public class LXModel implements LXSerializable {
   /**
    * Center position in the model (half-way between extremes)
    */
+  @Deprecated
   public final LXVector center = new LXVector(0, 0, 0);
 
   /**
    * Average position in the model (weighted by point density)
    */
+  @Deprecated
   public final LXVector average = new LXVector(0, 0, 0);
-
-  /**
-   * Center of the model in x space
-   */
-  public float cx;
-
-  /**
-   * Center of the model in y space
-   */
-  public float cy;
-
-  /**
-   * Center of the model in z space
-   */
-  public float cz;
 
   /**
    * Average x point
@@ -183,51 +170,6 @@ public class LXModel implements LXSerializable {
    * Average z point
    */
   public float az;
-
-  /**
-   * Minimum x value
-   */
-  public float xMin;
-
-  /**
-   * Maximum x value
-   */
-  public float xMax;
-
-  /**
-   * Range of x values
-   */
-  public float xRange;
-
-  /**
-   * Minimum y value
-   */
-  public float yMin;
-
-  /**
-   * Maximum y value
-   */
-  public float yMax;
-
-  /**
-   * Range of y values
-   */
-  public float yRange;
-
-  /**
-   * Minimum z value
-   */
-  public float zMin;
-
-  /**
-   * Maximum z value
-   */
-  public float zMax;
-
-  /**
-   * Range of z values
-   */
-  public float zRange;
 
   /**
    * Smallest radius from origin (0, 0)
@@ -264,7 +206,7 @@ public class LXModel implements LXSerializable {
 
   /**
    * Angle of this model's center about the origin in the x-z plane
-   * (right-handed angle of rotation about the Y-axis)
+   * (clockwise rotation about the upwards vertical Y-axis)
    *
    * 0 is pointing straight ahead (+z axis)
    * HALF_PI is to the right (+x axis)
@@ -281,6 +223,8 @@ public class LXModel implements LXSerializable {
    * -HALF_PI is downwards (-y axis)
    */
   public float elevation;
+
+  private final LXNormalizationBounds normalizationBounds;
 
   /**
    * Constructs a null model with no points
@@ -376,6 +320,7 @@ public class LXModel implements LXSerializable {
     this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
+    this.normalizationBounds = this;
 
     Map<String, String> mutableMetadata = new HashMap<String, String>();
     if (metaData != null) {
@@ -394,20 +339,7 @@ public class LXModel implements LXSerializable {
    * @param children Sub-models
    */
   public LXModel(LXModel[] children) {
-    this(children, LXModel.Tag.MODEL);
-  }
-
-  /**
-   *
-   * Constructs a model from the given submodels. The point list is generated from
-   * all points in the submodels, on the assumption that they have not yet been
-   * added.
-   *
-   * @param children Pre-built sub-models
-   * @param tags Tag identifiers for this model
-   */
-  private LXModel(LXModel[] children, String ... tags) {
-    this(children, java.util.Arrays.asList(tags));
+    this(children, (LXNormalizationBounds) null);
   }
 
   /**
@@ -415,10 +347,36 @@ public class LXModel implements LXSerializable {
    * all points in the submodels, on the assumption that they have not yet been
    * added.
    *
+   * @param children Sub-models
+   * @param bounds Bounds
+   */
+  public LXModel(LXModel[] children, LXNormalizationBounds bounds) {
+    this(children, bounds, LXModel.Tag.MODEL);
+  }
+
+  /**
+   * Constructs a model from the given submodels. The point list is generated from
+   * all points in the submodels, on the assumption that they have not yet been
+   * added.
+   *
+   * @param children Sub-models
+   * @param bounds Normalization bounds
+   * @param tags Tags
+   */
+  public LXModel(LXModel[] children, LXNormalizationBounds bounds, String ... tags) {
+    this(children, bounds, java.util.Arrays.asList(tags));
+  }
+
+  /**
+   * Constructs a model from the given submodels. The point list is generated from
+   * all points in the submodels, on the assumption that they have not yet been
+   * added.
+   *
    * @param children Pre-built sub-models
+   * @param bounds Normalization bounds
    * @param tags Tag identifiers for this model
    */
-  private LXModel(LXModel[] children, List<String> tags) {
+  private LXModel(LXModel[] children, LXNormalizationBounds bounds, List<String> tags) {
     this.tags = validateTags(tags);
     List<LXPoint> _points = new ArrayList<LXPoint>();
     addChildren(children);
@@ -431,6 +389,7 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = _points.size();
+    this.normalizationBounds = (bounds != null) ? bounds : this;
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
     this.metaData = Collections.unmodifiableMap(new HashMap<String, String>());
     recomputeGeometry();
@@ -458,6 +417,7 @@ public class LXModel implements LXSerializable {
     this.points = _points.toArray(new LXPoint[0]);
     this.pointList = Collections.unmodifiableList(_points);
     this.size = this.points.length;
+    this.normalizationBounds = this;
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>(builder.outputs));
     this.metaData = Collections.unmodifiableMap(new HashMap<String, String>());
     recomputeGeometry();
@@ -497,8 +457,8 @@ public class LXModel implements LXSerializable {
    *
    * @return Model that defines normalization ranges for points
    */
-  public LXModel getNormalizationSpace() {
-    return this;
+  public LXNormalizationBounds getNormalizationBounds() {
+    return this.normalizationBounds;
   }
 
   /**
@@ -852,9 +812,9 @@ public class LXModel implements LXSerializable {
     this.rMin = rMin;
     this.rMax = rMax;
     this.rRange = rMax - rMin;
-    this.cx = xMin + xRange / 2f;
-    this.cy = yMin + yRange / 2f;
-    this.cz = zMin + zRange / 2f;
+    this.cx = xMin + .5f * this.xRange;
+    this.cy = yMin + .5f * this.yRange;
+    this.cz = zMin + .5f * this.zRange;
     this.center.set(this.cx, this.cy, this.cz);
     this.average.set(this.ax, this.ay, this.az);
     this.azimuth = (float) ((LX.TWO_PI + Math.atan2(this.cx, this.cz)) % (LX.TWO_PI));
@@ -869,7 +829,7 @@ public class LXModel implements LXSerializable {
    */
   public LXModel normalizePoints() {
     for (LXPoint p : this.points) {
-      p.normalize(this);
+      p.normalize(this.normalizationBounds, this);
     }
     float rcMin = 0, rcMax = 0;
     boolean firstPoint = true;

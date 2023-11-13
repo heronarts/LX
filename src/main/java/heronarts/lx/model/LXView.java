@@ -432,7 +432,7 @@ public class LXView extends LXModel {
   }
 
   @Override
-  public LXModel getNormalizationSpace() {
+  public LXModel getNormalizationBounds() {
     return this.normalizationSpace;
   }
 

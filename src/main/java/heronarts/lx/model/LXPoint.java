@@ -360,17 +360,17 @@ public class LXPoint {
   /**
    * Sets the normalized values on this point, relative to a model
    *
-   * @param model Model to normalize points relative to
+   * @param bounds Model to normalize points relative to
    */
-  void normalize(LXModel model) {
-    this.xn = (model.xRange == 0) ? .5f : (this.x - model.xMin) / model.xRange;
-    this.yn = (model.yRange == 0) ? .5f : (this.y - model.yMin) / model.yRange;
-    this.zn = (model.zRange == 0) ? .5f : (this.z - model.zMin) / model.zRange;
+  void normalize(LXNormalizationBounds bounds, LXModel model) {
+    this.xn = (bounds.xRange == 0) ? .5f : (this.x - bounds.xMin) / bounds.xRange;
+    this.yn = (bounds.yRange == 0) ? .5f : (this.y - bounds.yMin) / bounds.yRange;
+    this.zn = (bounds.zRange == 0) ? .5f : (this.z - bounds.zMin) / bounds.zRange;
     this.rn = (model.rMax == 0) ? .5f : this.r / model.rMax;
 
-    float rx = this.x - model.cx;
-    float ry = this.y - model.cy;
-    float rz = this.z - model.cz;
+    float rx = this.x - bounds.cx;
+    float ry = this.y - bounds.cy;
+    float rz = this.z - bounds.cz;
     this.rc = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
   }
 }

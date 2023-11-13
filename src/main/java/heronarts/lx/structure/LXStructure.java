@@ -41,6 +41,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXNormalizationBounds;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.IndexBuffer;
@@ -50,6 +51,10 @@ import heronarts.lx.output.OPCDatagram;
 import heronarts.lx.output.OPCSocket;
 import heronarts.lx.output.StreamingACNDatagram;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.LXListenableParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.structure.view.LXViewEngine;
 import heronarts.lx.utils.LXUtils;
@@ -438,6 +443,22 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     public void fixtureMoved(LXFixture fixture, int index);
   }
 
+  public enum NormalizationMode {
+    AUTOMATIC("Auto"),
+    MANUAL("Manual");
+
+    public final String label;
+
+    private NormalizationMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   private File modelFile = null;
 
   public final StringParameter modelName =
@@ -462,6 +483,38 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   public final BooleanParameter mute =
     new BooleanParameter("Mute", false)
     .setDescription("Send black to all pixels");
+
+  public final EnumParameter<NormalizationMode> normalizationMode =
+    new EnumParameter<NormalizationMode>("Normalization", NormalizationMode.AUTOMATIC)
+    .setDescription("Whether the normalization space is defined by the model or manually");
+
+  public final BoundedParameter normalizationX =
+    new BoundedParameter("X", 0, -LXFixture.POSITION_RANGE, LXFixture.POSITION_RANGE)
+    .setDescription("Manual X position of the normalization center");
+
+  public final BoundedParameter normalizationY =
+    new BoundedParameter("Y", 0, -LXFixture.POSITION_RANGE, LXFixture.POSITION_RANGE)
+    .setDescription("Manual Y position of the normalization center");
+
+  public final BoundedParameter normalizationZ =
+    new BoundedParameter("Z", 0, -LXFixture.POSITION_RANGE, LXFixture.POSITION_RANGE)
+    .setDescription("Manual Z position of the normalization center");
+
+  public final BoundedParameter normalizationWidth =
+    new BoundedParameter("Width", 100, 0, LXFixture.POSITION_RANGE)
+    .setDescription("With of the normalization space");
+
+  public final BoundedParameter normalizationHeight =
+    new BoundedParameter("Height", 100, 0, LXFixture.POSITION_RANGE)
+    .setDescription("Height of the normalization space");
+
+  public final BoundedParameter normalizationDepth =
+    new BoundedParameter("Depth", 100, 0, LXFixture.POSITION_RANGE)
+    .setDescription("Depth of the normalization space");
+
+  public final BooleanParameter showNormalizationBounds =
+    new BooleanParameter("Show Normalization Bounds", false)
+    .setDescription("Outline the normalization bounds in the preview window");
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
@@ -490,6 +543,14 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     addParameter("syncModelFile", this.syncModelFile);
     addParameter("allWhite", this.allWhite);
     addParameter("mute", this.mute);
+    addNormalizationParameter("normalizationMode", this.normalizationMode);
+    addNormalizationParameter("normalizationX", this.normalizationX);
+    addNormalizationParameter("normalizationY", this.normalizationY);
+    addNormalizationParameter("normalizationZ", this.normalizationZ);
+    addNormalizationParameter("normalizationWidth", this.normalizationWidth);
+    addNormalizationParameter("normalizationHeight", this.normalizationHeight);
+    addNormalizationParameter("normalizationDepth", this.normalizationDepth);
+    addInternalParameter("showNormalizationBounds", this.showNormalizationBounds);
 
     addChild("views", this.views = new LXViewEngine(lx));
 
@@ -514,6 +575,38 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
           + sx.getLocalizedMessage());
     }
     this.output = output;
+  }
+
+  private void addNormalizationParameter(String path, LXListenableParameter p) {
+    addParameter(path, p);
+    p.addListener(this::normalizationChanged);
+  }
+
+  private void normalizationChanged(LXParameter p) {
+    if ((p == this.normalizationMode) || (this.normalizationMode.getEnum() == NormalizationMode.MANUAL)) {
+      regenerateModel(false);
+    }
+  }
+
+  private LXNormalizationBounds generateManualNormalizationBounds() {
+    if (this.normalizationMode.getEnum() == NormalizationMode.AUTOMATIC) {
+      return null;
+    }
+
+    final LXNormalizationBounds bounds = new LXNormalizationBounds();
+    bounds.cx = this.normalizationX.getValuef();
+    bounds.cy = this.normalizationY.getValuef();
+    bounds.cz = this.normalizationZ.getValuef();
+    bounds.xRange = this.normalizationWidth.getValuef();
+    bounds.yRange = this.normalizationHeight.getValuef();
+    bounds.zRange = this.normalizationDepth.getValuef();
+    bounds.xMin = bounds.cx - .5f * bounds.xRange;
+    bounds.xMax = bounds.cx + .5f * bounds.xRange;
+    bounds.yMin = bounds.cy - .5f * bounds.yRange;
+    bounds.yMax = bounds.cy + .5f * bounds.yRange;
+    bounds.zMin = bounds.cz - .5f * bounds.zRange;
+    bounds.zMax = bounds.cz + .5f * bounds.zRange;
+    return bounds;
   }
 
   /**
@@ -923,7 +1016,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
     }
 
-    LXModel[] submodels = new LXModel[activeFixtures];
+    final LXModel[] submodels = new LXModel[activeFixtures];
     int pointIndex = 0;
     int fixtureIndex = 0;
     for (LXFixture fixture : this.fixtures) {
@@ -934,7 +1027,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
         submodels[fixtureIndex++] = fixtureModel;
       }
     }
-    this.model = new LXModel(submodels).normalizePoints();
+
+    this.model = new LXModel(submodels, generateManualNormalizationBounds()).normalizePoints();
     this.modelListener.structureChanged(this.model);
 
     if ((this.modelFile != null) && !fromLoad) {

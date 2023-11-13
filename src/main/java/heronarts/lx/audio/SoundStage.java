@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXNormalizationBounds;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -107,15 +108,15 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     .setDescription("Absolute Z position of the sound stage center");
 
   public final BoundedParameter widthAbsolute =
-    new BoundedParameter("Width", 100, -LXFixture.POSITION_RANGE, LXFixture.POSITION_RANGE)
+    new BoundedParameter("Width", 100, 0, LXFixture.POSITION_RANGE)
     .setDescription("Absolute width of the sound stage");
 
   public final BoundedParameter heightAbsolute =
-    new BoundedParameter("Height", 100, -LXFixture.POSITION_RANGE, LXFixture.POSITION_RANGE)
+    new BoundedParameter("Height", 100, 0, LXFixture.POSITION_RANGE)
     .setDescription("Absolute height of the sound stage");
 
   public final BoundedParameter depthAbsolute =
-    new BoundedParameter("Depth", 100, -LXFixture.POSITION_RANGE, LXFixture.POSITION_RANGE)
+    new BoundedParameter("Depth", 100, 0, LXFixture.POSITION_RANGE)
     .setDescription("Absolute depth of the sound stage");
 
   public final BoundedParameter xRelative =
@@ -294,11 +295,11 @@ public class SoundStage extends LXComponent implements LXOscComponent {
 
     // Now the values are in the sound stage, we need to normalized them to the reference model
     // by doing an inverse interpolation
-    final LXModel reference = model.getNormalizationSpace();
+    final LXNormalizationBounds bounds = model.getNormalizationBounds();
     position.set(
-      (reference.xRange == 0) ? .5f : LXUtils.ilerpf(position.x, reference.xMin, reference.xMax),
-      (reference.yRange == 0) ? .5f : LXUtils.ilerpf(position.y, reference.yMin, reference.yMax),
-      (reference.zRange == 0) ? .5f : LXUtils.ilerpf(position.z, reference.zMin, reference.zMax)
+      (bounds.xRange == 0) ? .5f : LXUtils.ilerpf(position.x, bounds.xMin, bounds.xMax),
+      (bounds.yRange == 0) ? .5f : LXUtils.ilerpf(position.y, bounds.yMin, bounds.yMax),
+      (bounds.zRange == 0) ? .5f : LXUtils.ilerpf(position.z, bounds.zMin, bounds.zMax)
     );
 
     return position;
