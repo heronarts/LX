@@ -189,11 +189,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   private final Map<String, LXParameter> normalizationParameters =
     new HashMap<String, LXParameter>();
 
-  public LXStructure(LX lx) {
-    this(lx, null);
-  }
-
-  public LXStructure(LX lx, LXModel immutable) {
+  public LXStructure(LX lx, LXModel immutable, ModelListener modelListener) {
     super(lx);
     addParameter("syncModelFile", this.syncModelFile);
     addParameter("allWhite", this.allWhite);
@@ -230,6 +226,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
           + sx.getLocalizedMessage());
     }
     this.output = output;
+
+    this.modelListener = modelListener;
   }
 
   private void addNormalizationParameter(String path, LXListenableParameter p) {
@@ -263,23 +261,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     bounds.zMin = bounds.cz - .5f * bounds.zRange;
     bounds.zMax = bounds.cz + .5f * bounds.zRange;
     return bounds;
-  }
-
-  /**
-   * Internal implementation-only helper to set a listener for notification on
-   * changes to the structure's model. This is used by the LX class to relay
-   * model-changes from the structure back to the top-level LX object while
-   * keeping that functionality private on the core LX API.
-   *
-   * @param listener Listener
-   */
-  public void setModelListener(ModelListener listener) {
-    Objects.requireNonNull("LXStructure.setModelListener() cannot be null");
-    if (this.modelListener != null) {
-      throw new IllegalStateException(
-        "Cannot overwrite setModelListener() - should only called once by LX parent object");
-    }
-    this.modelListener = listener;
   }
 
   @Override

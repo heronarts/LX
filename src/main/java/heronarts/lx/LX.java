@@ -400,13 +400,7 @@ public class LX {
     this.flags.immutableModel = (model != null);
 
     // Create structure object
-    this.structure = new LXStructure(this, model);
-    if (model == null) {
-      this.model = this.structure.getModel();
-    } else {
-      this.model = model;
-    }
-    this.structure.setModelListener(new LXStructure.ModelListener() {
+    this.structure = new LXStructure(this, model, new LXStructure.ModelListener() {
       public void structureChanged(LXModel model) {
         setModel(model);
       }
@@ -416,6 +410,11 @@ public class LX {
         }
       }
     });
+    if (model == null) {
+      this.model = this.structure.getModel();
+    } else {
+      this.model = model;
+    }
     LX.initProfiler.log("Model");
 
     // Custom content loader
