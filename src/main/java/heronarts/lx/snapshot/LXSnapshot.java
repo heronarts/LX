@@ -30,6 +30,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXLayer;
 import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXPath;
@@ -240,8 +241,13 @@ public abstract class LXSnapshot extends LXComponent {
 
     private ParameterView(LX lx, JsonObject obj) {
       super(lx, obj);
-      String path = obj.get(KEY_PARAMETER_PATH).getAsString();
-      this.parameter = (LXParameter) LXPath.get(lx, path);
+      final String path = obj.get(KEY_PARAMETER_PATH).getAsString();
+
+      if (isGlobalSnapshot() || path.startsWith(LXPath.ROOT_PREFIX)) {
+        this.parameter = (LXParameter) LXPath.get(lx, path);
+      } else {
+        this.parameter = (LXParameter) LXPath.get(snapshotParameterScope, path);
+      }
       if (this.parameter == null) {
         throw new IllegalStateException("Cannot create snapshot view of non-existent parameter: " + path);
       }
@@ -355,10 +361,10 @@ public abstract class LXSnapshot extends LXComponent {
     @Override
     public void save(LX lx, JsonObject obj) {
       super.save(lx, obj);
-      obj.addProperty(KEY_PARAMETER_PATH, this.parameter.getCanonicalPath());
-      if (parameter instanceof DiscreteParameter) {
+      obj.addProperty(KEY_PARAMETER_PATH, this.parameter.getCanonicalPath(snapshotParameterScope));
+      if (this.parameter instanceof DiscreteParameter) {
         obj.addProperty(KEY_VALUE, this.intValue);
-      } else if (parameter instanceof StringParameter) {
+      } else if (this.parameter instanceof StringParameter) {
         obj.addProperty(KEY_VALUE, this.stringValue);
       } else {
         obj.addProperty(KEY_VALUE, this.value);
@@ -390,8 +396,13 @@ public abstract class LXSnapshot extends LXComponent {
 
     private ChannelFaderView(LX lx, JsonObject obj) {
       super(ViewScope.MIXER, ViewType.CHANNEL_FADER);
-      final String channelPath = obj.get(KEY_CHANNEL_PATH).getAsString();
-      this.channel = (LXAbstractChannel) LXPath.get(lx, channelPath);
+      String channelPath = "";
+      if (isClipSnapshot()) {
+        this.channel = getClipChannel();
+      } else {
+        channelPath = obj.get(KEY_CHANNEL_PATH).getAsString();
+        this.channel = (LXAbstractChannel) LXPath.get(lx, channelPath);
+      }
       if (this.channel == null) {
         throw new IllegalStateException("Cannot create ChannelFaderView of non-existent channel: " + channelPath);
       }
@@ -451,7 +462,9 @@ public abstract class LXSnapshot extends LXComponent {
     @Override
     public void save(LX lx, JsonObject obj) {
       super.save(lx, obj);
-      obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath());
+      if (isGlobalSnapshot()) {
+        obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath());
+      }
       obj.addProperty(KEY_CHANNEL_ENABLED, this.enabled);
       obj.addProperty(KEY_CHANNEL_FADER, this.fader);
     }
@@ -474,8 +487,13 @@ public abstract class LXSnapshot extends LXComponent {
 
     private ActivePatternView(LX lx, JsonObject obj) {
       super(lx, obj);
-      final String channelPath = obj.get(KEY_CHANNEL_PATH).getAsString();
-      this.channel = (LXChannel) LXPath.get(lx, channelPath);
+      String channelPath = "";
+      if (isClipSnapshot()) {
+        this.channel = getClipChannel();
+      } else {
+        channelPath = obj.get(KEY_CHANNEL_PATH).getAsString();
+        this.channel = (LXChannel) LXPath.get(lx, channelPath);
+      }
       if (this.channel == null) {
         throw new IllegalStateException("Cannot restore ActivePatternView for non-existent channel: " + channelPath);
       }
@@ -507,19 +525,42 @@ public abstract class LXSnapshot extends LXComponent {
     @Override
     public void save(LX lx, JsonObject obj) {
       super.save(lx, obj);
-      obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath());
+      if (isGlobalSnapshot()) {
+        obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath(snapshotParameterScope));
+      }
       obj.addProperty(KEY_ACTIVE_PATTERN_INDEX, this.pattern.getIndex());
     }
   }
+
+  /**
+   * Scope that parameters are serialized within, or null. For global snapshots
+   * this is null since the snapshot can refer to anything, but clip snapshots
+   * are scoped to the bus that they live on and only refer to parameters within
+   * that prefix.
+   */
+  private final LXComponent snapshotParameterScope;
 
   public final BoundedParameter transitionTimeSecs =
     new BoundedParameter("Transition Time", 1, .1, 180)
     .setDescription("Sets the duration of interpolated transitions between snapshots")
     .setUnits(LXParameter.Units.SECONDS);
 
-  protected LXSnapshot(LX lx) {
+  protected LXSnapshot(LX lx, LXComponent snapshotParameterScope) {
     super(lx, "Snapshot");
+    this.snapshotParameterScope = snapshotParameterScope;
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
+  }
+
+  public boolean isGlobalSnapshot() {
+    return (this instanceof LXGlobalSnapshot);
+  }
+
+  public boolean isClipSnapshot() {
+    return (this instanceof LXClipSnapshot);
+  }
+
+  public LXChannel getClipChannel() {
+    return null;
   }
 
   /**
@@ -548,20 +589,17 @@ public abstract class LXSnapshot extends LXComponent {
       addParameterView(ViewScope.MIXER, channel.crossfadeGroup);
     }
 
-    initializeClipBus(bus, true);
+    if (bus instanceof LXChannel) {
+      addParameterView(ViewScope.PATTERNS, ((LXChannel) bus).compositeMode);
+    }
+
+    initializeClipBus(bus);
   }
 
   protected void initializeClipBus(LXBus bus) {
-    initializeClipBus(bus, false);
-  }
-
-  private void initializeClipBus(LXBus bus, boolean isGlobal) {
 
     if (bus instanceof LXChannel) {
-      LXChannel channel = (LXChannel) bus;
-      if (isGlobal) {
-        addParameterView(ViewScope.PATTERNS, channel.compositeMode);
-      }
+      final LXChannel channel = (LXChannel) bus;
       if (channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
         // Only need to add settings for the active pattern
         LXPattern pattern = channel.getActivePattern();
@@ -572,7 +610,8 @@ public abstract class LXSnapshot extends LXComponent {
       } else {
         for (LXPattern pattern : channel.patterns) {
           if (pattern.enabled.isOn()) {
-            // Store all settings for any pattern that is active (including enabled state)
+            // Store all settings for any pattern that is active, explicitly including enabled state
+            addParameterView(ViewScope.PATTERNS, pattern.enabled);
             addPatternView(pattern);
           } else {
             // Just store enabled (disabled) state for a pattern that's off
@@ -591,7 +630,7 @@ public abstract class LXSnapshot extends LXComponent {
   protected void addEffectView(LXEffect effect) {
     if (effect.enabled.isOn()) {
       // If the effect is on, store all its parameters (including that it's enabled)
-      addLayeredView(ViewScope.EFFECTS, effect);
+      addDeviceView(ViewScope.EFFECTS, effect);
     } else {
       // If the effect is off, then we only recall that it is off
       addParameterView(ViewScope.EFFECTS, effect.enabled);
@@ -599,9 +638,25 @@ public abstract class LXSnapshot extends LXComponent {
   }
 
   protected void addPatternView(LXPattern pattern) {
-    addLayeredView(ViewScope.PATTERNS, pattern);
+    addDeviceView(ViewScope.PATTERNS, pattern);
     for (LXEffect effect : pattern.effects) {
       addEffectView(effect);
+    }
+  }
+
+  protected void addDeviceView(ViewScope scope, LXDeviceComponent device) {
+    for (LXParameter p : device.getParameters()) {
+      AggregateParameter ap = p.getParentParameter();
+      if (ap != null) {
+        p = ap;
+      }
+      if (device.isSnapshotControl(p)) {
+        addParameterView(scope, p);
+      }
+    }
+
+    for (LXLayer layer : device.getLayers()) {
+      addLayeredView(scope, layer);
     }
   }
 

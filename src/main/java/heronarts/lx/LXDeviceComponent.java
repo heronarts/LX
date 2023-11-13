@@ -228,6 +228,21 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   }
 
   /**
+   * Returns whether this parameter is stored along with snapshots
+   *
+   * @param parameter Parameter
+   * @return true if this can be included in snapshots
+   */
+  public boolean isSnapshotControl(LXParameter parameter) {
+    return !(
+      (parameter == this.label) ||
+      (parameter == this.midiFilter) ||
+      (parameter == this.viewPriority)
+    );
+
+  }
+
+  /**
    * Returns whether this parameter is visible in default remote control
    * or device control UIs
    *

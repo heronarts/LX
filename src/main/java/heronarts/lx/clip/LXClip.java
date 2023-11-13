@@ -118,7 +118,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("automationEnabled", this.automationEnabled);
     addParameter("customSnapshotTransition", this.customSnapshotTransition);
 
-    addChild("snapshot", this.snapshot = new LXClipSnapshot(lx));
+    addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this));
 
     for (LXEffect effect : bus.effects) {
       registerComponent(effect);

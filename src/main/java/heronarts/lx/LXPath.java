@@ -25,6 +25,11 @@ import heronarts.lx.parameter.LXParameter;
  * Typcially this is an LXComponent or an LXParameter
  */
 public interface LXPath {
+
+  public static final String ROOT = "lx";
+  public static final String ROOT_PREFIX = "/lx/";
+  public static final String ROOT_SLASH = "lx/";
+
   /**
    * Returns the immediate path of this component, relative to its parent
    *
@@ -136,10 +141,10 @@ public interface LXPath {
     if (path.charAt(0) == '/') {
       path = path.substring(1);
     }
-    if (path.equals("lx")) {
+    if (path.equals(ROOT)) {
       return lx.engine;
     }
-    if (path.startsWith("lx/")) {
+    if (path.startsWith(ROOT_SLASH)) {
       path = path.substring(3);
       String[] parts = path.split("/");
       return lx.engine.path(parts, 0);

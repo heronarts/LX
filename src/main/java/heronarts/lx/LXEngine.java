@@ -437,7 +437,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   @Override
   public String getPath() {
-    return "lx";
+    return LXPath.ROOT;
   }
 
   public LXEngine setInputDispatch(Dispatch inputDispatch) {

@@ -62,7 +62,7 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
 
 
   public LXGlobalSnapshot(LX lx) {
-    super(lx);
+    super(lx, null);
     setParent(lx.engine.snapshots);
     addParameter("recall", this.recall);
     addParameter("autoCycleEligible", this.autoCycleEligible);

@@ -24,6 +24,8 @@ import heronarts.lx.LX;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.command.LXCommand;
+import heronarts.lx.mixer.LXBus;
+import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -34,17 +36,29 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
   private boolean inTransition = false;
   private double transitionProgress = 0;
 
-  public LXClipSnapshot(LX lx) {
-    super(lx);
+  public final LXClip clip;
+
+  public LXClipSnapshot(LX lx, LXClip clip) {
+    super(lx, clip.bus);
+    this.clip = clip;
   }
 
   public LXClip getClip() {
-    return (LXClip) getParent();
+    return this.clip;
+  }
+
+  public LXBus getBus() {
+    return this.clip.bus;
+  }
+
+  @Override
+  public LXChannel getClipChannel() {
+    return (this.clip.bus instanceof LXChannel) ? (LXChannel) this.clip.bus : null;
   }
 
   @Override
   public void initialize() {
-    initializeClipBus(getClip().bus);
+    initializeClipBus(this.clip.bus);
   }
 
   public boolean isInTransition() {
@@ -62,16 +76,14 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
   }
 
   public BooleanParameter getSnapshotTransitionEnabledParameter() {
-    final LXClip clip = getClip();
-    return clip.customSnapshotTransition.isOn() ?
-      clip.snapshotTransitionEnabled :
+    return this.clip.customSnapshotTransition.isOn() ?
+      this.clip.snapshotTransitionEnabled :
       lx.engine.clips.snapshotTransitionEnabled;
   }
 
   public BoundedParameter getSnapshotTransitionTimeParameter() {
-    final LXClip clip = getClip();
-    return clip.customSnapshotTransition.isOn() ?
-      clip.snapshot.transitionTimeSecs :
+    return this.clip.customSnapshotTransition.isOn() ?
+      this.clip.snapshot.transitionTimeSecs :
       lx.engine.clips.snapshotTransitionTimeSecs;
   }
 
@@ -92,10 +104,9 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
 
   public void loop(double deltaMs) {
     if (this.inTransition) {
-      LXClip clip = getClip();
       BoundedParameter transitionTimeSecs =
-        clip.customSnapshotTransition.isOn() ?
-        clip.snapshot.transitionTimeSecs :
+        this.clip.customSnapshotTransition.isOn() ?
+        this.clip.snapshot.transitionTimeSecs :
         lx.engine.clips.snapshotTransitionTimeSecs;
 
       double increment = deltaMs / (1000 * transitionTimeSecs.getValue());

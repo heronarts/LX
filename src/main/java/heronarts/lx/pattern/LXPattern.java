@@ -238,6 +238,16 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   @Override
+  public boolean isSnapshotControl(LXParameter parameter) {
+    return !(
+      parameter == this.recall ||
+      parameter == this.enabled ||
+      parameter == this.hasCustomCycleTime ||
+      parameter == this.customCycleTimeSecs
+    ) && super.isSnapshotControl(parameter);
+  }
+
+  @Override
   public boolean isHiddenControl(LXParameter parameter) {
     return
       parameter == this.recall ||
