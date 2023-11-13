@@ -18,9 +18,14 @@
 
 package heronarts.lx.modulator;
 
+import com.google.gson.JsonObject;
+
+import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
@@ -54,8 +59,29 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     }
   }
 
+  public enum InterpolationMode {
+    DIRECT("Direct"),
+    DAMPING("Damped"),
+    SMOOTHING("Smooth");
+
+    public final String label;
+
+    private InterpolationMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   public final EnumParameter<TriggerMode> triggerMode =
     new EnumParameter<TriggerMode>("Trig Mode", TriggerMode.INTERNAL)
+    .setDescription("Whether triggers are internally or externally generated");
+
+  public final EnumParameter<InterpolationMode> lerpMode =
+    new EnumParameter<InterpolationMode>("Lerp Mode", InterpolationMode.DIRECT)
     .setDescription("Whether triggers are internally or externally generated");
 
   public final CompoundParameter periodMs =
@@ -77,10 +103,6 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
 
   private double randomInterval = 0;
 
-  public final BooleanParameter damping =
-    new BooleanParameter("Damping", true)
-    .setDescription("Apply damping to the movement of the random value");
-
   private final FunctionalParameter totalMs = new FunctionalParameter() {
     @Override
     public double getValue() {
@@ -91,14 +113,25 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
   };
 
   public final CompoundParameter speed =
-    new CompoundParameter("Speed", 5, .1, 10)
+    new CompoundParameter("Speed", 5, .01, 10)
     .setExponent(2)
     .setDescription("Speed of value update");
 
-  public final CompoundParameter accel =
-    new CompoundParameter("Acceleration", 5, .1, 10)
+  public final CompoundParameter accelTimeSecs =
+    new CompoundParameter("Accel Time", .5, 0, 5)
+    .setUnits(CompoundParameter.Units.SECONDS)
     .setExponent(2)
-    .setDescription("Acceleration on value change");
+    .setDescription("Number of seconds to accelerate up to speed");
+
+  public final CompoundParameter smoothingWindow =
+    new CompoundParameter("Time", .5)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Smoothing window time");
+
+  public final BoundedParameter smoothingWindowRangeMs =
+    new BoundedParameter("Range", 1000, 100, 60000)
+    .setUnits(BoundedParameter.Units.MILLISECONDS)
+    .setDescription("Range of smoothing window control");
 
   public final CompoundParameter min =
     new CompoundParameter("Minimum", 0)
@@ -120,7 +153,16 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
 
   private final MutableParameter target = new MutableParameter(0.5);
 
-  private final DampedParameter damper = new DampedParameter(this.target, this.speed, this.accel);
+  private double smoothedValue = 0;
+
+  private final DampedParameter damper = new DampedParameter(
+    this.target,
+    this.speed,
+    FunctionalParameter.create(() -> {
+      final double accelTimeSecs = this.accelTimeSecs.getValue();
+      return (accelTimeSecs == 0) ? 0 : (this.speed.getValue() / accelTimeSecs);
+    })
+  );
 
   public Randomizer() {
     this("Random");
@@ -131,13 +173,17 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     setPeriod(this.totalMs);
 
     addParameter("triggerMode", this.triggerMode);
+    addParameter("leprMode", this.lerpMode);
+
     addParameter("periodMs", this.periodMs);
     addParameter("randomMs", this.randomMs);
     addParameter("chance", this.chance);
 
-    addParameter("damping", this.damping);
     addParameter("speed", this.speed);
-    addParameter("accel", this.accel);
+    addParameter("accelTimeSecs", this.accelTimeSecs);
+
+    addParameter("smoothingWindow", this.smoothingWindow);
+    addParameter("smoothingWindowRangeMs", this.smoothingWindowRangeMs);
 
     addParameter("min", this.min);
     addParameter("max", this.max);
@@ -148,6 +194,25 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
     this.damper.start();
 
     setDescription("Random value updated with specified interval and range");
+  }
+
+  private static final String KEY_LEGACY_ACCEL = "accel";
+  private static final String KEY_LEGACY_DAMPING = "damping";
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    if (LXSerializable.Utils.hasParameter(obj, KEY_LEGACY_ACCEL)) {
+      // Acceleration was formerly stored as an absolute value, if that key is still there, then
+      // we set the new parameter based upon the ratio
+      final double legacyAccel = LXSerializable.Utils.getParameter(obj, KEY_LEGACY_ACCEL).getAsDouble();
+      this.accelTimeSecs.setValue((legacyAccel == 0) ? 0 : (this.speed.getValue() / legacyAccel));
+    }
+    if (LXSerializable.Utils.hasParameter(obj, KEY_LEGACY_DAMPING)) {
+      if (LXSerializable.Utils.getParameter(obj, KEY_LEGACY_DAMPING).getAsBoolean()) {
+        this.lerpMode.setValue(InterpolationMode.DAMPING);
+      }
+    }
   }
 
   @Override
@@ -185,16 +250,36 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
         }
       }
     }
-    return this.damping.isOn() ?
-      LXUtils.constrain(this.damper.getValue(), 0, 1) :
-      this.target.getValue();
+    switch (this.lerpMode.getEnum()) {
+    case DAMPING:
+      return LXUtils.constrain(this.damper.getValue(), 0, 1);
+    case SMOOTHING:
+      return this.smoothedValue;
+    default:
+    case DIRECT:
+      return this.smoothedValue = this.target.getValue();
+    }
   }
 
   @Override
   protected void postRun(double deltaMs) {
     this.damper.loop(deltaMs);
-    if (this.damping.isOn()) {
+
+    this.smoothedValue = LXUtils.lerp(
+      getValue(),
+      this.target.getValue(),
+      LXUtils.min(1, deltaMs / (this.smoothingWindow.getValue() * this.smoothingWindowRangeMs.getValue()))
+    );
+
+    switch (this.lerpMode.getEnum()) {
+    case DAMPING:
       updateValue(LXUtils.constrain(this.damper.getValue(), 0, 1));
+      break;
+    case SMOOTHING:
+      updateValue(this.smoothedValue);
+      break;
+    default:
+      break;
     }
   }
 
