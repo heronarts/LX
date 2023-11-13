@@ -63,6 +63,20 @@ public interface LXSerializable {
    */
   public static class Utils {
 
+    public static boolean hasParameter(JsonObject object, String parameter) {
+      if (object.has(LXComponent.KEY_PARAMETERS)) {
+        return object.get(LXComponent.KEY_PARAMETERS).getAsJsonObject().has(parameter);
+      }
+      return false;
+    }
+
+    public static JsonElement getParameter(JsonObject object, String parameter) {
+      if (object.has(LXComponent.KEY_PARAMETERS)) {
+        return object.get(LXComponent.KEY_PARAMETERS).getAsJsonObject().get(parameter);
+      }
+      return null;
+    }
+
     public static void saveParameters(JsonObject obj, Map<String, LXParameter> parameters) {
       for (String path : parameters.keySet()) {
         LXParameter parameter = parameters.get(path);
