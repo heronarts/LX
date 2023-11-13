@@ -532,7 +532,7 @@ public abstract class LXSnapshot extends LXComponent {
 
   public abstract void initialize();
 
-  protected void initializeBus(LXBus bus) {
+  protected void initializeGlobalBus(LXBus bus) {
     if (bus instanceof LXMasterBus) {
       // The master bus fader is just like a normal parameter, but it lives
       // in the MASTER section
@@ -548,9 +548,20 @@ public abstract class LXSnapshot extends LXComponent {
       addParameterView(ViewScope.MIXER, channel.crossfadeGroup);
     }
 
+    initializeClipBus(bus, true);
+  }
+
+  protected void initializeClipBus(LXBus bus) {
+    initializeClipBus(bus, false);
+  }
+
+  private void initializeClipBus(LXBus bus, boolean isGlobal) {
+
     if (bus instanceof LXChannel) {
       LXChannel channel = (LXChannel) bus;
-      addParameterView(ViewScope.PATTERNS, channel.compositeMode);
+      if (isGlobal) {
+        addParameterView(ViewScope.PATTERNS, channel.compositeMode);
+      }
       if (channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
         // Only need to add settings for the active pattern
         LXPattern pattern = channel.getActivePattern();

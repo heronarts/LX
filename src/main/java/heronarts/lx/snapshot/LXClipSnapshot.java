@@ -44,7 +44,7 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
 
   @Override
   public void initialize() {
-    initializeBus(getClip().bus);
+    initializeClipBus(getClip().bus);
   }
 
   public boolean isInTransition() {
