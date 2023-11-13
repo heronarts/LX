@@ -224,7 +224,11 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    */
   public float elevation;
 
-  private final LXNormalizationBounds normalizationBounds;
+  /**
+   * The bounds against which this model is normalized, typically this is the
+   * model itself, but a manual bounds can be specified which may differ.
+   */
+  public final LXNormalizationBounds normalizationBounds;
 
   /**
    * Constructs a null model with no points
@@ -249,7 +253,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifiers for the model type
    */
   public LXModel(List<LXPoint> points, String ... tags) {
-    this(points, new LXModel[0], null, tags);
+    this(points, new LXModel[0], null, null, java.util.Arrays.asList(tags));
   }
 
   /**
@@ -285,7 +289,21 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, String ... tags) {
-    this(points, children, null, tags);
+    this(points, children, null, null, java.util.Arrays.asList(tags));
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds
+   * @param tags Tag identifier for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, String ... tags) {
+    this(points, children, bounds, null, java.util.Arrays.asList(tags));
   }
 
   /**
@@ -299,7 +317,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, String ... tags) {
-    this(points, children, metaData, java.util.Arrays.asList(tags));
+    this(points, children, null, metaData, java.util.Arrays.asList(tags));
   }
 
   /**
@@ -313,6 +331,21 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String> tags) {
+    this(points, children, null, metaData, tags);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds, if different from the model itself
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, Map<String, String> metaData, List<String> tags) {
     this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
     addChildren(children);
@@ -320,7 +353,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
-    this.normalizationBounds = this;
+    this.normalizationBounds = (bounds != null) ? bounds : this;
 
     Map<String, String> mutableMetadata = new HashMap<String, String>();
     if (metaData != null) {

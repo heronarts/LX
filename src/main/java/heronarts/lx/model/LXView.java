@@ -399,12 +399,10 @@ public class LXView extends LXModel {
       children[i] = cloneModel(clonedPoints, model.children[i]);
     }
 
-    return new LXModel(points, children, model.metaData, model.tags);
+    return new LXModel(points, children, model.normalizationBounds, model.metaData, model.tags);
   }
 
   private final LXModel model;
-
-  private final LXModel normalizationSpace;
 
   final Normalization normalization;
 
@@ -420,20 +418,15 @@ public class LXView extends LXModel {
    * @param children Child models
    */
   private LXView(LXModel model, Normalization normalization, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children) {
-    super(points, children, LXModel.Tag.VIEW);
+    super(points, children, (normalization == Normalization.ABSOLUTE) ? model.normalizationBounds : null, LXModel.Tag.VIEW);
     this.model = model;
     this.normalization = normalization;
-    this.normalizationSpace = (normalization == Normalization.RELATIVE) ? this : model;
+
     this.clonedPoints = java.util.Collections.unmodifiableMap(clonedPoints);
     model.derivedViews.add(this);
     if (normalization == Normalization.RELATIVE) {
       normalizePoints();
     }
-  }
-
-  @Override
-  public LXModel getNormalizationBounds() {
-    return this.normalizationSpace;
   }
 
   @Override
