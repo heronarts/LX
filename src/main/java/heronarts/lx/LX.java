@@ -933,6 +933,8 @@ public class LX {
     } catch (IOException iox) {
       LX.error(iox, "Could not write project to output file: " + file.toString());
     }
+
+    confirmModelSaved();
   }
 
   private JsonObject saveProjectJson() {
@@ -1066,6 +1068,19 @@ public class LX {
     // maybe headless could show something on the CLI? But not sure we want to
     // get into that...
     confirm.run();
+  }
+
+  protected final void confirmModelSaved() {
+    if (this.structure.isExternalModel() && this.structure.isDirty()) {
+      final File file = this.structure.getModelFile();
+      showConfirmUnsavedModelDialog(file, () -> {
+        this.structure.exportModel(file);
+      });
+    }
+  }
+
+  protected void showConfirmUnsavedModelDialog(File file, Runnable confirm) {
+    // Subclasses can handle this if they have a UI and prompt to save
   }
 
   /**

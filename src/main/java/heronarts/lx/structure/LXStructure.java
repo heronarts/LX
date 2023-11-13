@@ -179,6 +179,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   private LXModel staticModel = null;
 
+  private boolean isDirty = false;
+
   // Whether a single immutable model is used, defined at construction time
   private final boolean isImmutable;
 
@@ -717,6 +719,18 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     if (this.modelFile != null) {
       this.modelName.setValue(this.modelFile.getName() + "*");
     }
+    this.isDirty = true;
+  }
+
+  public boolean isExternalModel() {
+    return
+      !this.isImmutable &&
+      (this.staticModel == null) &&
+      (this.modelFile != null);
+  }
+
+  public boolean isDirty() {
+    return this.isDirty;
   }
 
   private boolean isLoading = false;
@@ -824,6 +838,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       }
     }
 
+    // Done loading!
+    this.isDirty = false;
   }
 
   private void loadFixtures(LX lx, JsonObject obj) {
@@ -903,6 +919,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       regenerateModel(true);
       regenerateOutputs();
     }
+    this.isDirty = false;
     return this;
   }
 
@@ -910,6 +927,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     if (!this.lx.permissions.canSave()) {
       return this;
     }
+
     JsonObject obj = new JsonObject();
     obj.addProperty(LX.KEY_VERSION, LX.VERSION);
     obj.addProperty(LX.KEY_TIMESTAMP, System.currentTimeMillis());
@@ -924,11 +942,13 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       new GsonBuilder().create().toJson(obj, writer);
       this.modelFile = file;
       this.modelName.setValue(file.getName());
+      this.isDirty = false;
       this.isStatic.bang();
       LX.log("Model exported successfully to " + file);
     } catch (IOException iox) {
       LX.error(iox, "Exception writing model file to " + file);
     }
+
     return this;
   }
 }
