@@ -362,7 +362,7 @@ public abstract class LXCommand {
         }
       }
 
-      private LXParameter getParameter() {
+      public LXParameter getParameter() {
         return this.isDiscrete ? this.discreteParameter.get()
           : this.genericParameter.get();
       }
@@ -572,6 +572,10 @@ public abstract class LXCommand {
         this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
         this.originalValue = new LXNormalizedValue(parameter);
         this.newValue = newValue;
+      }
+
+      public LXNormalizedParameter getParameter() {
+        return this.parameter.get();
       }
 
       @Override
@@ -1592,6 +1596,8 @@ public abstract class LXCommand {
 
       private ComponentReference<LXCompoundModulation> modulation;
 
+      private JsonObject modulationObj = null;
+
       public AddModulation(LXModulationEngine engine,
         LXNormalizedParameter source, CompoundParameter target) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
@@ -1608,10 +1614,17 @@ public abstract class LXCommand {
       public void perform(LX lx) throws InvalidCommandException {
         try {
           LXCompoundModulation modulation = new LXCompoundModulation(
-            this.engine.get(),  this.source.get(), this.target.get());
+            this.engine.get(),
+            this.source.get(),
+            this.target.get()
+          );
+          if (this.modulationObj != null) {
+            modulation.load(lx, this.modulationObj);
+          } else {
+            this.modulationObj = LXSerializable.Utils.toObject(lx, modulation);
+          }
           this.engine.get().addModulation(modulation);
-          this.modulation = new ComponentReference<LXCompoundModulation>(
-            modulation);
+          this.modulation = new ComponentReference<LXCompoundModulation>(modulation);
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
