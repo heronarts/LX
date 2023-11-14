@@ -456,8 +456,16 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   }
 
   @Override
+  public Class<?> getPresetClass() {
+    // groups and the master bus can be interchangeable
+    return LXBus.class;
+  }
+
+  @Override
   public void postProcessPreset(LX lx, JsonObject obj) {
-    LXSerializable.Utils.stripParameter(obj, "fader");
+    LXSerializable.Utils.stripParameter(obj, this.fader);
+    LXSerializable.Utils.stripParameter(obj, this.arm);
+    LXSerializable.Utils.stripParameter(obj, this.selected);
   }
 
   private static final String KEY_EFFECTS = "effects";

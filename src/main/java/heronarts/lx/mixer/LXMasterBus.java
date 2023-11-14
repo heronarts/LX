@@ -18,7 +18,10 @@
 
 package heronarts.lx.mixer;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXMasterClip;
 import heronarts.lx.parameter.EnumParameter;
@@ -97,4 +100,11 @@ public class LXMasterBus extends LXBus {
   protected LXClip constructClip(int index) {
     return new LXMasterClip(this.lx, index);
   }
+
+  @Override
+  public void postProcessPreset(LX lx, JsonObject obj) {
+    super.postProcessPreset(lx, obj);
+    LXSerializable.Utils.stripParameter(obj, this.previewMode);
+  }
+
 }

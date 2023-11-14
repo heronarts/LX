@@ -1083,6 +1083,11 @@ public class LXChannel extends LXAbstractChannel {
     super.dispose();
   }
 
+  @Override
+  public Class<?> getPresetClass() {
+    return getClass();
+  }
+
   private static final String KEY_PATTERNS = "patterns";
   private static final String KEY_PATTERN_INDEX = "patternIndex";
   private static final String KEY_GROUP = "group";

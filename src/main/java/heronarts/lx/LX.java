@@ -1185,7 +1185,11 @@ public class LX {
    */
   public File getPresetFolder(LXComponent device) {
     File presetFolder = getMediaFolder(Media.PRESETS);
-    File deviceFolder = new File(presetFolder, device.getClass().getName());
+    Class<?> deviceClass = device.getClass();
+    if (device instanceof LXPresetComponent) {
+      deviceClass = ((LXPresetComponent) device).getPresetClass();
+    }
+    File deviceFolder = new File(presetFolder, deviceClass.getName());
     if (!deviceFolder.exists()) {
       deviceFolder.mkdir();
     }

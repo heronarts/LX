@@ -416,6 +416,10 @@ public interface LXSerializable {
       return object;
     }
 
+    public static JsonObject stripParameter(JsonObject object, LXParameter parameter) {
+      return stripParameter(object, parameter.getPath());
+    }
+
     public static JsonObject stripParameter(JsonObject object, String parameter) {
       if (object.has(LXComponent.KEY_PARAMETERS)) {
         object.get(LXComponent.KEY_PARAMETERS).getAsJsonObject().remove(parameter);

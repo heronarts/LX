@@ -28,4 +28,8 @@ public interface LXPresetComponent {
    * This method post-processes the JSON object before writing to disk.
    */
   public default void postProcessPreset(LX lx, JsonObject obj) {}
+
+  public default Class<?> getPresetClass() {
+    return getClass();
+  }
 }
