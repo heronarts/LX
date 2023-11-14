@@ -153,15 +153,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     .setDescription("Manual Z position of the normalization center");
 
   public final BoundedParameter normalizationWidth =
-    new BoundedParameter("Width", 100, 0, LXFixture.POSITION_RANGE)
+    new BoundedParameter("Width", 1000, 0, LXFixture.POSITION_RANGE)
     .setDescription("With of the normalization space");
 
   public final BoundedParameter normalizationHeight =
-    new BoundedParameter("Height", 100, 0, LXFixture.POSITION_RANGE)
+    new BoundedParameter("Height", 1000, 0, LXFixture.POSITION_RANGE)
     .setDescription("Height of the normalization space");
 
   public final BoundedParameter normalizationDepth =
-    new BoundedParameter("Depth", 100, 0, LXFixture.POSITION_RANGE)
+    new BoundedParameter("Depth", 1000, 0, LXFixture.POSITION_RANGE)
     .setDescription("Depth of the normalization space");
 
   public final BooleanParameter showNormalizationBounds =
