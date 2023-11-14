@@ -370,6 +370,15 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     this.listeners.clear();
   }
 
+  @Override
+  public void postProcessPreset(LX lx, JsonObject obj) {
+    super.postProcessPreset(lx, obj);
+    LXSerializable.Utils.stripParameter(obj, this.enabled);
+    LXSerializable.Utils.stripParameter(obj, this.crossfadeGroup);
+    LXSerializable.Utils.stripParameter(obj, this.cueActive);
+    LXSerializable.Utils.stripParameter(obj, this.auxActive);
+  }
+
   private void loadLegacyView(LX lx, JsonObject obj) {
     // Handle situation where there was a legacy view
     if (obj.has(LXComponent.KEY_PARAMETERS)) {
