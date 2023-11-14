@@ -18,6 +18,10 @@
 
 package heronarts.lx;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -30,8 +34,13 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
+
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.DiscreteColorParameter;
 import heronarts.lx.modulation.LXModulationContainer;
@@ -151,6 +160,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public final BooleanParameter modulationsExpanded =
     new BooleanParameter("Show Modulations", true)
     .setDescription("Whether the modulations are visible");
+
+  public final StringParameter presetFile =
+    new StringParameter("Preset", null)
+    .setDescription("Name of last preset file that has been loaded/saved");
 
   // Prefix for internal implementation-only parameters
   private static final String INTERNAL_PREFIX = "internal/";
@@ -414,6 +427,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     addInternalParameter("modulationColor", this.modulationColor);
     addInternalParameter("modulationControlsExpanded", this.modulationControlsExpanded);
     addInternalParameter("modulationsExpanded", this.modulationsExpanded);
+    addInternalParameter("presetFile", this.presetFile);
   }
 
   /**
@@ -571,9 +585,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @return If this is a valid OSC parameter
    */
   public boolean isValidOscParameter(LXParameter parameter) {
-    return
-      (this instanceof LXOscComponent) &&
-      this.parameters.containsKey(parameter.getPath());
+    return this.parameters.containsKey(parameter.getPath());
   }
 
   /**
@@ -1272,6 +1284,51 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       }
     }
     return this;
+  }
+
+  public void loadPreset(File file) {
+    if (!(this instanceof LXPresetComponent)) {
+      throw new IllegalStateException("Cannot load a preset for non-LXPresetComponent: " + getClass().getName());
+    }
+
+    try (FileReader fr = new FileReader(file)) {
+      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      this.lx.componentRegistry.projectLoading = true;
+      this.lx.componentRegistry.setIdCounter(this.lx.getMaxId(obj, this.lx.componentRegistry.getIdCounter()) + 1);
+      load(this.lx, obj);
+      this.lx.componentRegistry.projectLoading = false;
+      this.presetFile.setValue(file.getName());
+      LX.log("Preset loaded successfully from " + file.toString());
+    } catch (IOException iox) {
+      LX.error("Could not load preset file: " + iox.getLocalizedMessage());
+      this.lx.pushError(iox, "Could not load preset file: " + iox.getLocalizedMessage());
+    } catch (Exception x) {
+      LX.error(x, "Exception in loadPreset: " + x.getLocalizedMessage());
+      this.lx.pushError(x, "Exception in loadPreset: " + x.getLocalizedMessage());
+    } finally {
+      this.lx.componentRegistry.projectLoading = false;
+    }
+  }
+
+  public void savePreset(File file) {
+    if (!(this instanceof LXPresetComponent)) {
+      throw new IllegalStateException("Cannot save a preset for non-LXPresetComponent: " + getClass().getName());
+    }
+
+    JsonObject obj = new JsonObject();
+    obj.addProperty(LX.KEY_VERSION, LX.VERSION);
+    obj.addProperty(LX.KEY_TIMESTAMP, System.currentTimeMillis());
+    save(this.lx, obj);
+    ((LXPresetComponent) this).postProcessPreset(this.lx, obj);
+
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      this.presetFile.setValue(file.getName());
+      LX.log("Preset saved successfully to " + file.toString());
+    } catch (IOException iox) {
+      LX.error(iox, "Could not write preset to output file: " + file.toString());
+    }
   }
 
   public final static String KEY_ID = "id";

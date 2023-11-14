@@ -858,6 +858,7 @@ public class LX {
 
   public final static String KEY_VERSION = "version";
   public final static String KEY_TIMESTAMP = "timestamp";
+
   private final static String KEY_MODEL = "model";
   private final static String KEY_ENGINE = "engine";
   private final static String KEY_EXTERNALS = "externals";
@@ -1182,7 +1183,7 @@ public class LX {
    * @param device Device
    * @return Folder that holds presets for this device
    */
-  public File getPresetFolder(LXDeviceComponent device) {
+  public File getPresetFolder(LXComponent device) {
     File presetFolder = getMediaFolder(Media.PRESETS);
     File deviceFolder = new File(presetFolder, device.getClass().getName());
     if (!deviceFolder.exists()) {
@@ -1191,7 +1192,7 @@ public class LX {
     return deviceFolder;
   }
 
-  public File getPresetFile(LXDeviceComponent device, String name) {
+  public File getPresetFile(LXComponent device, String name) {
     return new File(getPresetFolder(device), (name != null) ? name : "default.lxd");
   }
 

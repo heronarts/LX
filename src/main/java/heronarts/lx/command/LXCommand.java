@@ -30,11 +30,13 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXPath;
+import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clipboard.LXNormalizedValue;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXDynamicColor;
+import heronarts.lx.color.LXPalette;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
@@ -969,12 +971,15 @@ public abstract class LXCommand {
 
     public static class LoadPreset extends LXCommand {
 
-      private final ComponentReference<LXDeviceComponent> device;
+      private final ComponentReference<LXComponent> device;
       private final JsonObject deviceObj;
       private final File file;
 
-      public LoadPreset(LXDeviceComponent device, File file) {
-        this.device = new ComponentReference<LXDeviceComponent>(device);
+      public LoadPreset(LXComponent device, File file) {
+        if (!(device instanceof LXPresetComponent)) {
+          throw new IllegalArgumentException("Cannot load a preset for a non-preset device: " + device.getClass().getName());
+        }
+        this.device = new ComponentReference<LXComponent>(device);
         this.deviceObj = LXSerializable.Utils.toObject(device);
         this.file = file;
       }
@@ -2009,6 +2014,34 @@ public abstract class LXCommand {
         return !this.set;
       }
 
+    }
+
+    public static class ImportSwatches extends LXCommand {
+
+      private final ComponentReference<LXPalette> palette;
+      private final JsonObject paletteObj;
+      private final File file;
+
+      public ImportSwatches(LXPalette palette, File file) {
+        this.palette = new ComponentReference<LXPalette>(palette);
+        this.paletteObj = LXSerializable.Utils.toObject(palette);
+        this.file = file;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Import Swatches " + this.file.getName();
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.palette.get().importSwatches(this.file);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.palette.get().load(lx, this.paletteObj);
+      }
     }
   }
 

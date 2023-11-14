@@ -163,7 +163,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     new CompoundParameter("Composite Level", 1)
     .setDescription("Alpha level to composite pattern at when in channel blend mode");
 
-
   public final BooleanParameter hasCustomCycleTime =
     new BooleanParameter("Custom Cycle", false)
     .setDescription("When enabled, this pattern uses its own custom duration rather than the default cycle time");

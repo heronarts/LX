@@ -21,6 +21,7 @@ package heronarts.lx.mixer;
 import heronarts.lx.LX;
 import heronarts.lx.LXModelComponent;
 import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEngine;
@@ -44,7 +45,7 @@ import com.google.gson.JsonObject;
  * Abstract representation of a channel, which could be a normal channel with patterns
  * or the master channel.
  */
-public abstract class LXBus extends LXModelComponent implements LXOscComponent {
+public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent {
 
   /**
    * Listener interface for objects which want to be notified when the internal
@@ -452,6 +453,11 @@ public abstract class LXBus extends LXModelComponent implements LXOscComponent {
     this.listeners.clear();
     this.clipListeners.clear();
     super.dispose();
+  }
+
+  @Override
+  public void postProcessPreset(LX lx, JsonObject obj) {
+    LXSerializable.Utils.stripParameter(obj, "fader");
   }
 
   private static final String KEY_EFFECTS = "effects";
