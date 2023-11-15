@@ -23,6 +23,8 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.midi.LXMidiListener;
+import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -41,7 +43,7 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Global("Randomizer")
 @LXModulator.Device("Randomizer")
 @LXCategory(LXCategory.CORE)
-public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
+public class Randomizer extends LXPeriodicModulator implements LXNormalizedParameter, LXTriggerSource, LXMidiListener, LXOscComponent {
 
   public enum TriggerMode {
     INTERNAL("Internal"),
@@ -170,6 +172,8 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
 
   private Randomizer(String label) {
     super(label, null);
+    this.midiFilter.enabled.setValue(false);
+
     setPeriod(this.totalMs);
 
     addParameter("triggerMode", this.triggerMode);
@@ -228,8 +232,14 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
 
   private void onTriggerIn() {
     if (this.running.isOn() && (this.triggerMode.getEnum() == TriggerMode.EXTERNAL)) {
-      if (Math.random()*100 < this.chance.getValue()) {
-        fire();
+      onManualTrigger(true);
+    }
+  }
+
+  private void onManualTrigger(boolean resetBasis) {
+    if (Math.random()*100 < this.chance.getValue()) {
+      fire();
+      if (resetBasis) {
         setBasis(0);
       }
     }
@@ -302,6 +312,11 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
   @Override
   protected double computeBasis(double basis, double value) {
     return 0;
+  }
+
+  @Override
+  public void noteOnReceived(MidiNoteOn note) {
+    onManualTrigger(false);
   }
 
 }
