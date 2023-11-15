@@ -139,6 +139,7 @@ public class LXRegistry implements LXSerializable {
   private static final List<Class<? extends LXEffect>> DEFAULT_EFFECTS;
   static {
     DEFAULT_EFFECTS = new ArrayList<Class<? extends LXEffect>>();
+    DEFAULT_EFFECTS.add(heronarts.lx.effect.audio.SoundObjectEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.BlurEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.color.ColorizeEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.DynamicsEffect.class);
