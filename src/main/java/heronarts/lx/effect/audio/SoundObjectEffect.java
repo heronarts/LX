@@ -22,20 +22,47 @@ import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.ModelBuffer;
+import heronarts.lx.blend.LXBlend;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.pattern.audio.SoundObjectPattern;
 
 @LXCategory(LXCategory.AUDIO)
 @LXComponentName("Sound Object")
 public class SoundObjectEffect extends LXEffect {
 
+  public enum MaskMode {
+    MULTIPLY("Multiply", LXColor::multiply),
+    SPOTLIGHT("Spotlight", LXColor::spotlight),
+    HIGHLIGHT("Highlight", LXColor::highlight),
+    ADD("Add", LXColor::add),
+    LERP("Lerp", LXColor::lerp);
+
+    public final String label;
+    public final LXBlend.FunctionalBlend.BlendFunction function;
+
+    private MaskMode(String label, LXBlend.FunctionalBlend.BlendFunction function) {
+      this.label = label;
+      this.function = function;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   public final SoundObjectPattern.Engine engine;
 
   private final ModelBuffer blendBuffer;
+
+  public final EnumParameter<MaskMode> maskMode =
+    new EnumParameter<MaskMode>("Mode", MaskMode.MULTIPLY)
+    .setDescription("How to apply the sound object mask");
 
   public final CompoundParameter maskDepth =
     new CompoundParameter("Depth", 1)
@@ -71,6 +98,7 @@ public class SoundObjectEffect extends LXEffect {
     addParameter("scopeTimeMs", this.engine.scopeTimeMs);
 
     addParameter("maskDepth", this.maskDepth);
+    addParameter("maskMode", this.maskMode);
     addParameter("cueMask", this.cueMask);
   }
 
@@ -87,8 +115,9 @@ public class SoundObjectEffect extends LXEffect {
         }
       } else {
         final int alpha = LXColor.blendMask(enabledAmount);
+        final LXBlend.FunctionalBlend.BlendFunction mask = this.maskMode.getEnum().function;
         for (LXPoint p : model.points) {
-          colors[p.index] = LXColor.multiply(colors[p.index], blend[p.index], alpha);
+          colors[p.index] = mask.apply(colors[p.index], blend[p.index], alpha);
         }
       }
     }
