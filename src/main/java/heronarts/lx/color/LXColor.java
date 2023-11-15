@@ -397,6 +397,18 @@ public class LXColor {
       (hsb(h, s, b) & 0x00ffffff);
   }
 
+  private static int BLEND_MASK_FULL = 0x100;
+
+  /**
+   * Returns the alpha multiplication coefficient for a blend
+   *
+   * @param alpha Alpha factor from 0-1
+   * @return Mask multiplication value from 0x00 to 0x100
+   */
+  public static int blendMask(double alpha) {
+    return (int) (alpha * BLEND_MASK_FULL);
+  }
+
   /**
    * Scales brightness of the color by a fixed amount
    *
@@ -405,7 +417,7 @@ public class LXColor {
    * @return Color with brightness adjusted
    */
   public static int scaleBrightness(int src, float amount) {
-    return multiply(src, grayn(amount), 0x100);
+    return multiply(src, grayn(amount), BLEND_MASK_FULL);
   }
 
   /**
@@ -416,7 +428,7 @@ public class LXColor {
    * @return Color with brightness adjusted
    */
   public static int scaleBrightness(int src, double amount) {
-    return multiply(src, grayn(amount), 0x100);
+    return multiply(src, grayn(amount), BLEND_MASK_FULL);
   }
 
   /**
@@ -430,47 +442,47 @@ public class LXColor {
   public static int blend(int dst, int src, Blend blendMode) {
     switch (blendMode) {
     case ADD:
-      return add(dst, src, 0x100);
+      return add(dst, src, BLEND_MASK_FULL);
     case SUBTRACT:
-      return subtract(dst, src, 0x100);
+      return subtract(dst, src, BLEND_MASK_FULL);
     case MULTIPLY:
-      return multiply(dst, src, 0x100);
+      return multiply(dst, src, BLEND_MASK_FULL);
     case SCREEN:
-      return screen(dst, src, 0x100);
+      return screen(dst, src, BLEND_MASK_FULL);
     case LIGHTEST:
-      return lightest(dst, src, 0x100);
+      return lightest(dst, src, BLEND_MASK_FULL);
     case DARKEST:
-      return darkest(dst, src, 0x100);
+      return darkest(dst, src, BLEND_MASK_FULL);
     case DODGE:
-      return dodge(dst, src, 0x100);
+      return dodge(dst, src, BLEND_MASK_FULL);
     case BURN:
-      return burn(dst, src, 0x100);
+      return burn(dst, src, BLEND_MASK_FULL);
     case HIGHLIGHT:
-      return highlight(dst, src, 0x100);
+      return highlight(dst, src, BLEND_MASK_FULL);
     case SPOTLIGHT:
-      return spotlight(dst, src, 0x100);
+      return spotlight(dst, src, BLEND_MASK_FULL);
     case LERP:
-      return lerp(dst, src, 0x100);
+      return lerp(dst, src, BLEND_MASK_FULL);
     }
     throw new IllegalArgumentException("Unimplemented blend mode: " + blendMode);
   }
 
   public static int lerp(int dst, int src) {
-    return lerp(dst, src, 0x100);
+    return lerp(dst, src, BLEND_MASK_FULL);
   }
 
   public static int lerp(int dst, int src, double alpha) {
-    return lerp(dst, src, (int) (alpha * 0x100));
+    return lerp(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int lerp(int dst, int src, float alpha) {
-    return lerp(dst, src, (int) (alpha * 0x100));
+    return lerp(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int lerp(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
     return
       min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
       ((dst & RB_MASK) * dstAlpha + (src & RB_MASK) * srcAlpha) >>> 8 & RB_MASK |
@@ -485,7 +497,7 @@ public class LXColor {
    * @return Summed RGB channels with 255 clip
    */
   public static int add(int dst, int src) {
-    return add(dst, src, 0x100);
+    return add(dst, src, BLEND_MASK_FULL);
   }
 
   /**
@@ -497,7 +509,7 @@ public class LXColor {
    * @return Summed RGB channels with 255 clip
    */
   public static int add(int dst, int src, double alpha) {
-    return add(dst, src, (int) (alpha * 0x100));
+    return add(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   /**
@@ -521,11 +533,11 @@ public class LXColor {
   }
 
   public static int subtract(int dst, int src) {
-    return subtract(dst, src, 0x100);
+    return subtract(dst, src, BLEND_MASK_FULL);
   }
 
   public static int subtract(int dst, int src, double alpha) {
-    return subtract(dst, src, (int) (alpha * 0x100));
+    return subtract(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int subtract(int dst, int src, int alpha) {
@@ -541,17 +553,17 @@ public class LXColor {
   }
 
   public static int multiply(int dst, int src) {
-    return multiply(dst, src, 0x100);
+    return multiply(dst, src, BLEND_MASK_FULL);
   }
 
   public static int multiply(int dst, int src, double alpha) {
-    return multiply(dst, src, (int) (alpha * 0x100));
+    return multiply(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int multiply(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
 
     int dstG = (dst & G_MASK);
     int dstR = (dst & R_MASK) >> R_SHIFT;
@@ -567,17 +579,17 @@ public class LXColor {
   }
 
   public static int screen(int dst, int src) {
-    return screen(dst, src, 0x100);
+    return screen(dst, src, BLEND_MASK_FULL);
   }
 
   public static int screen(int dst, int src, double alpha) {
-    return screen(dst, src, (int) (alpha * 0x100));
+    return screen(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int screen(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
 
     int dstRb = dst & RB_MASK;
     int dstGn = dst & G_MASK;
@@ -598,17 +610,17 @@ public class LXColor {
   }
 
   public static int lightest(int dst, int src) {
-    return lightest(dst, src, 0x100);
+    return lightest(dst, src, BLEND_MASK_FULL);
   }
 
   public static int lightest(int dst, int src, double alpha) {
-    return lightest(dst, src, (int) (alpha * 0x100));
+    return lightest(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int lightest(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
     int rb =
       max(src & R_MASK, dst & R_MASK) |
       max(src & B_MASK, dst & B_MASK);
@@ -620,17 +632,17 @@ public class LXColor {
   }
 
   public static int darkest(int dst, int src) {
-    return darkest(dst, src, 0x100);
+    return darkest(dst, src, BLEND_MASK_FULL);
   }
 
   public static int darkest(int dst, int src, double alpha) {
-    return darkest(dst, src, (int) (alpha * 0x100));
+    return darkest(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int darkest(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
     int rb =
       min(src & R_MASK, dst & R_MASK) |
       min(src & B_MASK, dst & B_MASK);
@@ -642,17 +654,17 @@ public class LXColor {
   }
 
   public static int difference(int dst, int src) {
-    return difference(dst, src, 0x100);
+    return difference(dst, src, BLEND_MASK_FULL);
   }
 
   public static int difference(int dst, int src, double alpha) {
-    return difference(dst, src, (int) (alpha * 0x100));
+    return difference(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int difference(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
     int r = (dst & R_MASK) - (src & R_MASK);
     int g = (dst & G_MASK) - (src & G_MASK);
     int b = (dst & B_MASK) - (src & B_MASK);
@@ -665,18 +677,18 @@ public class LXColor {
   }
 
   public static int dodge(int dst, int src) {
-    return dodge(dst, src, 0x100);
+    return dodge(dst, src, BLEND_MASK_FULL);
   }
 
   public static int dodge(int dst, int src, double alpha) {
-    return dodge(dst, src, (int) (alpha * 0x100));
+    return dodge(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int dodge(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
 
     int srcAlpha = a + (a >= 0x7f ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
     int r = (dst & R_MASK) / (256 - ((src & R_MASK) >> R_SHIFT));
     int g = ((dst & G_MASK) << 8) / (256 - ((src & G_MASK) >> G_SHIFT));
     int b = ((dst & B_MASK) << 8) / (256 - (src & B_MASK));
@@ -692,18 +704,18 @@ public class LXColor {
   }
 
   public static int burn(int dst, int src) {
-    return burn(dst, src, 0x100);
+    return burn(dst, src, BLEND_MASK_FULL);
   }
 
   public static int burn(int dst, int src, double alpha) {
-    return burn(dst, src, (int) (alpha * 0x100));
+    return burn(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int burn(int dst, int src, int alpha) {
     int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
 
     int srcAlpha = a + (a >= 0x7f ? 1 : 0);
-    int dstAlpha = 0x100 - srcAlpha;
+    int dstAlpha = BLEND_MASK_FULL - srcAlpha;
 
     int r = ((R_MASK - (dst & R_MASK)))  / (1 + (src & R_MASK >> R_SHIFT));
     int g = ((G_MASK - (dst & G_MASK)) << 8) / (1 + (src & G_MASK >> G_SHIFT));
@@ -720,23 +732,23 @@ public class LXColor {
   }
 
   public static int highlight(int dst, int src) {
-    return highlight(dst, src, 0x100);
+    return highlight(dst, src, BLEND_MASK_FULL);
   }
 
   public static int highlight(int dst, int src, double alpha) {
-    return highlight(dst, src, (int) (alpha * 0x100));
+    return highlight(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int highlight(int dst, int src, int alpha) {
-    return add(dst, multiply(dst, src, 0x100), alpha);
+    return add(dst, multiply(dst, src, BLEND_MASK_FULL), alpha);
   }
 
   public static int spotlight(int dst, int src) {
-    return spotlight(dst, src, 0x100);
+    return spotlight(dst, src, BLEND_MASK_FULL);
   }
 
   public static int spotlight(int dst, int src, double alpha) {
-    return spotlight(dst, src, (int) (alpha * 0x100));
+    return spotlight(dst, src, (int) (alpha * BLEND_MASK_FULL));
   }
 
   public static int spotlight(int dst, int src, int alpha) {
@@ -750,7 +762,7 @@ public class LXColor {
       (dstMax << R_SHIFT) |
       (dstMax << G_SHIFT) |
       dstMax;
-    return add(dst, multiply(dstMlt, src, 0x100), alpha);
+    return add(dst, multiply(dstMlt, src, BLEND_MASK_FULL), alpha);
   }
 
   private static int min(int a, int b) {
