@@ -737,6 +737,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   private static final String KEY_FIXTURES = "fixtures";
   private static final String KEY_VIEWS = "views";
+  private static final String KEY_NORMALIZATION = "normalization";
   private static final String KEY_STATIC_MODEL = "staticModel";
   private static final String KEY_FILE = "file";
 
@@ -896,8 +897,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       reset(fromSync);
       final JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
       loadFixtures(this.lx, obj);
-      if (obj.has(KEY_PARAMETERS)) {
-        loadParameters(this, obj.get(KEY_PARAMETERS).getAsJsonObject(), this.normalizationParameters);
+      if (obj.has(KEY_NORMALIZATION)) {
+        loadParameters(this, obj.get(KEY_NORMALIZATION).getAsJsonObject(), this.normalizationParameters);
       }
       LXSerializable.Utils.loadObject(this.lx, this.views, obj, KEY_VIEWS);
       this.modelFile = file;
@@ -934,7 +935,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     saveFixtures(this.lx, obj);
     JsonObject normalizationParameters = new JsonObject();
     saveParameters(this, normalizationParameters, this.normalizationParameters);
-    obj.add(KEY_PARAMETERS, normalizationParameters);
+    obj.add(KEY_NORMALIZATION, normalizationParameters);
     obj.add(KEY_VIEWS, LXSerializable.Utils.toObject(lx, this.views));
 
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
