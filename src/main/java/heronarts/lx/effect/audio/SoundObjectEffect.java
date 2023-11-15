@@ -36,7 +36,7 @@ import heronarts.lx.pattern.audio.SoundObjectPattern;
 public class SoundObjectEffect extends LXEffect {
 
   public enum MaskMode {
-    MULTIPLY("Multiply", LXColor::multiply),
+    MULTIPLY("Mask", LXColor::multiply),
     SPOTLIGHT("Spotlight", LXColor::spotlight),
     HIGHLIGHT("Highlight", LXColor::highlight),
     ADD("Add", LXColor::add),

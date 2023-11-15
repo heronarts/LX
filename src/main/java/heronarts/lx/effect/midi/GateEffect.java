@@ -132,7 +132,7 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
 
   public final EnumParameter<TriggerMode> triggerMode =
     new EnumParameter<TriggerMode>("Trigger Mode", TriggerMode.RETRIG)
-    .setDescription("Trigger Mode");
+    .setDescription("How to retrigger the envelope on overlapping events");
 
   public final BooleanParameter manualTrigger =
     new BooleanParameter("Trigger", false)
