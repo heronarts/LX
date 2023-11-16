@@ -350,6 +350,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private static final long INIT_RUN = -1;
   private long lastMillis = INIT_RUN;
+  private long lastNanoTime = INIT_RUN;
   private long autoSaveMillis = INIT_RUN;
 
   private double fixedDeltaMs = 0;
@@ -357,6 +358,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * Globally accessible counter of the current millisecond clock
    */
+
+  public long nowNanoTime = System.nanoTime();
   public long nowMillis = System.currentTimeMillis();
 
   LXEngine(final LX lx) {
@@ -1002,29 +1005,33 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     this.hasStarted = true;
 
-    long runStart = System.nanoTime();
+    final long runStart = this.nowNanoTime = System.nanoTime();
 
     // Compute elapsed time
     this.nowMillis = System.currentTimeMillis();
     if (this.lastMillis == INIT_RUN) {
       // Initial frame is set to be the framerate
-      this.lastMillis = this.nowMillis - (long) (1000f / framesPerSecond.getValuef());
+      this.lastNanoTime = this.nowNanoTime - (long) (1000000000. / this.framesPerSecond.getValue());
+      this.lastMillis = this.nowMillis - (long) (1000f / this.framesPerSecond.getValuef());
       this.autoSaveMillis = this.lastMillis;
     }
-    double deltaMs = this.nowMillis - this.lastMillis;
+    double deltaMs = (this.nowNanoTime - this.lastNanoTime) / 1000000.;
 
-    // Check for tricky system clock changes!
+    // Check for tricky system clock changes! This should not be necessary now
+    // that we have switched to using nanoTime() for the render loop rather than
+    // currentTimeMillis(), but leaving it in just in case of any weirdness
     if (deltaMs < 0) {
-      LX.error("Negative system clock change detected at System.currentTimeMillis(): " + this.nowMillis);
+      LX.error("Negative system clock change detected from System.nanoTime(): " + this.nowNanoTime);
       // If that happens, just pretend we ran at framerate
       deltaMs = 1000 / framesPerSecond.getValue();
     } else if (deltaMs > 60000) {
       // A frame took over a minute? Was probably a system clock moving forward...
-      LX.error("System clock moved over 60s in a frame, assuming clock change at System.currentTimeMillis(): " + this.nowMillis);
+      LX.error("System.nanoTime() clock moved over 60s in a frame, resetting clock timer: " + this.nowNanoTime);
       deltaMs = 1000 / framesPerSecond.getValue();
     }
 
     this.lastMillis = this.nowMillis;
+    this.lastNanoTime = this.nowNanoTime;
 
     // Override deltaMs if in fixed render mode
     if (this.fixedDeltaMs > 0) {
