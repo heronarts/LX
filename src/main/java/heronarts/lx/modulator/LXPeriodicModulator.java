@@ -109,6 +109,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     addParameter("tempoSync", this.tempoSync);
     addParameter("tempoMultiplier", this.tempoDivision);
     addParameter("tempoLock", this.tempoLock);
+    this.tempoDivision.setWrappable(false);
     this.period = period;
   }
 
