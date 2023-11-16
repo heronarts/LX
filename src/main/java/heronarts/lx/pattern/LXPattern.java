@@ -637,6 +637,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     }
   }
 
+  private void removeEffects() {
+    for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
+      removeEffect(this.mutableEffects.get(i));
+    }
+  }
+
   private static final String KEY_EFFECTS = "effects";
 
   @Override
@@ -647,10 +653,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    // Remove effects
-    for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
-      removeEffect(this.mutableEffects.get(i));
-    }
+    removeEffects();
 
     // Add the effects
     if (obj.has(KEY_EFFECTS)) {
@@ -683,6 +686,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   @Override
   public void dispose() {
+    removeEffects();
+
     this.enabled.removeListener(this.onEnabled);
     this.compositeMode.removeListener(this.onCompositeMode);
     super.dispose();
