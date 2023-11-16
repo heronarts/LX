@@ -35,7 +35,6 @@ import heronarts.lx.pattern.color.SolidPattern;
 import heronarts.lx.scheduler.LXScheduler;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
@@ -126,6 +125,28 @@ public class LX {
   }
 
   public static class Flags {
+
+    /**
+     * Specifies how the state of live output is restored when a project
+     * is loaded.
+     */
+    public enum OutputMode {
+      /**
+       * Restore the setting stored in the project
+       */
+      PROJECT,
+
+      /**
+       * Always enable Live output when loading a project
+       */
+      ACTIVE,
+
+      /**
+       * Always suppress Live output when loading a project
+       */
+      INACTIVE;
+    }
+
     /**
      * Sometimes we need to know if we are P4LX, but we don't want LX library to have
      * any dependency upon P4LX.
@@ -146,6 +167,7 @@ public class LX {
     public boolean loadPreferences = true;
     public List<String> enabledPlugins = new ArrayList<String>();
     public List<String> classpathPlugins = new ArrayList<String>();
+    public OutputMode outputMode = OutputMode.PROJECT;
   }
 
   public static enum Media {

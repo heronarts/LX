@@ -1343,6 +1343,18 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Invoke super-loader
     super.load(lx, obj);
+
+    // Override project output mode if flag is set
+    switch (lx.flags.outputMode) {
+    case ACTIVE:
+      this.output.enabled.setValue(true);
+      break;
+    case INACTIVE:
+      this.output.enabled.setValue(false);
+      break;
+    default:
+      break;
+    }
   }
 
   @Override
