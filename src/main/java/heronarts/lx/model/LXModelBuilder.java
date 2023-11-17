@@ -32,7 +32,10 @@ import heronarts.lx.output.LXOutput;
  * in the amount of functionality exported, with only the components needed
  * for construction. It is mutable up until the moment it has been converted
  * into a model, at which point no further modifications are allowed.
+ *
+ * @deprecated
  */
+@Deprecated
 public class LXModelBuilder {
 
   final List<LXPoint> points = new ArrayList<LXPoint>();

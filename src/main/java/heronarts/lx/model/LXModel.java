@@ -481,10 +481,12 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     recomputeGeometry();
   }
 
+  @Deprecated
   public LXModel(LXModelBuilder builder) {
     this(builder, true);
   }
 
+  @Deprecated
   protected LXModel(LXModelBuilder builder, boolean isRoot) {
     if (builder.model != null) {
       throw new IllegalStateException("LXModelBuilder may only be used once: " + builder);
