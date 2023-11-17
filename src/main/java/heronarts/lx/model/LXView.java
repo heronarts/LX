@@ -29,8 +29,8 @@ import heronarts.lx.LX;
 public class LXView extends LXModel {
 
   public enum Normalization {
-    RELATIVE("Normalize points to view"),
-    ABSOLUTE("Preserve absolute normalization");
+    RELATIVE("Normalize to View"),
+    ABSOLUTE("Preserve Absolute");
 
     public final String description;
 
@@ -399,7 +399,7 @@ public class LXView extends LXModel {
       children[i] = cloneModel(clonedPoints, model.children[i]);
     }
 
-    return new LXModel(points, children, model.normalizationBounds, model.metaData, model.tags);
+    return new LXModel(points, children, model.getNormalizationBounds(), model.metaData, model.tags);
   }
 
   private final LXModel model;
@@ -418,7 +418,7 @@ public class LXView extends LXModel {
    * @param children Child models
    */
   private LXView(LXModel model, Normalization normalization, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children) {
-    super(points, children, (normalization == Normalization.ABSOLUTE) ? model.normalizationBounds : null, LXModel.Tag.VIEW);
+    super(points, children, (normalization == Normalization.ABSOLUTE) ? model.getNormalizationBounds() : null, LXModel.Tag.VIEW);
     this.model = model;
     this.normalization = normalization;
 
