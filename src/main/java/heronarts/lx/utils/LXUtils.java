@@ -305,6 +305,17 @@ public class LXUtils {
   }
 
   /**
+   * Returns the result of Math.atan2 pushed into the positive space [0-TWO_PI]
+   *
+   * @param y Y
+   * @param x X
+   * @return Result of atan2, in the range 0-TWO_PI
+   */
+  public static float atan2pf(float y, float x) {
+    return (float) ((LX.TWO_PI + Math.atan2(y, x)) % LX.TWO_PI);
+  }
+
+  /**
    * Returns a floating-point rounded value of the tan function to 8 decimal places.
    * This is often useful because Math.sin(Math.PI) is NOT actually 0.
    *
