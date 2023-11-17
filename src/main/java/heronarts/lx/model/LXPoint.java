@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXTransform;
 import heronarts.lx.transform.LXVector;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * A point is a node with a position in space. In addition to basic
@@ -124,7 +125,7 @@ public class LXPoint {
 
   /**
    * Normalized position of point in radial space from center of model,
-   * 0 is center, 1 is max radius from center
+   * 0 is center, 1 is point with max radius from center
    */
   public float rcn = 0;
 
@@ -366,11 +367,7 @@ public class LXPoint {
     this.xn = (bounds.xRange == 0) ? .5f : (this.x - bounds.xMin) / bounds.xRange;
     this.yn = (bounds.yRange == 0) ? .5f : (this.y - bounds.yMin) / bounds.yRange;
     this.zn = (bounds.zRange == 0) ? .5f : (this.z - bounds.zMin) / bounds.zRange;
-    this.rn = (model.rMax == 0) ? .5f : this.r / model.rMax;
-
-    float rx = this.x - bounds.cx;
-    float ry = this.y - bounds.cy;
-    float rz = this.z - bounds.cz;
-    this.rc = (float) Math.sqrt(rx * rx + ry * ry + rz * rz);
+    this.rn = (model.rMax == 0) ? 0f : this.r / model.rMax;
+    this.rc = LXUtils.distf(this.x, this.y, this.z, bounds.cx, bounds.cy, bounds.cz);
   }
 }
