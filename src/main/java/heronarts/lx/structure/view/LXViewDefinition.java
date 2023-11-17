@@ -42,7 +42,7 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
 
   public final EnumParameter<LXView.Normalization> normalization =
     new EnumParameter<LXView.Normalization>("View Normalization", LXView.Normalization.RELATIVE)
-    .setDescription("Whether view coordinates are normalized relative to the view, or absolute model");
+    .setDescription("Whether point coordinates are re-normalized relative to the view group, or kept the same as in absolute model");
 
   public final BooleanParameter priority =
     new BooleanParameter("Priority", true)
