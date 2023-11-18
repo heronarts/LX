@@ -1037,8 +1037,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
 
     // Step 3: blend the channel buffers down
-    boolean blendLeft = leftBusActive || this.cueA.isOn();
-    boolean blendRight = rightBusActive || this.cueB.isOn();
+    boolean blendLeft = leftBusActive || this.cueA.isOn() || (isPerformanceMode && this.auxA.isOn());
+    boolean blendRight = rightBusActive || this.cueB.isOn() || (isPerformanceMode && this.auxB.isOn());
     boolean leftExists = false, rightExists = false;
     for (LXAbstractChannel channel : this.channels) {
       long blendStart = System.nanoTime();
