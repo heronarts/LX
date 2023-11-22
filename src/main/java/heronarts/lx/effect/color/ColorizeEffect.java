@@ -93,8 +93,8 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   public enum ColorMode {
     FIXED("Fixed"),
-    GRADIENT("Gradient"),
-    PRIMARY("Primary"),
+    RELATIVE("Relative"),
+    LINKED("Linked"),
     PALETTE("Palette");
 
     public final String label;
@@ -147,20 +147,20 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     .setDescription("Amount of brightness gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter primaryHue =
-    new CompoundParameter("H-Primary", 0, -360, 360)
+  public final CompoundParameter linkedHue =
+    new CompoundParameter("H-Linked", 0, -360, 360)
     .setUnits(CompoundParameter.Units.DEGREES)
     .setDescription("Amount of hue gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter primarySaturation =
-    new CompoundParameter("S-Primary", 0, -100, 100)
+  public final CompoundParameter linkedSaturation =
+    new CompoundParameter("S-Linked", 0, -100, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount of saturation gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
-  public final CompoundParameter primaryBrightness =
-    new CompoundParameter("B-Primary", 0, -100, 100)
+  public final CompoundParameter linkedBrightness =
+    new CompoundParameter("B-Linked", 0, -100, 100)
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("Amount of brightness gradient")
     .setPolarity(LXParameter.Polarity.BIPOLAR);
@@ -185,9 +185,9 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     addParameter("color2", this.color2);
     addParameter("paletteIndex", this.paletteIndex);
     addParameter("paletteStops", this.paletteStops);
-    addParameter("primaryHue", this.primaryHue);
-    addParameter("primarySaturation", this.primarySaturation);
-    addParameter("primaryBrightness", this.primaryBrightness);
+    addParameter("primaryHue", this.linkedHue);
+    addParameter("primarySaturation", this.linkedSaturation);
+    addParameter("primaryBrightness", this.linkedBrightness);
   }
 
   @Override
@@ -197,9 +197,9 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
         p == this.gradientHue ||
         p == this.gradientSaturation ||
         p == this.gradientBrightness ||
-        p == this.primaryHue ||
-        p == this.primarySaturation ||
-        p == this.primaryBrightness) {
+        p == this.linkedHue ||
+        p == this.linkedSaturation ||
+        p == this.linkedBrightness) {
       // We want to do this onParameterChanged so that the UI indicator
       // updates properly, whether or not this pattern is actually running
       setGradientColor();
@@ -209,15 +209,15 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
   private final ColorStops colorStops = new ColorStops();
 
   private void setGradientColor() {
-    if (this.colorMode.getEnum() == ColorMode.GRADIENT) {
+    if (this.colorMode.getEnum() == ColorMode.RELATIVE) {
       this.color2.brightness.setValue(this.color1.brightness.getValue() + this.gradientBrightness.getValue());
       this.color2.saturation.setValue(this.color1.saturation.getValue() + this.gradientSaturation.getValue());
       this.color2.hue.setValue((360 + this.color1.hue.getValue() + this.gradientHue.getValue()) % 360);
-    } else if (this.colorMode.getEnum() == ColorMode.PRIMARY) {
+    } else if (this.colorMode.getEnum() == ColorMode.LINKED) {
       LXDynamicColor swatchColor = getSwatchColor();
-      this.color1.brightness.setValue(swatchColor.getBrightness() + this.primaryBrightness.getValue());
-      this.color1.saturation.setValue(swatchColor.getSaturation() + this.primarySaturation.getValue());
-      this.color1.hue.setValue((360 + swatchColor.getHue() + this.primaryHue.getValue()) % 360);
+      this.color1.brightness.setValue(swatchColor.getBrightness() + this.linkedBrightness.getValue());
+      this.color1.saturation.setValue(swatchColor.getSaturation() + this.linkedSaturation.getValue());
+      this.color1.hue.setValue((360 + swatchColor.getHue() + this.linkedHue.getValue()) % 360);
 
       this.color2.brightness.setValue(swatchColor.getBrightness() + this.gradientBrightness.getValue());
       this.color2.saturation.setValue(swatchColor.getSaturation() + this.gradientSaturation.getValue());
@@ -238,12 +238,12 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       this.colorStops.setNumStops(2);
       break;
 
-    case PRIMARY:
+    case LINKED:
       LXDynamicColor swatchColor = getSwatchColor();
       this.colorStops.stops[0].set(swatchColor,
-        this.primaryHue.getValuef(),
-        this.primarySaturation.getValuef(),
-        this.primaryBrightness.getValuef()
+        this.linkedHue.getValuef(),
+        this.linkedSaturation.getValuef(),
+        this.linkedBrightness.getValuef()
       );
       this.colorStops.stops[1].set(swatchColor,
         this.gradientHue.getValuef(),
@@ -253,7 +253,7 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       this.colorStops.setNumStops(2);
       break;
 
-    case GRADIENT:
+    case RELATIVE:
       this.colorStops.stops[0].set(this.color1);
       this.colorStops.stops[1].set(this.color1,
         this.gradientHue.getValuef(),

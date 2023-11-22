@@ -43,7 +43,7 @@ public class GradientPattern extends LXPattern implements GradientFunction {
 
   public enum ColorMode {
     FIXED("Fixed"),
-    PRIMARY("Primary"),
+    LINKED("Linked"),
     PALETTE("Palette");
 
     public final String label;
@@ -93,7 +93,7 @@ public class GradientPattern extends LXPattern implements GradientFunction {
   }
 
   public final EnumParameter<ColorMode> colorMode =
-    new EnumParameter<ColorMode>("Color Mode", ColorMode.PRIMARY)
+    new EnumParameter<ColorMode>("Color Mode", ColorMode.LINKED)
     .setDescription("Which source the gradient selects colors from");
 
   public final EnumParameter<BlendMode> blendMode =
@@ -254,7 +254,7 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     }
   }
 
-  public LXDynamicColor getPrimaryColor() {
+  public LXDynamicColor getLinkedColor() {
     return this.lx.engine.palette.getSwatchColor(this.paletteIndex.getValuei() - 1);
   }
 
@@ -272,11 +272,11 @@ public class GradientPattern extends LXPattern implements GradientFunction {
         LXUtils.constrain(this.fixedColor.brightness.getValue() + brtGradient, 0, 100)
       ));
       break;
-    case PRIMARY:
-      LXDynamicColor primary = getPrimaryColor();
-      int c = primary.getColor();
+    case LINKED:
+      LXDynamicColor linked = getLinkedColor();
+      int c = linked.getColor();
       this.secondaryColor.setColor(LXColor.hsb(
-        primary.getHue() + hueGradient,
+        linked.getHue() + hueGradient,
         LXUtils.constrain(LXColor.s(c) + satGradient, 0, 100),
         LXUtils.constrain(LXColor.b(c) + brtGradient, 0, 100)
       ));
@@ -298,8 +298,8 @@ public class GradientPattern extends LXPattern implements GradientFunction {
       this.colorStops.stops[1].set(this.fixedColor, huef, satf, brtf);
       this.colorStops.setNumStops(2);
       break;
-    case PRIMARY:
-      LXDynamicColor swatchColor = getPrimaryColor();
+    case LINKED:
+      LXDynamicColor swatchColor = getLinkedColor();
       this.colorStops.stops[0].set(swatchColor);
       this.colorStops.stops[1].set(swatchColor, huef, satf, brtf);
       this.colorStops.setNumStops(2);
