@@ -403,6 +403,12 @@ public abstract class LXCommand {
 
     }
 
+    public static class SetIndex extends SetValue {
+      public SetIndex(DiscreteParameter parameter, int index) {
+        super(parameter, index + parameter.getMinValue());
+      }
+    }
+
     public static class SetColor extends LXCommand {
 
       private final ParameterReference<ColorParameter> colorParameter;

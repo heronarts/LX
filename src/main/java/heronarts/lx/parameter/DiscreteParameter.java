@@ -161,7 +161,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @return String description, or numerical value
    */
   public String getOption() {
-    return (this.options != null) ? this.options[getValuei()] : getFormatter().format(getValuei());
+    return (this.options != null) ? this.options[getIndex()] : getFormatter().format(getValuei());
   }
 
   /**
@@ -171,8 +171,23 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @return this
    */
   public DiscreteParameter setOptions(String[] options) {
+    return setOptions(options, true);
+  }
+
+  /**
+   * Set the range and option strings for the parameter
+   *
+   * @param options Array of string labels
+   * @param updateRange Also update the range
+   * @return this
+   */
+  public DiscreteParameter setOptions(String[] options, boolean updateRange) {
     this.options = options;
-    setRange(options.length);
+    if (updateRange) {
+      setRange(options.length);
+    } else if (options.length != this.range) {
+      throw new IllegalArgumentException("Cannot set options array with length different from range: " + this.range + " != " + options.length);
+    }
     this.optionsChanged.bang();
     return this;
   }
@@ -206,6 +221,17 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    */
   public DiscreteParameter setRange(int range) {
     return setRange(0, range);
+  }
+
+  /**
+   * Set the value by index
+   *
+   * @param index Index in all eligible values, 0 corresponds to minimum value
+   * @return this
+   */
+  public DiscreteParameter setIndex(int index) {
+    setValue(index + this.minValue);
+    return this;
   }
 
   public DiscreteParameter increment() {
@@ -252,6 +278,10 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
 
   public int getValuei() {
     return (int) getValue();
+  }
+
+  public int getIndex() {
+    return getValuei() - this.minValue;
   }
 
   public double getNormalized() {
