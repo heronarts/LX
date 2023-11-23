@@ -27,6 +27,7 @@ import heronarts.lx.color.GradientUtils.ColorStops;
 import heronarts.lx.color.GradientUtils.GradientFunction;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
+import heronarts.lx.color.LXPalette;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BooleanParameter;
@@ -109,8 +110,8 @@ public class GradientPattern extends LXPattern implements GradientFunction {
     .setDescription("Secondary color that the gradient blends to");
 
   public final DiscreteParameter paletteIndex =
-    new DiscreteParameter("Index", 1, LXSwatch.MAX_COLORS + 1)
-    .setDescription("Which index at the palette to start from");
+    new LXPalette.IndexSelector("Index")
+    .setDescription("Which index in the palette to start from");
 
   public final DiscreteParameter paletteStops =
     new DiscreteParameter("Stops", LXSwatch.MAX_COLORS, 2, LXSwatch.MAX_COLORS + 1)

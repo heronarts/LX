@@ -23,7 +23,7 @@ import heronarts.lx.LXCategory;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
-import heronarts.lx.color.LXSwatch;
+import heronarts.lx.color.LXPalette;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -46,7 +46,7 @@ public class DmxColorModulator extends AbstractDmxModulator implements LXOscComp
     .setDescription("Updates the global palette's active swatch with the DMX color");
 
   public final DiscreteParameter paletteIndex =
-    new DiscreteParameter("Index", 1, LXSwatch.MAX_COLORS + 1)
+    new LXPalette.IndexSelector("Index")
     .setDescription("Target index in the global palette's active swatch");
 
   public final BooleanParameter setPaletteFixed =

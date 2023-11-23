@@ -27,6 +27,7 @@ import heronarts.lx.color.GradientUtils.ColorStops;
 import heronarts.lx.color.GradientUtils.GradientFunction;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXDynamicColor;
+import heronarts.lx.color.LXPalette;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXPoint;
@@ -166,7 +167,7 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     .setPolarity(LXParameter.Polarity.BIPOLAR);
 
   public final DiscreteParameter paletteIndex =
-    new DiscreteParameter("Index", 1, LXSwatch.MAX_COLORS + 1)
+    new LXPalette.IndexSelector("Index")
     .setDescription("Which index at the palette to start from");
 
   public final DiscreteParameter paletteStops =

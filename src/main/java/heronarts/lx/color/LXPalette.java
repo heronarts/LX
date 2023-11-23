@@ -47,6 +47,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -134,6 +135,28 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     new BooleanParameter("Enabled", true)
     .setDescription("Whether the palette pane is expanded in performance mode");
 
+  public final StringParameter label1 =
+    new StringParameter("Label 1", "1")
+    .setDescription("Label for Palette Color 1");
+
+  public final StringParameter label2 =
+    new StringParameter("Label 2", "2")
+    .setDescription("Label for Palette Color 2");
+
+  public final StringParameter label3 =
+    new StringParameter("Label 3", "3")
+    .setDescription("Label for Palette Color 3");
+
+  public final StringParameter label4 =
+    new StringParameter("Label 4", "4")
+    .setDescription("Label for Palette Color 4");
+
+  public final StringParameter label5 =
+    new StringParameter("Label 5", "5")
+    .setDescription("Label for Palette Color 5");
+
+  public final StringParameter[] labels = { this.label1, this.label2, this.label3, this.label4, this.label5 };
+
   private LXSwatch inTransition = null;
   private LXSwatch transitionFrom = null;
   private LXSwatch transitionTo = null;
@@ -162,6 +185,25 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     }
   };
 
+  private static final List<IndexSelector> selectors = new ArrayList<IndexSelector>();
+  private static final String[] selectorOptions = new String[] { "1", "2", "3", "4", "5" };
+
+  public static class IndexSelector extends DiscreteParameter {
+
+    public IndexSelector(String name) {
+      super(name, 1, LXSwatch.MAX_COLORS + 1);
+      setDescription("Which color index in the palette to use");
+      setOptions(selectorOptions, false);
+      selectors.add(this);
+    }
+
+    @Override
+    public void dispose() {
+      super.dispose();
+      selectors.remove(this);
+    }
+  }
+
   public LXPalette(LX lx) {
     super(lx, "Color Palette");
     addChild("swatch", this.swatch = new LXSwatch(this, false));
@@ -175,7 +217,24 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     addParameter("autoCycleCursor", this.autoCycleCursor);
     addParameter("triggerSwatchCycle", this.triggerSwatchCycle);
     addParameter("expandedPerformance", this.expandedPerformance);
+    addParameter("label1", this.label1);
+    addParameter("label2", this.label2);
+    addParameter("label3", this.label3);
+    addParameter("label4", this.label4);
+    addParameter("label5", this.label5);
     this.color = swatch.colors.get(0);
+  }
+
+  private void updateSelectors() {
+    int i = 0;
+    for (StringParameter label : this.labels) {
+      final String option = label.getString();
+      selectorOptions[i] = option.isEmpty() ? String.valueOf(i+1) : option;
+      ++i;
+    }
+    for (IndexSelector selector : selectors) {
+      selector.optionsChanged.bang();
+    }
   }
 
   @Override
@@ -187,6 +246,8 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       if (!this.transitionEnabled.isOn()) {
         finishTransition();
       }
+    } else if (p == this.label1 || p == this.label2 || p == this.label3 || p == this.label4 || p == this.label5) {
+      updateSelectors();
     }
   }
 
