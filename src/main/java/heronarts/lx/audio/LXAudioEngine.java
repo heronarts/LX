@@ -67,8 +67,19 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
   public final Reaper reaper;
 
   public enum Mode {
-    INPUT,
-    OUTPUT
+    INPUT("Input"),
+    OUTPUT("Output");
+
+    public final String label;
+
+    private Mode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
   };
 
   public final EnumParameter<Mode> mode = new EnumParameter<Mode>("Mode", Mode.INPUT);
@@ -135,8 +146,6 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     addParameter("expandedPerformance", this.expandedPerformance);
     addInternalParameter("ioExpanded", this.ioExpanded);
     addInternalParameter("numSoundObjects", this.numSoundObjects);
-
-    this.mode.setOptions(new String[] { "Input", "Output" });
 
     addChild("input", this.input = new LXAudioInput(lx));
     addChild("output", this.output = new LXAudioOutput(lx));
