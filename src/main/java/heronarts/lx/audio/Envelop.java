@@ -21,6 +21,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXRunnableComponent;
+import heronarts.lx.Tempo.ClockSource;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
@@ -192,6 +193,9 @@ public class Envelop extends LXRunnableComponent {
   public static final String ENVELOP_DECODE_PATH = "decode";
   public static final String ENVELOP_SOURCE_AED = "aed";
   public static final String ENVELOP_SOURCE_XYZ = "xyz";
+  public static final String ENVELOP_TEMPO_PATH = "tempo";
+  public static final String ENVELOP_BEAT_PATH = "beat";
+  public static final String ENVELOP_BPM_PATH = "bpm";
 
   public boolean handleEnvelopOscMessage(OscMessage message, String[] parts, int index) {
     if (ENVELOP_SOURCE_PATH.equals(parts[2])) {
@@ -268,6 +272,16 @@ public class Envelop extends LXRunnableComponent {
         }
       }
       return true;
+    } else if (ENVELOP_TEMPO_PATH.equals(parts[2])) {
+      if (this.lx.engine.tempo.clockSource.getEnum() == ClockSource.OSC) {
+        if (message.size() == 0) {
+          LXOscEngine.error("Envelop tempo message missing argument: " + message.toString());
+        } else  if (ENVELOP_BPM_PATH.equals(parts[3])) {
+          this.lx.engine.tempo.bpm.setValue(message.getFloat());
+        } else if (ENVELOP_BEAT_PATH.equals(parts[3])) {
+          this.lx.engine.tempo.triggerBeatWithinBar(message.getInt());
+        }
+      }
     }
     return false;
   }
