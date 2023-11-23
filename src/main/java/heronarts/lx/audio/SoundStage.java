@@ -31,6 +31,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.structure.LXFixture;
+import heronarts.lx.transform.LXMatrix;
 import heronarts.lx.transform.LXVector;
 import heronarts.lx.utils.LXUtils;
 
@@ -87,6 +88,16 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     }
   }
 
+  private final LXMatrix rotationMatrix = new LXMatrix();
+
+  private final LXVector basisX = new LXVector();
+
+  private final LXVector basisY = new LXVector();
+
+  private final LXVector basisZ = new LXVector();
+
+  public final LXVector rotation = new LXVector();
+
   public final LXVector center = new LXVector();
 
   public final LXVector size = new LXVector();
@@ -119,6 +130,16 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     new BoundedParameter("Depth", 100, 0, LXFixture.POSITION_RANGE)
     .setDescription("Absolute depth of the sound stage");
 
+  public final BoundedParameter azimuthAbsolute =
+    new BoundedParameter("Azimuth", 0, -180, 180)
+    .setUnits(BoundedParameter.Units.DEGREES)
+    .setDescription("Azimuth of the front of the sound stage");
+
+  public final BoundedParameter elevationAbsolute =
+    new BoundedParameter("Elevation", 0, -90, 90)
+    .setUnits(BoundedParameter.Units.DEGREES)
+    .setDescription("Elevation of the front of the sound stage");
+
   public final BoundedParameter xRelative =
     new BoundedParameter("X", 0, -5, 5)
     .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
@@ -149,6 +170,16 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Relative depth of the sound stage");
 
+  public final BoundedParameter azimuthRelative =
+    new BoundedParameter("Azimuth", 0, -180, 180)
+    .setUnits(BoundedParameter.Units.DEGREES)
+    .setDescription("Azimuth of the front of the sound stage");
+
+  public final BoundedParameter elevationRelative =
+    new BoundedParameter("Elevation", 0, -90, 90)
+    .setUnits(BoundedParameter.Units.DEGREES)
+    .setDescription("Elevation of the front of the sound stage");
+
   public final BooleanParameter showSoundStage =
     new BooleanParameter("Show Sound Stage", false)
     .setDescription("Render sound stage in the UI");
@@ -175,12 +206,17 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     addGeometryParameter("widthAbsolute", this.widthAbsolute);
     addGeometryParameter("heightAbsolute", this.heightAbsolute);
     addGeometryParameter("depthAbsolute", this.depthAbsolute);
+    addGeometryParameter("azimuthAbsolute", this.azimuthAbsolute);
+    addGeometryParameter("elevationAbsolute", this.elevationAbsolute);
+
     addGeometryParameter("xRelative", this.xRelative);
     addGeometryParameter("yRelative", this.yRelative);
     addGeometryParameter("zRelative", this.zRelative);
     addGeometryParameter("widthRelative", this.widthRelative);
     addGeometryParameter("heightRelative", this.heightRelative);
     addGeometryParameter("depthRelative", this.depthRelative);
+    addGeometryParameter("azimuthRelative", this.azimuthRelative);
+    addGeometryParameter("elevationRelative", this.elevationRelative);
 
     addParameter("showSoundStage", this.showSoundStage);
     addParameter("showSoundObjects", this.showSoundObjects);
@@ -206,16 +242,30 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     p.addListener(this::recomputeBounds);
   }
 
+  private void setRotation(float azimuth, float elevation) {
+    this.rotation.set(elevation, azimuth, 0);
+    this.rotationMatrix
+      .identity()
+      .rotateX((float) Math.toRadians(elevation))
+      .rotateY((float) -Math.toRadians(azimuth));
+
+    this.basisX.set(this.rotationMatrix.m11, this.rotationMatrix.m12, this.rotationMatrix.m13);
+    this.basisY.set(this.rotationMatrix.m21, this.rotationMatrix.m22, this.rotationMatrix.m23);
+    this.basisZ.set(this.rotationMatrix.m31, this.rotationMatrix.m32, this.rotationMatrix.m33);
+  }
+
   private void recomputeBounds(LXParameter p) {
     final LXModel model = this.lx.getModel();
 
     switch (this.mode.getEnum()) {
     case DEFAULT:
+      setRotation(0, 0);
       this.center.set(model.cx, model.cy, model.cz);
       this.size.set(model.xRange, model.yRange, model.zRange);
       break;
 
     case RELATIVE:
+      setRotation(this.azimuthRelative.getValuef(), this.elevationRelative.getValuef());
       this.center.set(
         model.cx + model.xRange * this.xRelative.getValuef(),
         model.cy + model.yRange * this.yRelative.getValuef(),
@@ -229,6 +279,7 @@ public class SoundStage extends LXComponent implements LXOscComponent {
       break;
 
     case ABSOLUTE:
+      setRotation(this.azimuthAbsolute.getValuef(), this.elevationAbsolute.getValuef());
       this.center.set(
         this.xAbsolute.getValuef(),
         this.yAbsolute.getValuef(),
@@ -241,6 +292,27 @@ public class SoundStage extends LXComponent implements LXOscComponent {
       );
       break;
     }
+  }
+
+  /**
+   * Gets the normalized sound object position in the global model space
+   *
+   * @param object Sound object
+   * @return Vector of normalized x/y/z values for sound object position
+   */
+  public LXVector getNormalizedObjectPosition(SoundObject object) {
+    return getNormalizedObjectPosition(object, this.lx.getModel());
+  }
+
+  /**
+   * Gets the normalized sound object position in the global model space
+   *
+   * @param object Sound object
+   * @param reference Model to perform normalization against
+   * @return Vector of normalized x/y/z values for sound object position
+   */
+  public LXVector getNormalizedObjectPosition(SoundObject object, LXModel reference) {
+    return getNormalizedObjectPosition(object, ObjectPositionMode.ABSOLUTE, reference);
   }
 
   /**
@@ -271,6 +343,7 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     if (position == null) {
       position = new LXVector();
     }
+
     switch (mode) {
     case ABSOLUTE:
       position.set(-.5f, -.5f, -.5f).add(object.position);
@@ -291,10 +364,20 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     }
 
     // At this point the vector values are in range [-.5f,.5f] (possibly exceeding in ABSOLUTE)
-    position.mult(this.size).add(this.center);
+    // but they are relative to the sound stage bounds. We will scale by the basis vectors and
+    // move to the center of the sound field
+    final float xb = position.x;
+    final float yb = position.y;
+    final float zb = position.z;
 
-    // Now the values are in the sound stage, we need to normalized them to the reference model
-    // by doing an inverse interpolation
+    position
+      .set(this.center)
+      .add(this.basisX, xb * this.size.x)
+      .add(this.basisY, yb * this.size.y)
+      .add(this.basisZ, zb * this.size.z);
+
+    // Now the values are absolutely in the sound stage, we need to normalized them into to the
+    // reference model by doing an inverse interpolation
     final LXNormalizationBounds bounds = model.getNormalizationBounds();
     position.set(
       (bounds.xRange == 0) ? .5f : LXUtils.ilerpf(position.x, bounds.xMin, bounds.xMax),

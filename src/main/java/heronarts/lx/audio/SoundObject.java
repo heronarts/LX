@@ -155,7 +155,8 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
    * Holds the position of the sound object in coordinate
    * space where (.5, .5, .5) is the center. For distance
    * values larger than 100%, values may fall outside
-   * of the bounds [0,1]
+   * of the bounds [0,1]. Note that this position is relative
+   * to the sound stage bounds, not the absolute space.
    */
   public final LXVector position = new LXVector();
 
@@ -163,6 +164,8 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
    * Holds the normalized position of the sound object, assuming
    * that distance is set to 100%. All values will fall in the
    * range [-1,1] and the amplitude of this vector will be 1.
+   * Note that this position is relative to the sound stage bounds,
+   * not the absolute space.
    */
   public final LXVector normalized = new LXVector();
 
