@@ -253,18 +253,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     } else if (parts[index].equals(PATH_BEAT_WITHIN_BAR)) {
       if (this.clockSource.getObject() == Tempo.ClockSource.OSC) {
         if (message.size() > 0) {
-          // Message specifies a relative 1-indexed beat count within the bar
-          final int currentBeat = beatCountWithinBar();
-          final int nextBeat = message.getInt() - 1;
-          final int currentBar = barCount();
-          if (nextBeat <= currentBeat) {
-            // The beat has wrapped around, e.g. 2, 3, 4 -> 1
-            // We are moving onto the next bar!
-            trigger((currentBar+1) * this.beatsPerBar.getValuei() + nextBeat);
-          } else {
-            // We are still in the same bar
-            trigger(this.beatCount + (nextBeat - currentBeat));
-          }
+          triggerBeatWithinBar(message.getInt());
         } else {
           LXOscEngine.error(PATH_BEAT_WITHIN_BAR + " message missing argument: " + message.toString());
         }
@@ -551,6 +540,27 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    */
   public void trigger() {
     trigger(true);
+  }
+
+  /**
+   * Triggers the given beat within bar, keeping count over subsequent bars if
+   * desired.
+   *
+   * @param beatWithinBar Beat within bar, 1-indexed
+   */
+  public void triggerBeatWithinBar(int beatWithinBar) {
+    // Message specifies a relative 1-indexed beat count within the bar
+    final int currentBeat = beatCountWithinBar();
+    final int nextBeat = beatWithinBar - 1;
+    final int currentBar = barCount();
+    if (nextBeat <= currentBeat) {
+      // The beat has wrapped around, e.g. 2, 3, 4 -> 1
+      // We are moving onto the next bar!
+      trigger((currentBar+1) * this.beatsPerBar.getValuei() + nextBeat);
+    } else {
+      // We are still in the same bar
+      trigger(this.beatCount + (nextBeat - currentBeat));
+    }
   }
 
   /**
