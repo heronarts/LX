@@ -133,6 +133,13 @@ public class LXVector {
     return this;
   }
 
+  public LXVector add(LXVector that, float amount) {
+    this.x += that.x * amount;
+    this.y += that.y * amount;
+    this.z += that.z * amount;
+    return this;
+  }
+
   public LXVector sub(float x, float y) {
     this.x -= x;
     this.y -= y;
