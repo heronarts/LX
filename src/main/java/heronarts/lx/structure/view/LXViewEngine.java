@@ -350,7 +350,7 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
   }
 
   public List<LXViewDefinition> addViews(LX lx, JsonObject obj) {
-    List<LXViewDefinition> added = new ArrayList<LXViewDefinition>();
+    final List<LXViewDefinition> added = new ArrayList<LXViewDefinition>();
     if (obj.has(KEY_VIEWS)) {
       JsonArray viewArr = obj.get(KEY_VIEWS).getAsJsonArray();
       for (JsonElement swatchElem : viewArr) {

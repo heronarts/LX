@@ -686,18 +686,20 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     }
   }
 
-  public void importSwatches(File file) {
+  public List<LXSwatch> importSwatches(File file) {
+    final List<LXSwatch> imported = new ArrayList<LXSwatch>();
     try (FileReader fr = new FileReader(file)) {
       JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
       if (obj.has(KEY_SWATCHES)) {
         JsonArray swatchArr = obj.get(KEY_SWATCHES).getAsJsonArray();
         for (JsonElement swatchElem : swatchArr) {
-          addSwatch(swatchElem.getAsJsonObject(), -1);
+          imported.add(addSwatch(swatchElem.getAsJsonObject(), -1));
         }
       }
     } catch (IOException iox) {
       LX.error(iox, "Could not import color swatches from file: " + file.toString());
     }
+    return imported;
   }
 
 }

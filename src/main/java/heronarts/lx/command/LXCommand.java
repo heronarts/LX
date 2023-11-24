@@ -2024,13 +2024,20 @@ public abstract class LXCommand {
 
     public static class ImportSwatches extends LXCommand {
 
-      private final ComponentReference<LXPalette> palette;
-      private final JsonObject paletteObj;
+      private static class ImportedSwatch {
+        private final ComponentReference<LXSwatch> swatch;
+        private final JsonObject swatchObj;
+
+        private ImportedSwatch(LXSwatch swatch) {
+          this.swatch = new ComponentReference<LXSwatch>(swatch);
+          this.swatchObj = LXSerializable.Utils.toObject(swatch.getLX(), swatch);
+        }
+      }
+
       private final File file;
+      private List<ImportedSwatch> importedSwatches;
 
       public ImportSwatches(LXPalette palette, File file) {
-        this.palette = new ComponentReference<LXPalette>(palette);
-        this.paletteObj = LXSerializable.Utils.toObject(palette);
         this.file = file;
       }
 
@@ -2041,12 +2048,31 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        this.palette.get().importSwatches(this.file);
+        if (this.importedSwatches == null) {
+          this.importedSwatches= new ArrayList<ImportedSwatch>();
+          final List<LXSwatch> imported = lx.engine.palette.importSwatches(this.file);
+          if (imported != null) {
+            for (LXSwatch swatch : imported) {
+              this.importedSwatches.add(new ImportedSwatch(swatch));
+            }
+          }
+        } else {
+          // We've imported already, this is a redo and we need to
+          // preserve the swatch IDs and restore whatever was on disk
+          // the first time... the file may have changed underneath us
+          // but there could be "Redo" operations ahead of us in the
+          // queue
+          for (ImportedSwatch swatch : this.importedSwatches) {
+            lx.engine.palette.addSwatch(swatch.swatchObj, -1);
+          }
+        }
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        this.palette.get().load(lx, this.paletteObj);
+        for (int i = this.importedSwatches.size() - 1; i >= 0; --i) {
+          lx.engine.palette.removeSwatch(this.importedSwatches.get(i).swatch.get());
+        }
       }
     }
   }
