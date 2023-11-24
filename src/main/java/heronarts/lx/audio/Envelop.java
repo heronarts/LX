@@ -274,12 +274,28 @@ public class Envelop extends LXRunnableComponent {
       return true;
     } else if (ENVELOP_TEMPO_PATH.equals(parts[2])) {
       if (this.lx.engine.tempo.clockSource.getEnum() == ClockSource.OSC) {
-        if (message.size() == 0) {
-          LXOscEngine.error("Envelop tempo message missing argument: " + message.toString());
-        } else  if (ENVELOP_BPM_PATH.equals(parts[3])) {
-          this.lx.engine.tempo.bpm.setValue(message.getFloat());
+        if (ENVELOP_BPM_PATH.equals(parts[3])) {
+          if (message.size() == 0) {
+            LXOscEngine.error("Envelop bpm message missing argument: " + message.toString());
+          } else {
+            this.lx.engine.tempo.bpm.setValue(message.getFloat());
+          }
         } else if (ENVELOP_BEAT_PATH.equals(parts[3])) {
-          this.lx.engine.tempo.triggerBeatWithinBar(message.getInt());
+          if (message.size() == 0) {
+            LXOscEngine.error("Envelop beat message missing arguments: " + message.toString());
+          } else {
+            final int beat = message.getInt();
+            if (message.size() >= 3) {
+              final int bar = message.getInt();
+              final float bpm = message.getFloat();
+              if (bar >= 1 && beat >= 1) {
+                this.lx.engine.tempo.triggerBarAndBeat(bar, beat);
+              }
+              this.lx.engine.tempo.bpm.setValue(bpm);
+            } else {
+              this.lx.engine.tempo.triggerBeatWithinBar(beat);
+            }
+          }
         }
       }
     }
