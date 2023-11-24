@@ -127,8 +127,7 @@ public class StepSequencer extends LXPeriodicModulator implements LXTriggerSourc
 
   private void nextStep(int increment, boolean trigger) {
     if (this.tempoSync.isOn() && this.tempoLock.isOn()) {
-      double composite = this.lx.engine.tempo.getBasis(this.tempoDivision.getEnum(), false);
-      this.step = ((int) composite) % this.numSteps.getValuei();
+      this.step = this.lx.engine.tempo.getCycleCount(this.tempoDivision.getEnum()) % this.numSteps.getValuei();
     } else {
       this.step = (this.step + increment) % this.numSteps.getValuei();
     }

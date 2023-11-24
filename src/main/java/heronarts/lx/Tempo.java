@@ -34,6 +34,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.TriggerParameter;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * Class to represent a musical tempo at which patterns are operating. This can
@@ -54,6 +55,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
   public final static double DEFAULT_MIN_BPM = 20;
   public final static double DEFAULT_MAX_BPM = 240;
+
+  private static final double MAX_SLEW_CORRECTION = 3.9;
 
   private double minOscBpm = DEFAULT_MIN_BPM;
   private double maxOscBpm = DEFAULT_MAX_BPM;
@@ -95,17 +98,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     INTERNAL,
     MIDI,
     OSC;
-
-    public boolean isLooping() {
-      switch (this) {
-      case INTERNAL:
-        return true;
-      case MIDI:
-      case OSC:
-      default:
-        return false;
-      }
-    }
 
     public boolean isExternal() {
       return this != INTERNAL;
@@ -180,20 +172,92 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private boolean resetOnNextBeat = false;
-  private boolean doTrigger = false;
+  private boolean didTrigger = false;
   private boolean running = true;
 
-  private boolean isBeat = false;
+  private class Cursor {
+    private boolean isBeat = false;
+    private int beatCount = 0;
+    private double basis = 0;
 
-  private double basis = 0;
+    private void advance(double progress) {
+      advance(progress, true);
+    }
+
+    private void advance(double progress, boolean clearBeat) {
+      boolean isBeat = false;
+      this.basis += progress;
+      if (this.basis >= 1.) {
+        // NOTE: this is overkill but for some crazy fast tempo and slow engine rate we
+        // could hop multiple beats in a go?!?
+        this.beatCount += (int) this.basis;
+        this.basis = this.basis % 1.;
+        isBeat = true;
+      }
+      if (clearBeat || isBeat) {
+        this.isBeat = isBeat;
+      }
+    }
+
+    private void reset() {
+      this.basis = 0;
+      this.beatCount = 0;
+      this.isBeat = false;
+    }
+
+    private void set(Cursor that) {
+      this.basis = that.basis;
+      this.beatCount = that.beatCount;
+      this.isBeat = that.isBeat;
+    }
+
+    private int barCount() {
+      return this.beatCount / beatsPerBar.getValuei();
+    }
+
+    private int beatCountWithinBar() {
+      return this.beatCount % beatsPerBar.getValuei();
+    }
+
+    private double getCompositeBasis() {
+      return this.beatCount + this.basis;
+    }
+
+    // Note: need these helpers! Using composite basis comparisons can create
+    // bugs from subtle rounding errors where the integer bar count summed with
+    // the basis is not exactly the right value
+    private boolean isEqualTo(Cursor that) {
+      return
+        (this.beatCount == that.beatCount) &&
+        (this.basis == that.basis);
+    }
+
+    // NB: again, need explicit comparisons
+    private boolean isBehind(Cursor that) {
+      return
+        (this.beatCount < that.beatCount) || (
+          (this.beatCount == that.beatCount) &&
+          (this.basis < that.basis)
+        );
+    }
+
+    private double getCompositeDistance(Cursor that) {
+      return Math.abs(getCompositeBasis() - that.getCompositeBasis());
+    }
+
+  }
+
+  private final Cursor target = new Cursor();
+  private final Cursor smooth = new Cursor();
+  private final Cursor slew = new Cursor();
 
   private long firstTap = 0;
   private long lastTap = 0;
   private int tapCount = 0;
 
-  private int beatCount = 0;
+  private boolean inBpmPeriodUpdate = false;
 
-  private boolean parameterUpdate = false;
+  private int oscBeatCount = -1;
 
   public Tempo(LX lx) {
     super(lx);
@@ -245,8 +309,12 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
           // Message specifies an absolute 1-indexed beat count
           trigger(message.getInt()-1);
         } else {
-          // Message is a raw trigger only
-          trigger(false);
+          // Oof, these raw beat messages are risky business...
+          if (this.oscBeatCount < 0) {
+            trigger(this.oscBeatCount = 0);
+          } else {
+            trigger(++this.oscBeatCount);
+          }
         }
       }
       return true;
@@ -257,8 +325,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
         } else {
           LXOscEngine.error(PATH_BEAT_WITHIN_BAR + " message missing argument: " + message.toString());
         }
-        return true;
       }
+      return true;
     }
     return super.handleOscMessage(message, parts, index);
   }
@@ -272,16 +340,16 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.period) {
-      if (!this.parameterUpdate) {
-        this.parameterUpdate = true;
+      if (!this.inBpmPeriodUpdate) {
+        this.inBpmPeriodUpdate = true;
         this.bpm.setValue(MS_PER_MINUTE / this.period.getValue());
-        this.parameterUpdate = false;
+        this.inBpmPeriodUpdate = false;
       }
     } else if (p == this.bpm) {
-      if (!this.parameterUpdate) {
-        this.parameterUpdate = true;
+      if (!this.inBpmPeriodUpdate) {
+        this.inBpmPeriodUpdate = true;
         this.period.setValue(MS_PER_MINUTE / this.bpm.getValue());
-        this.parameterUpdate = false;
+        this.inBpmPeriodUpdate = false;
       }
     } else if (p == this.tap) {
       if (this.tap.isOn()) {
@@ -293,13 +361,16 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       updateNudge(this.nudgeDown, this.nudgeUp, 1.1);
     } else if (p == this.clockSource) {
       if (this.clockSource.getEnum().isExternal()) {
-        // Reset and stop clock, wait for trigger
+        // Reset and stop clock, wait for a trigger
+        this.resetOnNextBeat = false;
+        this.oscBeatCount = -1;
         this.running = false;
-        this.basis = 0;
+        this.target.reset();
+        this.smooth.reset();
       } else {
         this.running = true;
-        if (this.basis >= 1) {
-          this.basis = 0;
+        if (this.target.basis >= 1) {
+          this.target.basis = this.smooth.basis = 0;
         }
       }
     }
@@ -350,7 +421,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @return true if we are on a quarter-note beat
    */
   public boolean beat() {
-    return this.isBeat;
+    return this.smooth.isBeat;
   }
 
   /**
@@ -359,7 +430,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @return Bar count
    */
   public int barCount() {
-    return this.beatCount / this.beatsPerBar.getValuei();
+    return this.smooth.beatCount / this.beatsPerBar.getValuei();
   }
 
   /**
@@ -368,7 +439,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @return Beat count
    */
   public int beatCount() {
-    return this.beatCount;
+    return this.smooth.beatCount;
   }
 
   /**
@@ -378,7 +449,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @return Beat count within bar
    */
   public int beatCountWithinBar() {
-    return this.beatCount % this.beatsPerBar.getValuei();
+    return this.smooth.beatCountWithinBar();
   }
 
   /**
@@ -388,31 +459,43 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @return Number of full beats completed since beginning of tempo
    */
   public double getCompositeBasis() {
-    return this.beatCount + this.basis;
+    return this.smooth.getCompositeBasis();
   }
 
   /**
-   * Gets the basis of the tempo, relative to a division. If specified,
-   * the modulus is automatically taken against 1.
+   * Gets the cycle count at this tempo division
    *
-   * @param division Tempo division
-   * @param mod Whether to take modulus against 1
-   * @return Basis
+   * @param division Division level
+   * @return Measure count
    */
-  public double getBasis(Division division, boolean mod) {
-    double basis = getCompositeBasis() * division.multiplier;
-    return mod ? (basis % 1.) : basis;
+  public int getCycleCount(Division division) {
+    // NB - a bit of tricky casting and math games needed here to avoid rounding
+    // errors when summing
+    final double beatMultiple = this.smooth.beatCount * division.multiplier;
+    final double basisMultiple = this.smooth.basis * division.multiplier;
+    return
+      (int) beatMultiple +
+      (int) basisMultiple +
+      (int) ((beatMultiple % 1.) + (basisMultiple % 1.));
   }
 
   /**
    * Gets the basis of the tempo, relative to a tempo division. The result is between
-   * 0 and 1.
+   * 0 and strictly less than 1
    *
    * @param division Tempo division
-   * @return Relative tempo basis from 0-1
+   * @return Relative tempo division cycle basis from 0-1
    */
   public double getBasis(Division division) {
-    return (getCompositeBasis() * division.multiplier) % 1.;
+    // NB the repeated % operations, this is to deal with rounding errors that could
+    // unfortunately push values up, e.g. beatCount=19 basis=0.9999999999999996 and
+    // division = WHOLE would end up rounding up to 5.0 when it should be strictly less
+    // than 5, and this can cause problems with clients of this method like a periodic
+    // LFO wrapping around when they should not. Doing the modulo operations independently
+    // keeps the resulting value < 1. as it should be.
+    final double beatMultiple = this.smooth.beatCount * division.multiplier;
+    final double basisMultiple = this.smooth.basis * division.multiplier;
+    return ((beatMultiple % 1.) + (basisMultiple % 1.)) % 1.;
   }
 
   /**
@@ -442,11 +525,11 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @return value from 0-1 indicating phase of beat
    */
   public double basis() {
-    return this.basis;
+    return this.smooth.basis;
   }
 
   public float basisf() {
-    return (float) this.basis;
+    return (float) this.smooth.basis;
   }
 
   /**
@@ -458,7 +541,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    */
   @Deprecated
   public double ramp() {
-    return this.basis;
+    return basis();
   }
 
   /**
@@ -469,7 +552,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    */
   @Deprecated
   public float rampf() {
-    return (float) this.ramp();
+    return (float) ramp();
   }
 
   /**
@@ -524,7 +607,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   /**
-   * When in interneal clock mode, the next beat will reset the
+   * When in internal clock mode, the next beat will reset the
    * beat count to 0.
    */
   public Tempo resetOnNextBeat() {
@@ -550,27 +633,31 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    */
   public void triggerBeatWithinBar(int beatWithinBar) {
     // Message specifies a relative 1-indexed beat count within the bar
-    final int currentBeat = beatCountWithinBar();
+    final int currentBeat = this.target.beatCountWithinBar();
     final int nextBeat = beatWithinBar - 1;
-    final int currentBar = barCount();
-    if (nextBeat <= currentBeat) {
+    final int currentBar = this.target.barCount();
+    if (nextBeat < currentBeat) {
       // The beat has wrapped around, e.g. 2, 3, 4 -> 1
       // We are moving onto the next bar!
       trigger((currentBar+1) * this.beatsPerBar.getValuei() + nextBeat);
     } else {
-      // We are still in the same bar
-      trigger(this.beatCount + (nextBeat - currentBeat));
+      // We are still in the same bar, possibly on the same beat which
+      // reached us a tad late, or stepping forwards
+      trigger(this.target.beatCount + (nextBeat - currentBeat));
     }
   }
 
   /**
-   * Triggers the metronome, setting the beat count to the given explicit value
+   * Trigger the given bar and beat position, both 1-indexed
    *
-   * @param beat Beat count
+   * @param bar Bar number, 1-indexed
+   * @param beat Beat number, 1-indexed
    */
-  public void trigger(int beat) {
-    this.beatCount = beat;
-    this.doTrigger = true;
+  public void triggerBarAndBeat(int bar, int beat) {
+    if (bar < 1 || beat < 1) {
+      throw new IllegalArgumentException("Bar and beat must be 1 or greater: " + bar + "." + beat);
+    }
+    trigger((bar-1) * this.beatsPerBar.getValuei() + beat - 1);
   }
 
   /**
@@ -579,8 +666,17 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @param resetBeat True if the beat count should be reset to 0
    */
   public void trigger(boolean resetBeat) {
-    this.beatCount = resetBeat ? 0 : this.beatCount + 1;
-    this.doTrigger = true;
+    trigger(resetBeat ? 0 : this.target.beatCount + 1);
+  }
+
+  /**
+   * Triggers the metronome, setting the beat count to the given explicit value
+   *
+   * @param beat Beat count
+   */
+  public void trigger(int beat) {
+    this.target.beatCount = beat;
+    this.didTrigger = true;
   }
 
   /**
@@ -614,46 +710,84 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     trigger(this.tapCount - 1);
   }
 
+  /**
+   * Stop the metronome running
+   */
+  public void stop() {
+    this.running = false;
+  }
+
   @Override
   public void loop(double deltaMs) {
     // Run modulators
     super.loop(deltaMs);
 
-    boolean isBeat = false;
+    final double progress = deltaMs / (this.period.getValue() * this.nudge.getValue());
 
     // Explicit beat trigger, back to the start of the beat
-    if (this.doTrigger) {
-      this.doTrigger = false;
-      this.basis = 0;
+    if (this.didTrigger) {
+      this.didTrigger = false;
+      // TODO(mcslee): we ought to set the basis to time elapsed since the original source of
+      // the trigger event (e.g. time elapsed since OSC or MIDI message received)
+      this.target.basis = 0;
+      this.target.isBeat = true;
       this.running = true;
-      isBeat = true;
     } else if (this.running) {
-      this.basis += deltaMs / (this.period.getValue() * this.nudge.getValue());
-      if (this.basis >= 1) {
-        if (this.clockSource.getEnum().isLooping()) {
-          // NOTE: this is overkill but for some crazy fast tempo and slow engine rate we
-          // could hop multiple beats!
-          this.beatCount += (int) this.basis;
-          this.basis = this.basis % 1.;
-          isBeat = true;
-        } else {
-          // We're in a non-looping clock mode (MIDI/OSC), we just stop here at the end
-          // of the beat and wait it out until the next beat comes
-          this.basis = 1;
-          this.running = false;
-        }
+      // Non-trigger situation, advance + wrap the target cursor
+      this.target.advance(progress);
+    } else {
+      this.target.isBeat = false;
+    }
+
+    // If the reset flag was set, cronk our target beat down to 0
+    if (this.target.isBeat) {
+      if (this.resetOnNextBeat) {
+        this.resetOnNextBeat = false;
+        this.target.beatCount = 0;
       }
     }
 
-    if (this.isBeat = isBeat) {
-      if (this.resetOnNextBeat) {
-        this.resetOnNextBeat = false;
-        this.beatCount = 0;
-      }
+    // Now it's time to update the smoothed transport
+    this.slew.set(this.smooth);
+    this.slew.isBeat = false;
+    if (this.running) {
+      this.slew.advance(progress);
+    }
 
-      int beatsPerBar = this.beatsPerBar.getValuei();
-      int beatIndex = this.beatCount % beatsPerBar;
-      int barIndex = this.beatCount / beatsPerBar;
+    // Were you dragging, or rushing?
+    final double slewError = this.slew.getCompositeDistance(this.target);
+    final double correctionLerp = LXUtils.min(1, slewError);
+
+    if (this.slew.isEqualTo(this.target) || (slewError >= MAX_SLEW_CORRECTION)) {
+      // We're bang on! Incredible. Or we're so far off that there is no
+      // point smoothing this, just jump to the new state.
+      this.smooth.set(this.target);
+    } else if (this.slew.isBehind(this.target)) {
+      // We're dragging - boost on ahead
+      // LX.log(this.smooth.getCompositeBasis() + " --->>> " + this.target.getCompositeBasis());
+      double accel = LXUtils.lerp(.1, 2, correctionLerp);
+      this.slew.advance(LXUtils.min(slewError, progress * accel), false);
+      this.smooth.set(this.slew);
+    } else {
+      // We're rushing! Need to slow it back down, but only if we are running,
+      // since we never want a playhead moving in reverse. Note that we operate
+      // directly on smooth here, not slew. Slew was advanced too far ahead, we're
+      // going to advance *less* far ahead
+      this.smooth.isBeat = false;
+      if (this.running) {
+        // LX.log(this.target.getCompositeBasis() + " <<<--- " + this.smooth.getCompositeBasis());
+        double decel = LXUtils.lerp(.9, .25, correctionLerp);
+        this.smooth.advance(progress * decel);
+      }
+    }
+
+    // Check if the smoothed tempo has crossed a beat threshold, if so it is
+    // time to fire off the listeners
+    if (this.smooth.isBeat) {
+      final int beatsPerBar = this.beatsPerBar.getValuei();
+      final int beatIndex = this.smooth.beatCount % beatsPerBar;
+      final int barIndex = this.smooth.beatCount / beatsPerBar;
+
       if (beatIndex == 0) {
         for (Listener listener : this.listeners) {
           listener.onBar(this, barIndex);
