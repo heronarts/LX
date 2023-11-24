@@ -2568,7 +2568,6 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         lx.structure.views.removeView(this.view.get());
-
       }
 
       @Override
@@ -2606,7 +2605,60 @@ public abstract class LXCommand {
       public void undo(LX lx) {
         lx.structure.views.moveView(this.view.get(), this.fromIndex);
       }
+    }
 
+    public static class ImportViews extends LXCommand {
+
+      private static class ImportedView {
+        private final ComponentReference<LXViewDefinition> view;
+        private final JsonObject viewObj;
+
+        private ImportedView(LXViewDefinition view) {
+          this.view = new ComponentReference<LXViewDefinition>(view);
+          this.viewObj = LXSerializable.Utils.toObject(view.getLX(), view);
+        }
+      }
+
+      private final File file;
+      private List<ImportedView> importedViews;
+
+      public ImportViews(File file) {
+        this.file = file;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Import Views " + this.file.getName();
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.importedViews == null) {
+          this.importedViews = new ArrayList<ImportedView>();
+          final List<LXViewDefinition> imported = lx.structure.importViews(this.file);
+          if (imported != null) {
+            for (LXViewDefinition view : imported) {
+              this.importedViews.add(new ImportedView(view));
+            }
+          }
+        } else {
+          // We've imported already, this is a redo and we need to
+          // preserve the view IDs and restore whatever was on disk
+          // the first time... the file may have changed underneath us
+          // but there could be "Redo" operations ahead of us in the
+          // queue
+          for (ImportedView view : this.importedViews) {
+            lx.structure.views.addView(view.viewObj, -1);
+          }
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (int i = this.importedViews.size() - 1; i >= 0; --i) {
+          lx.structure.views.removeView(this.importedViews.get(i).view.get());
+        }
+      }
     }
   }
 

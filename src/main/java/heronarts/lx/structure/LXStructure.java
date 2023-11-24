@@ -49,6 +49,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.structure.view.LXViewDefinition;
 import heronarts.lx.structure.view.LXViewEngine;
 
 public class LXStructure extends LXComponent implements LXFixtureContainer {
@@ -736,7 +737,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   private boolean isLoading = false;
 
   private static final String KEY_FIXTURES = "fixtures";
-  private static final String KEY_VIEWS = "views";
   private static final String KEY_NORMALIZATION = "normalization";
   private static final String KEY_STATIC_MODEL = "staticModel";
   private static final String KEY_FILE = "file";
@@ -769,7 +769,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     if (this.isImmutable) {
       // When the model is immutable, clear/load the views
       this.views.reset();
-      LXSerializable.Utils.loadObject(this.lx, this.views, obj, KEY_VIEWS);
+      LXSerializable.Utils.loadObject(this.lx, this.views, obj, this.views.getPath());
       return;
     }
 
@@ -900,7 +900,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       if (obj.has(KEY_NORMALIZATION)) {
         loadParameters(this, obj.get(KEY_NORMALIZATION).getAsJsonObject(), this.normalizationParameters);
       }
-      LXSerializable.Utils.loadObject(this.lx, this.views, obj, KEY_VIEWS);
       this.modelFile = file;
       this.modelName.setValue(file.getName());
       this.isStatic.bang();
@@ -936,7 +935,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     JsonObject normalizationParameters = new JsonObject();
     saveParameters(this, normalizationParameters, this.normalizationParameters);
     obj.add(KEY_NORMALIZATION, normalizationParameters);
-    obj.add(KEY_VIEWS, LXSerializable.Utils.toObject(lx, this.views));
 
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
@@ -951,5 +949,25 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
 
     return this;
+  }
+
+  public void exportViews(File file) {
+    final JsonObject obj = LXSerializable.Utils.toObject(this.lx, this.views, true);
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      LX.log("Views saved successfully to " + file.toString());
+    } catch (IOException iox) {
+      LX.error(iox, "Could not export views to file: " + file.toString());
+    }
+  }
+
+  public List<LXViewDefinition> importViews(File file) {
+    try (FileReader fr = new FileReader(file)) {
+      return this.views.addViews(this.lx, new Gson().fromJson(fr, JsonObject.class));
+    } catch (IOException iox) {
+      LX.error(iox, "Could not import views from file: " + file.toString());
+    }
+    return null;
   }
 }

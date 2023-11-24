@@ -175,6 +175,7 @@ public class LX {
     FIXTURES("Fixtures"),
     PROJECTS("Projects"),
     MODELS("Models"),
+    VIEWS("Views"),
     PRESETS("Presets"),
     SCRIPTS("Scripts"),
     COLORS("Colors"),
