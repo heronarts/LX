@@ -24,6 +24,7 @@ import javax.sound.midi.SysexMessage;
 public class MidiBeat extends LXShortMessage {
 
   public static final long PERIOD_UNKNOWN = -1;
+  public static final int STOP = -1;
 
   private final int beat;
   private double period = PERIOD_UNKNOWN;
@@ -43,6 +44,10 @@ public class MidiBeat extends LXShortMessage {
 
   public int getBeat() {
     return this.beat;
+  }
+
+  public boolean isStop() {
+    return this.beat == STOP;
   }
 
 }

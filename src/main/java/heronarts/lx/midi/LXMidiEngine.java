@@ -968,11 +968,15 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       if (message instanceof MidiBeat &&
           input.syncEnabled.isOn() &&
           this.lx.engine.tempo.clockSource.getObject() == Tempo.ClockSource.MIDI) {
-        MidiBeat beat = (MidiBeat) message;
-        this.lx.engine.tempo.trigger(((MidiBeat) message).getBeat());
-        double period = beat.getPeriod();
-        if (period != MidiBeat.PERIOD_UNKNOWN) {
-          this.lx.engine.tempo.setPeriod(period);
+        final MidiBeat beat = (MidiBeat) message;
+        if (beat.isStop()) {
+          this.lx.engine.tempo.stop();
+        } else {
+          this.lx.engine.tempo.trigger(((MidiBeat) message).getBeat());
+          final double period = beat.getPeriod();
+          if (period != MidiBeat.PERIOD_UNKNOWN) {
+            this.lx.engine.tempo.setPeriod(period);
+          }
         }
       }
     }

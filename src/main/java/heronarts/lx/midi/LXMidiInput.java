@@ -182,6 +182,7 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
             }
             break;
           case ShortMessage.STOP:
+            message = new MidiBeat(sm, MidiBeat.STOP);
             this.lastBeatNanos = -1;
             break;
           case ShortMessage.SONG_POSITION_POINTER:
