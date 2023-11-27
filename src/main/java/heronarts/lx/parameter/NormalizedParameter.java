@@ -141,6 +141,7 @@ public class NormalizedParameter implements LXNormalizedParameter {
     return 1;
   }
 
+  @Override
   public boolean isMappable() {
     return this.mappable;
   }

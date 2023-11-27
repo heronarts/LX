@@ -24,11 +24,9 @@ package heronarts.lx.parameter;
  * able to listen for changes to the parameter value and to update it in a
  * normalized range of values.
  */
-public abstract class LXListenableNormalizedParameter extends
-    LXListenableParameter implements LXNormalizedParameter {
+public abstract class LXListenableNormalizedParameter extends LXListenableParameter implements LXNormalizedParameter {
 
   private double exponent = 1;
-  private boolean mappable = true;
   private boolean wrappable = false;
   private OscMode oscMode = OscMode.NORMALIZED;
 
@@ -49,12 +47,6 @@ public abstract class LXListenableNormalizedParameter extends
   }
 
   @Override
-  public LXListenableNormalizedParameter setMappable(boolean mappable) {
-    this.mappable = mappable;
-    return this;
-  }
-
-  @Override
   public LXListenableNormalizedParameter setUnits(Units units) {
     super.setUnits(units);
     switch (units) {
@@ -70,11 +62,6 @@ public abstract class LXListenableNormalizedParameter extends
       break;
     }
     return this;
-  }
-
-  @Override
-  public boolean isMappable() {
-    return this.mappable;
   }
 
   public LXListenableNormalizedParameter setOscMode(OscMode oscMode) {
