@@ -616,7 +616,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   }
 
   private LXStructure reset(boolean fromSync) {
-    this.views.reset();
     this.staticModel = null;
     removeAllFixtures();
     if (!fromSync) {
@@ -776,6 +775,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     this.isLoading = true;
 
     // Reset everything to complete scratch!
+    this.views.reset();
     reset(false);
 
     // Load parameter values, this is also where views will get loaded
