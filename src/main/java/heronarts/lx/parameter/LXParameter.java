@@ -46,6 +46,13 @@ public interface LXParameter extends LXPath {
       put(path, parameter);
       return this;
     }
+
+    public Collection reset() {
+      for (LXParameter p : values()) {
+        p.reset();
+      }
+      return this;
+    }
   }
 
   public static class Monitor {
