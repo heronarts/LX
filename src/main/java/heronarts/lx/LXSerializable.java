@@ -77,24 +77,13 @@ public interface LXSerializable {
       return null;
     }
 
-    /**
-     * Utility function to load a set of parameters
-     *
-     * @param obj JsonObject to serialize to
-     * @param parameters Map of parameters to unserialize
-     */
-    public static void loadParameters(JsonObject obj, Map<String, LXParameter> parameters) {
-      for (String path : parameters.keySet()) {
-        final LXParameter parameter = parameters.get(path);
-        if (parameter instanceof AggregateParameter) {
-          // Let this store/restore from the underlying parameter values
-          continue;
-        }
-        LXSerializable.Utils.loadParameter(parameter, obj, path);
-      }
+    public static JsonObject saveParameters(LXParameter.Collection parameters) {
+      final JsonObject obj = new JsonObject();
+      saveParameters(obj, parameters);
+      return obj;
     }
 
-    public static void saveParameters(JsonObject obj, Map<String, LXParameter> parameters) {
+    public static void saveParameters(JsonObject obj, LXParameter.Collection parameters) {
       for (String path : parameters.keySet()) {
         LXParameter parameter = parameters.get(path);
         if (parameter instanceof AggregateParameter) {
@@ -124,6 +113,23 @@ public interface LXSerializable {
         // Do not write FunctionalParamters into saved files
       } else {
         obj.addProperty(path, parameter.getValue());
+      }
+    }
+
+    /**
+     * Utility function to load a set of parameters
+     *
+     * @param obj JsonObject to serialize to
+     * @param parameters Map of parameters to unserialize
+     */
+    public static void loadParameters(JsonObject obj, LXParameter.Collection parameters) {
+      for (String path : parameters.keySet()) {
+        final LXParameter parameter = parameters.get(path);
+        if (parameter instanceof AggregateParameter) {
+          // Let this store/restore from the underlying parameter values
+          continue;
+        }
+        LXSerializable.Utils.loadParameter(parameter, obj, path);
       }
     }
 

@@ -26,9 +26,7 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import com.google.gson.Gson;
@@ -189,8 +187,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   public final LXViewEngine views;
 
-  private final Map<String, LXParameter> normalizationParameters =
-    new HashMap<String, LXParameter>();
+  private final LXParameter.Collection normalizationParameters = new LXParameter.Collection();
 
   public LXStructure(LX lx, LXModel immutable, ModelListener modelListener) {
     super(lx);
@@ -932,9 +929,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     obj.addProperty(LX.KEY_VERSION, LX.VERSION);
     obj.addProperty(LX.KEY_TIMESTAMP, System.currentTimeMillis());
     saveFixtures(this.lx, obj);
-    JsonObject normalizationParameters = new JsonObject();
-    saveParameters(this, normalizationParameters, this.normalizationParameters);
-    obj.add(KEY_NORMALIZATION, normalizationParameters);
+    obj.add(KEY_NORMALIZATION, LXSerializable.Utils.saveParameters(this.normalizationParameters));
 
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");

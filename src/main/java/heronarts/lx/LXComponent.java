@@ -1356,17 +1356,6 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   public static final String KEY_PATH = "path";
 
   /**
-   * Utility function to serialize a set of parameters
-   *
-   * @param component Component that owns the parameters
-   * @param obj JsonObject to serialize to
-   * @param parameters Map of parameters to serialize
-   */
-  protected static void saveParameters(LXComponent component, JsonObject obj, Map<String, LXParameter> parameters) {
-    LXSerializable.Utils.saveParameters(obj, parameters);
-  }
-
-  /**
    * Utility function to load a set of parameters
    *
    * @param component Component that owns the parameters
@@ -1396,19 +1385,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    */
   @Override
   public void save(LX lx, JsonObject obj) {
-    // Serialize parameters
-    JsonObject internal = new JsonObject();
-    saveParameters(this, internal, this.internalParameters);
-    JsonObject parameters = new JsonObject();
-    saveParameters(this, parameters, this.parameters);
-
-    // Serialize children
-    JsonObject children = LXSerializable.Utils.toObject(lx, this.mutableChildren);
     obj.addProperty(KEY_ID, this.id);
     obj.addProperty(KEY_CLASS, getClass().getName());
-    obj.add(KEY_INTERNAL, internal);
-    obj.add(KEY_PARAMETERS, parameters);
-    obj.add(KEY_CHILDREN, children);
+    obj.add(KEY_INTERNAL, LXSerializable.Utils.saveParameters(this.internalParameters));
+    obj.add(KEY_PARAMETERS, LXSerializable.Utils.saveParameters(this.parameters));
+    obj.add(KEY_CHILDREN, LXSerializable.Utils.toObject(lx, this.mutableChildren));
   }
 
   /**
