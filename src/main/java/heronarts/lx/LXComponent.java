@@ -1024,14 +1024,14 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   // Map of String key to parameter
-  protected final Map<String, LXParameter> parameters = new LinkedHashMap<String, LXParameter>();
+  protected final LXParameter.Collection parameters = new LXParameter.Collection();
 
   // Map of String key to internal-only parameters
-  protected final Map<String, LXParameter> internalParameters = new LinkedHashMap<String, LXParameter>();
+  protected final LXParameter.Collection internalParameters = new LXParameter.Collection();
 
-  protected final Map<String, LXParameter> legacyParameters = new LinkedHashMap<String, LXParameter>();
+  protected final LXParameter.Collection legacyParameters = new LXParameter.Collection();
 
-  protected final Map<String, LXParameter> legacyInternalParameters = new LinkedHashMap<String, LXParameter>();
+  protected final LXParameter.Collection legacyInternalParameters = new LXParameter.Collection();
 
   /**
    * Adds a parameter to this component, using its label as the path by default. This method
@@ -1044,6 +1044,19 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   @Deprecated
   protected final LXComponent addParameter(LXParameter parameter) {
     return addParameter(parameter.getLabel(), parameter);
+  }
+
+  /**
+   * Add all parameters from a collection of parameters
+   *
+   * @param parameters Collection of parameters
+   * @return this
+   */
+  protected final LXComponent addParameters(LXParameter.Collection parameters) {
+    for (Map.Entry<String, LXParameter> entry : parameters.entrySet()) {
+      addParameter(entry.getKey(), entry.getValue());
+    }
+    return this;
   }
 
   /**

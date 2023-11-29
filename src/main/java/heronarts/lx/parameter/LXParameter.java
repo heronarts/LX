@@ -23,6 +23,7 @@ import heronarts.lx.LXPath;
 import heronarts.lx.midi.MidiNote;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -31,6 +32,21 @@ import java.util.List;
  * parameters, such as a pattern, effect, or transition.
  */
 public interface LXParameter extends LXPath {
+
+  public static class Collection extends LinkedHashMap<String, LXParameter> {
+    private static final long serialVersionUID = -7473252361485696112L;
+
+    public Collection add(String path, LXParameter parameter) {
+      if (containsKey(path)) {
+        throw new IllegalStateException("Cannot add duplicate parameter path to collection: " + path);
+      }
+      if (containsValue(parameter)) {
+        throw new IllegalStateException("Cannot add parameter to same collection twice: " + parameter);
+      }
+      put(path, parameter);
+      return this;
+    }
+  }
 
   public static class Monitor {
 

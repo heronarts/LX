@@ -19,7 +19,6 @@
 package heronarts.lx.midi.surface;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import com.google.gson.JsonElement;
@@ -69,10 +68,10 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     .setMappable(false)
     .setDescription("Whether the control surface is enabled");
 
-  protected final Map<String, LXParameter> mutableSettings = new LinkedHashMap<String, LXParameter>();
+  protected final LXParameter.Collection mutableSettings = new LXParameter.Collection();
   public final Map<String, LXParameter> settings = Collections.unmodifiableMap(this.mutableSettings);
 
-  protected final Map<String, LXParameter> mutableState = new LinkedHashMap<String, LXParameter>();
+  protected final LXParameter.Collection mutableState = new LXParameter.Collection();
   public final Map<String, LXParameter> state = Collections.unmodifiableMap(this.mutableState);
 
   // Internal flag for enabled state, pre/post-teardown
