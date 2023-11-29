@@ -40,17 +40,7 @@ public class SparkleEffect extends LXEffect {
   public SparkleEffect(LX lx) {
     super(lx);
     addParameter("amount", this.amount);
-    addParameter("density", engine.density);
-    addParameter("speed", engine.speed);
-    addParameter("variation", engine.variation);
-    addParameter("duration", engine.duration);
-    addParameter("sharp", engine.sharp);
-    addParameter("waveshape", engine.waveshape);
-    addParameter("minInterval", engine.minInterval);
-    addParameter("maxInterval", engine.maxInterval);
-    // addParameter("baseLevel", engine.baseLevel);
-    addParameter("minLevel", engine.minLevel);
-    addParameter("maxLevel", engine.maxLevel);
+    addParameters(engine.parameters);
   }
 
   @Override
@@ -60,14 +50,14 @@ public class SparkleEffect extends LXEffect {
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
-    double amount = enabledAmount * this.amount.getValue();
+    enabledAmount *= this.amount.getValue();
 
     // Even if amount is 0, keep the sparkles advancing, don't want a "freeze-frame" effect
     // when turning the amount off and on
-    this.engine.run(deltaMs, model, amount);
+    this.engine.run(deltaMs, model, 0, enabledAmount);
 
     // But no need to multiply if amount is 0
-    if (amount > 0) {
+    if (enabledAmount > 0) {
       int i = 0;
       for (LXPoint p : model.points) {
         colors[p.index] = LXColor.multiply(colors[p.index], LXColor.gray(LXUtils.clamp(engine.outputLevels[i++], 0, 100)), 0x100);

@@ -24,6 +24,7 @@ import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulator.LXWaveshape;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.LX;
 import heronarts.lx.pattern.LXPattern;
@@ -91,6 +92,8 @@ public class SparklePattern extends LXPattern {
     private int numSparkles;
     private int maxPixelsPerSparkle;
 
+    public final LXParameter.Collection parameters = new LXParameter.Collection();
+
     public final CompoundParameter minInterval =
       new CompoundParameter("Fast", 1, .1, 60)
       .setExponent(2)
@@ -131,11 +134,6 @@ public class SparklePattern extends LXPattern {
       .setPolarity(CompoundParameter.Polarity.BIPOLAR)
       .setDescription("Sharpness of sparkle curve");
 
-    public final CompoundParameter baseLevel =
-      new CompoundParameter("Base", 0, 0, 100)
-      .setUnits(CompoundParameter.Units.PERCENT)
-      .setDescription("Base Level");
-
     public final CompoundParameter minLevel =
       new CompoundParameter("Min", 75, 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
@@ -150,6 +148,16 @@ public class SparklePattern extends LXPattern {
 
     public Engine(LXModel model) {
       setModel(model);
+      this.parameters.add("density", this.density);
+      this.parameters.add("speed", this.speed);
+      this.parameters.add("variation", this.variation);
+      this.parameters.add("duration", this.duration);
+      this.parameters.add("sharp", this.sharp);
+      this.parameters.add("waveshape", this.waveshape);
+      this.parameters.add("minInterval", this.minInterval);
+      this.parameters.add("maxInterval", this.maxInterval);
+      this.parameters.add("minLevel", this.minLevel);
+      this.parameters.add("maxLevel", this.maxLevel);
     }
 
     public void setModel(LXModel model) {
@@ -174,14 +182,14 @@ public class SparklePattern extends LXPattern {
       }
     }
 
-    public void run(double deltaMs, LXModel model, double amount) {
+    public void run(double deltaMs, LXModel model, double base, double amount) {
       final double minIntervalMs = 1000 * this.minInterval.getValue();
       final double maxIntervalMs = 1000 * this.maxInterval.getValue();
       final double speed = this.speed.getValue();
       final double variation = .01 * this.variation.getValue();
       final double durationInv = 100 / this.duration.getValue();
       final double density = .01 * this.density.getValue();
-      final double baseLevel = LXUtils.lerp(100, this.baseLevel.getValue(), amount);
+      final double baseLevel = LXUtils.lerp(100, base, amount);
 
       LXWaveshape waveshape = this.waveshape.getObject();
 
@@ -269,19 +277,15 @@ public class SparklePattern extends LXPattern {
 
   public final Engine engine = new Engine(model);
 
+  public final CompoundParameter baseLevel =
+    new CompoundParameter("Base", 0, 0, 100)
+    .setUnits(CompoundParameter.Units.PERCENT)
+    .setDescription("Base Level");
+
   public SparklePattern(LX lx) {
     super(lx);
-    addParameter("density", engine.density);
-    addParameter("speed", engine.speed);
-    addParameter("variation", engine.variation);
-    addParameter("duration", engine.duration);
-    addParameter("sharp", engine.sharp);
-    addParameter("waveshape", engine.waveshape);
-    addParameter("minInterval", engine.minInterval);
-    addParameter("maxInterval", engine.maxInterval);
-    addParameter("baseLevel", engine.baseLevel);
-    addParameter("minLevel", engine.minLevel);
-    addParameter("maxLevel", engine.maxLevel);
+    addParameters(engine.parameters);
+    addParameter("baseLevel", this.baseLevel);
   }
 
   @Override
@@ -291,7 +295,7 @@ public class SparklePattern extends LXPattern {
 
   @Override
   public void run(double deltaMs) {
-    engine.run(deltaMs, model, 1.);
+    engine.run(deltaMs, model, this.baseLevel.getValue(), 1.);
     int i = 0;
     for (LXPoint p : model.points) {
       colors[p.index] = LXColor.gray(LXUtils.clamp(engine.outputLevels[i++], 0, 100));
