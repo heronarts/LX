@@ -122,4 +122,10 @@ public class SoundObjectEffect extends LXEffect {
       }
     }
   }
+
+  @Override
+  public void dispose() {
+    this.blendBuffer.dispose();
+    super.dispose();
+  }
 }
