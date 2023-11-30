@@ -67,7 +67,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       getProtocolChannel(),
       getProtocolPriority(),
       getProtocolSequenceEnabled(),
-      this.kinetVersion.getEnum(),
+      getProtocolKinetVersion(),
       OutputDefinition.FPS_UNSPECIFIED,
       buildSegment()
     ));
