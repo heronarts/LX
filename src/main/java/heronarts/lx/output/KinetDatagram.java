@@ -42,29 +42,15 @@ public class KinetDatagram extends LXDatagram {
   public final static int KINET_PORT = 6038;
 
   public enum Version {
-    DMXOUT,
-    PORTOUT;
+    DMXOUT(DMXOUT_HEADER_LENGTH, DMXOUT_PACKET_LENGTH),
+    PORTOUT(PORTOUT_HEADER_LENGTH, PORTOUT_PACKET_LENGTH);
 
-    public int getDataOffset() {
-      switch (this) {
-      case PORTOUT:
-        return PORTOUT_HEADER_LENGTH;
+    public final int headerLength;
+    public final int packetLength;
 
-      case DMXOUT:
-      default:
-        return DMXOUT_HEADER_LENGTH;
-      }
-    }
-
-    public int getPacketLength() {
-      switch (this) {
-      case PORTOUT:
-        return PORTOUT_PACKET_LENGTH;
-
-      case DMXOUT:
-      default:
-        return DMXOUT_PACKET_LENGTH;
-      }
+    private Version(int headerLength, int packetLength) {
+      this.headerLength = headerLength;
+      this.packetLength = packetLength;
     }
   };
 
@@ -149,7 +135,7 @@ public class KinetDatagram extends LXDatagram {
    * @param version Version of Kinet Protocol
    */
   public KinetDatagram(LX lx, IndexBuffer indexBuffer, int kinetPort, Version version) {
-    super(lx, indexBuffer, version.getPacketLength());
+    super(lx, indexBuffer, version.packetLength);
     setPort(KINET_PORT);
     this.version = version;
 
@@ -163,41 +149,49 @@ public class KinetDatagram extends LXDatagram {
 
     switch (this.version) {
     case PORTOUT:
+      // Version
       this.buffer[4] = (byte) 0x01;
       this.buffer[5] = (byte) 0x00;
+
+      // Type (PORTOUT)
       this.buffer[6] = (byte) 0x08;
       this.buffer[7] = (byte) 0x01;
+
+      // Padding / sequence
       this.buffer[8] = (byte) 0x00;
       this.buffer[9] = (byte) 0x00;
       this.buffer[10] = (byte) 0x00;
       this.buffer[11] = (byte) 0x00;
+
+      // Universe
       this.buffer[12] = (byte) 0xff;
       this.buffer[13] = (byte) 0xff;
       this.buffer[14] = (byte) 0xff;
       this.buffer[15] = (byte) 0xff;
 
       // Port number
-      this.buffer[16] = (byte) kinetPort;
+      this.buffer[16] = (byte) (0xff & kinetPort);
 
-      // Maybe a checksum? 0x00 works fine
+      // Pad
       this.buffer[17] = (byte) 0x00;
+
+      // Flags (irrelevant?)
       this.buffer[18] = (byte) 0x00;
       this.buffer[19] = (byte) 0x00;
       this.buffer[20] = (byte) 0x00;
+      this.buffer[21] = (byte) 0x02; // Possibly # of ports on controller? (irrelevant)
 
-      // Total # of ports on controller? (irrelevant)
-      this.buffer[21] = (byte) 0x02;
-
-      // Unused
+      // Start code
       this.buffer[22] = (byte) 0x00;
       this.buffer[23] = (byte) 0x00;
       break;
 
     case DMXOUT:
+      // Version
       this.buffer[4] = (byte) 0x01;
       this.buffer[5] = (byte) 0x00;
 
-      // Type number (DMXOUT)
+      // Type (DMXOUT)
       this.buffer[6] = (byte) 0x01;
       this.buffer[7] = (byte) 0x01;
 
@@ -207,17 +201,21 @@ public class KinetDatagram extends LXDatagram {
       this.buffer[10] = (byte) 0x00;
       this.buffer[11] = (byte) 0x00;
 
-      // Unused header
+      // Port
       this.buffer[12] = (byte) 0x00;
-      this.buffer[13] = (byte) 0x00;
+
+      // Priority / Flags
+      this.buffer[13] = (byte) 0x40; // Priority? Checksum? Irrelevant padding?
+
+      // Timer Val? Padding?
       this.buffer[14] = (byte) 0x00;
       this.buffer[15] = (byte) 0x00;
 
-      // Universe
-      this.buffer[16] = (byte) 0xff;
-      this.buffer[17] = (byte) 0xff;
-      this.buffer[18] = (byte) 0xff;
-      this.buffer[19] = (byte) 0xff;
+      // Universe, little-endian
+      this.buffer[16] = (byte) (0xff & kinetPort);
+      this.buffer[17] = (byte) 0x00;
+      this.buffer[18] = (byte) 0x00;
+      this.buffer[19] = (byte) 0x00;
 
       // One byte to start data
       this.buffer[20] = (byte) 0x00;
@@ -226,16 +224,13 @@ public class KinetDatagram extends LXDatagram {
   }
 
   public KinetDatagram setKinetPort(byte kinetPort) {
-    if (this.version != Version.PORTOUT) {
-      throw new IllegalStateException("Cannot set kinetPort on DMXOUT KinetDatagram");
-    }
     this.buffer[16] = kinetPort;
     return this;
   }
 
   @Override
   protected int getDataBufferOffset() {
-    return this.version.getDataOffset();
+    return this.version.headerLength;
   }
 
 }

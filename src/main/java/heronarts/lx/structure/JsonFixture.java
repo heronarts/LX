@@ -47,6 +47,7 @@ import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtSyncDatagram;
+import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
@@ -152,6 +153,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_UNIVERSE = "universe";
   private static final String KEY_DDP_DATA_OFFSET = "dataOffset";
   private static final String KEY_KINET_PORT = "kinetPort";
+  private static final String KEY_KINET_VERSION = "kinetVersion";
   private static final String KEY_OPC_CHANNEL = "channel";
   private static final String KEY_CHANNEL = "channel";
   private static final String KEY_PRIORITY = "priority";
@@ -492,10 +494,11 @@ public class JsonFixture extends LXFixture {
     private final int channel;
     private final int priority;
     private final boolean sequenceEnabled;
+    private final KinetDatagram.Version kinetVersion;
     private final float fps;
     private final List<JsonSegmentDefinition> segments;
 
-    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteEncoderDefinition byteOrder, InetAddress address, int port, int universe, int channel, int priority, boolean sequenceEnabled, float fps, List<JsonSegmentDefinition> segments) {
+    private JsonOutputDefinition(LXFixture fixture, JsonProtocolDefinition protocol, JsonTransportDefinition transport, JsonByteEncoderDefinition byteOrder, InetAddress address, int port, int universe, int channel, int priority, boolean sequenceEnabled, KinetDatagram.Version kinetVersion, float fps, List<JsonSegmentDefinition> segments) {
       this.fixture = fixture;
       this.protocol = protocol;
       this.transport = transport;
@@ -506,6 +509,7 @@ public class JsonFixture extends LXFixture {
       this.channel = channel;
       this.priority = priority;
       this.sequenceEnabled = sequenceEnabled;
+      this.kinetVersion = kinetVersion;
       this.fps = fps;
       this.segments = segments;
     }
@@ -2125,6 +2129,20 @@ public class JsonFixture extends LXFixture {
       }
     }
 
+    KinetDatagram.Version kinetVersion = KinetDatagram.Version.PORTOUT;
+    if (protocol == JsonProtocolDefinition.KINET) {
+      if (outputObj.has(KEY_KINET_VERSION)) {
+        String key = loadString(outputObj, KEY_KINET_VERSION, true, "Output must specify valid KiNET version of PORTOUT or DMXOUT");
+        if (key != null) {
+          try {
+            kinetVersion = KinetDatagram.Version.valueOf(key.toUpperCase());
+          } catch (Exception x) {
+            addWarning("Output specifies an invalid KiNET version: " + key);
+          }
+        }
+      }
+    }
+
     final boolean sequenceEnabled = loadBoolean(outputObj, KEY_SEQUENCE_ENABLED, true, "Output " + KEY_SEQUENCE_ENABLED + " must be a valid boolean");
 
     // Top level output byte-order
@@ -2134,7 +2152,7 @@ public class JsonFixture extends LXFixture {
     List<JsonSegmentDefinition> segments = new ArrayList<JsonSegmentDefinition>();
     loadSegments(fixture, segments, outputObj, byteOrder);
 
-    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, priority, sequenceEnabled, fps, segments));
+    this.definedOutputs.add(new JsonOutputDefinition(fixture, protocol, transport, byteOrder, address, port, universe, channel, priority, sequenceEnabled, kinetVersion, fps, segments));
   }
 
   private void loadBrightness(LXFixture child, JsonObject childObj) {
@@ -2399,6 +2417,7 @@ public class JsonFixture extends LXFixture {
       output.channel,
       output.priority,
       output.sequenceEnabled,
+      output.kinetVersion,
       output.fps,
       segments.toArray(new Segment[0])
     ));

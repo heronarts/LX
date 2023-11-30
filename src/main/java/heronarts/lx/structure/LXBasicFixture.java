@@ -43,6 +43,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
     addOutputParameter("opcOffset", this.opcOffset);
     addOutputParameter("ddpDataOffset", this.ddpDataOffset);
     addOutputParameter("kinetPort", this.kinetPort);
+    addOutputParameter("kinetVersion", this.kinetVersion);
   }
 
   @Override
@@ -66,6 +67,7 @@ public abstract class LXBasicFixture extends LXProtocolFixture {
       getProtocolChannel(),
       getProtocolPriority(),
       getProtocolSequenceEnabled(),
+      this.kinetVersion.getEnum(),
       OutputDefinition.FPS_UNSPECIFIED,
       buildSegment()
     ));

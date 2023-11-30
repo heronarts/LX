@@ -245,10 +245,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     protected final int channel;
     protected final int priority;
     protected final boolean sequenceEnabled;
+    protected final KinetDatagram.Version kinetVersion;
     protected final float fps;
     protected final Segment[] segments;
 
-    public OutputDefinition(Protocol protocol, Transport transport, InetAddress address, int port, int universe, int channel, int priority, boolean sequenceEnabled, float fps, Segment ... segments) {
+    public OutputDefinition(Protocol protocol, Transport transport, InetAddress address, int port, int universe, int channel, int priority, boolean sequenceEnabled, KinetDatagram.Version kinetVersion, float fps, Segment ... segments) {
       this.protocol = protocol;
       this.transport = transport;
       this.address = address;
@@ -256,6 +257,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       this.universe = universe;
       this.channel = channel;
       this.priority = priority;
+      this.kinetVersion = kinetVersion;
       this.sequenceEnabled = sequenceEnabled;
       this.fps = fps;
       this.segments = segments;

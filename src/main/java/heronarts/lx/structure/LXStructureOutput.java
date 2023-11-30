@@ -54,11 +54,12 @@ public class LXStructureOutput extends LXOutput {
     private final int universe;
     private int priority;
     private boolean sequenceEnabled;
+    private final KinetDatagram.Version kinetVersion;
     private float fps = 0f;
 
     private final List<IndexBuffer.Segment> segments = new ArrayList<IndexBuffer.Segment>();
 
-    private Packet(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe, int priority, boolean sequenceEnabled) {
+    private Packet(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe, int priority, boolean sequenceEnabled, KinetDatagram.Version kinetVersion) {
       this.protocol = protocol;
       this.transport = transport;
       this.address = address;
@@ -66,6 +67,7 @@ public class LXStructureOutput extends LXOutput {
       this.universe = universe;
       this.priority = priority;
       this.sequenceEnabled = sequenceEnabled;
+      this.kinetVersion = kinetVersion;
     }
 
     private boolean checkOverflow() {
@@ -162,7 +164,7 @@ public class LXStructureOutput extends LXOutput {
         output = new StreamingACNDatagram(lx, toIndexBuffer(), this.universe).setPriority(this.priority);
         break;
       case KINET:
-        output = new KinetDatagram(lx, toIndexBuffer(), this.universe);
+        output = new KinetDatagram(lx, toIndexBuffer(), this.universe, this.kinetVersion);
         break;
       case OPC:
         if (this.transport == LXFixture.Transport.TCP) {
@@ -187,14 +189,15 @@ public class LXStructureOutput extends LXOutput {
     }
   }
 
-  private Packet findPacket(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe, int priority, boolean sequenceEnabled) {
+  private Packet findPacket(LXFixture.Protocol protocol, LXFixture.Transport transport, InetAddress address, int port, int universe, int priority, boolean sequenceEnabled, KinetDatagram.Version kinetVersion) {
     // Check if there's an existing packet for this address space
     for (Packet packet : this.packets) {
       if ((packet.protocol == protocol)
         && (packet.transport == transport)
         && (packet.address.equals(address))
         && (packet.port == port)
-        && (packet.universe == universe)) {
+        && (packet.universe == universe)
+        && (packet.kinetVersion == kinetVersion)) {
 
         // Priority is the max of any segment contained within
         packet.priority = LXUtils.max(packet.priority, priority);
@@ -207,7 +210,7 @@ public class LXStructureOutput extends LXOutput {
     }
 
     // Create a new packet for this address space
-    Packet packet = new Packet(protocol, transport, address, port, universe, priority, sequenceEnabled);
+    Packet packet = new Packet(protocol, transport, address, port, universe, priority, sequenceEnabled, kinetVersion);
     this.packets.add(packet);
     return packet;
   }
@@ -281,11 +284,12 @@ public class LXStructureOutput extends LXOutput {
     int channel = output.channel;
     final int priority = output.priority;
     final boolean sequenceEnabled = output.sequenceEnabled;
+    final KinetDatagram.Version kinetVersion = output.kinetVersion;
     final float fps = output.fps;
     boolean overflow = false;
 
     // Find the starting packet for this output definition
-    Packet packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled);
+    Packet packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled, kinetVersion);
     for (LXFixture.Segment segment : output.segments) {
       if (overflow) {
         // Is it okay for this type to overflow?
@@ -296,7 +300,7 @@ public class LXStructureOutput extends LXOutput {
         overflow = false;
         ++universe;
         channel = 0;
-        packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled);
+        packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled, kinetVersion);
       }
 
       int chunkStart = 0;
@@ -329,7 +333,7 @@ public class LXStructureOutput extends LXOutput {
         ++universe;
         channel = 0;
         availableBytes = protocol.maxChannels;
-        packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled);
+        packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled, kinetVersion);
       }
 
       // Add the final chunk (the whole segment in the common case)
