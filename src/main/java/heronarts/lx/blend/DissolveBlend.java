@@ -41,7 +41,7 @@ public class DissolveBlend extends LXBlend {
     final int dstAlpha = 0x100 - srcAlpha;
     for (LXPoint p : model.points) {
       final int i = p.index;
-      output[i] = LXColor.add(LXColor.add(LXColor.BLACK, dst[i], dstAlpha), src[i], srcAlpha);
+      output[i] = LXColor.add(LXColor.add(LXColor.CLEAR, dst[i], dstAlpha), src[i], srcAlpha);
     }
   }
 }
