@@ -195,6 +195,15 @@ public abstract class LXProtocolFixture extends LXFixture {
     }
   }
 
+  protected KinetDatagram.Version getProtocolKinetVersion() {
+    switch (this.protocol.getEnum()) {
+    case KINET:
+      return this.kinetVersion.getEnum();
+    default:
+      return KinetDatagram.Version.PORTOUT;
+    }
+  }
+
   protected int getProtocolPriority() {
     switch (this.protocol.getEnum()) {
     case SACN:
