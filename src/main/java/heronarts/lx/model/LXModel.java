@@ -86,10 +86,11 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     /**
      * Compute a geometry value for this point
      *
+     * @param model Model that point belongs to
      * @param p Point
      * @return Geometry value
      */
-    public float compute(LXPoint p);
+    public float compute(LXModel model, LXPoint p);
   }
 
   /**
@@ -98,29 +99,29 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    */
   public enum Geometry {
 
-    RADIUS_3D_CENTER_NORMALIZED(p -> { return LXUtils.distf(p.xn, p.yn, p.zn, .5f, .5f, .5f); }),
-    RADIUS_XY_CENTER_NORMALIZED(p -> { return LXUtils.distf(p.xn, p.yn, .5f, .5f); }),
-    RADIUS_XZ_CENTER_NORMALIZED(p -> { return LXUtils.distf(p.xn, p.zn, .5f, .5f); }),
-    RADIUS_YZ_CENTER_NORMALIZED(p -> { return LXUtils.distf(p.yn, p.zn, .5f, .5f); }),
+    RADIUS_3D_CENTER_NORMALIZED((model, p) -> { return LXUtils.distf(p.xn, p.yn, p.zn, .5f, .5f, .5f); }),
+    RADIUS_XY_CENTER_NORMALIZED((model, p) -> { return LXUtils.distf(p.xn, p.yn, .5f, .5f); }),
+    RADIUS_XZ_CENTER_NORMALIZED((model, p) -> { return LXUtils.distf(p.xn, p.zn, .5f, .5f); }),
+    RADIUS_YZ_CENTER_NORMALIZED((model, p) -> { return LXUtils.distf(p.yn, p.zn, .5f, .5f); }),
 
-    RADIUS_3D_NORMALIZED(p -> { return LXUtils.distf(p.xn, p.yn, p.zn, 0, 0, 0); }),
-    RADIUS_XY_ORIGIN_NORMALIZED(p -> { return LXUtils.distf(p.xn, p.yn, 0, 0); }),
-    RADIUS_XZ_ORIGIN_NORMALIZED(p -> { return LXUtils.distf(p.xn, p.zn, 0, 0); }),
-    RADIUS_YZ_ORIGIN_NORMALIZED(p -> { return LXUtils.distf(p.yn, p.zn, 0, 0); }),
+    RADIUS_3D_NORMALIZED((model, p) -> { return LXUtils.distf(p.xn, p.yn, p.zn, 0, 0, 0); }),
+    RADIUS_XY_ORIGIN_NORMALIZED((model, p) -> { return LXUtils.distf(p.xn, p.yn, 0, 0); }),
+    RADIUS_XZ_ORIGIN_NORMALIZED((model, p) -> { return LXUtils.distf(p.xn, p.zn, 0, 0); }),
+    RADIUS_YZ_ORIGIN_NORMALIZED((model, p) -> { return LXUtils.distf(p.yn, p.zn, 0, 0); }),
 
-    RADIUS_3D_ORIGIN_ABSOLUTE(p -> { return LXUtils.distf(p.x, p.y, p.z, 0, 0, 0); }),
-    RADIUS_XY_ORIGIN_ABSOLUTE(p -> { return LXUtils.distf(p.x, p.y, 0, 0); }),
-    RADIUS_XZ_ORIGIN_ABSOLUTE(p -> { return LXUtils.distf(p.x, p.z, 0, 0); }),
-    RADIUS_YZ_ORIGIN_ABSOLUTE(p -> { return LXUtils.distf(p.y, p.z, 0, 0); }),
+    RADIUS_3D_ORIGIN_ABSOLUTE((model, p) -> { return LXUtils.distf(p.x, p.y, p.z, 0, 0, 0); }),
+    RADIUS_XY_ORIGIN_ABSOLUTE((model, p) -> { return LXUtils.distf(p.x, p.y, 0, 0); }),
+    RADIUS_XZ_ORIGIN_ABSOLUTE((model, p) -> { return LXUtils.distf(p.x, p.z, 0, 0); }),
+    RADIUS_YZ_ORIGIN_ABSOLUTE((model, p) -> { return LXUtils.distf(p.y, p.z, 0, 0); }),
 
-    AZIMUTH_XZ_CENTER_NORMALIZED(p -> { return LXUtils.atan2pf(p.xn-.5f, p.zn-.5f); }),
-    ELEVATION_XZ_CENTER_NORMALIZED(p -> { return (float) Math.atan2(p.yn - .5f, LXUtils.distf(p.xn, p.zn, .5f, .5f)); }),
+    AZIMUTH_XZ_CENTER_NORMALIZED((model, p) -> { return LXUtils.atan2pf(p.xn-.5f, p.zn-.5f); }),
+    ELEVATION_XZ_CENTER_NORMALIZED((model, p) -> { return (float) Math.atan2(p.yn - .5f, LXUtils.distf(p.xn, p.zn, .5f, .5f)); }),
 
-    AZIMUTH_XZ_ORIGIN_ABSOLUTE(p -> { return LXUtils.atan2pf(p.x, p.z); }),
-    ELEVATION_XZ_ORIGIN_ABSOLUTE(p -> { return (float) Math.atan2(p.y, LXUtils.distf(p.x, p.z, 0, 0)); }),
+    AZIMUTH_XZ_ORIGIN_ABSOLUTE((model, p) -> { return LXUtils.atan2pf(p.x, p.z); }),
+    ELEVATION_XZ_ORIGIN_ABSOLUTE((model, p) -> { return (float) Math.atan2(p.y, LXUtils.distf(p.x, p.z, 0, 0)); }),
 
-    THETA_XY_ORIGIN_ABSOLUTE(p -> { return LXUtils.atan2pf(p.y, p.x); }),
-    THETA_XY_CENTER_NORMALIZED(p -> { return LXUtils.atan2pf(p.yn-.5f, p.xn-.5f); });
+    THETA_XY_ORIGIN_ABSOLUTE((model, p) -> { return LXUtils.atan2pf(p.y, p.x); }),
+    THETA_XY_CENTER_NORMALIZED((model, p) -> { return LXUtils.atan2pf(p.yn-.5f, p.xn-.5f); });
 
     public final GeometryFunction function;
 
@@ -1049,7 +1050,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
   private float[] computeGeometry(GeometryFunction function, float[] arr) {
     for (LXPoint p : this.points) {
-      arr[p.index] = function.compute(p);
+      arr[p.index] = function.compute(this, p);
     }
     return arr;
   }
