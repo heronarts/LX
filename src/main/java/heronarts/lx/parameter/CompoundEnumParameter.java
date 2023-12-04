@@ -18,41 +18,36 @@
 
 package heronarts.lx.parameter;
 
-public class EnumParameter<T extends Enum<?>> extends ObjectParameter<T> {
+public class CompoundEnumParameter<T extends Enum<?>> extends CompoundObjectParameter<T> {
 
-  @SuppressWarnings("unchecked")
-  static <T> T[] valuesFor(T o) {
-    try {
-      return (T[]) o.getClass().getMethod("values").invoke(null);
-    } catch (Exception x) {
-      throw new RuntimeException(x);
-    }
-  }
-
-  public EnumParameter(String label, T t) {
-    super(label, valuesFor(t), t);
+  public CompoundEnumParameter(String label, T t) {
+    super(label, EnumParameter.valuesFor(t), t);
   }
 
   @Override
-  public EnumParameter<T> setDescription(String description) {
+  public CompoundEnumParameter<T> setDescription(String description) {
     super.setDescription(description);
     return this;
   }
 
   @Override
-  public EnumParameter<T> setMappable(boolean mappable) {
+  public CompoundEnumParameter<T> setMappable(boolean mappable) {
     super.setMappable(mappable);
     return this;
   }
 
   @Override
-  public EnumParameter<T> addListener(LXParameterListener listener) {
+  public CompoundEnumParameter<T> addListener(LXParameterListener listener) {
     super.addListener(listener);
     return this;
   }
 
   public T getEnum() {
     return getObject();
+  }
+
+  public T getBaseEnum() {
+    return getBaseObject();
   }
 
 }

@@ -275,15 +275,6 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
   }
 
   /**
-   * Retrieves the current value of the modulator in floating point precision.
-   *
-   * @return Current value of the modulator, cast to float
-   */
-  public final float getValuef() {
-    return (float) this.getValue();
-  }
-
-  /**
    * Set the modulator to a certain value in its cycle.
    *
    * @param value The value to apply

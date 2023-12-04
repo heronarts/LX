@@ -25,9 +25,8 @@ import java.util.List;
 import java.util.Objects;
 
 import heronarts.lx.modulation.LXCompoundModulation;
-import heronarts.lx.utils.LXUtils;
 
-public class CompoundParameter extends BoundedParameter {
+public class CompoundParameter extends BoundedParameter implements LXCompoundModulation.Target {
 
   // Note that the thread-safe CopyOnWriteArrayList is used here because the UI
   // thread may also need to access these modulations to draw animated knobs and controls
@@ -38,14 +37,11 @@ public class CompoundParameter extends BoundedParameter {
   public final List<LXCompoundModulation> modulations =
     Collections.unmodifiableList(this.mutableModulations);
 
-  public interface ModulationListener {
-    public void modulationAdded(CompoundParameter parameter, LXCompoundModulation modulation);
-    public void modulationRemoved(CompoundParameter parameter, LXCompoundModulation modulation);
-  }
+  private final List<LXCompoundModulation.Listener> modulationListeners =
+    new ArrayList<LXCompoundModulation.Listener>();
 
-  private final List<ModulationListener> modulationListeners = new ArrayList<ModulationListener>();
-
-  public final CompoundParameter addModulationListener(ModulationListener listener) {
+  @Override
+  public final CompoundParameter addModulationListener(LXCompoundModulation.Listener listener) {
     Objects.requireNonNull(listener, "May not add null CompoundParameter.ModulationListener");
     if (this.modulationListeners.contains(listener)) {
       throw new IllegalStateException("Cannod add CompoundParameter.ModulationListener listener twice: " + listener);
@@ -54,7 +50,8 @@ public class CompoundParameter extends BoundedParameter {
     return this;
   }
 
-  public final CompoundParameter removeModulationListener(ModulationListener listener) {
+  @Override
+  public final CompoundParameter removeModulationListener(LXCompoundModulation.Listener listener) {
     this.modulationListeners.remove(listener);
     return this;
   }
@@ -166,18 +163,24 @@ public class CompoundParameter extends BoundedParameter {
     return this;
   }
 
+  @Override
+  public List<LXCompoundModulation> getModulations() {
+    return this.modulations;
+  }
+
   /**
    * Adds a modulation to this parameter
    *
    * @param modulation Modulation mapping to add to this parameter
    * @return this
    */
+  @Override
   public CompoundParameter addModulation(LXCompoundModulation modulation) {
     if (this.mutableModulations.contains(modulation)) {
       throw new IllegalStateException("Cannot add same modulation twice");
     }
     this.mutableModulations.add(modulation);
-    for (ModulationListener listener : this.modulationListeners) {
+    for (LXCompoundModulation.Listener listener : this.modulationListeners) {
       listener.modulationAdded(this, modulation);
     }
     bang();
@@ -190,53 +193,29 @@ public class CompoundParameter extends BoundedParameter {
    * @param modulation Modulation mapping to remove
    * @return this
    */
+  @Override
   public CompoundParameter removeModulation(LXCompoundModulation modulation) {
     this.mutableModulations.remove(modulation);
-    for (ModulationListener listener : this.modulationListeners) {
+    for (LXCompoundModulation.Listener listener : this.modulationListeners) {
       listener.modulationRemoved(this, modulation);
     }
     bang();
     return this;
   }
 
+  @Override
   public double getBaseValue() {
     return super.getValue();
   }
 
-  public float getBaseValuef() {
-    return (float) getBaseValue();
-  }
-
+  @Override
   public double getBaseNormalized() {
     return this.range.getNormalized(getBaseValue(), getExponent(), getNormalizationCurve());
   }
 
-  public float getBaseNormalizedf() {
-    return (float) getBaseNormalized();
-  }
-
   @Override
   public double getNormalized() {
-    double normalized = this.range.getNormalized(getBaseValue(), getExponent(), getNormalizationCurve());
-    for (LXCompoundModulation modulation : this.mutableModulations) {
-      if (modulation.enabled.isOn()) {
-        if (modulation.getPolarity() == Polarity.UNIPOLAR) {
-          normalized += modulation.source.getNormalized() * modulation.range.getValue();
-        } else {
-          normalized += 2.*(modulation.source.getNormalized()-.5) * modulation.range.getValue();
-        }
-      }
-    }
-    if (isWrappable()) {
-      if (normalized < 0) {
-        return 1. + (normalized % 1.);
-      } else if (normalized > 1) {
-        return normalized % 1.;
-      }
-      // NOTE: don't want to mod exactly 1. to 0, leave it at 1.
-      return normalized;
-    }
-    return LXUtils.constrain(normalized, 0, 1);
+    return getNormalizedWithModulation(getBaseNormalized(), this.modulations);
   }
 
   @Override

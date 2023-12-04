@@ -18,7 +18,6 @@
 
 package heronarts.lx.clipboard;
 
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 
 public class LXNormalizedValue implements LXClipboardItem {
@@ -26,7 +25,7 @@ public class LXNormalizedValue implements LXClipboardItem {
   public final double value;
 
   public LXNormalizedValue(LXNormalizedParameter p) {
-    this((p instanceof CompoundParameter) ? ((CompoundParameter)p).getBaseNormalized() : p.getNormalized());
+    this.value = p.getBaseNormalized();
   }
 
   public LXNormalizedValue(double value) {

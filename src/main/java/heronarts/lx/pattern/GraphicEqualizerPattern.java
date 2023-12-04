@@ -50,12 +50,12 @@ public class GraphicEqualizerPattern extends LXPattern {
     new CompoundParameter("Center", 0)
     .setDescription("Center point on the axis");
 
-  public final CompoundParameter fade = (CompoundParameter)
+  public final CompoundParameter fade =
     new CompoundParameter("Fade", 0.1)
     .setExponent(2)
     .setDescription("Amount of fade");
 
-  public final CompoundParameter sharp = (CompoundParameter)
+  public final CompoundParameter sharp =
     new CompoundParameter("Sharp", 0.9)
     .setExponent(2)
     .setDescription("Amount of sharpness");

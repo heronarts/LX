@@ -112,11 +112,6 @@ public class NormalizedParameter implements LXNormalizedParameter {
   }
 
   @Override
-  public float getValuef() {
-    return (float) getValue();
-  }
-
-  @Override
   public String getLabel() {
     return this.label;
   }

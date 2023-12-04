@@ -97,11 +97,6 @@ public class FixedParameter implements LXParameter {
   }
 
   @Override
-  public float getValuef() {
-    return (float) this.value;
-  }
-
-  @Override
   public String getLabel() {
     return null;
   }

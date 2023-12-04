@@ -21,7 +21,6 @@ package heronarts.lx.parameter;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.midi.MidiNote;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -290,7 +289,29 @@ public interface LXParameter extends LXPath {
    *
    * @return Parameter value as float
    */
-  public float getValuef();
+  public default float getValuef() {
+    return (float) getValue();
+  }
+
+  /**
+   * Get the base parameter value, for modulated parameters
+   * this may differ from getValue()
+   *
+   * @return Base parameter value
+   */
+  public default double getBaseValue() {
+    return getValue();
+  }
+
+  /**
+   * Get the base parameter value, for modulated parameters
+   * this may differ from getValue()
+   *
+   * @return Base parameter value
+   */
+  public default float getBaseValuef() {
+    return (float) getBaseValue();
+  }
 
   /**
    * Gets the label for this parameter

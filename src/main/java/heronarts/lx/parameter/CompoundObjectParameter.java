@@ -18,62 +18,31 @@
 
 package heronarts.lx.parameter;
 
-import java.util.Objects;
-
-public class ObjectParameter<T> extends DiscreteParameter {
-
-  static <T> int defaultValue(T value, T[] objects) {
-    if (value == null) {
-      return 0;
-    }
-    for (int i = 0; i < objects.length; ++i) {
-      if (Objects.equals(value, objects[i])) {
-        return i;
-      }
-    }
-    throw new IllegalArgumentException("The ObjectParameter value is not present in the objects[]: " + value);
-  }
-
-  static <T> int indexOf(T value, T[] objects) {
-    for (int i = 0; i < objects.length; ++i) {
-      if (Objects.equals(value, objects[i])) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  static <T> String[] toOptions(T[] objects) {
-    final String[] options = new String[objects.length];
-    for (int i = 0; i < objects.length; ++i) {
-      options[i] = (objects[i] == null) ? "null" : objects[i].toString();
-    }
-    return options;
-  }
+public class CompoundObjectParameter<T> extends CompoundDiscreteParameter {
 
   private T[] objects = null;
 
-  public ObjectParameter(String label, T[] objects) {
+  public CompoundObjectParameter(String label, T[] objects) {
     this(label, objects, null, (String[]) null);
   }
 
-  public ObjectParameter(String label, T[] objects, T value) {
+  public CompoundObjectParameter(String label, T[] objects, T value) {
     this(label, objects, value, (String[]) null);
   }
 
-  public ObjectParameter(String label, T[] objects, String[] options) {
+  public CompoundObjectParameter(String label, T[] objects, String[] options) {
     this(label, objects, null, options);
   }
 
-  public ObjectParameter(String label, T[] objects, T value, String[] options) {
-    super(label, defaultValue(value, objects), 0, objects.length);
+  public CompoundObjectParameter(String label, T[] objects, T value, String[] options) {
+    super(label, ObjectParameter.defaultValue(value, objects), 0, objects.length);
     setObjects(objects, options);
     setIncrementMode(IncrementMode.RELATIVE);
     setWrappable(true);
   }
 
   @Override
-  public ObjectParameter<T> setDescription(String description) {
+  public CompoundObjectParameter<T> setDescription(String description) {
     super.setDescription(description);
     return this;
   }
@@ -84,21 +53,21 @@ public class ObjectParameter<T> extends DiscreteParameter {
    * @param objects Array of arbitrary object values
    * @return this
    */
-  public ObjectParameter<T> setObjects(T[] objects) {
+  public CompoundObjectParameter<T> setObjects(T[] objects) {
     return setObjects(objects, null);
   }
 
-  public ObjectParameter<T> setObjects(T[] objects, String[] options) {
+  public CompoundObjectParameter<T> setObjects(T[] objects, String[] options) {
     this.objects = objects;
     if (options == null) {
-      options = toOptions(objects);
+      options = ObjectParameter.toOptions(objects);
     }
     setOptions(options);
     return this;
   }
 
   @Override
-  public ObjectParameter<T> setRange(int minValue, int maxValue) {
+  public CompoundObjectParameter<T> setRange(int minValue, int maxValue) {
     if (this.objects!= null && (this.objects.length != maxValue - minValue)) {
       throw new UnsupportedOperationException("May not call setRange on an ObjectParameter with Object list of different length");
     }
@@ -106,11 +75,11 @@ public class ObjectParameter<T> extends DiscreteParameter {
     return this;
   }
 
-  public ObjectParameter<T> setValue(Object object) {
+  public CompoundObjectParameter<T> setValue(Object object) {
     if (this.objects == null) {
       throw new UnsupportedOperationException("Cannot setValue with an object unless setObjects() was called");
     }
-    int index = indexOf(object, this.objects);
+    int index = ObjectParameter.indexOf(object, this.objects);
     if (index >= 0) {
       setValue(index);
       return this;
@@ -124,6 +93,10 @@ public class ObjectParameter<T> extends DiscreteParameter {
 
   public T getObject() {
     return this.objects[getIndex()];
+  }
+
+  public T getBaseObject() {
+    return this.objects[getBaseIndex()];
   }
 
 }

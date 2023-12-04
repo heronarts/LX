@@ -51,8 +51,28 @@ public interface LXNormalizedParameter extends LXParameter {
    *
    * @return Normalized value of parameter, in range from 0 to 1
    */
-  default public float getNormalizedf() {
+  public default float getNormalizedf() {
     return (float) getNormalized();
+  }
+
+  /**
+   * Get the base parameter value, for modulated parameters
+   * this may differ from getValue()
+   *
+   * @return Base normalized parameter value
+   */
+  public default double getBaseNormalized() {
+    return getNormalized();
+  }
+
+  /**
+   * Get the base parameter value, for modulated parameters
+   * this may differ from getValue()
+   *
+   * @return Base normalized parameter value
+   */
+  public default float getBaseNormalizedf() {
+    return (float) getBaseNormalized();
   }
 
   /**

@@ -814,10 +814,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       obj.addProperty("VALUE", ((StringParameter)parameter).getString());
       obj.addProperty("TYPE", "s");
     } else if (parameter instanceof ColorParameter) {
-      obj.addProperty("VALUE", ((ColorParameter)parameter).getColor());
+      obj.addProperty("VALUE", ((ColorParameter)parameter).getBaseColor());
       obj.addProperty("TYPE", "r");
     } else if (parameter instanceof DiscreteParameter) {
-      obj.addProperty("VALUE", ((DiscreteParameter) parameter).getValuei());
+      obj.addProperty("VALUE", ((DiscreteParameter) parameter).getBaseValuei());
       obj.addProperty("TYPE", "i");
       range = new JsonObject();
       range.addProperty("MIN", ((DiscreteParameter) parameter).getMinValue());
@@ -829,20 +829,11 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       if (boundedParameter.getOscMode() == CompoundParameter.OscMode.ABSOLUTE) {
         range.addProperty("MIN", (float) boundedParameter.range.min);
         range.addProperty("MAX", (float) boundedParameter.range.max);
-        if (parameter instanceof CompoundParameter) {
-          obj.addProperty("VALUE", ((CompoundParameter) parameter).getBaseValuef());
-        } else {
-          obj.addProperty("VALUE", boundedParameter.getValuef());
-        }
+        obj.addProperty("VALUE", boundedParameter.getBaseValuef());
       } else {
         range.addProperty("MIN", 0f);
         range.addProperty("MAX", 1f);
-        if (parameter instanceof CompoundParameter) {
-          obj.addProperty("VALUE", ((CompoundParameter) parameter).getBaseNormalizedf());
-        } else {
-          obj.addProperty("VALUE", boundedParameter.getNormalizedf());
-        }
-
+        obj.addProperty("VALUE", boundedParameter.getBaseNormalizedf());
       }
     } else if (parameter instanceof LXNormalizedParameter) {
       obj.addProperty("VALUE", ((LXNormalizedParameter) parameter).getNormalizedf());
@@ -1290,10 +1281,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         ((StringParameter) thisParameter).setValue(((StringParameter) thatParameter).getString());
       } else if (thisParameter instanceof AggregateParameter) {
         // NOTE(mcslee): do nothing! Let the sub-parameters copy over in this instance
-      } else if (thisParameter instanceof CompoundParameter) {
-        thisParameter.setValue(((CompoundParameter) thatParameter).getBaseValue());
       } else {
-        thisParameter.setValue(thatParameter.getValue());
+        thisParameter.setValue(thatParameter.getBaseValue());
       }
     }
     return this;

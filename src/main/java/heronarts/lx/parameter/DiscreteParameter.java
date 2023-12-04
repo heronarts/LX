@@ -25,11 +25,11 @@ import heronarts.lx.utils.LXUtils;
  */
 public class DiscreteParameter extends LXListenableNormalizedParameter {
 
-  private int minValue;
+  protected int minValue;
 
-  private int maxValue;
+  protected int maxValue;
 
-  private int range;
+  protected int range;
 
   private String[] options = null;
 
@@ -121,7 +121,8 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
 
   @Override
   public DiscreteParameter setDescription(String description) {
-    return (DiscreteParameter) super.setDescription(description);
+    super.setDescription(description);
+    return this;
   }
 
   @Override
@@ -153,6 +154,15 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    */
   public String[] getOptions() {
     return this.options;
+  }
+
+  /**
+   * The currently selected option
+   *
+   * @return String description, or numerical value
+   */
+  public String getBaseOption() {
+    return (this.options != null) ? this.options[getBaseIndex()] : getFormatter().format(getBaseValuei());
   }
 
   /**
@@ -209,7 +219,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     this.minValue = minValue;
     this.maxValue = maxValue - 1;
     this.range = maxValue - minValue;
-    setValue(LXUtils.constrain(getValuei(), this.minValue, this.maxValue));
+    setValue(LXUtils.constrain(getBaseValuei(), this.minValue, this.maxValue));
     return this;
   }
 
@@ -248,9 +258,9 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
 
   public DiscreteParameter increment(int amt, boolean wrap) {
     if (wrap) {
-      setValue(getValuei() + amt);
+      setValue(getBaseValuei() + amt);
     } else {
-      setValue(Math.min(this.minValue + this.range - 1, getValuei() + amt));
+      setValue(Math.min(this.minValue + this.range - 1, getBaseValuei() + amt));
     }
     return this;
   }
@@ -271,7 +281,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     if (wrap) {
       setValue(getValuei() - amt);
     } else {
-      setValue(Math.max(this.minValue, getValuei() - amt));
+      setValue(Math.max(this.minValue, getBaseValuei() - amt));
     }
     return this;
   }
@@ -280,8 +290,16 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     return (int) getValue();
   }
 
+  public int getBaseValuei() {
+    return getValuei();
+  }
+
   public int getIndex() {
     return getValuei() - this.minValue;
+  }
+
+  public int getBaseIndex() {
+    return getBaseValuei() - this.minValue;
   }
 
   public double getNormalized() {
@@ -291,16 +309,12 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     return (getValue() - this.minValue) / (this.range - 1);
   }
 
-  public float getNormalizedf() {
-    return (float) getNormalized();
+  protected int normalizedToValue(double normalized) {
+    return this.minValue + LXUtils.constrain((int) (normalized * this.range), 0, this.range-1);
   }
 
   public DiscreteParameter setNormalized(double normalized) {
-    int value = (int) Math.floor(normalized * this.range);
-    if (value == this.range) {
-      --value;
-    }
-    setValue(this.minValue + value);
+    setValue(normalizedToValue(normalized));
     return this;
   }
 

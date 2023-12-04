@@ -89,6 +89,10 @@ public class ColorParameter extends AggregateParameter {
     return this.color;
   }
 
+  public int getBaseColor() {
+    return getColor();
+  }
+
   /**
    * Calculates the potentially modulated value of the color parameter
    * based upon the parameter values at this precise instance.

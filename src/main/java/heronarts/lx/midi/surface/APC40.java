@@ -41,7 +41,6 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -181,9 +180,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         LXListenableNormalizedParameter parameter = this.knobs[i];
         if (parameter != null) {
           sendControlChange(0, DEVICE_KNOB_STYLE + i, parameter.getPolarity() == LXParameter.Polarity.BIPOLAR ? LED_STYLE_BIPOLAR : LED_STYLE_UNIPOLAR);
-          double normalized = (parameter instanceof CompoundParameter) ?
-            ((CompoundParameter) parameter).getBaseNormalized() :
-            parameter.getNormalized();
+          double normalized = parameter.getBaseNormalized();
           sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
         } else {
           sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
@@ -292,14 +289,12 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     }
 
     private void sendKnobValue(LXListenableNormalizedParameter knobParam, int i) {
-      double normalized = (knobParam instanceof CompoundParameter) ?
-        ((CompoundParameter) knobParam).getBaseNormalized() :
-        knobParam.getNormalized();
+      double normalized = knobParam.getBaseNormalized();
 
       // Wrappable discrete parameters need to inset the values a bit to avoid fiddly jumping at 0/1
       if ((knobParam instanceof DiscreteParameter) && knobParam.isWrappable()) {
         DiscreteParameter discrete = (DiscreteParameter) knobParam;
-        normalized = (discrete.getValuei() - discrete.getMinValue() + 0.5f) / discrete.getRange();
+        normalized = (discrete.getBaseValuei() - discrete.getMinValue() + 0.5f) / discrete.getRange();
       }
       sendControlChange(0, DEVICE_KNOB + i, (int) (normalized * 127));
     }

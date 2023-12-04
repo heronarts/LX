@@ -45,7 +45,6 @@ import heronarts.lx.audio.Envelop;
 import heronarts.lx.audio.Reaper;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -416,25 +415,17 @@ public class LXOscEngine extends LXComponent {
             oscString.setValue(((StringParameter) parameter).getString());
             oscMessage.add(oscString);
           } else if (parameter instanceof ColorParameter) {
-            oscInt.setValue(((ColorParameter) parameter).getColor());
+            oscInt.setValue(((ColorParameter) parameter).getBaseColor());
             oscMessage.add(oscInt);
           } else if (parameter instanceof DiscreteParameter) {
-            oscInt.setValue(((DiscreteParameter) parameter).getValuei());
+            oscInt.setValue(((DiscreteParameter) parameter).getBaseValuei());
             oscMessage.add(oscInt);
-          } else if (parameter instanceof CompoundParameter) {
-            CompoundParameter compoundParameter = (CompoundParameter) parameter;
-            if (compoundParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
-              oscFloat.setValue(compoundParameter.getBaseValuef());
-            } else {
-              oscFloat.setValue(compoundParameter.getBaseNormalizedf());
-            }
-            oscMessage.add(oscFloat);
           } else if (parameter instanceof LXNormalizedParameter) {
             LXNormalizedParameter normalizedParameter = (LXNormalizedParameter) parameter;
             if (normalizedParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
-              oscFloat.setValue(normalizedParameter.getValuef());
+              oscFloat.setValue(normalizedParameter.getBaseValuef());
             } else {
-              oscFloat.setValue(normalizedParameter.getNormalizedf());
+              oscFloat.setValue(normalizedParameter.getBaseNormalizedf());
             }
             oscMessage.add(oscFloat);
           } else {

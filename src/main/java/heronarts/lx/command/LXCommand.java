@@ -33,7 +33,6 @@ import heronarts.lx.LXPath;
 import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
-import heronarts.lx.clipboard.LXNormalizedValue;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXPalette;
@@ -53,7 +52,6 @@ import heronarts.lx.modulation.LXParameterModulation;
 import heronarts.lx.modulation.LXTriggerModulation;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -289,9 +287,7 @@ public abstract class LXCommand {
 
       public Reset(LXParameter parameter) {
         this.parameter = new ParameterReference<LXParameter>(parameter);
-        this.originalValue = (parameter instanceof CompoundParameter)
-          ? ((CompoundParameter) parameter).getBaseValue()
-          : parameter.getValue();
+        this.originalValue = parameter.getBaseValue();
         this.originalString = (parameter instanceof StringParameter) ? ((StringParameter) parameter).getString() : null;
       }
 
@@ -331,7 +327,7 @@ public abstract class LXCommand {
         this.isDiscrete = true;
         this.discreteParameter = new ParameterReference<DiscreteParameter>(
           parameter);
-        this.originalDiscreteValue = parameter.getValuei();
+        this.originalDiscreteValue = parameter.getBaseValuei();
         this.newDiscreteValue = value;
 
         this.genericParameter = null;
@@ -342,21 +338,16 @@ public abstract class LXCommand {
       public SetValue(LXParameter parameter, double value) {
         if (parameter instanceof DiscreteParameter) {
           this.isDiscrete = true;
-          this.discreteParameter = new ParameterReference<DiscreteParameter>(
-            (DiscreteParameter) parameter);
-          this.originalDiscreteValue = ((DiscreteParameter) parameter)
-            .getValuei();
+          this.discreteParameter = new ParameterReference<DiscreteParameter>((DiscreteParameter) parameter);
+          this.originalDiscreteValue = ((DiscreteParameter) parameter).getBaseValuei();
           this.newDiscreteValue = (int) value;
           this.genericParameter = null;
           this.originalGenericValue = 0;
           this.newGenericValue = 0;
         } else {
           this.isDiscrete = false;
-          this.genericParameter = new ParameterReference<LXParameter>(
-            parameter);
-          this.originalGenericValue = (parameter instanceof CompoundParameter)
-            ? ((CompoundParameter) parameter).getBaseValue()
-            : parameter.getValue();
+          this.genericParameter = new ParameterReference<LXParameter>(parameter);
+          this.originalGenericValue = parameter.getBaseValue();
           this.newGenericValue = value;
           this.discreteParameter = null;
           this.originalDiscreteValue = 0;
@@ -476,7 +467,7 @@ public abstract class LXCommand {
 
       public Increment(DiscreteParameter parameter, int amount, boolean alwaysWrap) {
         this.parameter = new ParameterReference<DiscreteParameter>(parameter);
-        this.originalValue = parameter.getValuei();
+        this.originalValue = parameter.getBaseValuei();
         this.amount = amount;
         this.alwaysWrap = alwaysWrap;
       }
@@ -514,7 +505,7 @@ public abstract class LXCommand {
 
       public Decrement(DiscreteParameter parameter, int amount) {
         this.parameter = new ParameterReference<DiscreteParameter>(parameter);
-        this.originalValue = parameter.getValuei();
+        this.originalValue = parameter.getBaseValuei();
         this.amount = amount;
       }
 
@@ -565,11 +556,11 @@ public abstract class LXCommand {
     public static class SetNormalized extends LXCommand {
 
       private final ParameterReference<LXNormalizedParameter> parameter;
-      private final LXNormalizedValue originalValue;
+      private final double originalValue;
       private double newValue;
 
       public SetNormalized(LXNormalizedParameter parameter) {
-        this(parameter, new LXNormalizedValue(parameter).getValue());
+        this(parameter, parameter.getBaseNormalized());
       }
 
       public SetNormalized(BooleanParameter parameter, boolean value) {
@@ -578,7 +569,7 @@ public abstract class LXCommand {
 
       public SetNormalized(LXNormalizedParameter parameter, double newValue) {
         this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
-        this.originalValue = new LXNormalizedValue(parameter);
+        this.originalValue = parameter.getBaseNormalized();
         this.newValue = newValue;
       }
 
@@ -593,7 +584,7 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) {
-        this.parameter.get().setNormalized(this.originalValue.getValue());
+        this.parameter.get().setNormalized(this.originalValue);
       }
 
       @Override
@@ -1603,18 +1594,18 @@ public abstract class LXCommand {
       private final ComponentReference<LXModulationEngine> engine;
 
       private final ModulationSourceReference source;
-      private final ParameterReference<CompoundParameter> target;
+      private final ParameterReference<LXCompoundModulation.Target> target;
 
       private ComponentReference<LXCompoundModulation> modulation;
 
       private JsonObject modulationObj = null;
 
-      public AddModulation(LXModulationEngine engine,
-        LXNormalizedParameter source, CompoundParameter target) {
+      public AddModulation(LXModulationEngine engine, LXNormalizedParameter source, LXCompoundModulation.Target target) {
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.source = new ModulationSourceReference(source);
-        this.target = new ParameterReference<CompoundParameter>(target);
+        this.target = new ParameterReference<LXCompoundModulation.Target>(target);
       }
+
 
       @Override
       public String getDescription() {
@@ -1624,10 +1615,11 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         try {
+          LXCompoundModulation.Target target = this.target.get();
           LXCompoundModulation modulation = new LXCompoundModulation(
             this.engine.get(),
             this.source.get(),
-            this.target.get()
+            target
           );
           if (this.modulationObj != null) {
             modulation.load(lx, this.modulationObj);
@@ -1687,8 +1679,8 @@ public abstract class LXCommand {
 
       private final List<RemoveModulation> removeModulations = new ArrayList<RemoveModulation>();
 
-      public RemoveModulations(CompoundParameter parameter) {
-        for (LXCompoundModulation modulation : parameter.modulations) {
+      public RemoveModulations(LXCompoundModulation.Target parameter) {
+        for (LXCompoundModulation modulation : parameter.getModulations()) {
           this.removeModulations.add(new RemoveModulation(modulation.scope, modulation));
         }
       }

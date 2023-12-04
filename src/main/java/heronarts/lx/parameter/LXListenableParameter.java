@@ -236,10 +236,6 @@ public abstract class LXListenableParameter implements LXParameter {
     return this.value;
   }
 
-  public final float getValuef() {
-    return (float) getValue();
-  }
-
   public final boolean isDefault() {
     // NOTE: check this.value directly here, don't use getValue() because a
     // CompoundParameter with modulation will return something different...

@@ -18,6 +18,8 @@
 
 package heronarts.lx.modulation;
 
+import java.util.List;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -25,12 +27,88 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.LXParameter.Polarity;
 
 public class LXCompoundModulation extends LXParameterModulation {
 
+  /**
+   * A parameter type that can receive compound modulation. The
+   * canonical examples of this are CompoundParameter and
+   * CompoundDiscreteParameter.
+   */
+  public interface Target extends LXNormalizedParameter {
+    /**
+     * Get the list of modulations applied to this parameter
+     *
+     * @return List of modulations applied to this parameter
+     */
+    public List<LXCompoundModulation> getModulations();
+
+    /**
+     * Add a modulation to this parameter
+     *
+     * @param modulation Modulation to add
+     * @return The parameter
+     */
+    public Target addModulation(LXCompoundModulation modulation);
+
+    /**
+     * Remove a modulation fromthis parameter
+     *
+     * @param modulation Modulation to remove
+     * @return The parameter
+     */
+    public Target removeModulation(LXCompoundModulation modulation);
+
+
+    /**
+     * Adds a listener to the modulation target
+     *
+     * @param listener Listener
+     * @return The target
+     */
+    public Target addModulationListener(Listener listener);
+
+    /**
+     * Removes a listener from the modulation target
+     *
+     * @param listener Listener
+     * @return The target
+     */
+    public Target removeModulationListener(Listener listener);
+  }
+
+  /**
+   * Listener that is fired when there is a change to the list of modulations being
+   * applied to a target parameter.
+   */
+  public interface Listener {
+    /**
+     * Fires when a new modulation is added to a parameter
+     *
+     * @param parameter Target parameter
+     * @param modulation Modulation that was added
+     */
+    public void modulationAdded(Target parameter, LXCompoundModulation modulation);
+
+    /**
+     * Fires when a modulation is removed from a target parameter
+     *
+     * @param parameter Target parameter
+     * @param modulation Modulation that was removed
+     */
+    public void modulationRemoved(Target parameter, LXCompoundModulation modulation);
+  }
+
+  /**
+   * The source parameter for this compound modulation mapping
+   */
   public final LXNormalizedParameter source;
 
-  public final CompoundParameter target;
+  /**
+   * The target parameter that receives the compound modulation
+   */
+  public final Target target;
 
   public final EnumParameter<LXParameter.Polarity> polarity =
     new EnumParameter<LXParameter.Polarity>("Polarity", LXParameter.Polarity.UNIPOLAR)
@@ -46,11 +124,11 @@ public class LXCompoundModulation extends LXParameterModulation {
     this(
       scope,
       (LXNormalizedParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_SOURCE)),
-      (CompoundParameter) getParameter(lx, scope, obj.getAsJsonObject(KEY_TARGET))
+      (Target) getParameter(lx, scope, obj.getAsJsonObject(KEY_TARGET))
     );
   }
 
-  public LXCompoundModulation(LXModulationEngine scope, LXNormalizedParameter source, CompoundParameter target) throws ModulationException {
+  public LXCompoundModulation(LXModulationEngine scope, LXNormalizedParameter source, Target target) throws ModulationException {
     super(scope, source, target);
     this.source = source;
     this.target = target;
@@ -71,6 +149,17 @@ public class LXCompoundModulation extends LXParameterModulation {
 
   public LXParameter.Polarity getPolarity() {
     return this.polarity.getEnum();
+  }
+
+  public double getModulationAmount() {
+    if (!this.enabled.isOn()) {
+      return 0;
+    }
+    if (this.getPolarity() == Polarity.UNIPOLAR) {
+      return this.source.getNormalized() * this.range.getValue();
+    } else {
+     return 2.*(this.source.getNormalized()-.5) * this.range.getValue();
+    }
   }
 
   @Override

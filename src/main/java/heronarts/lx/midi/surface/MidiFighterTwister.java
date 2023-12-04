@@ -32,8 +32,8 @@ import heronarts.lx.midi.LXMidiOutput;
 import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
+import heronarts.lx.modulation.LXCompoundModulation;
 import heronarts.lx.parameter.BooleanParameter;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -622,9 +622,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
-          double normalized = (parameter instanceof CompoundParameter) ?
-            ((CompoundParameter) parameter).getBaseNormalized() :
-            parameter.getNormalized();
+          double normalized = parameter.getBaseNormalized();
           sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
           sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
           sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, isAux ? RGB_AUX : RGB_PRIMARY);
@@ -702,12 +700,10 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             }
             sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
             sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
-            double normalized = (parameter instanceof CompoundParameter) ?
-              ((CompoundParameter) parameter).getBaseNormalized() :
-              parameter.getNormalized();
+            double normalized = parameter.getBaseNormalized();
             sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, (int) (normalized * 127));
             sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
-            if (parameter instanceof CompoundParameter && ((CompoundParameter)parameter).modulations.size()>0) {
+            if (parameter instanceof LXCompoundModulation.Target && ((LXCompoundModulation.Target)parameter).getModulations().size() > 0) {
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_PULSE_EVERY_2_BEATS);
             } else {
               sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_ANIMATION_NONE);
@@ -750,9 +746,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
       for (int i = 0; i < this.knobs.length; ++i) {
         if (parameter == this.knobs[i]) {
-          double normalized = (parameter instanceof CompoundParameter) ?
-            ((CompoundParameter) parameter).getBaseNormalized() :
-            this.knobs[i].getNormalized();
+          double normalized = this.knobs[i].getBaseNormalized();
           // Normalized DiscreteParameters need artificial tracking of absolute knob location.
           // Keep local tracking in sync with changes from other source.
           if (parameter instanceof DiscreteParameter && ((DiscreteParameter)parameter).getIncrementMode() == IncrementMode.NORMALIZED) {
@@ -834,9 +828,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               p.reset();
               break;
             case TEMPORARY:
-              this.tempValues[index] = (p instanceof CompoundParameter) ?
-                ((CompoundParameter) p).getBaseNormalized() :
-                p.getNormalized();
+              this.tempValues[index] = p.getBaseNormalized();
               break;
             }
           } else {

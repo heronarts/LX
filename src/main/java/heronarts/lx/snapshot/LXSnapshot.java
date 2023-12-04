@@ -44,7 +44,6 @@ import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
-import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -221,9 +220,9 @@ public abstract class LXSnapshot extends LXComponent {
         throw new IllegalStateException("Cannot store a snapshot view of an AggregateParameter");
       }
       this.parameter = parameter;
-      this.value = getBaseValue();
+      this.value = this.parameter.getBaseValue();
       if (parameter instanceof DiscreteParameter) {
-        this.intValue = ((DiscreteParameter) parameter).getValuei();
+        this.intValue = ((DiscreteParameter) parameter).getBaseValuei();
         this.stringValue = null;
       } else if (parameter instanceof StringParameter) {
         this.intValue = 0;
@@ -233,7 +232,7 @@ public abstract class LXSnapshot extends LXComponent {
         this.stringValue = null;
       }
       if (parameter instanceof LXNormalizedParameter) {
-        this.normalizedValue = getBaseNormalized();
+        this.normalizedValue = ((LXNormalizedParameter) parameter).getBaseNormalized();
       } else {
         this.normalizedValue = 0;
       }
@@ -314,9 +313,9 @@ public abstract class LXSnapshot extends LXComponent {
       if (this.parameter instanceof StringParameter) {
         recall();
       } else if (this.parameter instanceof LXNormalizedParameter) {
-        this.fromNormalized = getBaseNormalized();
+        this.fromNormalized = ((LXNormalizedParameter) this.parameter).getBaseNormalized();
       } else if (this.parameter instanceof DiscreteParameter) {
-        this.fromInt = ((DiscreteParameter) this.parameter).getValuei();
+        this.fromInt = ((DiscreteParameter) this.parameter).getBaseValuei();
       } else {
         this.fromValue = this.parameter.getValue();
       }
@@ -338,20 +337,6 @@ public abstract class LXSnapshot extends LXComponent {
     @Override
     protected void finishTransition() {
       recall();
-    }
-
-    private double getBaseNormalized() {
-      if (this.parameter instanceof CompoundParameter) {
-        return ((CompoundParameter) this.parameter).getBaseNormalized();
-      }
-      return ((LXNormalizedParameter) this.parameter).getNormalized();
-    }
-
-    private double getBaseValue() {
-      if (this.parameter instanceof CompoundParameter) {
-        return ((CompoundParameter) this.parameter).getBaseValue();
-      }
-      return this.parameter.getValue();
     }
 
     private static final String KEY_PARAMETER_PATH = "parameterPath";

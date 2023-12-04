@@ -18,6 +18,11 @@
 
 package heronarts.lx.parameter;
 
+import heronarts.lx.modulation.LXCompoundModulation;
+import heronarts.lx.utils.LXUtils;
+
+import java.util.List;
+
 /**
  * A parameter that can be listened to and has normalized values. This is needed
  * for things like UI components such as a slider or a knob, which need to be
@@ -84,14 +89,28 @@ public abstract class LXListenableNormalizedParameter extends LXListenableParame
     return this.wrappable;
   }
 
+  protected double getNormalizedWithModulation(double normalized, List<? extends LXCompoundModulation> modulations) {
+    for (LXCompoundModulation modulation : modulations) {
+      normalized += modulation.getModulationAmount();
+    }
+    if (isWrappable()) {
+      if (normalized < 0) {
+        return 1. + (normalized % 1.);
+      } else if (normalized > 1) {
+        return normalized % 1.;
+      }
+      // NOTE: don't want to mod exactly 1. to 0, leave it at 1.
+      return normalized;
+    }
+    return LXUtils.constrain(normalized, 0, 1);
+  }
+
   public LXListenableNormalizedParameter incrementNormalized(double amount) {
     return incrementNormalized(amount, isWrappable());
   }
 
   public LXListenableNormalizedParameter incrementNormalized(double amount, boolean wrap) {
-    double normalized = (this instanceof CompoundParameter) ?
-      ((CompoundParameter) this).getBaseNormalized() :
-      getNormalized();
+    double normalized = getBaseNormalized();
     normalized += amount;
     if (wrap) {
       if (normalized > 1) {
