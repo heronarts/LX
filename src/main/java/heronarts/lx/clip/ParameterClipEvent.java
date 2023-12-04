@@ -12,7 +12,7 @@ public class ParameterClipEvent extends LXClipEvent {
   private double normalized;
 
   ParameterClipEvent(LXClipLane lane, LXNormalizedParameter parameter) {
-    this(lane, parameter, parameter.getNormalized());
+    this(lane, parameter, parameter.getBaseNormalized());
   }
 
   ParameterClipEvent(LXClipLane lane, LXNormalizedParameter parameter, double normalized) {
