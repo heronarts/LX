@@ -758,10 +758,14 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     final double slewError = this.slew.getCompositeDistance(this.target);
     final double correctionLerp = LXUtils.min(1, slewError);
 
-    if (this.slew.isEqualTo(this.target) || (slewError >= MAX_SLEW_CORRECTION)) {
-      // We're bang on! Incredible. Or we're so far off that there is no
-      // point smoothing this, just jump to the new state.
+    if (slewError >= MAX_SLEW_CORRECTION) {
+      // We're so far off that there is no point smoothing this, just jump
+      // to the new state.
       this.smooth.set(this.target);
+    } else if (this.slew.isEqualTo(this.target)) {
+      // We're bang on! Incredible. Use the slew state (it may have a
+      // different isBeat state)
+      this.smooth.set(this.slew);
     } else if (this.slew.isBehind(this.target)) {
       // We're dragging - boost on ahead
       // LX.log(this.smooth.getCompositeBasis() + " --->>> " + this.target.getCompositeBasis());
