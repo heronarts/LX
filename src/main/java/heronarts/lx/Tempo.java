@@ -177,6 +177,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   private boolean didTrigger = false;
   private long triggerNanoTime = -1;
   private boolean running = true;
+  private boolean oscParIsPlaying = true;
 
   private class Cursor {
     private boolean isBeat = false;
@@ -281,6 +282,10 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   private static final String PATH_BEAT = "beat";
   private static final String PATH_BEAT_WITHIN_BAR = "beat-within-bar";
   private static final String PATH_SET_BPM = "setBPM";
+  private static final String PATH_OSC_PAR = "osc-par";
+  private static final String PATH_OSC_PAR_BPM = "BPM";
+  private static final String PATH_OSC_PAR_BEAT_POS = "BeatPOS";
+  private static final String PATH_OSC_PAR_IS_PLAYING = "isPlaying";
 
   public Tempo setOscBpmRange(double min, double max) {
     if (min <= 0.0 || min >= max) {
@@ -330,8 +335,29 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
         }
       }
       return true;
+    } else if (parts[index].equals(PATH_OSC_PAR)) {
+      handleOscParMessage(message, parts, index+1);
+      return true;
     }
     return super.handleOscMessage(message, parts, index);
+  }
+
+  private void handleOscParMessage(OscMessage message, String[] parts, int index) {
+    if (index >= parts.length) {
+      LXOscEngine.error(PATH_OSC_PAR + " message address is too short: " + message.toString());
+      return;
+    }
+    if (message.size() < 1) {
+      LXOscEngine.error(PATH_OSC_PAR + " message missing argument: " + message.toString());
+      return;
+    }
+    if (PATH_OSC_PAR_BPM.equals(parts[index])) {
+      this.bpm.setValue(message.getFloat());
+    } else if (PATH_OSC_PAR_BEAT_POS.equals(parts[index])) {
+      trigger(message.getInt(), message);
+    } else if (PATH_OSC_PAR_IS_PLAYING.equals(parts[index])) {
+      this.running = this.oscParIsPlaying = message.getBoolean();
+    }
   }
 
   @Override
@@ -363,6 +389,12 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     } else if (p == this.nudgeDown) {
       updateNudge(this.nudgeDown, this.nudgeUp, 1.1);
     } else if (p == this.clockSource) {
+      // NOTE: this looks funny but is intentional, we don't know
+      // if we're using OSC-PAR, we set this flag to true and wait
+      // to actually see an "isPlaying 0" message from OSC-PAR before
+      // we'll actually stop the metronome because of it
+      this.oscParIsPlaying = true;
+
       if (this.clockSource.getEnum().isExternal()) {
         // Reset and stop clock, wait for a trigger
         this.resetOnNextBeat = false;
@@ -784,6 +816,10 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
     final double progress = deltaMs / (this.period.getValue() * this.nudge.getValue());
 
+    final boolean oscIsPaused =
+      (this.clockSource.getEnum() == ClockSource.OSC) &&
+      !this.oscParIsPlaying;
+
     // Explicit beat trigger, back to the start of the beat
     if (this.didTrigger) {
       this.didTrigger = false;
@@ -798,11 +834,16 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       this.target.basis = (triggerBasis < 1.) ? triggerBasis : 0.;
       this.target.isBeat = true;
       this.running = true;
-    } else if (this.running) {
+    } else if (this.running && !oscIsPaused) {
       // Non-trigger situation, advance + wrap the target cursor
       this.target.advance(progress);
     } else {
       this.target.isBeat = false;
+    }
+
+    // If we get isPlaying 0 from OSC-PAR we stop until it comes back
+    if (oscIsPaused) {
+      this.running = false;
     }
 
     // If the reset flag was set, cronk our target beat down to 0
