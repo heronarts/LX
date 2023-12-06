@@ -249,6 +249,14 @@ public interface LXParameter extends LXPath {
   public Formatter getFormatter();
 
   /**
+   * Sets the formatter used for printing this parameter's value
+   *
+   * @param formatter Formatter
+   * @return The parameter
+   */
+  public LXParameter setFormatter(Formatter formatter);
+
+  /**
    * Gets the polarity of this parameter.
    *
    * @return polarity of this parameter

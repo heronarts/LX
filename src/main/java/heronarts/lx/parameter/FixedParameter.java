@@ -32,6 +32,8 @@ public class FixedParameter implements LXParameter {
   private LXComponent parent;
   private String path;
 
+  private Formatter formatter;
+
   public FixedParameter(double value) {
     this.value = value;
   }
@@ -64,8 +66,15 @@ public class FixedParameter implements LXParameter {
     return this.path;
   }
 
+  @Override
   public Formatter getFormatter() {
-    return getUnits();
+    return (this.formatter != null) ? this.formatter : getUnits();
+  }
+
+  @Override
+  public FixedParameter setFormatter(Formatter formatter) {
+    this.formatter = formatter;
+    return this;
   }
 
   public Units getUnits() {

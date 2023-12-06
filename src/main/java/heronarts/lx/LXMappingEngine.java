@@ -19,7 +19,7 @@
 package heronarts.lx;
 
 import heronarts.lx.parameter.EnumParameter;
-import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.LXNormalizedParameter;
 
 public class LXMappingEngine {
 
@@ -32,7 +32,7 @@ public class LXMappingEngine {
     TRIGGER_TARGET
   };
 
-  private LXParameter controlTarget = null;
+  private LXNormalizedParameter controlTarget = null;
 
   public final EnumParameter<Mode> mode = new EnumParameter<Mode>("Mode", Mode.OFF);
 
@@ -51,12 +51,12 @@ public class LXMappingEngine {
     return this.mode.getEnum();
   }
 
-  public LXMappingEngine setControlTarget(LXParameter controlTarget) {
+  public LXMappingEngine setControlTarget(LXNormalizedParameter controlTarget) {
     this.controlTarget = controlTarget;
     return this;
   }
 
-  public LXParameter getControlTarget() {
+  public LXNormalizedParameter getControlTarget() {
     return this.controlTarget;
   }
 

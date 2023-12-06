@@ -192,13 +192,17 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @return this
    */
   public DiscreteParameter setOptions(String[] options, boolean updateRange) {
-    this.options = options;
-    if (updateRange) {
-      setRange(options.length);
-    } else if (options.length != this.range) {
-      throw new IllegalArgumentException("Cannot set options array with length different from range: " + this.range + " != " + options.length);
+    if (this.options != options) {
+      this.options = options;
+      if (options != null) {
+        if (updateRange) {
+          setRange(options.length);
+        } else if (options.length != this.range) {
+          throw new IllegalArgumentException("Cannot set options array with length different from range: " + this.range + " != " + options.length);
+        }
+      }
+      this.optionsChanged.bang();
     }
-    this.optionsChanged.bang();
     return this;
   }
 
@@ -307,6 +311,11 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
       return 0;
     }
     return (getValue() - this.minValue) / (this.range - 1);
+  }
+
+  @Override
+  public double getValueFromNormalized(double normalized) {
+    return normalizedToValue(normalized);
   }
 
   protected int normalizedToValue(double normalized) {

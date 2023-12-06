@@ -76,6 +76,16 @@ public interface LXNormalizedParameter extends LXParameter {
   }
 
   /**
+   * Get the equivalent raw parameter value from a normalized value
+   *
+   * @param normalized Normalized value
+   * @return The equivalent raw value
+   */
+  public default double getValueFromNormalized(double normalized) {
+    return normalized;
+  }
+
+  /**
    * Gets the exponent used for scaling this parameter across its normalized range.
    * Default is 1 which means linear scaling.
    *

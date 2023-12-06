@@ -2837,12 +2837,12 @@ public abstract class LXCommand {
     public static class AddMapping extends LXCommand {
 
       private final LXShortMessage message;
-      private final ParameterReference<LXParameter> parameter;
+      private final ParameterReference<LXNormalizedParameter> parameter;
       private LXMidiMapping mapping;
 
-      public AddMapping(LXShortMessage message, LXParameter parameter) {
+      public AddMapping(LXShortMessage message, LXNormalizedParameter parameter) {
         this.message = message;
-        this.parameter = new ParameterReference<LXParameter>(parameter);
+        this.parameter = new ParameterReference<LXNormalizedParameter>(parameter);
       }
 
       @Override

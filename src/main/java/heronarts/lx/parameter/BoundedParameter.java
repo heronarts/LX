@@ -522,6 +522,11 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
     return this.range.getNormalized(getValue(), getExponent(), getNormalizationCurve());
   }
 
+  @Override
+  public double getValueFromNormalized(double normalized) {
+    return this.range.normalizedToValue(normalized);
+  }
+
   /**
    * Normalized value as a float
    *

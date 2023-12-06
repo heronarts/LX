@@ -37,6 +37,7 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
@@ -813,7 +814,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   private void createMapping(LXShortMessage message) {
     // Is there a control parameter selected?
-    LXParameter parameter = lx.engine.mapping.getControlTarget();
+    final LXNormalizedParameter parameter = lx.engine.mapping.getControlTarget();
     if (parameter == null) {
       return;
     }
@@ -1043,7 +1044,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         try {
           addMapping(LXMidiMapping.create(this.lx, element.getAsJsonObject()));
         } catch (Exception x) {
-          error("Could not load MIDI mapping: " + element.toString());
+          error(x, "Could not load MIDI mapping: " + element.toString());
         }
       }
     }

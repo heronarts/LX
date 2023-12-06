@@ -44,6 +44,7 @@ public abstract class FunctionalParameter implements LXParameter {
 
   private LXComponent parent;
   private String path;
+  private Formatter formatter = null;
 
   protected FunctionalParameter() {
     this("FUNC-PARAM");
@@ -93,7 +94,13 @@ public abstract class FunctionalParameter implements LXParameter {
 
   @Override
   public Formatter getFormatter() {
-    return getUnits();
+    return (this.formatter != null) ? this.formatter : getUnits();
+  }
+
+  @Override
+  public FunctionalParameter setFormatter(Formatter formatter) {
+    this.formatter = formatter;
+    return this;
   }
 
   @Override
