@@ -842,7 +842,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     boolean applied = false;
     for (LXMidiMapping mapping : this.mutableMappings) {
       if (mapping.matches(message)) {
-        mapping.apply(message);
+        mapping.apply(this.lx, message);
         applied = true;
       }
     }

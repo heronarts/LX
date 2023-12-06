@@ -24,6 +24,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -115,7 +116,7 @@ public abstract class LXMidiMapping implements LXSerializable {
   }
 
   abstract boolean matches(LXShortMessage message);
-  abstract void apply(LXShortMessage message);
+  abstract void apply(LX lx, LXShortMessage message);
 
   public abstract String getDescription();
 
@@ -293,7 +294,7 @@ public abstract class LXMidiMapping implements LXSerializable {
     }
 
     @Override
-    void apply(LXShortMessage message) {
+    void apply(LX lx, LXShortMessage message) {
       final MidiNote note = (MidiNote) message;
       final boolean noteOn = note.isNoteOn();
 
@@ -303,14 +304,14 @@ public abstract class LXMidiMapping implements LXSerializable {
           switch (this.mode.getEnum()) {
           case MOMENTARY:
           case ON:
-            bool.setValue(true);
+            lx.command.perform(new LXCommand.Parameter.SetNormalized(bool, true));
             break;
           case OFF:
-            bool.setValue(false);
+            lx.command.perform(new LXCommand.Parameter.SetNormalized(bool, false));
             break;
           default:
           case TOGGLE:
-            bool.toggle();
+            lx.command.perform(new LXCommand.Parameter.Toggle(bool));
             break;
           }
         } else if (this.mode.getEnum() == Mode.MOMENTARY) {
@@ -321,17 +322,17 @@ public abstract class LXMidiMapping implements LXSerializable {
         if (noteOn) {
           switch (this.discreteMode.getEnum()) {
           case DECREMENT:
-            discrete.decrement(true);
+            lx.command.perform(new LXCommand.Parameter.Decrement(discrete, true));
             break;
           case RANDOM:
-            discrete.setNormalized(Math.random());
+            lx.command.perform(new LXCommand.Parameter.SetNormalized(discrete, Math.random()));
             break;
           case FIXED:
-            discrete.setIndex(this.fixedValue.getIndex());
+            lx.command.perform(new LXCommand.Parameter.SetIndex(discrete, this.fixedValue.getIndex()));
             break;
           default:
           case INCREMENT:
-            discrete.increment(true);
+            lx.command.perform(new LXCommand.Parameter.Increment(discrete, true));
             break;
           }
         }
@@ -341,21 +342,24 @@ public abstract class LXMidiMapping implements LXSerializable {
         }
         switch (this.mode.getEnum()) {
         case MOMENTARY:
-          this.parameter.setNormalized(noteOn ? this.onValue.getValue() : this.offValue.getValue());
+          lx.command.perform(new LXCommand.Parameter.SetNormalized(
+            this.parameter,
+            noteOn ? this.onValue.getValue() : this.offValue.getValue()
+          ));
           break;
         case TOGGLE:
           if (noteOn) {
-            this.parameter.setNormalized(this.toggleState ? this.onValue.getValue() : this.offValue.getValue());
+            lx.command.perform(new LXCommand.Parameter.SetNormalized(this.parameter, this.toggleState ? this.onValue.getValue() : this.offValue.getValue()));
           }
           break;
         case ON:
           if (noteOn) {
-            this.parameter.setNormalized(this.onValue.getValue());
+            lx.command.perform(new LXCommand.Parameter.SetNormalized(this.parameter, this.onValue.getValue()));
           }
           break;
         case OFF:
           if (noteOn) {
-            this.parameter.setNormalized(this.offValue.getValue());
+            lx.command.perform(new LXCommand.Parameter.SetNormalized(this.parameter, this.offValue.getValue()));
           }
           break;
         }
@@ -440,8 +444,33 @@ public abstract class LXMidiMapping implements LXSerializable {
       return false;
     }
 
+    private long discreteMillis = 0;
+    private long normalizedMillis = 0;
+    private LXCommand.Parameter.SetValue discreteUpdate = null;
+    private LXCommand.Parameter.SetNormalized normalizedUpdate = null;
+
+    private static final long COALSECE_UPDATE_MILLIS = 1000;
+
+    private void setDiscreteCommand(LX lx, int value) {
+      final long elapsedMillis = lx.engine.nowMillis - this.discreteMillis;
+      this.discreteMillis = lx.engine.nowMillis;
+      if ((this.discreteUpdate == null) || (elapsedMillis > COALSECE_UPDATE_MILLIS)) {
+        this.discreteUpdate = new LXCommand.Parameter.SetValue(this.discreteParameter, value);
+      }
+      lx.command.perform(this.discreteUpdate.updateDiscrete(value));
+    }
+
+    private void setNormalizedCommand(LX lx, double normalized) {
+      final long elapsedMillis = lx.engine.nowMillis - this.normalizedMillis;
+      this.normalizedMillis = lx.engine.nowMillis;
+      if ((this.normalizedUpdate == null) || (elapsedMillis > COALSECE_UPDATE_MILLIS)) {
+        this.normalizedUpdate = new LXCommand.Parameter.SetNormalized(this.parameter, normalized);
+      }
+      lx.command.perform(this.normalizedUpdate.update(normalized));
+    }
+
     @Override
-    void apply(LXShortMessage message) {
+    void apply(LX lx, LXShortMessage message) {
       final MidiControlChange controlChange = (MidiControlChange) message;
       double normalized = controlChange.getNormalized();
       if (this.isDiscrete) {
@@ -453,14 +482,16 @@ public abstract class LXMidiMapping implements LXSerializable {
           max = tmp;
           normalized = 1-normalized;
         }
-        this.discreteParameter.setValue(LXUtils.min(min + (max - min + 1) * normalized, max));
+        setDiscreteCommand(lx, LXUtils.min((int) (min + (max - min + 1) * normalized), max));
       } else if (this.isBoolean) {
-        this.booleanParameter.setValue(
+        final boolean isOn =
           (normalized >= this.minValue.getNormalized()) &&
-          (normalized <= this.maxValue.getNormalized())
-        );
+          (normalized <= this.maxValue.getNormalized());
+        if (this.booleanParameter.isOn() != isOn) {
+          lx.command.perform(new LXCommand.Parameter.SetNormalized(this.booleanParameter, isOn));
+        }
       } else {
-        this.parameter.setNormalized(LXUtils.lerp(
+        setNormalizedCommand(lx, LXUtils.lerp(
           this.minValue.getNormalized(),
           this.maxValue.getNormalized(),
           normalized

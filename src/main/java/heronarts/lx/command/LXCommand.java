@@ -317,7 +317,7 @@ public abstract class LXCommand {
 
       private final ParameterReference<DiscreteParameter> discreteParameter;
       private final int originalDiscreteValue;
-      private final int newDiscreteValue;
+      private int newDiscreteValue;
 
       private final ParameterReference<LXParameter> genericParameter;
       private final double originalGenericValue;
@@ -325,8 +325,7 @@ public abstract class LXCommand {
 
       public SetValue(DiscreteParameter parameter, int value) {
         this.isDiscrete = true;
-        this.discreteParameter = new ParameterReference<DiscreteParameter>(
-          parameter);
+        this.discreteParameter = new ParameterReference<DiscreteParameter>(parameter);
         this.originalDiscreteValue = parameter.getBaseValuei();
         this.newDiscreteValue = value;
 
@@ -360,10 +359,17 @@ public abstract class LXCommand {
           : this.genericParameter.get();
       }
 
+      public SetValue updateDiscrete(int value) {
+        if (!this.isDiscrete) {
+          throw new IllegalStateException("Cannot update non-discrete parameter with integer value");
+        }
+        this.newDiscreteValue = value;
+        return this;
+      }
+
       public SetValue update(double value) {
         if (this.isDiscrete) {
-          throw new IllegalStateException(
-            "Cannot update discrete parameter with double value");
+          throw new IllegalStateException("Cannot update discrete parameter with double value");
         }
         this.newGenericValue = value;
         return this;
@@ -498,15 +504,25 @@ public abstract class LXCommand {
       private final ParameterReference<DiscreteParameter> parameter;
       private final int originalValue;
       private final int amount;
+      private final boolean alwaysWrap;
 
       public Decrement(DiscreteParameter parameter) {
-        this(parameter, 1);
+        this(parameter, 1, false);
       }
 
       public Decrement(DiscreteParameter parameter, int amount) {
+        this(parameter, amount, false);
+      }
+
+      public Decrement(DiscreteParameter parameter, boolean alwaysWrap) {
+        this(parameter, 1, alwaysWrap);
+      }
+
+      public Decrement(DiscreteParameter parameter, int amount, boolean alwaysWrap) {
         this.parameter = new ParameterReference<DiscreteParameter>(parameter);
         this.originalValue = parameter.getBaseValuei();
         this.amount = amount;
+        this.alwaysWrap = alwaysWrap;
       }
 
       @Override
@@ -516,7 +532,11 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.parameter.get().decrement(this.amount);
+        if (this.alwaysWrap) {
+          this.parameter.get().decrement(this.amount, true);
+        } else {
+          this.parameter.get().decrement(this.amount);
+        }
       }
 
       @Override
