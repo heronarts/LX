@@ -166,13 +166,16 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
   private final LinearEnvelope nudge = new LinearEnvelope(1, 1, 5000);
 
-  public final MutableParameter period = (MutableParameter) new MutableParameter(MS_PER_MINUTE / DEFAULT_BPM)
+  public final MutableParameter period = (MutableParameter)
+    new MutableParameter(MS_PER_MINUTE / DEFAULT_BPM)
+    .setUnits(MutableParameter.Units.MILLISECONDS)
     .setDescription("Reports the duration between beats (ms)");
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private boolean resetOnNextBeat = false;
   private boolean didTrigger = false;
+  private long triggerNanoTime = -1;
   private boolean running = true;
 
   private class Cursor {
@@ -251,8 +254,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   private final Cursor smooth = new Cursor();
   private final Cursor slew = new Cursor();
 
-  private long firstTap = 0;
-  private long lastTap = 0;
+  private long firstTapNanos = 0;
+  private long lastTapNanos = 0;
   private int tapCount = 0;
 
   private boolean inBpmPeriodUpdate = false;
@@ -307,13 +310,13 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       if (this.clockSource.getObject() == Tempo.ClockSource.OSC) {
         if (message.size() > 0) {
           // Message specifies an absolute 1-indexed beat count
-          trigger(message.getInt()-1);
+          trigger(message.getInt()-1, message);
         } else {
           // Oof, these raw beat messages are risky business...
           if (this.oscBeatCount < 0) {
-            trigger(this.oscBeatCount = 0);
+            trigger(this.oscBeatCount = 0, message);
           } else {
-            trigger(++this.oscBeatCount);
+            trigger(++this.oscBeatCount, message);
           }
         }
       }
@@ -321,7 +324,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     } else if (parts[index].equals(PATH_BEAT_WITHIN_BAR)) {
       if (this.clockSource.getObject() == Tempo.ClockSource.OSC) {
         if (message.size() > 0) {
-          triggerBeatWithinBar(message.getInt());
+          triggerBeatWithinBar(message.getInt(), message);
         } else {
           LXOscEngine.error(PATH_BEAT_WITHIN_BAR + " message missing argument: " + message.toString());
         }
@@ -630,8 +633,20 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * desired.
    *
    * @param beatWithinBar Beat within bar, 1-indexed
+   * @param message OSC message that triggered the beat, for timing adjustment
    */
-  public void triggerBeatWithinBar(int beatWithinBar) {
+  public void triggerBeatWithinBar(int beatWithinBar, OscMessage message) {
+    triggerBeatWithinBar(beatWithinBar, message.nanoTime);
+  }
+
+  /**
+   * Triggers the given beat within bar, keeping count over subsequent bars if
+   * desired.
+   *
+   * @param beatWithinBar Beat within bar, 1-indexed
+   * @param nanoTime System.nanoTime() value for the event causing trigger
+   */
+  public void triggerBeatWithinBar(int beatWithinBar, long nanoTime) {
     // Message specifies a relative 1-indexed beat count within the bar
     final int currentBeat = this.target.beatCountWithinBar();
     final int nextBeat = beatWithinBar - 1;
@@ -639,11 +654,11 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     if (nextBeat < currentBeat) {
       // The beat has wrapped around, e.g. 2, 3, 4 -> 1
       // We are moving onto the next bar!
-      trigger((currentBar+1) * this.beatsPerBar.getValuei() + nextBeat);
+      trigger((currentBar+1) * this.beatsPerBar.getValuei() + nextBeat, nanoTime);
     } else {
       // We are still in the same bar, possibly on the same beat which
       // reached us a tad late, or stepping forwards
-      trigger(this.target.beatCount + (nextBeat - currentBeat));
+      trigger(this.target.beatCount + (nextBeat - currentBeat), nanoTime);
     }
   }
 
@@ -654,10 +669,32 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @param beat Beat number, 1-indexed
    */
   public void triggerBarAndBeat(int bar, int beat) {
+    triggerBarAndBeat(bar, beat, System.nanoTime());
+  }
+
+  /**
+   * Trigger the given bar and beat position, both 1-indexed
+   *
+   * @param bar Bar number, 1-indexed
+   * @param beat Beat number, 1-indexed
+   * @param message Source message, for timing adjustment
+   */
+  public void triggerBarAndBeat(int bar, int beat, OscMessage message) {
+    triggerBarAndBeat(bar, beat, message.nanoTime);
+  }
+
+  /**
+   * Trigger the given bar and beat position, both 1-indexed
+   *
+   * @param bar Bar number, 1-indexed
+   * @param beat Beat number, 1-indexed
+   * @param nanoTime System.nanoTime() value of the event that caused the trigger
+   */
+  public void triggerBarAndBeat(int bar, int beat, long nanoTime) {
     if (bar < 1 || beat < 1) {
       throw new IllegalArgumentException("Bar and beat must be 1 or greater: " + bar + "." + beat);
     }
-    trigger((bar-1) * this.beatsPerBar.getValuei() + beat - 1);
+    trigger((bar-1) * this.beatsPerBar.getValuei() + beat - 1, nanoTime);
   }
 
   /**
@@ -672,10 +709,33 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   /**
    * Triggers the metronome, setting the beat count to the given explicit value
    *
-   * @param beat Beat count
+   * @param beat Beat count, 0-indexed
    */
   public void trigger(int beat) {
+    trigger(beat, System.nanoTime());
+  }
+
+  /**
+   * Triggers the metronome, setting the beat count to the given value
+   * with a specified offset into the beat.
+   *
+   * @param beat Beat count, 0-indexed
+   * @param message OSC message that caused the trigger, for timing adjustment
+   */
+  public void trigger(int beat, OscMessage message) {
+    trigger(beat, message.nanoTime);
+  }
+
+  /**
+   * Triggers the metronome, setting the beat count to the given value
+   * with a specified offset into the beat.
+   *
+   * @param beat Beat count, 0-indexed
+   * @param nanoTime System.nanoTime() value of event that caused the trigger
+   */
+  public void trigger(int beat, long nanoTime) {
     this.target.beatCount = beat;
+    this.triggerNanoTime = nanoTime;
     this.didTrigger = true;
   }
 
@@ -687,25 +747,25 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * this is all that is desired.
    */
   public void tap() {
-    tap(System.currentTimeMillis());
+    tap(System.nanoTime());
   }
 
   /**
    * Adjusts the tempo, specifying an exact timestamp in milliseconds
    * of when the tap event occurred.
    *
-   * @param now Timestamp of event, should be equivalent to System.currentTimeMillis()
+   * @param nanoTime Timestamp of event, should be equivalent to System.nanoTime()
    */
-  public void tap(long now) {
-    if (now - this.lastTap > 2000) {
-      this.firstTap = now;
+  public void tap(long nanoTime) {
+    if (nanoTime - this.lastTapNanos > 2000000000) {
+      this.firstTapNanos = nanoTime;
       this.tapCount = 0;
     }
-    this.lastTap = now;
+    this.lastTapNanos = nanoTime;
     ++this.tapCount;
     if (this.tapCount > 3) {
-      double beatPeriod = (this.lastTap - this.firstTap) / (double) (this.tapCount - 1);
-      setBpm(MS_PER_MINUTE / beatPeriod);
+      double beatPeriodMs = (this.lastTapNanos - this.firstTapNanos) / 1000000. / (this.tapCount - 1.);
+      setBpm(MS_PER_MINUTE / beatPeriodMs);
     }
     trigger(this.tapCount - 1);
   }
@@ -727,9 +787,15 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     // Explicit beat trigger, back to the start of the beat
     if (this.didTrigger) {
       this.didTrigger = false;
-      // TODO(mcslee): we ought to set the basis to time elapsed since the original source of
-      // the trigger event (e.g. time elapsed since OSC or MIDI message received)
-      this.target.basis = 0;
+
+      // NOTE: potentially overkill, but on a slow framerate the time that the engine gets around
+      // to processing the input event which triggered a beat, we could be *into* that beat period,
+      // so let's compute the basis here and set it for sane values (< 1., if we're past that, the
+      // engine isn't even keeping up with an entire beat and tempo will be entirely fucked regardless)
+      final double triggerBasis =
+        (this.lx.engine.nowNanoTime <= this.triggerNanoTime) ? 0. :
+        (this.lx.engine.nowNanoTime - this.triggerNanoTime) / 1000000. / this.period.getValue();
+      this.target.basis = (triggerBasis < 1.) ? triggerBasis : 0.;
       this.target.isBeat = true;
       this.running = true;
     } else if (this.running) {

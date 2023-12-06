@@ -973,11 +973,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         if (beat.isStop()) {
           this.lx.engine.tempo.stop();
         } else {
-          this.lx.engine.tempo.trigger(((MidiBeat) message).getBeat());
           final double period = beat.getPeriod();
           if (period != MidiBeat.PERIOD_UNKNOWN) {
             this.lx.engine.tempo.setPeriod(period);
           }
+          this.lx.engine.tempo.trigger(beat.getBeat(), beat.nanoTime);
         }
       }
     }

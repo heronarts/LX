@@ -173,16 +173,16 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
           case ShortMessage.START:
             this.beatClock = 0;
             this.lastBeatNanos = System.nanoTime();
-            message = new MidiBeat(sm, 0);
+            message = new MidiBeat(sm, 0, this.lastBeatNanos);
             break;
           case ShortMessage.CONTINUE:
             if (this.beatClock % PULSES_PER_QUARTER_NOTE == 0) {
               this.lastBeatNanos = System.nanoTime();
-              message = new MidiBeat(sm, this.beatClock / PULSES_PER_QUARTER_NOTE);
+              message = new MidiBeat(sm, this.beatClock / PULSES_PER_QUARTER_NOTE, this.lastBeatNanos);
             }
             break;
           case ShortMessage.STOP:
-            message = new MidiBeat(sm, MidiBeat.STOP);
+            message = new MidiBeat(sm, MidiBeat.STOP, 0);
             this.lastBeatNanos = -1;
             break;
           case ShortMessage.SONG_POSITION_POINTER:
@@ -194,7 +194,7 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
             ++this.beatClock;
             if (this.beatClock % PULSES_PER_QUARTER_NOTE == 0) {
               long now = System.nanoTime();
-              MidiBeat beat = new MidiBeat(sm, this.beatClock / PULSES_PER_QUARTER_NOTE);
+              MidiBeat beat = new MidiBeat(sm, this.beatClock / PULSES_PER_QUARTER_NOTE, now);
               if (this.lastBeatNanos > 0) {
                 beat.setPeriod((now - this.lastBeatNanos) / 1000000.);
               }

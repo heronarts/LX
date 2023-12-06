@@ -289,11 +289,11 @@ public class Envelop extends LXRunnableComponent {
               final int bar = message.getInt();
               final float bpm = message.getFloat();
               if (bar >= 1 && beat >= 1) {
-                this.lx.engine.tempo.triggerBarAndBeat(bar, beat);
+                this.lx.engine.tempo.triggerBarAndBeat(bar, beat, message);
               }
               this.lx.engine.tempo.bpm.setValue(bpm);
             } else {
-              this.lx.engine.tempo.triggerBeatWithinBar(beat);
+              this.lx.engine.tempo.triggerBeatWithinBar(beat, message);
             }
           }
         }
