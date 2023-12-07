@@ -429,7 +429,7 @@ public class LXOscEngine extends LXComponent {
             }
             oscMessage.add(oscFloat);
           } else {
-            oscFloat.setValue(parameter.getValuef());
+            oscFloat.setValue(parameter.getBaseValuef());
             oscMessage.add(oscFloat);
           }
           _sendMessage(oscMessage);
