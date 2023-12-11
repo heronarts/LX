@@ -42,6 +42,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
+import heronarts.lx.websocket.LXWebsocketEngine;
 
 import java.io.File;
 import java.net.SocketException;
@@ -88,6 +89,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final LXOscEngine osc;
 
   public final LXDmxEngine dmx;
+
+  public final LXWebsocketEngine websocket;
 
   private Dispatch inputDispatch = null;
 
@@ -424,6 +427,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // OSC engine
     addChild("osc", this.osc = new LXOscEngine(lx));
     LX.initProfiler.log("Engine: Osc");
+
+    // Websocket engine
+    addChild("websocket", this.websocket = new LXWebsocketEngine(lx));
+    LX.initProfiler.log("Engine: Websocket");
 
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
@@ -1180,6 +1187,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.profiler.outputNanos = 0;
     }
 
+    // Service requests from the websocket engine
+    this.websocket.loop(deltaMs);
+
     // All done running this pass of the engine!
     this.profiler.runNanos = System.nanoTime() - runStart;
 
@@ -1359,6 +1369,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   @Override
   public void dispose() {
+    this.websocket.dispose();
     this.midi.disposeSurfaces();
     this.modulation.dispose();
     this.mixer.dispose();
