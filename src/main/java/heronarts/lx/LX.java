@@ -97,8 +97,13 @@ public class LX {
     public static final int UNLIMITED_POINTS = -1;
 
     public boolean canSave();
-    public int getMaxPoints();
+
+    public int getMaxOutputPoints();
+
+    public int getMaxRenderPoints();
+
     public boolean canRunPlugins();
+
     public boolean hasPackageLicense(String packageName);
 
     public static Permissions UNRESTRICTED = new Permissions() {
@@ -108,7 +113,12 @@ public class LX {
       }
 
       @Override
-      public int getMaxPoints() {
+      public int getMaxOutputPoints() {
+        return UNLIMITED_POINTS;
+      }
+
+      @Override
+      public int getMaxRenderPoints() {
         return UNLIMITED_POINTS;
       }
 

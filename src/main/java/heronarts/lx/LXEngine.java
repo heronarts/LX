@@ -126,7 +126,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     public final BooleanParameter restricted =
       new BooleanParameter("Restricted", false)
-      .setDescription("Whether output is restricted due to license restrictions");
+      .setDescription("Whether output is disabled due to license restrictions");
 
     /**
      * This ModelOutput helper is used for sending dynamic datagrams that are
@@ -175,7 +175,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.restricted.addListener((p) -> {
         if (this.restricted.isOn()) {
           final int myPoints = lx.model.size;
-          final int limitPoints = lx.permissions.getMaxPoints();
+          final int limitPoints = lx.permissions.getMaxOutputPoints();
           final String outputError =
             (limitPoints == 0) ?
               "Your license level does not support sending live network output, it will be disabled." :
@@ -1158,7 +1158,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.buffer.flip();
     }
 
-    final int maxPoints = this.lx.permissions.getMaxPoints();
+    final int maxPoints = this.lx.permissions.getMaxOutputPoints();
     this.output.restricted.setValue((maxPoints >= 0) && (this.buffer.copy.main.length > maxPoints));
 
     if (!this.output.restricted.isOn()) {
