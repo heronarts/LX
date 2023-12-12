@@ -1065,6 +1065,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.buffer.render.setModel(this.lx.model);
 
     // Check render and output state based upon this model
+    final boolean eulaAccepted = !this.lx.permissions.isEulaRequired() || this.lx.preferences.eulaAccepted.isOn();
     final int maxOutputPoints = this.lx.permissions.getMaxOutputPoints();
     final int maxRenderPoints = this.lx.permissions.getMaxRenderPoints();
     this.restricted.setValue((maxRenderPoints >= 0) && (this.buffer.render.main.length > maxRenderPoints));
@@ -1092,7 +1093,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Okay, time for the real work, to run and blend all of our channels
     // First, set up a bunch of state to keep track of which buffers we
     // are rendering into.
-    if (!this.restricted.isOn()) {
+    if (eulaAccepted && !this.restricted.isOn()) {
       this.mixer.loop(buffer.render, deltaMs);
     }
 
@@ -1158,7 +1159,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.buffer.flip();
     }
 
-    if (!this.output.restricted.isOn()) {
+    if (eulaAccepted && !this.output.restricted.isOn()) {
       if (isNetworkMultithreaded) {
         // Notify the network thread of new work to do!
         synchronized (this.networkThread) {
@@ -1251,11 +1252,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
           this.timer.copyNanos = copyEnd - copyStart;
           try {
             output.send(this.networkFrame.main);
-          } catch (Exception x) {
+          } catch (Throwable x) {
             // TODO(mcslee): For now we don't flag these, there could be ConcurrentModificationException
             // or ArrayIndexBounds exceptions if the model/fixtures are being changed in real-time.
             // This is rare and would only occur at a VERY high framerate.
-            LX.error("Exception in network thread: " + x.getLocalizedMessage());
+            LX.error(x, "Error in network thread: " + x.getLocalizedMessage());
           }
           this.timer.sendNanos = System.nanoTime() - copyEnd;
         }

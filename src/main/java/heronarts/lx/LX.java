@@ -96,6 +96,8 @@ public class LX {
 
     public static final int UNLIMITED_POINTS = -1;
 
+    public boolean isEulaRequired();
+
     public boolean canSave();
 
     public int getMaxOutputPoints();
@@ -107,6 +109,12 @@ public class LX {
     public boolean hasPackageLicense(String packageName);
 
     public static Permissions UNRESTRICTED = new Permissions() {
+
+      @Override
+      public boolean isEulaRequired() {
+        return false;
+      }
+
       @Override
       public boolean canSave() {
         return true;
@@ -343,7 +351,7 @@ public class LX {
   /**
    * Permissions
    */
-  public final Permissions permissions = getPermissions();
+  public final Permissions permissions = getPermissions();;
 
   protected Permissions getPermissions() {
     return Permissions.UNRESTRICTED;
@@ -459,6 +467,8 @@ public class LX {
     this.preferences = new LXPreferences(this);
     if (this.flags.loadPreferences) {
       this.preferences.load();
+    } else {
+      this.preferences.loadEULA();
     }
 
     // Scheduler
