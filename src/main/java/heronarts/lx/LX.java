@@ -1427,6 +1427,10 @@ public class LX {
   static File EXPLICIT_LOG_FILE = null;
   private static PrintStream EXPLICIT_LOG_STREAM = null;
 
+  public static File getLogFile() {
+    return EXPLICIT_LOG_FILE;
+  }
+
   public static void setLogFile(File file) {
     try {
       EXPLICIT_LOG_FILE = file;

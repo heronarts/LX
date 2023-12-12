@@ -113,6 +113,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     new BooleanParameter("Performance", false)
     .setDescription("Whether performance mode UI is enabled");
 
+  public final BooleanParameter restricted =
+    new BooleanParameter("Restricted", false)
+    .setDescription("Whether rendering is disabled due to license restrictions");
+
   public final LXModulationEngine modulation;
 
   public final LXSnapshotEngine snapshots;
@@ -172,18 +176,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     Output(LX lx) {
       super(lx);
-      this.restricted.addListener((p) -> {
-        if (this.restricted.isOn()) {
-          final int myPoints = lx.model.size;
-          final int limitPoints = lx.permissions.getMaxOutputPoints();
-          final String outputError =
-            (limitPoints == 0) ?
-              "Your license level does not support sending live network output, it will be disabled." :
-              ("You have exceeded the maximum number of points allowed by your license (" + myPoints + " > " + limitPoints + "). Output will be disabled.");
-          lx.pushError(null, outputError);
-        }
-      });
-
       try {
         addChild(new ModelOutput(lx));
       } catch (SocketException sx) {
@@ -1072,6 +1064,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Initialize the model context for this render frame
     this.buffer.render.setModel(this.lx.model);
 
+    // Check render and output state based upon this model
+    final int maxOutputPoints = this.lx.permissions.getMaxOutputPoints();
+    final int maxRenderPoints = this.lx.permissions.getMaxRenderPoints();
+    this.restricted.setValue((maxRenderPoints >= 0) && (this.buffer.render.main.length > maxRenderPoints));
+    this.output.restricted.setValue((maxOutputPoints >= 0) && (this.buffer.render.main.length > maxOutputPoints));
+
     // Run tempo and audio, always using real-time
     this.lx.engine.tempo.loop(deltaMs);
     this.audio.loop(deltaMs);
@@ -1094,7 +1092,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Okay, time for the real work, to run and blend all of our channels
     // First, set up a bunch of state to keep track of which buffers we
     // are rendering into.
-    this.mixer.loop(buffer.render, deltaMs);
+    if (!this.restricted.isOn()) {
+      this.mixer.loop(buffer.render, deltaMs);
+    }
 
     // Add fixture identification very last
     int identifyColor = LXColor.hsb(0, 100, Math.abs(-100 + (runStart / 8000000) % 200));
@@ -1157,9 +1157,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       // We are multi-threading, lock the double buffer and flip it
       this.buffer.flip();
     }
-
-    final int maxPoints = this.lx.permissions.getMaxOutputPoints();
-    this.output.restricted.setValue((maxPoints >= 0) && (this.buffer.copy.main.length > maxPoints));
 
     if (!this.output.restricted.isOn()) {
       if (isNetworkMultithreaded) {
