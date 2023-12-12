@@ -182,6 +182,13 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         lx.pushError(sx, "Serious network error, could not create output socket. Program will continue with no network output.\n" + sx.getLocalizedMessage());
         LXOutput.error("Could not create output datagram socket, model will not be able to send");
       }
+      this.restricted.addListener(p -> {
+        if (this.restricted.isOn()) {
+          LXOutput.error("Network output is disabled due to license restrictions.");
+        } else {
+          LXOutput.log("Network output restored.");
+        }
+      });
     }
 
     @Override
@@ -424,6 +431,15 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addParameter("framesPerSecond", this.framesPerSecond);
     addParameter("speed", this.speed);
     addParameter("performanceMode", this.performanceMode);
+
+    // Log messages for restriction state
+    this.restricted.addListener(p -> {
+      if (this.restricted.isOn()) {
+        LX.error("Rendering engine disabled due to license restrictions.");
+      } else {
+        LX.log("Rendering engine restored within license limits.");
+      }
+    });
   }
 
   public void logProfiler() {
