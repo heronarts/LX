@@ -794,11 +794,15 @@ public class JsonFixture extends LXFixture {
       String parameterValue = "";
 
       if (KEY_INSTANCE.equals(parameterName)) {
-        parameterValue = String.valueOf(this.currentChildInstance);
         if (returnType == ParameterType.BOOLEAN) {
           addWarning("Cannot load non-boolean parameter $" + parameterName + " into a boolean type: " + key);
           return null;
         }
+        if (this.currentChildInstance < 0) {
+          addWarning("Cannot reference variable $" + parameterName + " when \"" + KEY_INSTANCES + "\" has not been declared");
+          return null;
+        }
+        parameterValue = String.valueOf(this.currentChildInstance);
       } else if (KEY_INSTANCES.equals(parameterName)) {
         parameterValue = String.valueOf(this.currentNumInstances);
         if (returnType == ParameterType.BOOLEAN) {
