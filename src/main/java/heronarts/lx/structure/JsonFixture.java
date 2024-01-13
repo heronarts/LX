@@ -2251,9 +2251,6 @@ public class JsonFixture extends LXFixture {
       num -= offset;
 
     } else if (segmentObj.has(KEY_COMPONENT_INDEX)) {
-      if (segmentObj.has(KEY_START)) {
-        addWarning("Output specifies " + KEY_COMPONENT_INDEX + ", ignoring " + KEY_START);
-      }
       if (!(fixture instanceof JsonFixture)) {
         addWarning("Output " + KEY_COMPONENT_INDEX + " may only be used on custom fixtures");
         return;
