@@ -213,7 +213,7 @@ public class Envelop extends LXRunnableComponent {
         float distance = message.getFloat();
 
         // Let's handle normalizing values that might be out of strict range
-        float sign = (elevation > 0) ? 1 : -1;
+        float sign = (elevation >= 0) ? 1 : -1;
         boolean flipAzimuth = false;
 
         // Elevation values that go beyond 90 degrees will require adjusting
@@ -223,13 +223,13 @@ public class Envelop extends LXRunnableComponent {
         if (elevation >= 270f) {
           // We're flipped 3/4 way around, top/bottom are flipped but
           // azimuth is unchanged
-          elevation = absElevation - sign*360f;
+          elevation = sign * (absElevation - 360f);
         } else if (absElevation > 90f) {
           // We're flipped onto the other lateral "side" of the sphere,
           // where azimuth is 180 degrees opposite but top stays top
           // and bottom stays bottom
           flipAzimuth = true;
-          elevation = sign*180f - absElevation;
+          elevation = sign * (180f - absElevation);
         }
 
         // The azimuth may need a 180 degree rotation if elevation put us
