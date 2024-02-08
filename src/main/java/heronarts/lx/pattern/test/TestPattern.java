@@ -60,14 +60,15 @@ public class TestPattern extends LXPattern {
     new EnumParameter<Mode>("Mode", Mode.ITERATE)
     .setDescription("Which mode of test operation to use");
 
-  public final CompoundParameter rate = (CompoundParameter)
+  public final CompoundParameter rate =
     new CompoundParameter("Rate", 50, 10, 10000)
     .setExponent(2)
     .setUnits(LXParameter.Units.MILLISECONDS)
     .setDescription("Iteration speed through points in the model");
 
-  public final DiscreteParameter fixedIndex = new DiscreteParameter("Fixed", 0, LXUtils.max(1, model.size))
-  .setDescription("Fixed LED point to turn on");
+  public final DiscreteParameter fixedIndex =
+    new DiscreteParameter("Fixed", 0, LXUtils.max(1, model.size))
+    .setDescription("Fixed LED point to turn on");
 
   public final StringParameter tag =
     new StringParameter("Tag", LXModel.Tag.STRIP)

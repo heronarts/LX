@@ -134,6 +134,7 @@ public interface LXParameter extends LXPath {
     CLOCK;
 
     @Override
+    @SuppressWarnings("fallthrough")
     public String format(double value) {
       switch (this) {
       case INTEGER:
@@ -144,7 +145,7 @@ public interface LXParameter extends LXPath {
         return String.format("%d%%", (int) (100*value));
       case SECONDS:
         value *= 1000;
-        //$FALL-THROUGH$
+        // Intentional fall-through
       case MILLISECONDS:
       case MILLISECONDS_RAW:
         if (value < 1000) {
@@ -187,6 +188,7 @@ public interface LXParameter extends LXPath {
       }
     }
 
+    @SuppressWarnings("fallthrough")
     public double parseDouble(String value) throws NumberFormatException {
       double timeMultiple = 1;
       switch (this) {
@@ -198,7 +200,7 @@ public interface LXParameter extends LXPath {
           // in seconds, but always multiplies by 1000 to get the ms equivalent
           timeMultiple = 1000;
         }
-        //$FALL-THROUGH$
+        // Intentional fallthrough
       case SECONDS:
         double raw = 0;
         for (String part : value.split(":")) {
