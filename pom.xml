@@ -5,7 +5,7 @@
 
 	<groupId>com.heronarts</groupId>
 	<artifactId>lx</artifactId>
-	<version>0.4.2</version>
+	<version>1.0.0-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
 	<name>LX</name>
@@ -14,8 +14,8 @@
 
 	<licenses>
 		<license>
-			<name>LX Studio Software License and Distribution Agreement</name>
-			<url>http://lx.studio/license</url>
+			<name>Chromatik / LX Software License and Distribution Agreement</name>
+			<url>https://chromatik.co/license/</url>
 		</license>
 	</licenses>
 
@@ -173,7 +173,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.5</version>
+						<version>3.1.0</version>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
