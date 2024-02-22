@@ -1,6 +1,6 @@
-Copyright 2013-2022 Mark C. Slee, Heron Arts LLC		
+Copyright 2013-2024 Mark C. Slee, Heron Arts LLC		
 
-LX STUDIO SOFTWARE LICENSE AND DISTRIBUTION AGREEMENT
+CHROMATIK / LX SOFTWARE LICENSE AND DISTRIBUTION AGREEMENT
 
 This Software License and Distribution Agreement (the "Agreement") is entered 
 into by and between Heron Arts LLC, with offices at 7 Heron Street, San 
@@ -18,7 +18,7 @@ Software, in object code or executable form only.
 with all Licensee Applications, taken together, for any 12-month period during 
 the term of this Agreement, with no deductions.
 
-1.4. "Software" means the Heron Arts LX software libraries, including all 
+1.4. "Software" means the Heron Arts LX, GLX, Chromatik, and LX Studio software libraries, including all 
 Updates supplied by Heron Arts under this Agreement.
 
 1.5. "Update" means any correction, update, upgrade, patch or other 
@@ -54,7 +54,7 @@ is at least as favorable to Heron Arts as this Agreement.
 2.3. Proprietary Notices. On each Software copy, Licensee shall reproduce all 
 copyright or other proprietary notices contained on the Software, as provided 
 by Heron Arts. Licensee shall not alter or remove or in any other way obscure 
-or hide from display any Heron Arts or LX Studio logo or proprietary notice 
+or hide from display any any Heron Arts, Chromatik, or LX Studio logo or proprietary notice 
 from the Application user interface or in the Software.
 
 2.4. Third Party Open Source Software. Notwithstanding Section 2.1, Licensee 
@@ -76,7 +76,7 @@ and interest in the Software, and all intellectual property rights therein.
 
 4. Use of Heron Arts Trademarks. Licensee shall state that the Application 
 includes the Software and may use such applicable trademarks, trade names and
-logos of Heron Arts (including the LX Studio trademarks) as required to do so
+logos of Heron Arts (including the Chromatik and LX Studio trademarks) as required to do so
 (collectively, the "Heron Arts Trademarks"). Any and all good will arising from
 Licensee's use of the Heron Arts Trademarks will inure solely to the benefit of
 Heron Arts. Licensee shall not assert any claim to the Heron Arts Trademarks
@@ -86,8 +86,8 @@ Arts Trademark, in any jurisdiction.
 
 5. Heron Arts Portfolio. (i) Licensee hereby grants to Heron Arts the right to
 publicize Licensee's use of the Software and (ii) Heron Arts may use Licensee's
-logo on the LX Studio website in areas naming licensees of the software, and in
-LX Studio portfolios or marketing presentations listing licensees of the
+logo on the Chromatik or LX Studio website in areas naming licensees of the software, and in
+Chromatik or LX Studio portfolios or marketing presentations listing licensees of the
 Software.
 
 6. Term and Termination.
