@@ -39,7 +39,7 @@ LX may be run in headless mode on any Java-enabled device (such as a Raspberry P
 
 ### Contact and Collaboration ###
 
-Building a big cool project? I'm probably interested in hearing about it! Want to solicit some help, request new framework features, or just ask a random question? Open an issue on the project or drop me a line: mark@heronarts.com
+Building a big cool project? I'm probably interested in hearing about it! Want to solicit some help, request new framework features, or just ask a random question? Feel free to open a GitHub issue directly on this project, drop me a line at mark@chromatik.co or [join the Discord](https://chromatik.co/discord).
 
 ---
 
