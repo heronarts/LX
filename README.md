@@ -6,7 +6,7 @@ Please note that LX is not open-source software. The license grants permission t
 
 ### LX Overview ###
 
-LX is a software library for real-time procedural animation, primarily designed for pixel-based LED lighting systems. It is the foundation of the [LX Studio](http://lx.studio) application.
+LX is a software library for real-time procedural animation, primarily designed for pixel-based LED lighting systems. It is the foundation of the [Chromatik](https://chromatik) application (formerly known as LX Studio).
 
 The modular engine design contains a variety of components:
 
@@ -29,13 +29,13 @@ LX differs from many other lighting/VJ software packages in that it is designed 
 
 ### GUI ###
 
-A companion library, [P3LX](https://github.com/heronarts/P3LX), makes it simple to embed LX in the Processing 3 environment with modular UI controls and simulation, the  most typical use case. This core library is kept separate, free of any dependency on the Processing libraries or runtime.
+A companion library, [GLX](https://github.com/heronarts/GLX), makes it simple to embed LX in a GUI environment (using [LWJGL](https://www.lwjgl.org/) and [bgfx](https://github.com/bkaradzic/bgfx)) with modular UI controls and simulation, the  most typical use case. This core library is kept separate, free of any UI dependencies.
 
-[LX Studio](https://github.com/heronarts/LXStudio) is a fully-featured digital lighting workstation with a rich UI for visualization and control.
+[Chromatik](https://chromatik.co) is a fully-featured digital lighting workstation with a rich UI for visualization and control.
 
 ### Headless ###
 
-LX may be run in headless mode on any Java-enabled device (such as a Raspberry Pi). There is a provided example of a standalone headless project in the tests folder.
+LX may be run in headless mode on any Java-enabled device (such as a Raspberry Pi).
 
 ### Contact and Collaboration ###
 
