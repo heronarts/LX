@@ -119,6 +119,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       throw x;
     }
     afterLayers(deltaMs);
+    applyEffects(deltaMs);
 
     this.profiler.loopNanos = System.nanoTime() - loopStart;
   }
@@ -126,6 +127,8 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   protected /* abstract */ void onLoop(double deltaMs) {}
 
   protected /* abstract */ void afterLayers(double deltaMs) {}
+
+  protected /* abstract */ void applyEffects(double deltaMs) {}
 
   private void checkForReentrancy(LXLayer target, String operation) {
     if (this.loopingLayer != null) {

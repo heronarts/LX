@@ -544,7 +544,10 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.runMs += deltaMs;
     this.run(deltaMs);
     this.profiler.runNanos = System.nanoTime() - runStart;
+  }
 
+  @Override
+  protected final void applyEffects(double deltaMs) {
     long effectStart = System.nanoTime();
     if (!this.mutableEffects.isEmpty()) {
       for (LXEffect effect : this.mutableEffects) {
