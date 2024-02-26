@@ -114,7 +114,7 @@ public class TestPattern extends LXPattern {
       this.colors[this.active] = LXColor.WHITE;
       break;
     case FIXED:
-      this.colors[this.fixedIndex.getValuei()] = LXColor.WHITE;
+      this.colors[model.points[this.fixedIndex.getValuei()].index] = LXColor.WHITE;
       break;
     case TAG:
       for (LXModel sub : model.sub(this.tag.getString())) {
