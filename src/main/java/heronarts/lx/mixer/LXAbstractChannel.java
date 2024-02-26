@@ -224,7 +224,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   void updateChannelBlendOptions() {
     for (LXBlend blend : this.blendMode.getObjects()) {
       if (blend != null) {
-        blend.dispose();
+        LX.dispose(blend);
       }
     }
     this.blendMode.setObjects(lx.engine.mixer.instantiateChannelBlends());

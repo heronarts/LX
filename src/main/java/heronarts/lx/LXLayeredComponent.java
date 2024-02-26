@@ -166,7 +166,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     checkForReentrancy(layer, "remove");
     this.mutableLayers.remove(layer);
     _reindexLayers();
-    layer.dispose();
+    LX.dispose(layer);
     return layer;
   }
 
@@ -178,7 +178,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   public void dispose() {
     checkForReentrancy(null, "dispose");
     for (LXLayer layer : this.mutableLayers) {
-      layer.dispose();
+      LX.dispose(layer);
     }
     this.mutableLayers.clear();
     super.dispose();

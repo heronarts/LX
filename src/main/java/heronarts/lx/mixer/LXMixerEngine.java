@@ -313,7 +313,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private void updateCrossfaderBlendOptions() {
     for (LXBlend blend : this.crossfaderBlendMode.getObjects()) {
       if (blend != null) {
-        blend.dispose();
+        LX.dispose(blend);
       }
     }
     this.crossfaderBlendMode.setObjects(instantiateCrossfaderBlends());
@@ -710,7 +710,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       getFocusedChannel().selected.setValue(true);
     }
 
-    channel.dispose();
+    LX.dispose(channel);
   }
 
   /**
@@ -1204,7 +1204,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     for (LXAbstractChannel channel : toRemove) {
       removeChannel(channel);
     }
-    this.masterBus.dispose();
+    LX.dispose(this.masterBus);
     super.dispose();
   }
 

@@ -255,7 +255,7 @@ public class LXChannel extends LXAbstractChannel {
   void updateTransitionBlendOptions() {
     for (LXBlend blend : this.transitionBlendMode.getObjects()) {
       if (blend != null) {
-        blend.dispose();
+        LX.dispose(blend);
       }
     }
     this.transitionBlendMode.setObjects(this.lx.engine.mixer.instantiateTransitionBlends());
@@ -601,7 +601,7 @@ public class LXChannel extends LXAbstractChannel {
       }
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, newActive.getIndex());
     }
-    pattern.dispose();
+    LX.dispose(pattern);
     return this;
   }
 
@@ -1071,7 +1071,7 @@ public class LXChannel extends LXAbstractChannel {
     this.focusedPattern.setValue(0);
 
     for (LXPattern pattern : this.mutablePatterns) {
-      pattern.dispose();
+      LX.dispose(pattern);
     }
     this.mutablePatterns.clear();
     if (this.thread.hasStarted) {

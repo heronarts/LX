@@ -374,7 +374,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       this.autoCycleCursor.decrement();
     }
     this.autoCycleCursor.setRange(NO_SNAPSHOT_INDEX, this.snapshots.size());
-    snapshot.dispose();
+    LX.dispose(snapshot);
     return this;
   }
 

@@ -125,7 +125,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
   public <T extends LXModulator> T removeModulator(T modulator) {
     checkForReentrancy(modulator, "remove");
     this.mutableModulators.remove(modulator);
-    modulator.dispose();
+    LX.dispose(modulator);
     _reindexModulators();
     return modulator;
   }
@@ -147,7 +147,7 @@ public abstract class LXModulatorComponent extends LXComponent implements LXLoop
   public void dispose() {
     checkForReentrancy(null, "dispose");
     for (LXModulator modulator : this.mutableModulators) {
-      modulator.dispose();
+      LX.dispose(modulator);
     }
     this.mutableModulators.clear();
     super.dispose();

@@ -266,7 +266,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   public void updateCompositeBlendOptions() {
     for (LXBlend blend : this.compositeMode.getObjects()) {
       if (blend != null) {
-        blend.dispose();
+        LX.dispose(blend);
       }
     }
     this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends());
@@ -456,7 +456,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       for (Listener listener : this.listeners) {
         listener.effectRemoved(this, effect);
       }
-      effect.dispose();
+      LX.dispose(effect);
     }
     return this;
   }

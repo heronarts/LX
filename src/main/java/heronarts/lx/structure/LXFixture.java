@@ -673,7 +673,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Clear output definitions and dispose of direct outputs
     this.outputDefinitions.clear();
     for (LXOutput output : this.outputsDirect) {
-      output.dispose();
+      LX.dispose(output);
     }
     this.mutableOutputsDirect.clear();
 
@@ -1242,10 +1242,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   @Override
   public void dispose() {
     for (LXFixture child : this.children) {
-      child.dispose();
+      LX.dispose(child);
     }
     for (LXOutput output : this.outputsDirect) {
-      output.dispose();
+      LX.dispose(output);
     }
     this.mutableOutputsDirect.clear();
     this.outputDefinitions.clear();

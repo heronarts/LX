@@ -229,7 +229,7 @@ public class LXStructureOutput extends LXOutput {
   void clear() {
     this.packets.clear();
     for (LXOutput output : this.generatedOutputs) {
-      output.dispose();
+      LX.dispose(output);
     }
     this.generatedOutputs.clear();
     this.outputErrors.clear();

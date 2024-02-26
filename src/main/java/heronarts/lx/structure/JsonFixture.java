@@ -673,7 +673,7 @@ public class JsonFixture extends LXFixture {
 
     // Clear the children
     for (LXFixture child : this.children) {
-      child.dispose();
+      LX.dispose(child);
     }
     this.mutableChildren.clear();
     this.componentsById.clear();

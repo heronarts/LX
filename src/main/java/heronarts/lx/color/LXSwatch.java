@@ -213,7 +213,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     for (Listener listener : this.listeners) {
       listener.colorRemoved(this, color);
     }
-    color.dispose();
+    LX.dispose(color);
     return color;
   }
 
@@ -286,7 +286,7 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
   @Override
   public void dispose() {
     for (LXDynamicColor color : this.colors) {
-      color.dispose();
+      LX.dispose(color);
     }
     this.mutableColors.clear();
     super.dispose();

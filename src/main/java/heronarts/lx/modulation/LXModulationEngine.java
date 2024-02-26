@@ -143,7 +143,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
       listener.modulationRemoved(this, modulation);
     }
     _reindex(this.modulations);
-    modulation.dispose();
+    LX.dispose(modulation);
     return this;
   }
 
@@ -168,7 +168,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     for (Listener listener : this.listeners) {
       listener.triggerRemoved(this, trigger);
     }
-    trigger.dispose();
+    LX.dispose(trigger);
     return this;
   }
 

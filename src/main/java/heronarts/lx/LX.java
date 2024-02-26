@@ -650,11 +650,22 @@ public class LX {
   }
 
   /**
+   * Dispose of a component, with an assertion that the disposal
+   * succeeds and the base class LXComponent.dispose() method was called.
+   *
+   * @param component Component to dispose
+   */
+  public static void dispose(LXComponent component) {
+    component.dispose();
+    LXComponent.assertDisposed(component);
+  }
+
+  /**
    * Shut down resources of the LX instance.
    */
   public void dispose() {
     this.registry.disposePlugins();
-    this.engine.dispose();
+    LX.dispose(this.engine);
   }
 
   /**

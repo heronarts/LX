@@ -165,7 +165,7 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
       listener.entryRemoved(this, entry);
     }
     this.dirty.setValue(true);
-    entry.dispose();
+    LX.dispose(entry);
     return this;
   }
 

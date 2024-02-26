@@ -267,7 +267,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
       for (Listener listener : this.listeners) {
         listener.effectRemoved(this, effect);
       }
-      effect.dispose();
+      LX.dispose(effect);
     }
     return this;
   }
@@ -406,7 +406,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
       for (ClipListener listener : this.clipListeners) {
         listener.clipRemoved(this, clip);
       }
-      clip.dispose();
+      LX.dispose(clip);
     }
   }
 
@@ -437,7 +437,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   protected void disposeClips() {
     for (LXClip clip : this.mutableClips) {
       if (clip != null) {
-        clip.dispose();
+        LX.dispose(clip);
       }
     }
     this.mutableClips.clear();
@@ -447,7 +447,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   public void dispose() {
     disposeClips();
     for (LXEffect effect : this.mutableEffects) {
-      effect.dispose();
+      LX.dispose(effect);
     }
     this.mutableEffects.clear();
     this.listeners.clear();

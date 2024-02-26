@@ -164,7 +164,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       this.bus.removeListener(this);
     }
     this.mutableLanes.clear();
-    this.snapshot.dispose();
+    LX.dispose(this.snapshot);
     this.listeners.clear();
     super.dispose();
   }

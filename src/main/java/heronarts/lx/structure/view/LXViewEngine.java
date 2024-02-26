@@ -155,7 +155,7 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
       listener.viewRemoved(this, view);
     }
     updateSelectors();
-    view.dispose();
+    LX.dispose(view);
     return this;
   }
 

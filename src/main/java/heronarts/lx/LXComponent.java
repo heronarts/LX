@@ -962,6 +962,18 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   private boolean disposed = false;
 
   /**
+   * A checked version of dispose used by internal engine implementation to ensure
+   * that the base class LXComponent.dispose() is always called.
+   *
+   * @param component Component to dispose
+   */
+  public static void assertDisposed(LXComponent component) {
+    if (!component.disposed) {
+      throw new IllegalStateException(component.getClass().getName() + ".dispose() did not complete, is there a missing call to super.dispose()?");
+    }
+  }
+
+  /**
    * Invoked when a component is being removed from the system and will no longer be used at all.
    * This unregisters the component and should free up any resources and parameter listeners.
    * Ideally after this method is called the object should be eligible for garbage collection.
@@ -986,7 +998,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
 
     // Remove the modulation engine for any component that has one
     if ((this != this.lx.engine) && (this instanceof LXModulationContainer)) {
-      ((LXModulationContainer) this).getModulationEngine().dispose();
+      LX.dispose(((LXModulationContainer) this).getModulationEngine());
     }
 
     // Remove modulations from any containers up the chain

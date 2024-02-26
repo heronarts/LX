@@ -417,7 +417,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       this.autoCycleCursor.decrement();
     }
     this.autoCycleCursor.setRange(NO_SWATCH_INDEX, this.swatches.size());
-    swatch.dispose();
+    LX.dispose(swatch);
     return this;
   }
 
@@ -642,10 +642,10 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   @Override
   public void dispose() {
     for (LXSwatch swatch : this.swatches) {
-      swatch.dispose();
+      LX.dispose(swatch);
     }
     this.mutableSwatches.clear();
-    this.swatch.dispose();
+    LX.dispose(this.swatch);
     super.dispose();
   }
 

@@ -442,7 +442,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       for (Listener l : this.listeners) {
         l.fixtureRemoved(fixture);
       }
-      fixture.dispose();
+      LX.dispose(fixture);
     }
     fixtureRemoved();
     return this;
@@ -463,7 +463,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       for (Listener l : this.listeners) {
         l.fixtureRemoved(fixture);
       }
-      fixture.dispose();
+      LX.dispose(fixture);
     }
     fixtureRemoved();
     return this;
@@ -480,7 +480,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     for (Listener l : this.listeners) {
       l.fixtureRemoved(fixture);
     }
-    fixture.dispose();
+    LX.dispose(fixture);
     fixtureRemoved();
     return this;
   }
@@ -495,7 +495,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       for (Listener l : this.listeners) {
         l.fixtureRemoved(fixture);
       }
-      fixture.dispose();
+      LX.dispose(fixture);
     }
 
     fixtureRemoved();
