@@ -111,7 +111,7 @@ public class TestPattern extends LXPattern {
         ++this.active;
       }
       this.active = this.active % model.points.length;
-      this.colors[this.active] = LXColor.WHITE;
+      this.colors[model.points[this.active].index] = LXColor.WHITE;
       break;
     case FIXED:
       this.colors[model.points[this.fixedIndex.getValuei()].index] = LXColor.WHITE;
