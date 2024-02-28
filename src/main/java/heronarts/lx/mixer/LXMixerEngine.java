@@ -1151,7 +1151,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         final int mult = LXColor.gray(100. * fader);
         final int[] output = this.blendStackMain.output;
         for (int i = 0; i < output.length; ++i) {
-          output[i] = LXColor.multiply(output[i], mult, 0x100);
+          output[i] = LXColor.multiply(output[i], mult, LXColor.BLEND_ALPHA_FULL);
         }
       }
     }

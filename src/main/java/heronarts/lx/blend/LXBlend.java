@@ -22,6 +22,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXBuffer;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 
@@ -59,7 +60,7 @@ public abstract class LXBlend extends LXModulatorComponent {
 
     @Override
     public void blend(int[] dst, int[] src, double alpha, int[] output, LXModel model) {
-      int alphaMask = (int) (alpha * 0x100);
+      int alphaMask = (int) (alpha * LXColor.BLEND_ALPHA_FULL);
       for (LXPoint p : model.points) {
         output[p.index] = this.function.apply(dst[p.index], src[p.index], alphaMask);
       }

@@ -236,9 +236,8 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
       setColors(LXColor.BLACK);
     } else if (level < 100) {
       int mask = LXColor.gray(level);
-      int alpha = 0x100;
       for (LXPoint p : model.points) {
-        colors[p.index] = LXColor.multiply(colors[p.index], mask, alpha);
+        colors[p.index] = LXColor.multiply(colors[p.index], mask, LXColor.BLEND_ALPHA_FULL);
       }
     }
   }

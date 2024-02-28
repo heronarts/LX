@@ -138,7 +138,7 @@ public class StrobeEffect extends LXEffect {
         } else {
           int src = LXColor.gray(100 * strobe);
           for (LXPoint p : model.points) {
-            this.colors[p.index] = LXColor.multiply(this.colors[p.index], src, 0x100);
+            this.colors[p.index] = LXColor.multiply(this.colors[p.index], src, LXColor.BLEND_ALPHA_FULL);
           }
         }
       }

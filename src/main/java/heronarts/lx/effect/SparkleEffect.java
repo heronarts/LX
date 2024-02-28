@@ -60,7 +60,7 @@ public class SparkleEffect extends LXEffect {
     if (enabledAmount > 0) {
       int i = 0;
       for (LXPoint p : model.points) {
-        colors[p.index] = LXColor.multiply(colors[p.index], LXColor.gray(LXUtils.clamp(engine.outputLevels[i++], 0, 100)), 0x100);
+        colors[p.index] = LXColor.multiply(colors[p.index], LXColor.gray(LXUtils.clamp(engine.outputLevels[i++], 0, 100)), LXColor.BLEND_ALPHA_FULL);
       }
     }
   }
