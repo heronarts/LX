@@ -320,6 +320,13 @@ public class LX {
     default public void modelGenerationChanged(LX lx, LXModel model) {}
   }
 
+  /**
+   * Listener for any type of model change
+   */
+  public interface ModelListener {
+    public void modelChanged(LXModel model);
+  }
+
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   public interface ProjectListener {
@@ -577,6 +584,39 @@ public class LX {
     }
     this.listeners.remove(listener);
     return this;
+  }
+
+  /**
+   * Registers and returns listener to fire on any change to the model
+   *
+   * @param listener Model listener for changes to model structure and/or geometry
+   * @return The registered listener
+   */
+  public LX.Listener onModelChanged(LX.ModelListener listener) {
+    return onModelChanged(listener, false);
+  }
+
+  /**
+   * Registers a permanent listener to fire on any change to the model
+   *
+   * @param listener Model listener for changes to model structure and/or geometry
+   * @param fire Whether to fire the listener immeediately
+   * @return The registered listener
+   */
+  public LX.Listener onModelChanged(LX.ModelListener listener, boolean fire) {
+    final Listener ret = new Listener() {
+      public void modelChanged(LX lx, LXModel model) {
+        listener.modelChanged(model);
+      }
+      public void modelGenerationChanged(LX lx, LXModel model) {
+        listener.modelChanged(model);
+      }
+    };
+    addListener(ret);
+    if (fire) {
+      listener.modelChanged(getModel());
+    }
+    return ret;
   }
 
   public LX addProjectListener(ProjectListener listener) {
