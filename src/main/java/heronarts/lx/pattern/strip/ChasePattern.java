@@ -267,15 +267,16 @@ public class ChasePattern extends LXPattern {
 
   @Override
   protected void run(double deltaMs) {
-    if (this.tempoSync.isOn() ) {
+    if (this.tempoSync.isOn()) {
       this.basis = lx.engine.tempo.getBasis(this.tempoDivision.getEnum());
+      if (this.reverse.isOn()) {
+        this.basis = 1f - basis;
+      }
     } else {
-      this.basis += deltaMs * .001 * this.speed.getValue() * this.speedRange.getValue() * .01;
+      double increment = deltaMs * .001 * this.speed.getValue() * this.speedRange.getValue() * .01;
+      this.basis += increment * (this.reverse.isOn() ? -1 : 1);
     }
-    double basis = (float) (this.basis - Math.floor(this.basis));
-    if (this.reverse.isOn()) {
-      basis = (1f - basis) % 1f;
-    }
+    double basis = (this.basis - Math.floor(this.basis));
 
     // Skew the thing
     final double skew = this.skew.getValue();
