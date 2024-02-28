@@ -685,8 +685,23 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @return List of direct children by type
    */
   public List<LXModel> children(String tag) {
-    List<LXModel> children = this.childDict.get(tag);
+    final List<LXModel> children = this.childDict.get(tag);
     return (children == null) ? EMPTY_LIST : children;
+  }
+
+  /**
+   * Returns the direct child component of a particular tag and given index. Children are only one-level
+   * deep. If the index is invalid, null is returned
+   *
+   * @param tag Child tag type
+   * @return List of direct children by type
+   */
+  public LXModel child(String tag, int index) {
+    if (index < 0) {
+      throw new IllegalArgumentException("LXModel.child(index) may not be negative: " + index);
+    }
+    final List<LXModel> children = this.childDict.get(tag);
+    return ((children != null) && (children.size() > index)) ? children.get(index) : null;
   }
 
   /**
@@ -697,8 +712,23 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @return List of all descendant submodels
    */
   public List<LXModel> sub(String tag) {
-    List<LXModel> sub = this.subDict.get(tag);
+    final List<LXModel> sub = this.subDict.get(tag);
     return (sub == null) ? EMPTY_LIST : sub;
+  }
+
+  /**
+   * Returns the submodel of the given model with the given index, if it exists
+   *
+   * @param tag Submodel tag
+   * @param index Index of descendant
+   * @return Descendant submodel at the given index, if one exists
+   */
+  public LXModel sub(String tag, int index) {
+    if (index < 0) {
+      throw new IllegalArgumentException("LXModel.sub(index) may not be negative: " + index);
+    }
+    final List<LXModel> sub = this.subDict.get(tag);
+    return ((sub != null) && (sub.size() > index)) ? sub.get(index) : null;
   }
 
   /**
