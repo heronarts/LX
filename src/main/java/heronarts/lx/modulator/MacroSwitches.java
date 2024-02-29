@@ -19,13 +19,16 @@
 package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
+import heronarts.lx.midi.LXMidiListener;
+import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Switches")
+@LXModulator.Device("Switches")
 @LXCategory(LXCategory.MACRO)
-public class MacroSwitches extends LXModulator implements LXOscComponent, LXTriggerSource {
+public class MacroSwitches extends LXModulator implements LXOscComponent, LXTriggerSource, LXMidiListener {
 
   public final BooleanParameter macro1 =
     new BooleanParameter("B1")
@@ -77,6 +80,7 @@ public class MacroSwitches extends LXModulator implements LXOscComponent, LXTrig
 
   public MacroSwitches() {
     this("Switches");
+    this.midiFilter.enabled.setValue(false);
   }
 
   public MacroSwitches(String label) {
@@ -104,5 +108,15 @@ public class MacroSwitches extends LXModulator implements LXOscComponent, LXTrig
   public BooleanParameter getTriggerSource() {
     return null;
   }
+
+  @Override
+  public void noteOnReceived(MidiNoteOn note) {
+    final int idx = note.getPitch() - this.midiFilter.minNote.getValuei();
+    if (idx < this.switches.length) {
+      this.switches[idx].toggle();
+    }
+  }
+
+
 
 }

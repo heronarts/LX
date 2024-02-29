@@ -19,13 +19,17 @@
 package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
+import heronarts.lx.midi.LXMidiListener;
+import heronarts.lx.midi.MidiNote;
+import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Triggers")
+@LXModulator.Device("Triggers")
 @LXCategory(LXCategory.MACRO)
-public class MacroTriggers extends LXModulator implements LXOscComponent, LXTriggerSource {
+public class MacroTriggers extends LXModulator implements LXOscComponent, LXTriggerSource, LXMidiListener {
 
   public final BooleanParameter macro1 =
     new BooleanParameter("T1")
@@ -82,6 +86,7 @@ public class MacroTriggers extends LXModulator implements LXOscComponent, LXTrig
 
   public MacroTriggers() {
     this("Triggers");
+    this.midiFilter.enabled.setValue(false);
   }
 
   public MacroTriggers(String label) {
@@ -108,6 +113,23 @@ public class MacroTriggers extends LXModulator implements LXOscComponent, LXTrig
   @Override
   public BooleanParameter getTriggerSource() {
     return null;
+  }
+
+  private void onMidiTrigger(MidiNote note, boolean value) {
+    final int trig = note.getPitch() - this.midiFilter.minNote.getValuei();
+    if (trig < this.triggers.length) {
+      this.triggers[trig].setValue(value);
+    }
+  }
+
+  @Override
+  public void noteOnReceived(MidiNoteOn note) {
+    onMidiTrigger(note, true);
+  }
+
+  @Override
+  public void noteOffReceived(MidiNote note) {
+    onMidiTrigger(note, false);
   }
 
 }

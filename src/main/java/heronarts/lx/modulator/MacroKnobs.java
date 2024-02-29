@@ -24,6 +24,7 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Knobs")
+@LXModulator.Device("Knobs")
 @LXCategory(LXCategory.MACRO)
 public class MacroKnobs extends LXModulator implements LXOscComponent {
 
