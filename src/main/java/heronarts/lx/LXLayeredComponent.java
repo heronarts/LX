@@ -40,6 +40,8 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
 
   private final List<LXLayer> mutableLayers = new ArrayList<LXLayer>();
 
+  private final List<LXLayer> removeLayers = new ArrayList<LXLayer>();
+
   public final List<LXLayer> layers = Collections.unmodifiableList(mutableLayers);
 
   protected final LXPalette palette;
@@ -118,6 +120,12 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       this.loopingLayer = null;
       throw x;
     }
+    // Remove layers scheduled for deletion
+    for (LXLayer layer : this.removeLayers) {
+      removeLayer(layer);
+    }
+    this.removeLayers.clear();
+
     afterLayers(deltaMs);
     applyEffects(deltaMs);
 
@@ -163,7 +171,13 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
   }
 
   protected final LXLayer removeLayer(LXLayer layer) {
-    checkForReentrancy(layer, "remove");
+    if (!this.layers.contains(layer)) {
+      throw new IllegalStateException("Cannot remove layer not in component: " + layer);
+    }
+    if (this.loopingLayer != null) {
+      this.removeLayers.add(layer);
+      return layer;
+    }
     this.mutableLayers.remove(layer);
     _reindexLayers();
     LX.dispose(layer);
@@ -181,6 +195,7 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
       LX.dispose(layer);
     }
     this.mutableLayers.clear();
+    this.removeLayers.clear();
     super.dispose();
   }
 
