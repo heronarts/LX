@@ -82,18 +82,18 @@ public abstract class LXOutput extends LXComponent {
        * Generate an output curve with the given parameters
        *
        * @param output Output byte lookup table
-       * @param b Brightness value 0-255
+       * @param brightness Brightness value 0-255
        * @param gamma Gamma
        * @param whitePoint White point 0-255
        */
-      private static void generate(byte[] output, int b, double gamma, double whitePoint) {
+      public static void generate(byte[] output, int brightness, double gamma, double whitePoint) {
         if (gamma == 1) {
-          for (int in = 0; in < 256; ++in) {
-            output[in] = (byte) (0xff & (int) Math.round(in * b * whitePoint * INV_255_2));
+          for (int in = 0; in < NUM_STEPS; ++in) {
+            output[in] = (byte) (0xff & (int) Math.round(in * brightness * whitePoint * INV_255_2));
           }
         } else {
-          for (int in = 0; in < 256; ++in) {
-            output[in] = (byte) (0xff & (int) Math.round(Math.pow(in * b * whitePoint * INV_255_3, gamma) * 255.f));
+          for (int in = 0; in < NUM_STEPS; ++in) {
+            output[in] = (byte) (0xff & (int) Math.round(Math.pow(in * brightness * whitePoint * INV_255_3, gamma) * 255.f));
           }
         }
       }
@@ -109,6 +109,27 @@ public abstract class LXOutput extends LXComponent {
       for (int i = 0; i < this.level.length; ++i) {
         this.level[i] = new Curve();
       }
+    }
+
+    /**
+     * Generate the gamma curve tables for RGBW tables
+     *
+     * @param gamma Gamma level
+     * @param whitePointRed White point for red (0-255)
+     * @param whitePointGreen White point for green (0-255)
+     * @param whitePointBlue White point for blue (0-255)
+     * @param whitePointWhite White point for white (0-255)
+     * @return this
+     */
+    public GammaTable generate(double gamma, double whitePointRed, double whitePointGreen, double whitePointBlue, double whitePointWhite) {
+      for (int brightness = 0; brightness < GammaTable.NUM_STEPS; ++brightness) {
+        Curve curve = this.level[brightness];
+        Curve.generate(curve.red, brightness, gamma, whitePointRed);
+        Curve.generate(curve.green, brightness, gamma, whitePointGreen);
+        Curve.generate(curve.blue, brightness, gamma, whitePointBlue);
+        Curve.generate(curve.white, brightness, gamma, whitePointWhite);
+      }
+      return this;
     }
 
     @Deprecated
@@ -223,18 +244,13 @@ public abstract class LXOutput extends LXComponent {
       if (this.gammaLut == null) {
         this.gammaLut = new GammaTable();
       }
-
-      final double gamma = this.gamma.getValue();
-      final double whitePointRed = this.whitePointRed.getValue();
-      final double whitePointGreen = this.whitePointGreen.getValue();
-      final double whitePointBlue = this.whitePointBlue.getValue();
-      final double whitePointWhite = this.whitePointWhite.getValue();
-      for (int b = 0; b < 256; ++b) {
-        GammaTable.Curve.generate(this.gammaLut.level[b].red, b, gamma, whitePointRed);
-        GammaTable.Curve.generate(this.gammaLut.level[b].green, b, gamma, whitePointGreen);
-        GammaTable.Curve.generate(this.gammaLut.level[b].blue, b, gamma, whitePointBlue);
-        GammaTable.Curve.generate(this.gammaLut.level[b].white, b, gamma, whitePointWhite);
-      }
+      this.gammaLut.generate(
+        this.gamma.getValue(),
+        this.whitePointRed.getValue(),
+        this.whitePointGreen.getValue(),
+        this.whitePointBlue.getValue(),
+        this.whitePointWhite.getValue()
+      );
     }
   }
 
