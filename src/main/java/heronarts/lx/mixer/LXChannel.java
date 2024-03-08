@@ -650,6 +650,7 @@ public class LXChannel extends LXAbstractChannel {
     boolean active = (pattern == getActivePattern());
     boolean focused = (pattern == getFocusedPattern());
 
+    // TODO(mcslee): Collect and restore global modulations to this pattern!
     int index = pattern.getIndex();
     JsonObject patternObj = new JsonObject();
     pattern.save(getLX(), patternObj);
@@ -660,6 +661,9 @@ public class LXChannel extends LXAbstractChannel {
     }
     if (active) {
       goPattern(newPattern);
+      if (this.transition != null) {
+        finishTransition();
+      }
     }
     return this;
   }
