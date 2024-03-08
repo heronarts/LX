@@ -176,6 +176,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     Output(LX lx) {
       super(lx);
+      this.gammaMode.setValue(GammaMode.DIRECT);
       try {
         addChild(new ModelOutput(lx));
       } catch (SocketException sx) {
