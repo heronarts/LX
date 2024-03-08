@@ -79,6 +79,10 @@ public class LXColor {
     return (byte) (argb & B_MASK);
   }
 
+  public static int toRGBA(int argb) {
+    return (argb >>> 24) | (argb << 8);
+  }
+
   public static int toABGR(int argb) {
     return
       (argb & AG_MASK) |
