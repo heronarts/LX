@@ -276,6 +276,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     if (!this.effects.contains(effect)) {
       throw new IllegalStateException("Cannot reload effect not on a channel");
     }
+    // TODO(mcslee): Collect and restore global modulations to this effect!
     int index = effect.getIndex();
     JsonObject effectObj = new JsonObject();
     effect.save(getLX(), effectObj);
