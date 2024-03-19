@@ -504,10 +504,14 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
    * @return Measure count
    */
   public int getCycleCount(Division division) {
+    return getCycleCount(division.multiplier);
+  }
+
+  public int getCycleCount(double multiplier) {
     // NB - a bit of tricky casting and math games needed here to avoid rounding
     // errors when summing
-    final double beatMultiple = this.smooth.beatCount * division.multiplier;
-    final double basisMultiple = this.smooth.basis * division.multiplier;
+    final double beatMultiple = this.smooth.beatCount * multiplier;
+    final double basisMultiple = this.smooth.basis * multiplier;
     return
       (int) beatMultiple +
       (int) basisMultiple +
