@@ -430,8 +430,8 @@ public class LXView extends LXModel {
   }
 
   @Override
-  public LXModel getRoot() {
-    return this.model.getRoot();
+  public LXModel getMainRoot() {
+    return this.model.getMainRoot();
   }
 
   @Override

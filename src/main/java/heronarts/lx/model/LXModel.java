@@ -577,6 +577,18 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
   }
 
   /**
+   * Gets the main root model. For basic models, this is the
+   * same as getRoot() - but for a LXView the result may be
+   * different. This method will return the top level master
+   * model in all cases
+   *
+   * @return Top level main root model
+   */
+  public LXModel getMainRoot() {
+    return getRoot();
+  }
+
+  /**
    * Returns the larger model which contains this model, if there is one. May be null.
    *
    * @return Model containing this model, or null
@@ -1075,7 +1087,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @return Array of geometry values indexed by LXPoint.index
    */
   public float[] computeGeometry(GeometryFunction function) {
-    return computeGeometry(function, new float[getRoot().size]);
+    return computeGeometry(function, new float[getMainRoot().size]);
   }
 
   private float[] computeGeometry(GeometryFunction function, float[] arr) {
