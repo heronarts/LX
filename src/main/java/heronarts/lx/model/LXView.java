@@ -430,6 +430,11 @@ public class LXView extends LXModel {
   }
 
   @Override
+  public LXModel getRoot() {
+    return this.model.getRoot();
+  }
+
+  @Override
   public void dispose() {
     this.model.derivedViews.remove(this);
     super.dispose();

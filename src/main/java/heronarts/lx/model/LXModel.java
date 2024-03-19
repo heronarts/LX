@@ -1053,7 +1053,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    */
   public float[] getGeometry(GeometryFunction function) {
     float[] arr = null;
-    LXModel root = getRoot();
+    final LXModel root = getRoot();
     if (root.normalizationBounds == this.normalizationBounds) {
       arr = root.geometryCache.get(function);
     }
