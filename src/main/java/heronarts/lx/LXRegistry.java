@@ -143,6 +143,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_EFFECTS.add(heronarts.lx.effect.BlurEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.color.ColorizeEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.color.ColorMaskEffect.class);
+    DEFAULT_EFFECTS.add(heronarts.lx.effect.color.GradientMaskEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.DynamicsEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.InvertEffect.class);
     DEFAULT_EFFECTS.add(heronarts.lx.effect.HueSaturationEffect.class);
