@@ -27,6 +27,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.effect.color.ColorMaskEffect.Mode;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -48,12 +49,18 @@ public class GradientMaskEffect extends LXEffect {
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Amount of masking to apply");
 
+  public final BooleanParameter cueMask =
+    new BooleanParameter("CUE", false)
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Directly render the mask");
+
   public GradientMaskEffect(LX lx) {
     super(lx);
     addParameter("depth", this.depth);
     addParameter("mode", this.mode);
     this.engine = new GradientPattern.Engine(lx);
     addParameters(this.engine.parameters);
+    addParameter("cueMask", this.cueMask);
   }
 
   @Override
@@ -69,14 +76,18 @@ public class GradientMaskEffect extends LXEffect {
       return;
     }
 
+    final boolean cueMask = this.cueMask.isOn();
+
     // Run the gradient engine
     final int[] maskColors = this.mask.getArray();
-    this.engine.run(deltaMs, this.model, maskColors);
+    this.engine.run(deltaMs, this.model, cueMask ? colors : maskColors);
 
     // Mask input colors by the results
-    final LXBlend.FunctionalBlend.BlendFunction blend = this.mode.getEnum().function;
-    for (LXPoint p : model.points) {
-      colors[p.index] = blend.apply(colors[p.index], maskColors[p.index], alpha);
+    if (!cueMask) {
+      final LXBlend.FunctionalBlend.BlendFunction blend = this.mode.getEnum().function;
+      for (LXPoint p : model.points) {
+        colors[p.index] = blend.apply(colors[p.index], maskColors[p.index], alpha);
+      }
     }
   }
 
