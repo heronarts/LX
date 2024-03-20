@@ -147,10 +147,10 @@ public class NoiseModulator extends LXModulator implements LXNormalizedParameter
   }
 
   private double _computeValue(float basis) {
-    return LXUtils.clamp(
-      this.level.getValue() + this.contrast.getValue() * getNoise(basis),
+    return LXUtils.lerp(
       this.minLevel.getValue(),
-      this.maxLevel.getValue()
+      this.maxLevel.getValue(),
+      LXUtils.clamp(this.level.getValue() + this.contrast.getValue() * getNoise(basis), 0, 1)
     );
   }
 
