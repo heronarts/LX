@@ -161,6 +161,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_MODULATORS.add(heronarts.lx.dmx.DmxColorModulator.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.BooleanLogic.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.ComparatorModulator.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.CycleModulator.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Damper.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Interval.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);
