@@ -270,7 +270,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     this.looped = false;
     this.numLoops = 0;
     this.needsReset = false;
-    double periodv = this.period.getValue();
+    final double periodv = this.period.getValue();
     if (this.tempoSync.isOn()) {
       if (this.tempoLock.isOn()) {
         final Tempo.Division division = this.tempoDivision.getEnum();
@@ -298,7 +298,7 @@ public abstract class LXPeriodicModulator extends LXModulator {
     } else if (periodv == 0) {
       this.basis = 1;
     } else {
-      this.basis += deltaMs / this.period.getValue();
+      this.basis += deltaMs / periodv;
     }
 
     if (this.basis >= 1.) {
