@@ -96,6 +96,33 @@ public class GradientPattern extends LXPattern {
 
   public static class Engine implements GradientFunction {
 
+    public interface ClampFunction {
+      public float clamp(float lerp);
+    }
+
+    public static enum ClampMode {
+      CLAMP("Clamp", f -> { return LXUtils.clampf(f, 0, 1); }),
+      WRAP("Wrap", f -> { return f - (float) Math.floor(f); }),
+      MIRROR("Mirror", f -> {
+        float floor = (float) Math.floor(f);
+        float diff = f - floor;
+        return (((int) floor) % 2 == 0) ? diff : 1-diff;
+      });
+
+      private final String label;
+      private final ClampFunction clamp;
+
+      private ClampMode(String label, ClampFunction func) {
+        this.label = label;
+        this.clamp = func;
+      }
+
+      @Override
+      public String toString() {
+        return this.label;
+      }
+    }
+
     private final LX lx;
 
     public final EnumParameter<ColorMode> colorMode =
@@ -142,6 +169,20 @@ public class GradientPattern extends LXPattern {
       new CompoundParameter("Brightness Range", 0, 100)
       .setUnits(CompoundParameter.Units.PERCENT)
       .setDescription("Range of total possible brightness gradient");
+
+    public final EnumParameter<ClampMode> gradientClamp =
+      new EnumParameter<ClampMode>("Clamp", ClampMode.CLAMP)
+      .setDescription("Gradient clamping behavior");
+
+    public final CompoundParameter gradientPhase =
+      new CompoundParameter("Phase", 0)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+      .setWrappable(true)
+      .setDescription("Phase offset into the gradient");
+
+    public final BooleanParameter gradientInvert =
+      new BooleanParameter("Invert", false)
+      .setDescription("Invert the direction of the gradient");
 
     public final EnumParameter<CoordinateMode> xMode =
       new EnumParameter<CoordinateMode>("X Mode", CoordinateMode.NORMAL)
@@ -236,6 +277,9 @@ public class GradientPattern extends LXPattern {
       addParameter("gradientRange", this.gradientRange);
       addParameter("saturationRange", this.saturationRange);
       addParameter("brightnessRange", this.brightnessRange);
+      addParameter("gradientClamp", this.gradientClamp);
+      addParameter("gradientPhase", this.gradientPhase);
+      addParameter("gradientInvert", this.gradientInvert);
       addTransformParameter("rotate", this.rotate);
       addTransformParameter("yaw", this.yaw);
       addTransformParameter("pitch", this.pitch);
@@ -328,6 +372,13 @@ public class GradientPattern extends LXPattern {
 
     @Override
     public int getGradientColor(float lerp) {
+      final float phase = this.gradientPhase.getValuef();
+      if (phase > 0) {
+        lerp = (lerp + phase) % 1f;
+      }
+      if (this.gradientInvert.isOn()) {
+        lerp = 1 - lerp;
+      }
       return this.colorStops.getColor(lerp, this.blendMode.getEnum().function);
     }
 
@@ -359,6 +410,10 @@ public class GradientPattern extends LXPattern {
 
       final GradientUtils.BlendFunction blendFunction = this.blendMode.getEnum().function;
 
+      final ClampFunction gradientClamp = this.gradientClamp.getEnum().clamp;
+      final float gradientPhase = this.gradientPhase.getValuef();
+      final boolean gradientInvert = this.gradientInvert.isOn();
+
       if (this.rotate.isOn()) {
         this.transform.update(matrix -> {
           matrix
@@ -374,23 +429,36 @@ public class GradientPattern extends LXPattern {
           final float yn = this.transform.yn(p);
           final float zn = this.transform.zn(p);
 
-          float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
+          float lerp = gradientClamp.clamp(
             xAmount * xFunction.getCoordinate(p, xn, xOffset) +
             yAmount * yFunction.getCoordinate(p, yn, yOffset) +
-            zAmount * zFunction.getCoordinate(p, zn, zOffset),
-            0, 1
+            zAmount * zFunction.getCoordinate(p, zn, zOffset)
           );
+          if (gradientPhase > 0) {
+            lerp = (lerp + gradientPhase) % 1f;
+          }
+          if (gradientInvert) {
+            lerp = 1 - lerp;
+          }
+          lerp *= this.colorStops.numStops - 1;
+
           int stop = (int) Math.floor(lerp);
           colors[p.index] = blendFunction.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
         }
       } else {
         for (LXPoint p : model.points) {
-          float lerp = (this.colorStops.numStops - 1) * LXUtils.clampf(
+          float lerp = gradientClamp.clamp(
             xAmount * xFunction.getCoordinate(p, p.xn, xOffset) +
             yAmount * yFunction.getCoordinate(p, p.yn, yOffset) +
-            zAmount * zFunction.getCoordinate(p, p.zn, zOffset),
-            0, 1
+            zAmount * zFunction.getCoordinate(p, p.zn, zOffset)
           );
+          if (gradientPhase > 0) {
+            lerp = (lerp + gradientPhase) % 1f;
+          }
+          if (gradientInvert) {
+            lerp = 1 - lerp;
+          }
+          lerp *= this.colorStops.numStops - 1;
           int stop = (int) Math.floor(lerp);
           colors[p.index] = blendFunction.blend(this.colorStops.stops[stop], this.colorStops.stops[stop+1], lerp - stop);
         }
