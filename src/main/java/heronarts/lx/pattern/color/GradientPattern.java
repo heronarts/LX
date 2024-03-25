@@ -180,6 +180,15 @@ public class GradientPattern extends LXPattern {
       .setWrappable(true)
       .setDescription("Phase offset into the gradient");
 
+    public final CompoundParameter gradientScale =
+      new CompoundParameter("Scale", 1, 0, 10)
+      .setDescription("Gradient scaling factor");
+
+    public final CompoundParameter gradientCompress =
+      new CompoundParameter("Compress", 1)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+      .setDescription("Gradient compression keeps gradient within bounds when multiple axes applied");
+
     public final BooleanParameter gradientInvert =
       new BooleanParameter("Invert", false)
       .setDescription("Invert the direction of the gradient");
@@ -279,6 +288,8 @@ public class GradientPattern extends LXPattern {
       addParameter("brightnessRange", this.brightnessRange);
       addParameter("gradientClamp", this.gradientClamp);
       addParameter("gradientPhase", this.gradientPhase);
+      addParameter("gradientScale", this.gradientScale);
+      addParameter("gradientCompress", this.gradientCompress);
       addParameter("gradientInvert", this.gradientInvert);
       addTransformParameter("rotate", this.rotate);
       addTransformParameter("yaw", this.yaw);
@@ -390,11 +401,10 @@ public class GradientPattern extends LXPattern {
       float zAmount = this.zAmount.getValuef();
 
       final float total = Math.abs(xAmount) + Math.abs(yAmount) + Math.abs(zAmount);
-      if (total > 1) {
-        xAmount /= total;
-        yAmount /= total;
-        zAmount /= total;
-      }
+      final float compressFactor = LXUtils.lerpf(1, (total > 1 ) ? (1 / total) : 1, this.gradientCompress.getValuef());
+      xAmount *= compressFactor;
+      yAmount *= compressFactor;
+      zAmount *= compressFactor;
 
       final float xOffset = this.xOffset.getValuef();
       final float yOffset = this.yOffset.getValuef();
@@ -409,6 +419,7 @@ public class GradientPattern extends LXPattern {
       final CoordinateFunction zFunction = (zAmount < 0) ? zMode.invert : zMode.function;
 
       final GradientUtils.BlendFunction blendFunction = this.blendMode.getEnum().function;
+      final float gradientScale = this.gradientScale.getValuef();
 
       final ClampFunction gradientClamp = this.gradientClamp.getEnum().clamp;
       final float gradientPhase = this.gradientPhase.getValuef();
@@ -429,11 +440,11 @@ public class GradientPattern extends LXPattern {
           final float yn = this.transform.yn(p);
           final float zn = this.transform.zn(p);
 
-          float lerp = gradientClamp.clamp(
+          float lerp = gradientClamp.clamp(gradientScale * (
             xAmount * xFunction.getCoordinate(p, xn, xOffset) +
             yAmount * yFunction.getCoordinate(p, yn, yOffset) +
             zAmount * zFunction.getCoordinate(p, zn, zOffset)
-          );
+          ));
           if (gradientPhase > 0) {
             lerp = (lerp + gradientPhase) % 1f;
           }
@@ -447,11 +458,11 @@ public class GradientPattern extends LXPattern {
         }
       } else {
         for (LXPoint p : model.points) {
-          float lerp = gradientClamp.clamp(
+          float lerp = gradientClamp.clamp(gradientScale * (
             xAmount * xFunction.getCoordinate(p, p.xn, xOffset) +
             yAmount * yFunction.getCoordinate(p, p.yn, yOffset) +
             zAmount * zFunction.getCoordinate(p, p.zn, zOffset)
-          );
+          ));
           if (gradientPhase > 0) {
             lerp = (lerp + gradientPhase) % 1f;
           }
