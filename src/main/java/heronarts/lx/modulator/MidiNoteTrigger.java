@@ -25,6 +25,7 @@ import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.NormalizedParameter;
 
 @LXModulator.Global("MIDI Note")
 @LXModulator.Device("MIDI Note")
@@ -40,14 +41,30 @@ public class MidiNoteTrigger extends LXModulator implements LXTriggerSource, LXO
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Indicates whenever the MIDI trig fires");
 
+  public final NormalizedParameter pitchOut =
+    new NormalizedParameter("Pitch", 0)
+    .setDescription("Normalized pitch of the note within valid range");
+
+  public final NormalizedParameter velocityOut =
+    new NormalizedParameter("Velocity", 0)
+    .setDescription("Normalized velocity of the note within valid range");
+
+  public final BooleanParameter showPitch =
+    new BooleanParameter("Preview", false)
+    .setDescription("Whether the note pitch meters are visible in the UI");
+
+
   public MidiNoteTrigger() {
     this("MIDI Note");
   }
 
   public MidiNoteTrigger(String label) {
     super(label);
-    addParameter("triggerOut", this.triggerOut);
     setMappingSource(false);
+    addParameter("triggerOut", this.triggerOut);
+    addParameter("pitchOut", this.pitchOut);
+    addParameter("velocityOut", this.velocityOut);
+    addParameter("showPitch", this.showPitch);
   }
 
   @Override
@@ -62,7 +79,7 @@ public class MidiNoteTrigger extends LXModulator implements LXTriggerSource, LXO
 
   @Override
   protected double computeValue(double deltaMs) {
-    return 0;
+    return this.pitchOut.getValue();
   }
 
   @Override
@@ -78,7 +95,24 @@ public class MidiNoteTrigger extends LXModulator implements LXTriggerSource, LXO
       // Immediately clear the trigger if not legato
       this.triggerOut.setValue(false);
     }
-
+    final int noteRange = this.midiFilter.noteRange.getValuei();
+    if (noteRange > 0) {
+      if (noteRange == 1) {
+        this.pitchOut.setValue(.5);
+      } else {
+        final int minNote = this.midiFilter.minNote.getValuei();
+        this.pitchOut.setValue((note.getPitch() - minNote ) / (double) noteRange);
+      }
+    }
+    final int velocityRange = this.midiFilter.velocityRange.getValuei();
+    if (velocityRange > 0) {
+      if (velocityRange == 1) {
+        this.velocityOut.setValue(.5);
+      } else {
+        final int minVelocity = this.midiFilter.minVelocity.getValuei();
+        this.velocityOut.setValue((note.getVelocity() - minVelocity) / (double) velocityRange);
+      }
+    }
   }
 
   @Override
