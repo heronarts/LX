@@ -197,14 +197,23 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXTrig
     return this.toggle;
   }
 
+  private boolean noteOn = false;
+
   @Override
   public void noteOnReceived(MidiNoteOn note) {
-    this.toggle.setValue(true);
+    this.toggle.setValue(this.noteOn = true);
   }
 
   @Override
   public void noteOffReceived(MidiNote note) {
-    this.toggle.setValue(false);
+    this.toggle.setValue(this.noteOn = false);
+  }
+
+  @Override
+  public void midiPanicReceived() {
+    if (this.noteOn) {
+      this.toggle.setValue(this.noteOn = false);
+    }
   }
 
 }

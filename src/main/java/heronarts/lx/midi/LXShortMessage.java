@@ -71,7 +71,11 @@ public abstract class LXShortMessage extends ShortMessage {
     return this.input;
   }
 
-  public void dispatch(LXMidiListener listener) {
+  public final void dispatch(LXMidiListener listener) {
+    if (this instanceof MidiPanic) {
+      listener.midiPanicReceived();
+      return;
+    }
     switch (getCommand()) {
     case ShortMessage.NOTE_ON:
       MidiNoteOn note = (MidiNoteOn) this;

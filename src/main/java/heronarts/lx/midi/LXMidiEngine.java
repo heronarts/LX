@@ -996,6 +996,15 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }
   }
 
+  public void panic() {
+    try {
+      dispatch(new MidiPanic());
+      lx.pushStatusMessage("Sent a MIDI panic to all devices");
+    } catch (InvalidMidiDataException imdx) {
+      LX.error(imdx, "Failed to generate MIDI panic");
+    }
+  }
+
   private static final String KEY_INPUTS = "inputs";
   private static final String KEY_SURFACES = "surfaces";
   private static final String KEY_MAPPINGS = "mapping";

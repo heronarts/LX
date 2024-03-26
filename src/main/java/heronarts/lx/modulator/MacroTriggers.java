@@ -115,9 +115,13 @@ public class MacroTriggers extends LXModulator implements LXOscComponent, LXTrig
     return null;
   }
 
+  private boolean[] midiOn = new boolean[this.triggers.length];
+
+
   private void onMidiTrigger(MidiNote note, boolean value) {
     final int trig = note.getPitch() - this.midiFilter.minNote.getValuei();
     if (trig < this.triggers.length) {
+      this.midiOn[trig] = true;
       this.triggers[trig].setValue(value);
     }
   }
@@ -130,6 +134,16 @@ public class MacroTriggers extends LXModulator implements LXOscComponent, LXTrig
   @Override
   public void noteOffReceived(MidiNote note) {
     onMidiTrigger(note, false);
+  }
+
+  @Override
+  public void midiPanicReceived() {
+    for (int i = 0; i < this.midiOn.length; ++i) {
+      if (this.midiOn[i]) {
+        this.midiOn[i] = false;
+        this.triggers[i].setValue(false);
+      }
+    }
   }
 
 }

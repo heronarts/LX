@@ -33,6 +33,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiFilterParameter;
+import heronarts.lx.midi.MidiPanic;
 import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.model.LXModel;
@@ -359,7 +360,10 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @param message Message
    */
   public void midiDispatch(LXShortMessage message) {
-    if (this.midiFilter.filter(message)) {
+    if (message instanceof MidiPanic) {
+      this.midiFilter.midiPanic();
+      message.dispatch(this);
+    } else if (this.midiFilter.filter(message)) {
       message.dispatch(this);
     }
     getModulationEngine().midiDispatch(message);

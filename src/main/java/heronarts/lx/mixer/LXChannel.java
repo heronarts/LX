@@ -27,6 +27,7 @@ import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.MidiPanic;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
@@ -384,22 +385,28 @@ public class LXChannel extends LXAbstractChannel {
 
   @Override
   public void midiDispatch(LXShortMessage message) {
-    switch (this.compositeMode.getEnum()) {
-    case PLAYLIST:
-      final LXPattern activePattern = getActivePattern();
-      activePattern.midiDispatch(message);
-      LXPattern nextPattern = getNextPattern();
-      if (nextPattern != null && nextPattern != activePattern) {
-        nextPattern.midiDispatch(message);
-      }
-      break;
-    case BLEND:
+    if (message instanceof MidiPanic) {
       for (LXPattern pattern : this.patterns) {
-        if (pattern.enabled.isOn()) {
-          pattern.midiDispatch(message);
-        }
+        pattern.midiDispatch(message);
       }
-      break;
+    } else {
+      switch (this.compositeMode.getEnum()) {
+      case PLAYLIST:
+        final LXPattern activePattern = getActivePattern();
+        activePattern.midiDispatch(message);
+        LXPattern nextPattern = getNextPattern();
+        if (nextPattern != null && nextPattern != activePattern) {
+          nextPattern.midiDispatch(message);
+        }
+        break;
+      case BLEND:
+        for (LXPattern pattern : this.patterns) {
+          if (pattern.enabled.isOn()) {
+            pattern.midiDispatch(message);
+          }
+        }
+        break;
+      }
     }
     super.midiDispatch(message);
   }

@@ -295,4 +295,12 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
     }
   }
 
+  @Override
+  public void midiPanicReceived() {
+    if (this.midiLegatoCount > 0) {
+      this.midiLegatoCount = 0;
+      this.env.engage.setValue(false);
+    }
+  }
+
 }

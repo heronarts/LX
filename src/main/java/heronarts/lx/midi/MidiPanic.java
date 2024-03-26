@@ -1,5 +1,5 @@
 /**
- * Copyright 2013- Mark C. Slee, Heron Arts LLC
+ * Copyright 2024- Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -18,30 +18,10 @@
 
 package heronarts.lx.midi;
 
-public abstract class LXAbstractMidiListener implements LXMidiListener {
+import javax.sound.midi.InvalidMidiDataException;
 
-  @Override
-  public void noteOnReceived(MidiNoteOn note) {
+public class MidiPanic extends MidiControlChange {
+  public MidiPanic() throws InvalidMidiDataException {
+    super(0, ALL_NOTES_OFF, 0);
   }
-
-  @Override
-  public void noteOffReceived(MidiNote note) {
-  }
-
-  @Override
-  public void controlChangeReceived(MidiControlChange cc) {
-  }
-
-  @Override
-  public void programChangeReceived(MidiProgramChange pc) {
-  }
-
-  @Override
-  public void pitchBendReceived(MidiPitchBend pitchBend) {
-  }
-
-  @Override
-  public void aftertouchReceived(MidiAftertouch aftertouch) {
-  }
-
 }

@@ -33,6 +33,7 @@ import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiFilterParameter;
+import heronarts.lx.midi.MidiPanic;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -291,7 +292,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
    */
   public void midiDispatch(LXShortMessage message) {
     for (LXEffect effect : this.effects) {
-      if (effect.enabled.isOn()) {
+      if ((message instanceof MidiPanic) || effect.enabled.isOn()) {
         effect.midiDispatch(message);
       }
     }

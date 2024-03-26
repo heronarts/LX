@@ -18,6 +18,8 @@
 
 package heronarts.lx.modulator;
 
+import java.util.Arrays;
+
 import heronarts.lx.LXCategory;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
@@ -259,6 +261,19 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
       if (this.midiLegatoCount == 0) {
         this.engage.setValue(false);
       }
+    }
+  }
+
+  @Override
+  public void midiPanicReceived() {
+    int total = 0;
+    for (int pitch : this.noteOn) {
+      total += pitch;
+    }
+    Arrays.fill(this.noteOn, 0);
+    if (total > 0 || this.midiLegatoCount > 0) {
+      this.midiLegatoCount = 0;
+      this.engage.setValue(false);
     }
   }
 

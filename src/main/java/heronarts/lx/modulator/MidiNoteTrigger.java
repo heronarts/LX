@@ -91,4 +91,12 @@ public class MidiNoteTrigger extends LXModulator implements LXTriggerSource, LXO
     }
   }
 
+  @Override
+  public void midiPanicReceived() {
+    if (this.noteCount > 0) {
+      this.noteCount = 0;
+      this.triggerOut.setValue(false);
+    }
+  }
+
 }
