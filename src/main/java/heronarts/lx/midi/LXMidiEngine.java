@@ -44,6 +44,10 @@ import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiException;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiNotification;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -59,9 +63,12 @@ import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.ShortMessage;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
 
 public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
@@ -1044,7 +1051,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   public void load(final LX lx, final JsonObject object) {
     this.rememberMidiInputs.clear();
     this.rememberMidiSurfaces.clear();
-    this.mutableMappings.clear();
+    removeMappings();
     super.load(lx, object);
 
     if (object.has(KEY_MAPPINGS)) {
@@ -1102,6 +1109,47 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
     });
+  }
+
+  public void removeMappings() {
+    for (int i = this.mappings.size() - 1; i >= 0; --i) {
+      removeMapping(this.mappings.get(i));
+    }
+  }
+
+  public void exportMappings(File file) {
+    final JsonObject obj = new JsonObject();
+    obj.add(KEY_MAPPINGS, LXSerializable.Utils.toArray(this.lx, this.mappings, true));
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      LX.log("Mappings saved successfully to " + file.toString());
+    } catch (IOException iox) {
+      LX.error(iox, "Could not export MIDI mappings to file: " + file.toString());
+    }
+  }
+
+  public List<LXMidiMapping> importMappings(File file) {
+    removeMappings();
+    final List<LXMidiMapping> imported = new ArrayList<LXMidiMapping>();
+    try (FileReader fr = new FileReader(file)) {
+      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      if (obj.has(KEY_MAPPINGS)) {
+        JsonArray mappingArr = obj.get(KEY_MAPPINGS).getAsJsonArray();
+        for (JsonElement mappingElem : mappingArr) {
+          try {
+            LXMidiMapping mapping = LXMidiMapping.create(this.lx, mappingElem.getAsJsonObject());
+            addMapping(mapping);
+            imported.add(mapping);
+          } catch (Exception x) {
+            error("Invalid mapping in " + file + ": " + mappingElem);
+          }
+        }
+      }
+    } catch (IOException iox) {
+      LX.error(iox, "Could not import MIDI mappings from file: " + file.toString());
+    }
+    return imported;
   }
 
   private static final String MIDI_LOG_PREFIX = "[MIDI] ";

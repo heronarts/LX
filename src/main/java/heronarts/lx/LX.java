@@ -197,6 +197,7 @@ public class LX {
     PRESETS("Presets"),
     SCRIPTS("Scripts"),
     COLORS("Colors"),
+    MIDI_MAPPINGS("MIDI Mappings"),
     LOGS("Logs"),
     AUTOSAVE("Autosave"),
     DELETED("Deleted");
