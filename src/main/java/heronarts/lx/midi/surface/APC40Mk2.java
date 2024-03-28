@@ -796,7 +796,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     this.deviceListener = new DeviceListener(lx);
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("crossfaderEnabled", this.crossfaderEnabled);
-    addSetting("deviceControlEnabled", this.deviceControl);
+    addSetting("deviceControl", this.deviceControl);
     addSetting("performanceLock", this.performanceLock);
   }
 
@@ -868,18 +868,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     sendPerformanceLights();
+    initializeDeviceControlKnobs(reconnect);
 
-    for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
-      if (isDeviceControl()) {
-        sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
-      } else {
-        // Initialize device knobs for generic control
-        sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_SINGLE);
-        if (!reconnect) {
-          sendControlChange(0, DEVICE_KNOB + i, 64);
-        }
-      }
-    }
     for (int i = 0; i < CHANNEL_KNOB_NUM; ++i) {
       // Initialize channel knobs for generic control, but don't
       // reset their values if we're in a reconnect situation
@@ -891,6 +881,22 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendChannels();
     this.cueState.reset();
     this.auxState.reset();
+  }
+
+  private void initializeDeviceControlKnobs(boolean reconnect) {
+    if (isDeviceControl()) {
+      for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
+        sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_OFF);
+      }
+    } else {
+      for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
+        // Initialize device knobs for generic control
+        sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_SINGLE);
+        if (!reconnect) {
+          sendControlChange(0, DEVICE_KNOB + i, 64);
+        }
+      }
+    }
   }
 
   private void resetPaletteVars() {
@@ -1319,11 +1325,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       registerDeviceControl();
     } else {
       unregisterDeviceControl();
-      // Surface was enabled and now is releasing device control
-      for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
-        sendControlChange(0, DEVICE_KNOB_STYLE + i, LED_STYLE_SINGLE);
-        sendControlChange(0, DEVICE_KNOB + i, 64);
-      }
+      initializeDeviceControlKnobs(false);
     }
   }
 
