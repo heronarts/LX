@@ -27,6 +27,7 @@ import heronarts.lx.command.LXCommand;
 import heronarts.lx.midi.surface.APC40;
 import heronarts.lx.midi.surface.APC40Mk2;
 import heronarts.lx.midi.surface.APCmini;
+import heronarts.lx.midi.surface.APCminiMk2;
 import heronarts.lx.midi.surface.DJM900nxs2;
 import heronarts.lx.midi.surface.DJMA9;
 import heronarts.lx.midi.surface.DJMV10;
@@ -171,6 +172,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     this.registeredSurfaces.put(APC40.DEVICE_NAME, APC40.class);
     this.registeredSurfaces.put(APC40Mk2.DEVICE_NAME, APC40Mk2.class);
     this.registeredSurfaces.put(APCmini.DEVICE_NAME, APCmini.class);
+    this.registeredSurfaces.put(APCminiMk2.DEVICE_NAME, APCminiMk2.class);
     this.registeredSurfaces.put(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
     this.registeredSurfaces.put(DJMA9.DEVICE_NAME, DJMA9.class);
     this.registeredSurfaces.put(DJMV10.DEVICE_NAME, DJMV10.class);
