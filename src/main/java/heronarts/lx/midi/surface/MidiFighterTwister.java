@@ -815,11 +815,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
               bp.toggle();
             }
           }
-        } else if (p instanceof DiscreteParameter) {
-          // Enum,Integer,etc will be incremented on click
-          if (isPressed) {
-            ((DiscreteParameter)p).increment();
-          }
         } else {
           // Set other parameter types to default value on click
           if (isPressed) {
