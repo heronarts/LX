@@ -380,7 +380,7 @@ public class LXRegistry implements LXSerializable {
     public LXPlugin instance = null;
     private boolean hasError = false;
     private boolean isEnabled = false;
-    private Exception exception = null;
+    private Throwable exception = null;
     private final boolean cliEnabled;
 
     private Plugin(Class<? extends LXPlugin> clazz) {
@@ -446,14 +446,14 @@ public class LXRegistry implements LXSerializable {
           this.instance = clazz.getConstructor().newInstance();
         }
         this.instance.initialize(lx);
-      } catch (Exception x) {
-        LX.error(x, "Unhandled exception in plugin initialize: " + clazz.getName());
+      } catch (Throwable x) {
+        LX.error(x, "Unhandled error in plugin initialize: " + clazz.getName());
         lx.pushError(x, "Error on initialization of plugin " + clazz.getSimpleName() + "\n" + x.getLocalizedMessage());
         setException(x);
       }
     }
 
-    public Plugin setException(Exception x) {
+    public Plugin setException(Throwable x) {
       this.hasError = true;
       this.exception = x;
       for (Listener listener : listeners) {
@@ -462,7 +462,7 @@ public class LXRegistry implements LXSerializable {
       return this;
     }
 
-    public Exception getException() {
+    public Throwable getException() {
       return this.exception;
     }
 
