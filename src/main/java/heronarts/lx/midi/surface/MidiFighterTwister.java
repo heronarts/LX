@@ -113,6 +113,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   public static final int RGB_PRIMARY = RGB_BLUE;
   public static final int RGB_AUX = RGB_RED;
+  public static final int RGB_USER = RGB_GREEN;
 
   // MIDI Notes on Animation channel
   public static final int RGB_ANIMATION_NONE = 0;
@@ -439,9 +440,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       }
     }
 
+    @SuppressWarnings("unused")
     private void pull() {
       // TODO: Query current surface settings
-      LXMidiEngine.error("Warning: MFT sysex pull not implemented");
 
       // TODO: Check firmware version for compatibility,
       // only send sysex if year > 2016
@@ -503,7 +504,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     private void initializeLXDefaults() {
-
       this.global.clear();
       this.global.put((byte)0, (byte)4);                            // System MIDI channel
       this.global.put((byte)1, (byte)1);                            // Bank Side Buttons
@@ -547,6 +547,63 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         enc.set("encoder_midi_type", CFG_ENC_MIDITYPE_SENDRELENC);        // Important! must be relative type
         enc.set("active_color", (byte)51);                               // MFT default 51
         enc.set("inactive_color", (byte)1);                              // MFT default 1
+        enc.set("detent_color", (byte)63);                               // MFT default 63
+        enc.set("indicator_display_type", CFG_ENC_INDICATORTYPE_BLENDEDBAR);
+        enc.set("is_super_knob", CFG_FALSE);
+        enc.set("encoder_shift_midi_channel", (byte)0);
+      }
+
+      this.initialized = true;
+    }
+
+    /**
+     * A configuration friendly to LX generic midi mapping.
+     * Encoders use absolute CCs, switches use notes.
+     */
+    private void initializeUserDefaults() {
+      this.global.clear();
+      this.global.put((byte)0, (byte)4);                            // System MIDI channel
+      this.global.put((byte)1, (byte)1);                            // Bank Side Buttons
+      this.global.put((byte)2, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Left Button 1 Function
+      this.global.put((byte)3, CFG_GLOBAL_SSACTION_BANKDOWN);       // Left Button 2 Function
+      this.global.put((byte)4, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Left Button 3 Function
+      this.global.put((byte)5, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Right Button 1 Function
+      this.global.put((byte)6, CFG_GLOBAL_SSACTION_BANKUP);         // Right Button 2 Function
+      this.global.put((byte)7, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Right Button 3 Function
+      this.global.put((byte)8, (byte)63);                           // Super Knob Start Point
+      this.global.put((byte)9, (byte)127);                          // Super Knob End Point
+      this.global.put((byte)10, (byte)0);                           // 0a
+      this.global.put((byte)11, (byte)0);                           // 0b CFG_ENC_MOVEMENTTYPE_DIRECT_HIGHRESOLUTION?
+      this.global.put((byte)12, (byte)0);                           // 0c CFG_ENC_SWACTION_CCHOLD?
+      this.global.put((byte)13, (byte)2);                           // 0d
+      this.global.put((byte)14, (byte)0);                           // 0e
+      this.global.put((byte)15, (byte)0);                           // 0f
+      this.global.put((byte)16, (byte)1);                           // 10
+      this.global.put((byte)17, (byte)0);                           // 11
+      this.global.put((byte)18, CFG_ENC_MIDITYPE_SENDCC);           // 12
+      this.global.put((byte)19, (byte)51);                          // 13
+      this.global.put((byte)20, (byte)1);                           // 14
+      this.global.put((byte)21, (byte)63);                          // 15
+      this.global.put((byte)22, CFG_ENC_INDICATORTYPE_BLENDEDBAR);  // 16
+      this.global.put((byte)23, (byte)0);                           // 17
+      this.global.put((byte)24, (byte)0);                           // 18
+      // Yes this gap matches the Midi Fighter Utility sysex
+      this.global.put((byte)31, (byte)127);                         // 1f  RGB LED Brightness
+      this.global.put((byte)32, (byte)127);                         // 20  Indicator Global Brightness
+
+      for (int i = 0; i < this.encoders.length; ++i) {
+        Encoder enc = this.encoders[i];
+        enc.setDetent(false);
+        enc.set("movement", CFG_ENC_MOVEMENTTYPE_DIRECT_HIGHRESOLUTION);
+        enc.set("switch_action_type", CFG_ENC_SWACTION_NOTEHOLD);
+        enc.set("switch_midi_channel", (byte)2);
+        enc.set("switch_midi_number", (byte)enc.encoderIndex);
+        enc.set("switch_midi_type", (byte)0);             // Appears no longer in use
+        enc.set("encoder_midi_channel", (byte)1);
+        enc.set("encoder_midi_number", (byte)enc.encoderIndex);
+        enc.set("encoder_midi_type", CFG_ENC_MIDITYPE_SENDCC);           // Absolute CC for LX generic mapping
+        enc.set("active_color", (byte)51);                               // MFT default 51
+        enc.set("inactive_color", (byte)RGB_USER);                       // MFT default 1
         enc.set("detent_color", (byte)63);                               // MFT default 63
         enc.set("indicator_display_type", CFG_ENC_INDICATORTYPE_BLENDEDBAR);
         enc.set("is_super_knob", CFG_FALSE);
@@ -920,6 +977,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     this.deviceListener.focusedDevice.updateRemoteControlFocus();
   }
 
+  private boolean initialized = false;
+
   @Override
   protected void onEnable(boolean on) {
     if (on) {
@@ -929,6 +988,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       if (this.deviceListener.isRegistered) {
         this.deviceListener.unregister();
       }
+      restoreConfig();
     }
   }
 
@@ -940,6 +1000,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   }
 
   private void initialize() {
+    this.initialized = true;
     initializeConfig();
 
     // Move MFT to current bank
@@ -957,16 +1018,33 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   private void initializeConfig() {
     // Pull existing config, save and re-apply at shutdown to leave MFT in previous config state.
-    this.userConfig.pull();
+    // this.userConfig.pull();
+    LXMidiEngine.error("Warning: MFT sysex pull not implemented. User settings will be overwritten.");
+    this.userConfig.initializeUserDefaults();
 
     // Apply LX-friendly config
     this.lxConfig.initializeLXDefaults();
     this.lxConfig.sendAll();
   }
 
-  @SuppressWarnings("unused")
   private void restoreConfig() {
-    //this.userConfig.sendAll();  // Uncomment after pull is working
+    if (this.initialized) {
+      this.initialized = false;
+
+      for (int i = 0; i < DEVICE_KNOB_NUM; ++i) {
+        sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_ANIMATION_NONE);
+        sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, INDICATOR_BRIGHTNESS_MAX);
+        sendControlChange(CHANNEL_ROTARY_ENCODER, DEVICE_KNOB + i, 0);
+        sendControlChange(CHANNEL_ANIMATIONS_AND_BRIGHTNESS, DEVICE_KNOB + i, RGB_BRIGHTNESS_MAX);
+        sendControlChange(CHANNEL_SWITCH_AND_COLOR, DEVICE_KNOB + i, RGB_USER);
+      }
+
+      // Move MFT to first bank
+      sendControlChange(CHANNEL_SYSTEM, BANK1, BANK_ON);
+
+      // Restore config (for now these are settings friendly to LX generic mapping)
+      this.userConfig.sendAll();
+    }
   }
 
   @Override
@@ -1114,6 +1192,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   @Override
   public void dispose() {
     this.deviceListener.dispose();
+    restoreConfig();
     super.dispose();
   }
 
