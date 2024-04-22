@@ -21,6 +21,7 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
@@ -41,15 +42,41 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     // a bus listener
     channel.addListener(this);
     for (LXPattern pattern : channel.patterns) {
-      registerComponent(pattern);
+      registerPattern(pattern);
     }
+  }
+
+  private final LXPattern.Listener patternEffectListener = new LXPattern.Listener() {
+    public void effectAdded(LXPattern pattern, LXEffect effect) {
+      registerComponent(effect);
+    }
+    public void effectRemoved(LXPattern pattern, LXEffect effect) {
+      unregisterComponent(effect);
+    }
+    public void effectMoved(LXPattern pattern, LXEffect effect) {}
+  };
+
+  protected void registerPattern(LXPattern pattern) {
+    registerComponent(pattern);
+    for (LXEffect effect : pattern.effects) {
+      registerComponent(effect);
+    }
+    pattern.addListener(this.patternEffectListener);
+  }
+
+  protected void unregisterPattern(LXPattern pattern) {
+    unregisterComponent(pattern);
+    for (LXEffect effect : pattern.effects) {
+      unregisterComponent(effect);
+    }
+    pattern.removeListener(this.patternEffectListener);
   }
 
   @Override
   public void dispose() {
     this.channel.removeListener(this);
     for (LXPattern pattern : this.channel.patterns) {
-      unregisterComponent(pattern);
+      unregisterPattern(pattern);
     }
     super.dispose();
   }
@@ -72,12 +99,12 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
 
   @Override
   public void patternAdded(LXChannel channel, LXPattern pattern) {
-    registerComponent(pattern);
+    registerPattern(pattern);
   }
 
   @Override
   public void patternRemoved(LXChannel channel, LXPattern pattern) {
-    unregisterComponent(pattern);
+    unregisterPattern(pattern);
   }
 
   @Override
