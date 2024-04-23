@@ -36,6 +36,7 @@ import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.midi.MidiPanic;
 import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
@@ -169,6 +170,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     LXComponent parent = getParent();
     if (parent instanceof LXAbstractChannel) {
       return ((LXAbstractChannel) parent).getModelView();
+    } else if (parent instanceof LXMasterBus) {
+      return lx.model;
     }
     return getModel();
   }
