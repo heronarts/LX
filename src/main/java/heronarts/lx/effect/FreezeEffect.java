@@ -71,8 +71,8 @@ public class FreezeEffect extends LXEffect {
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Freezes the frame only while held");
 
-  public final TriggerParameter retrig =
-    new TriggerParameter("Retrig", this::retrig)
+  public final TriggerParameter resample =
+    new TriggerParameter("Resample", this::resample)
     .setDescription("Samples a new underlying frame");
 
   public final CompoundParameter mix =
@@ -99,7 +99,7 @@ public class FreezeEffect extends LXEffect {
     super(lx);
     addParameter("lock", this.lock);
     addParameter("hold", this.hold);
-    addParameter("resample", this.retrig);
+    addParameter("resample", this.resample);
     addParameter("mix", this.mix);
     addParameter("attackMs", this.attackMs);
     addParameter("releaseMs", this.releaseMs);
@@ -133,7 +133,7 @@ public class FreezeEffect extends LXEffect {
     }
   }
 
-  private void retrig() {
+  private void resample() {
     this.capture = true;
   }
 
