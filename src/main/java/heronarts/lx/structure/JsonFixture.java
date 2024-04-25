@@ -539,7 +539,7 @@ public class JsonFixture extends LXFixture {
   /**
    * Fixture type parameter stores the file name, without the .lxf suffix
    */
-  private final StringParameter fixtureType =
+  public final StringParameter fixtureType =
     new StringParameter("Fixture File")
     .setDescription("Fixture definition path");
 
