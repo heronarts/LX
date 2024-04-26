@@ -1490,17 +1490,13 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         }
         return;
       case BANK_SELECT_LEFT:
-        if (isDeviceControl()) {
-          this.deviceListener.focusedDevice.previousChannel();
-        }
+        this.deviceListener.focusedDevice.previousChannel();
         if (!isAuxActive()) {
           lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
         }
         return;
       case BANK_SELECT_RIGHT:
-        if (isDeviceControl()) {
-          this.deviceListener.focusedDevice.nextChannel();
-        }
+        this.deviceListener.focusedDevice.nextChannel();
         if (!isAuxActive()) {
           lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
         }
