@@ -49,7 +49,7 @@ public class StringParameter extends LXListenableParameter {
 
   @Override
   public LXParameter reset(double value) {
-    throw new UnsupportedOperationException("StringParamater cannot be reset to a numeric value");
+    throw new UnsupportedOperationException("StringParameter cannot be reset to a numeric value");
   }
 
   public StringParameter reset(String string) {
