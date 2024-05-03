@@ -52,6 +52,11 @@ public class StringParameter extends LXListenableParameter {
     throw new UnsupportedOperationException("StringParamater cannot be reset to a numeric value");
   }
 
+  public StringParameter reset(String string) {
+    this.defaultString = string;
+    return setValue(this.defaultString);
+  }
+
   public StringParameter setValue(String string) {
     return setValue(string, false);
   }
