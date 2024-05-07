@@ -36,12 +36,13 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
-import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.LXPickupParameter;
 import heronarts.lx.pattern.LXPattern;
 
 public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
@@ -443,6 +444,36 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
   }
 
+  private final MixerSurface mixerSurface;
+
+  private final MixerSurface.Listener mixerSurfaceListener = new MixerSurface.Listener() {
+    @Override
+    public void onChannelChanged(int index, LXAbstractChannel channel, LXAbstractChannel previousChannel) {
+      if (previousChannel != null && !mixerSurface.channels.contains(previousChannel)) {
+        unregisterChannel(previousChannel);
+      }
+      if (channel != null) {
+        if (!isChannelRegistered(channel)) {
+          registerChannel(channel);
+        }
+        channelFaders[index].setParameter(channel.fader);
+      } else {
+        channelFaders[index].setParameter(null);
+      }
+
+      if (isGridModePatterns()) {
+        sendChannelPatterns(index, channel);
+      } else if (isGridModeClips()) {
+        sendChannelClips(index, channel);
+      }
+
+      sendChannelButton(index, channel);
+    }
+
+    @Override
+    public void onBankChanged(int bank) { }
+  };
+
   private class ChannelListener implements LXChannel.Listener, LXBus.ClipListener, LXParameterListener {
 
     private final LXAbstractChannel channel;
@@ -498,10 +529,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     }
 
     public void onParameterChanged(LXParameter p) {
-      int index = this.channel.getIndex();
-      if (index >= CLIP_LAUNCH_COLUMNS) {
-        return;
-      }
+      int index = mixerSurface.getIndex(this.channel);
 
       if (p == this.channel.cueActive) {
         if (channelButtonMode == ChannelButtonMode.CUE) {
@@ -516,7 +544,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
         sendNoteOn(MIDI_CHANNEL_SINGLE, CHANNEL_BUTTON + index, LED_OFF);
       } else if (p == this.channel.arm) {
         sendNoteOn(MIDI_CHANNEL_SINGLE, CHANNEL_BUTTON + index, channel.arm.isOn() ? LED_ON : LED_OFF);
-        sendChannelClips(this.channel.getIndex(), this.channel);
+        sendChannelClips(index, this.channel);
       } else if (p.getParent() instanceof LXClip) {
         LXClip clip = (LXClip)p.getParent();
         sendClip(index, this.channel, clip.getIndex(), clip);
@@ -562,48 +590,48 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     @Override
     public void patternAdded(LXChannel channel, LXPattern pattern) {
       if (isGridModePatterns()) {
-        sendChannelPatterns(channel.getIndex(), channel);
+        sendChannelPatterns(mixerSurface.getIndex(channel), channel);
       }
     }
 
     @Override
     public void patternRemoved(LXChannel channel, LXPattern pattern) {
       if (isGridModePatterns()) {
-        sendChannelPatterns(channel.getIndex(), channel);
+        sendChannelPatterns(mixerSurface.getIndex(channel), channel);
       }
     }
 
     @Override
     public void patternMoved(LXChannel channel, LXPattern pattern) {
       if (isGridModePatterns()) {
-        sendChannelPatterns(channel.getIndex(), channel);
+        sendChannelPatterns(mixerSurface.getIndex(channel), channel);
       }
     }
 
     @Override
     public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
       if (isGridModePatterns()) {
-        sendChannelPatterns(channel.getIndex(), channel);
+        sendChannelPatterns(mixerSurface.getIndex(channel), channel);
       }
     }
 
     @Override
     public void patternDidChange(LXChannel channel, LXPattern pattern) {
       if (isGridModePatterns()) {
-        sendChannelPatterns(channel.getIndex(), channel);
+        sendChannelPatterns(mixerSurface.getIndex(channel), channel);
       }
     }
 
     @Override
     public void clipAdded(LXBus bus, LXClip clip) {
       clip.running.addListener(this);
-      sendClip(this.channel.getIndex(), this.channel, clip.getIndex(), clip);
+      sendClip(mixerSurface.getIndex(channel), this.channel, clip.getIndex(), clip);
     }
 
     @Override
     public void clipRemoved(LXBus bus, LXClip clip) {
       clip.running.removeListener(this);
-      sendChannelClips(this.channel.getIndex(), this.channel);
+      sendChannelClips(mixerSurface.getIndex(channel), this.channel);
     }
 
   }
@@ -612,9 +640,51 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     new BooleanParameter("Master Fader", true)
     .setDescription("Whether the master fader is enabled");
 
+  public final BooleanParameter faderPickup =
+    new BooleanParameter("Pickup Faders", true)
+    .setDescription("True for fader pickup mode or False for fader direct mode");
+
+  private final LXPickupParameter masterFader;
+  private final LXPickupParameter[] channelFaders;
+
+  public enum ChannelBank {
+    BANK1(0, "Bank 1"),
+    BANK2(1, "Bank 2"),
+    BANK3(2, "Bank 3"),
+    BANK4(3, "Bank 4");
+
+    public final int index;
+    public final String label;
+
+    private ChannelBank(int index, String label) {
+      this.index = index;
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
+  public final EnumParameter<ChannelBank> channelBank =
+    new EnumParameter<ChannelBank>("CH Bank", ChannelBank.BANK1)
+    .setDescription("Which mixer channels are targeted by the controller");
+
   public APCminiMk2(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
+    addSetting("faderPickup", this.faderPickup);
+    addSetting("channelBank", this.channelBank);
+
+    this.masterFader = new LXPickupParameter(this.lx.engine.mixer.masterBus.fader);
+    this.channelFaders = new LXPickupParameter[NUM_CHANNELS];
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+      this.channelFaders[i] = new LXPickupParameter();
+    }
+    updateFaderPickups();
+
+    this.mixerSurface = new MixerSurface(lx, this.mixerSurfaceListener, NUM_CHANNELS);
   }
 
   private boolean isGridModePatterns() {
@@ -630,13 +700,30 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   }
 
   @Override
+  public void onParameterChanged(LXParameter p) {
+    if (p == this.channelBank) {
+      this.mixerSurface.setBank(this.channelBank.getEnum().index);
+    } else if (p == this.faderPickup) {
+      updateFaderPickups();
+    }
+  }
+
+  private void updateFaderPickups() {
+    boolean on = this.faderPickup.isOn();
+    this.masterFader.setPickup(on);
+    for (LXPickupParameter channelFader : this.channelFaders) {
+      channelFader.setPickup(on);
+    }
+  }
+
+  @Override
   protected void onEnable(boolean on) {
     if (on) {
       initialize(false);
       register();
     } else {
       this.deviceListener.register(null);
-      for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+      for (LXAbstractChannel channel : this.mixerSurface.channels) {
         if (channel instanceof LXChannel) {
           ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
         }
@@ -826,7 +913,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       if (channel != null) {
         switch (this.channelButtonMode) {
           case FOCUS:
-            sendNoteOn(MIDI_CHANNEL_SINGLE, CHANNEL_BUTTON + index, index == this.lx.engine.mixer.focusedChannel.getValuei() ? LED_ON : LED_OFF);
+            sendNoteOn(MIDI_CHANNEL_SINGLE, CHANNEL_BUTTON + index, channel.getIndex() == this.lx.engine.mixer.focusedChannel.getValuei() ? LED_ON : LED_OFF);
             break;
           case ENABLED:
             sendNoteOn(MIDI_CHANNEL_SINGLE, CHANNEL_BUTTON + index, channel.enabled.isOn() ? LED_ON : LED_OFF);
@@ -848,33 +935,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     }
   }
 
-  private final LXMixerEngine.Listener mixerEngineListener = new LXMixerEngine.Listener() {
-    @Override
-    public void channelRemoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-      unregisterChannel(channel);
-      if (!isGridModeParameters()) {
-        sendGrid();
-      }
-    }
-
-    @Override
-    public void channelMoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-      if (!isGridModeParameters()) {
-        sendGrid();
-      } else {
-        sendChannelButtonRow();
-      }
-    }
-
-    @Override
-    public void channelAdded(LXMixerEngine mixer, LXAbstractChannel channel) {
-      if (!isGridModeParameters()) {
-        sendGrid();
-      }
-      registerChannel(channel);
-    }
-  };
-
   private final LXParameterListener focusedChannelListener = (p) -> {
     sendChannelFocus();
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
@@ -885,11 +945,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   private void register() {
     isRegistered = true;
 
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      registerChannel(channel);
-    }
-
-    this.lx.engine.mixer.addListener(this.mixerEngineListener);
+    this.mixerSurface.register();
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
 
     this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
@@ -898,15 +954,15 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   private void unregister() {
     isRegistered = false;
 
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      unregisterChannel(channel);
-    }
-
-    this.lx.engine.mixer.removeListener(this.mixerEngineListener);
+    this.mixerSurface.unregister();
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
 
     clearGrid();
     clearChannelButtonRow();
+  }
+
+  private boolean isChannelRegistered(LXAbstractChannel channel) {
+    return this.channelListeners.containsKey(channel);
   }
 
   private void registerChannel(LXAbstractChannel channel) {
@@ -922,10 +978,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   }
 
   private LXAbstractChannel getChannel(int index) {
-    if (index < this.lx.engine.mixer.channels.size()) {
-      return this.lx.engine.mixer.channels.get(index);
-    }
-    return null;
+    return this.mixerSurface.get(index);
   }
 
   private void noteReceived(MidiNote note, boolean on) {
@@ -1131,16 +1184,14 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     switch (number) {
     case MASTER_FADER:
       if (this.masterFaderEnabled.isOn()) {
-        this.lx.engine.mixer.masterBus.fader.setNormalized(cc.getNormalized());
+        this.masterFader.setNormalized(cc.getNormalized());
       }
       return;
     }
 
     if (number >= CHANNEL_FADER && number <= CHANNEL_FADER_MAX) {
       int channel = number - CHANNEL_FADER;
-      if (channel < this.lx.engine.mixer.channels.size()) {
-        this.lx.engine.mixer.channels.get(channel).fader.setNormalized(cc.getNormalized());
-      }
+      this.channelFaders[channel].setNormalized(cc.getNormalized());
       return;
     }
 
@@ -1152,7 +1203,9 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     if (this.isRegistered) {
       unregister();
     }
+    this.masterFader.setParameter(null);
     this.deviceListener.dispose();
+    this.mixerSurface.dispose();
     super.dispose();
   }
 

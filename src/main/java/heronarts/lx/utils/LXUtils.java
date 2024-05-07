@@ -499,4 +499,17 @@ public class LXUtils {
   public static boolean isEmpty(String s) {
     return s == null || s.trim().isEmpty();
   }
+
+  /**
+   * Compare two objects either of which may be null.
+   */
+  public static boolean equals(Object obj1, Object obj2) {
+    if (obj1 == null) {
+      if (obj2 == null) {
+        return true;
+      }
+      return false;
+    }
+    return obj1.equals(obj2);
+  }
 }
