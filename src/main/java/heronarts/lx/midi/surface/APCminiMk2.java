@@ -444,7 +444,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
   }
 
-  private final MixerSurface mixerSurface;
+  protected final MixerSurface mixerSurface;
 
   private final MixerSurface.Listener mixerSurfaceListener = new MixerSurface.Listener() {
     @Override
