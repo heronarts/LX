@@ -326,17 +326,20 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private final DoubleBuffer buffer;
 
-  public final BooleanParameter isMultithreaded = new BooleanParameter("Threaded", false)
-  .setMappable(false)
-  .setDescription("Whether the engine and UI are on separate threads");
+  public final BooleanParameter isMultithreaded =
+    new BooleanParameter("Threaded", false)
+    .setMappable(false)
+    .setDescription("Whether the engine and UI are on separate threads");
 
-  public final BooleanParameter isChannelMultithreaded = new BooleanParameter("Channel Threaded", false)
-  .setMappable(false)
-  .setDescription("Whether the engine is multi-threaded per channel");
+  public final BooleanParameter isChannelMultithreaded =
+    new BooleanParameter("Channel Threaded", false)
+    .setMappable(false)
+    .setDescription("Whether the engine is multi-threaded per channel");
 
-  public final BooleanParameter isNetworkMultithreaded = new BooleanParameter("Network Threaded", false)
-  .setMappable(false)
-  .setDescription("Whether the network output is on a separate thread");
+  public final BooleanParameter isNetworkMultithreaded =
+    new BooleanParameter("Network Threaded", false)
+    .setMappable(false)
+    .setDescription("Whether the network output is on a separate thread");
 
   private Thread engineThread = null;
   private final ExecutorService engineExecutorService;
@@ -1112,6 +1115,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // are rendering into.
     if (eulaAccepted && !this.restricted.isOn()) {
       this.mixer.loop(buffer.render, deltaMs);
+    } else {
+      // Black everything out
+      Arrays.fill(buffer.render.main, LXColor.BLACK);
+      Arrays.fill(buffer.render.cue, LXColor.BLACK);
+      Arrays.fill(buffer.render.aux, LXColor.BLACK);
     }
 
     // Add fixture identification very last
