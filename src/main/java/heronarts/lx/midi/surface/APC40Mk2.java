@@ -1855,16 +1855,22 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     if (number >= DEVICE_KNOB && number <= DEVICE_KNOB_MAX) {
       if (isDeviceControl()) {
         this.deviceListener.onKnob(number - DEVICE_KNOB, cc.getNormalized());
+      } else {
+        echoControlChange(cc);
       }
       return;
     }
 
     if (number >= CHANNEL_KNOB && number <= CHANNEL_KNOB_MAX) {
-      sendControlChange(cc.getChannel(), cc.getCC(), cc.getValue());
+      echoControlChange(cc);
       return;
     }
 
     // LXMidiEngine.error("APC40mk2 UNMAPPED: " + cc);
+  }
+
+  private void echoControlChange(MidiControlChange cc) {
+    sendControlChange(cc.getChannel(), cc.getCC(), cc.getValue());
   }
 
   @Override
