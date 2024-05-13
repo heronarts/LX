@@ -1383,16 +1383,27 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   @Override
   public void dispose() {
     this.midi.disposeSurfaces();
+
+    // Shutdown the project content first, which may depend upon plugins
     LX.dispose(this.modulation);
     LX.dispose(this.mixer);
+
+    // Remove plugins now, they may depend upon the lower layer components
+    this.lx.registry.disposePlugins();
+
+    // Remove core engine components
     LX.dispose(this.audio);
     LX.dispose(this.midi);
     LX.dispose(this.osc);
     LX.dispose(this.dmx);
     LX.dispose(this.tempo);
+
+    // Kill network thread if it exists
     synchronized (this.networkThread) {
       this.networkThread.interrupt();
     }
+
+    // Clean up engine parameters
     super.dispose();
   }
 

@@ -705,7 +705,6 @@ public class LX {
    * Shut down resources of the LX instance.
    */
   public void dispose() {
-    this.registry.disposePlugins();
     LX.dispose(this.engine);
   }
 
