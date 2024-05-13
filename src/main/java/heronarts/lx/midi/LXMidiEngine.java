@@ -145,8 +145,8 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   private final Map<MidiDevice.Info, LXMidiOutput> midiInfoToOutput =
     new HashMap<MidiDevice.Info, LXMidiOutput>();
 
-  private final Map<String, Class<? extends LXMidiSurface>> registeredSurfaces =
-    new HashMap<String, Class<? extends LXMidiSurface>>();
+  private final Map<String, List<Class<? extends LXMidiSurface>>> registeredSurfaces =
+    new HashMap<String, List<Class<? extends LXMidiSurface>>>();
 
   private class InitializationLock {
     private final List<Runnable> whenReady = new ArrayList<Runnable>();
@@ -169,14 +169,14 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   public LXMidiEngine(LX lx) {
     super(lx);
-    this.registeredSurfaces.put(APC40.DEVICE_NAME, APC40.class);
-    this.registeredSurfaces.put(APC40Mk2.DEVICE_NAME, APC40Mk2.class);
-    this.registeredSurfaces.put(APCmini.DEVICE_NAME, APCmini.class);
-    this.registeredSurfaces.put(APCminiMk2.DEVICE_NAME, APCminiMk2.class);
-    this.registeredSurfaces.put(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
-    this.registeredSurfaces.put(DJMA9.DEVICE_NAME, DJMA9.class);
-    this.registeredSurfaces.put(DJMV10.DEVICE_NAME, DJMV10.class);
-    this.registeredSurfaces.put(MidiFighterTwister.DEVICE_NAME, MidiFighterTwister.class);
+    _registerSurface(APC40.DEVICE_NAME, APC40.class);
+    _registerSurface(APC40Mk2.DEVICE_NAME, APC40Mk2.class);
+    _registerSurface(APCmini.DEVICE_NAME, APCmini.class);
+    _registerSurface(APCminiMk2.DEVICE_NAME, APCminiMk2.class);
+    _registerSurface(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
+    _registerSurface(DJMA9.DEVICE_NAME, DJMA9.class);
+    _registerSurface(DJMV10.DEVICE_NAME, DJMV10.class);
+    _registerSurface(MidiFighterTwister.DEVICE_NAME, MidiFighterTwister.class);
 
     this.computerKeyboardEnabled.setMappable(false);
     this.computerKeyboardOctave.setMappable(false);
@@ -187,21 +187,27 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     addParameter("computerKeyboardVelocity", this.computerKeyboardVelocity);
   }
 
+  private void _registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
+    List<Class<? extends LXMidiSurface>> surfaces;
+    if (!this.registeredSurfaces.containsKey(deviceName)) {
+      this.registeredSurfaces.put(deviceName, surfaces = new ArrayList<Class<? extends LXMidiSurface>>());
+    } else {
+      surfaces = this.registeredSurfaces.get(deviceName);
+    }
+    if (surfaces.contains(surfaceClass)) {
+      throw new IllegalStateException("Surface class is already registered: " + deviceName + " -> " + surfaceClass.getName());
+    }
+    surfaces.add(surfaceClass);
+  }
+
   public LXMidiEngine registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
     this.lx.registry.checkRegistration();
-    if (this.registeredSurfaces.containsKey(deviceName)) {
-      throw new IllegalStateException("Existing midi device name " + deviceName + " cannot be remapped to " + surfaceClass);
-    }
-    this.registeredSurfaces.put(deviceName, surfaceClass);
+    _registerSurface(deviceName, surfaceClass);
 
     // NOTE: the MIDI initialize() thread has been kicked off at this point. We
     // might not get in until after it has already attempted to initialize MIDI surfaces
     // in which case we need to check again for this newly registered surface
-    whenReady(new Runnable() {
-      public void run() {
-        checkForNewSurfaceType(deviceName);
-      }
-    });
+    whenReady(() -> { checkForNewSurfaceType(deviceName); });
     return this;
   }
 
@@ -246,7 +252,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
         // Instantiate any midi surfaces
         for (LXMidiInput input : inputs) {
-          instantiateSurface(input, false);
+          instantiateSurfaces(input, false);
         }
 
         // Notify any threads blocked on waitUntilReady(), notify them to continue
@@ -540,42 +546,52 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     if (input == null) {
       return;
     }
-    LXMidiSurface surface = instantiateSurface(input, true);
-    if (surface == null) {
+    final List<LXMidiSurface> surfaces = instantiateSurfaces(input, true);
+    if (surfaces == null) {
       return;
     }
-    JsonObject unremember = null;
-    for (JsonObject remember : this.rememberMidiSurfaces) {
-      if (remember.get(LXMidiSurface.KEY_NAME).getAsString().equals(surface.getName())) {
-        unremember = remember;
-        surface.load(this.lx, remember);
-        surface.enabled.setValue(true);
-        break;
+
+    final List<JsonObject> unremember = new ArrayList<JsonObject>();
+    for (LXMidiSurface surface : surfaces) {
+      for (JsonObject remember : this.rememberMidiSurfaces) {
+        if (surface.matches(remember)) {
+          unremember.add(remember);
+          surface.load(this.lx, remember);
+          surface.enabled.setValue(true);
+          break;
+        }
       }
     }
     if (unremember != null) {
-      this.rememberMidiSurfaces.remove(unremember);
+      for (JsonObject remove : unremember) {
+        this.rememberMidiSurfaces.remove(remove);
+      }
     }
   }
 
-  private LXMidiSurface instantiateSurface(LXMidiInput input, boolean notifyListeners) {
-    Class<? extends LXMidiSurface> surfaceClass = this.registeredSurfaces.get(input.getName());
-    if (surfaceClass == null) {
+  private List<LXMidiSurface> instantiateSurfaces(LXMidiInput input, boolean notifyListeners) {
+    final List<Class<? extends LXMidiSurface>> surfaceClasses = this.registeredSurfaces.get(input.getName());
+    if (surfaceClasses == null) {
       return null;
     }
-    LXMidiSurface surface = null;
-    try {
-      surface = surfaceClass.getConstructor(LX.class, LXMidiInput.class, LXMidiOutput.class).newInstance(this.lx, input, findOutput(input));
-      this.mutableSurfaces.add(surface);
-      if (notifyListeners) {
-        for (DeviceListener listener : this.deviceListeners) {
-          listener.surfaceAdded(this, surface);
+    final List<LXMidiSurface> surfaces = new ArrayList<LXMidiSurface>();
+    for (Class<? extends LXMidiSurface> surfaceClass : surfaceClasses) {
+      LXMidiSurface surface = null;
+      try {
+        surface = surfaceClass.getConstructor(LX.class, LXMidiInput.class, LXMidiOutput.class).newInstance(this.lx, input, findOutput(input));
+        surfaces.add(surface);
+        this.mutableSurfaces.add(surface);
+        if (notifyListeners) {
+          for (DeviceListener listener : this.deviceListeners) {
+            listener.surfaceAdded(this, surface);
+          }
         }
+
+      } catch (Exception x) {
+        error(x, "Could not instantiate midi surface class: " + surfaceClass);
       }
-    } catch (Exception x) {
-      error(x, "Could not instantiate midi surface class: " + surfaceClass);
     }
-    return surface;
+    return surfaces;
   }
 
   /**

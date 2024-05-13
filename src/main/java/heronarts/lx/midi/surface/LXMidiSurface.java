@@ -186,6 +186,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     return false;
   }
 
+  public static final String KEY_CLASS = "class";
   public static final String KEY_NAME = "name";
   public static final String KEY_SETTINGS = "settings";
   public static final String KEY_STATE = "state";
@@ -208,13 +209,22 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
 
   @Override
   public void save(LX lx, JsonObject obj) {
-    obj.addProperty(KEY_NAME, this.input.getName());
+    obj.addProperty(KEY_CLASS, getClass().getName());
+    obj.addProperty(KEY_NAME, getName());
     if (!this.settings.isEmpty()) {
       obj.add(KEY_SETTINGS, LXSerializable.Utils.saveParameters(this.mutableSettings));
     }
     if (!this.state.isEmpty()) {
       obj.add(KEY_STATE, LXSerializable.Utils.saveParameters(this.mutableState));
     }
+  }
+
+  public boolean matches(JsonObject surface) {
+    // NOTE: legacy compabitility, pre-1.0.1 didn't store the surface CLASS
+    // here when there was only one surface type per device name supported
+    final String surfaceClass = surface.has(KEY_CLASS) ? surface.get(KEY_CLASS).getAsString() : null;
+    return getName().equals(surface.get(KEY_NAME).getAsString()) &&
+      ((surfaceClass == null) || surfaceClass.equals(getClass().getName()));
   }
 
   @Override
