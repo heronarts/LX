@@ -19,15 +19,11 @@
 
 package heronarts.lx.midi.surface;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import heronarts.lx.LX;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
+import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -37,127 +33,122 @@ import heronarts.lx.utils.LXUtils;
 public class MixerSurface {
 
   public interface Listener {
-    /**
-     * Selected bank has changed
-     */
-    public void onBankChanged(int bank);
 
     /**
-     * The channel assigned to a surface position has changed.
+     * A channel previously assigned to a surface index has been changed
+     *
      * @param index Index relative to surface
-     * @param channel New channel value, could be null
-     * @param previousChannel Previous channel value, could be null
+     * @param channel Channel that has been removed
+     * @param previous Previous channel that was assigned
      */
-    public void onChannelChanged(int index, LXAbstractChannel channel, LXAbstractChannel previousChannel);
+    public void onChannelChanged(int index, LXAbstractChannel channel, LXAbstractChannel previous);
+
   }
 
-  private final Listener listener;
   private final LX lx;
-  private final int bankSize;
 
-  private int bank = 0;
+  private final Listener listener;
 
-  private final Map<LXAbstractChannel, Boolean> channelAllowance = new HashMap<LXAbstractChannel, Boolean>();
-  private final List<LXAbstractChannel> allowedChannels = new ArrayList<LXAbstractChannel>();
-  private final List<LXAbstractChannel> mutableChannels = new ArrayList<LXAbstractChannel>();
-  public final List<LXAbstractChannel> channels = Collections.unmodifiableList(this.mutableChannels);
+  /**
+   * How many mixer channels this surface can control at once
+   */
+  public final int bankSize;
+
+  public final DiscreteParameter channelNumber =
+    new DiscreteParameter("Channel Num", 1, 2)
+    .setDescription("Channel number that the mixer surface begins at");
+
+  private final LXAbstractChannel[] channels;
 
   public MixerSurface(LX lx, Listener listener, int bankSize) {
     this.lx = lx;
     this.listener = listener;
     this.bankSize = bankSize;
-
-    for (int i = 0; i < this.bankSize; i++) {
-      this.mutableChannels.add(null);
-    }
+    this.channels = new LXAbstractChannel[bankSize];
+    setChannelIndexRange();
   }
 
-  /**
-   * Child class may hide channels by returning false to this method.
-   * Method will be called once per channel.
-   */
-  public boolean isChannelAllowed(LXAbstractChannel channel) {
-    return true;
+  private void setChannelIndexRange() {
+    this.channelNumber.setRange(1, LXUtils.max(2, 1 + this.lx.engine.mixer.channels.size()));
   }
 
-  public void setChannelAllowed(LXAbstractChannel channel, boolean allowed) {
-    if (!this.channelAllowance.containsKey(channel)) {
-      throw new IllegalArgumentException("Channel unknown by MixerSurface");
-    }
-
-    if (this.channelAllowance.get(channel) != allowed) {
-      this.channelAllowance.put(channel, allowed);
-      refreshAllowedChannels();
-    }
+  private int getChannelIndex() {
+    return this.channelNumber.getValuei() - 1;
   }
 
-  private int getIndexOffset() {
-    return this.bank * this.bankSize;
+  public void incrementChannel() {
+    this.channelNumber.increment(1);
   }
 
-  public boolean incrementBank() {
-    return setBank(this.bank + 1);
+  public void decrementChannel() {
+    this.channelNumber.decrement(1);
   }
 
-  public boolean decrementBank() {
-    if (this.bank > 0) {
-      return setBank(this.bank - 1);
-    }
-    return false;
+  public void incrementBank() {
+    this.channelNumber.increment(this.bankSize);
   }
 
-  public boolean setBank(int bank) {
-    if (bank < 0) {
-      throw new IllegalArgumentException("Channel bank may not be less than zero");
-    }
-    if (this.bank == bank) {
-      return false;
-    }
+  public void decrementBank() {
+    this.channelNumber.decrement(this.bankSize);
+  }
 
-    this.bank = bank;
+  private final LXParameterListener onChannelIndexChanged = p -> {
     if (this.isRegistered) {
       refreshChannels();
     }
-    listener.onBankChanged(this.bank);
-    return true;
-  }
+  };
 
   /**
-   * Retrieve channel for a given surface index, relative to current bank.
+   * Retrieve channel for a given surface index, relative to current index.
    */
-  public LXAbstractChannel get(int index) {
-    if (index >= 0 && index < this.channels.size()) {
-      return this.channels.get(index);
+  public LXAbstractChannel getChannel(int index) {
+    if (index >= 0 && index < this.channels.length) {
+      return this.channels[index];
     }
     return null;
   }
 
+  public boolean contains(LXAbstractChannel channel) {
+    for (LXAbstractChannel contains : this.channels) {
+      if (contains == channel) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Retrieve the index of a channel relative to surface.
-   * If channel is not assigned to a surface position, null will be returned.
+   * If channel is not assigned to a surface position, -1 will be returned.
+   *
+   * @param channel The channel to find
+   * @return Relative index of channel on surface, or -1 if not found
    */
   public int getIndex(LXAbstractChannel channel) {
-    return this.channels.indexOf(channel);
+    for (int i = 0; i < this.channels.length; ++i) {
+      if (this.channels[i] == channel) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   private final LXMixerEngine.Listener mixerEngineListener = new LXMixerEngine.Listener() {
     @Override
     public void channelAdded(LXMixerEngine mixer, LXAbstractChannel channel) {
-      registerChannel(channel);
-      refreshAllowedChannels();
+      setChannelIndexRange();
+      refreshChannels();
     }
 
     @Override
     public void channelMoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-      refreshAllowedChannels();
+      refreshChannels();
     }
 
     @Override
     public void channelRemoved(LXMixerEngine mixer, LXAbstractChannel channel) {
-      channelAllowance.remove(channel);
-      if (allowedChannels.remove(channel)) {
-        refreshAllowedChannels();
-      }
+      setChannelIndexRange();
+      refreshChannels();
     }
   };
 
@@ -168,12 +159,10 @@ public class MixerSurface {
       throw new IllegalStateException("Cannot double-register MixerSurface");
     }
 
+    setChannelIndexRange();
+    this.channelNumber.addListener(this.onChannelIndexChanged);
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
-
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      registerChannel(channel);
-    }
-    refreshAllowedChannels();
+    refreshChannels();
 
     this.isRegistered = true;
   }
@@ -183,45 +172,43 @@ public class MixerSurface {
       throw new IllegalStateException("Cannot unregister non-registered MixerSurface");
     }
 
+    this.channelNumber.removeListener(this.onChannelIndexChanged);
     this.lx.engine.mixer.removeListener(this.mixerEngineListener);
 
-    this.channelAllowance.clear();
-    this.allowedChannels.clear();
-    refreshChannels();
-
+    clearChannels();
     this.isRegistered = false;
   }
 
-  private void registerChannel(LXAbstractChannel channel) {
-    this.channelAllowance.put(channel, isChannelAllowed(channel));
+  private void clearChannels() {
+    for (int i = 0; i < this.channels.length; ++i) {
+      setChannel(i, null);
+    }
   }
 
-  private void refreshAllowedChannels() {
-    this.allowedChannels.clear();
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      if (this.channelAllowance.get(channel)) {
-        this.allowedChannels.add(channel);
-      }
+  private void setChannel(int index, LXAbstractChannel channel) {
+    if (index < 0 || index >= this.bankSize) {
+      throw new IllegalArgumentException("setChannel() index must be in bounds: " + index);
     }
-    refreshChannels();
+    if (this.channels[index] != channel) {
+      LXAbstractChannel previous = this.channels[index];
+      this.channels[index] = channel;
+      this.listener.onChannelChanged(index, channel, previous);
+    }
   }
 
   private void refreshChannels() {
-    final int indexOffset = getIndexOffset();
-    LXAbstractChannel channel, previous;
+    final int indexOffset = getChannelIndex();
+    final int numChannels = lx.engine.mixer.channels.size();
     for (int i = 0; i < this.bankSize; i++) {
-      channel = i + indexOffset < this.allowedChannels.size() ? this.allowedChannels.get(i + indexOffset) : null;
-      previous = this.mutableChannels.get(i);
-      if (!LXUtils.equals(channel, previous)) {
-        this.mutableChannels.set(i, channel);
-        this.listener.onChannelChanged(i, channel, previous);
-      }
+      int targetIndex = indexOffset + i;
+      setChannel(i, (targetIndex < numChannels) ? lx.engine.mixer.channels.get(targetIndex) : null);
     }
   }
 
   public void dispose() {
     if (this.isRegistered) {
       unregister();
+      this.isRegistered = false;
     }
   }
 }
