@@ -172,6 +172,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   public static final int LED_MODE_PULSE = 10;
   public static final int LED_MODE_BLINK = 15;
 
+  private static int LED_ON(boolean condition) {
+    return condition ? LED_ON : LED_OFF;
+  }
+
   // We use three modifier keys:
   // SHIFT: Momentary, can't be lit. Used for all sorts of purposes.
   private boolean shiftOn = false;
@@ -250,18 +254,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private void sendPerformanceLights() {
     boolean performanceMode = isPerformanceMode();
-    sendNoteOn(0, PLAY, performanceMode && !this.isAux ? LED_ON : LED_OFF);
-    sendNoteOn(0, RECORD, performanceMode && this.isAux ? LED_ON : LED_OFF);
-    sendNoteOn(0, SESSION, performanceMode ? LED_ON : LED_OFF);
+    sendNoteOn(0, PLAY, LED_ON(performanceMode && !this.isAux));
+    sendNoteOn(0, RECORD, LED_ON(performanceMode && this.isAux));
+    sendNoteOn(0, SESSION, LED_ON(performanceMode));
   }
 
   private void sendCueLights() {
     if (isAuxActive()) {
-      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.auxA.isOn() ? 1 : 0);
-      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.auxB.isOn() ? 1 : 0);
+      sendNoteOn(0, CLIP_DEVICE_VIEW, LED_ON(this.lx.engine.mixer.auxA.isOn()));
+      sendNoteOn(0, DETAIL_VIEW, LED_ON(this.lx.engine.mixer.auxB.isOn()));
     } else {
-      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
-      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
+      sendNoteOn(0, CLIP_DEVICE_VIEW, LED_ON(this.lx.engine.mixer.cueA.isOn()));
+      sendNoteOn(0, DETAIL_VIEW, LED_ON(this.lx.engine.mixer.cueB.isOn()));
     }
   }
 
@@ -321,7 +325,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         LXPattern pattern = (LXPattern) this.device;
         isEnabled = isPatternEnabled(pattern);
       }
-      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
+      sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isEnabled));
     }
 
     private void clearKnobsAfter(int i) {
@@ -353,7 +357,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         this.device.remoteControlsChanged.addListener(this);
       }
 
-      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
+      sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isEnabled));
       if (this.device == null) {
         clearKnobsAfter(0);
         return;
@@ -453,9 +457,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         registerDeviceKnobs();
       } else {
         if ((effect != null) && (parameter == effect.enabled)) {
-          sendNoteOn(0, DEVICE_ON_OFF, effect.enabled.isOn() ? LED_ON : LED_OFF);
+          sendNoteOn(0, DEVICE_ON_OFF, LED_ON(effect.enabled.isOn()));
         } else if ((pattern != null) && (parameter == pattern.enabled)) {
-          sendNoteOn(0, DEVICE_ON_OFF, isPatternEnabled(pattern) ? LED_ON : LED_OFF);
+          sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isPatternEnabled(pattern)));
           sendChannelPatterns(pattern.getChannel().getIndex(), pattern.getChannel());
         }
         // enabled could be a remote parameter
@@ -505,7 +509,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
         } else {
           pattern.getChannel().goPatternIndex(pattern.getIndex());
         }
-        sendNoteOn(0, DEVICE_ON_OFF, isPatternEnabled(pattern) ? LED_ON : LED_OFF);
+        sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isPatternEnabled(pattern)));
       } else if (this.device instanceof LXEffect) {
         LXEffect effect = (LXEffect) this.device;
         effect.enabled.toggle();
@@ -701,18 +705,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
 
       if (p == this.channel.cueActive) {
-        sendNoteOn(index, CHANNEL_SOLO, this.channel.cueActive.isOn() ? LED_ON : LED_OFF);
+        sendNoteOn(index, CHANNEL_SOLO, LED_ON(this.channel.cueActive.isOn()));
       } else if (p == this.channel.auxActive) {
         if (isPerformanceMode()) {
-          sendNoteOn(index, CHANNEL_ARM, this.channel.auxActive.isOn() ? LED_ON : LED_OFF);
+          sendNoteOn(index, CHANNEL_ARM, LED_ON(this.channel.auxActive.isOn()));
         }
       } else if (p == this.channel.enabled) {
-        sendNoteOn(index, CHANNEL_ACTIVE, this.channel.enabled.isOn() ? LED_ON : LED_OFF);
+        sendNoteOn(index, CHANNEL_ACTIVE, LED_ON(this.channel.enabled.isOn()));
       } else if (p == this.channel.crossfadeGroup) {
         sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, this.channel.crossfadeGroup.getValuei());
       } else if (p == this.channel.arm) {
         if (!isPerformanceMode()) {
-          sendNoteOn(index, CHANNEL_ARM, this.channel.arm.isOn() ? LED_ON : LED_OFF);
+          sendNoteOn(index, CHANNEL_ARM, LED_ON(this.channel.arm.isOn()));
         }
         sendChannelClips(this.channel.getIndex(), this.channel);
       } else if (p.getParent() instanceof LXClip) {
@@ -860,8 +864,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void initialize(boolean reconnect) {
-    this.output.sendNoteOn(0, BANK, this.bankOn ? LED_ON : LED_OFF);
-    this.output.sendNoteOn(0, DEVICE_LOCK, this.deviceLockOn ? LED_ON : LED_OFF);
+    this.output.sendNoteOn(0, BANK, LED_ON(this.bankOn));
+    this.output.sendNoteOn(0, DEVICE_LOCK, LED_ON(this.deviceLockOn));
 
     if (!reconnect) {
       resetPaletteVars();
@@ -918,8 +922,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     for (int i = 0; i < NUM_CHANNELS; ++i) {
       LXAbstractChannel channel = getChannel(i);
       if (channel != null) {
-        sendNoteOn(i, CHANNEL_SOLO, channel.cueActive.isOn() ? LED_ON : LED_OFF);
-        sendNoteOn(i, CHANNEL_ARM, (isPerformanceMode() ? channel.auxActive.isOn() : channel.arm.isOn()) ? LED_ON : LED_OFF);
+        sendNoteOn(i, CHANNEL_SOLO, LED_ON(channel.cueActive.isOn()));
+        sendNoteOn(i, CHANNEL_ARM, LED_ON(isPerformanceMode() ? channel.auxActive.isOn() : channel.arm.isOn()));
       } else {
         sendNoteOn(i, CHANNEL_SOLO, LED_OFF);
         sendNoteOn(i, CHANNEL_ARM, LED_OFF);
@@ -948,10 +952,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private void sendChannel(int index, LXAbstractChannel channel) {
     if (channel != null) {
-      sendNoteOn(index, CHANNEL_ACTIVE, channel.enabled.isOn() ? LED_ON : LED_OFF);
+      sendNoteOn(index, CHANNEL_ACTIVE, LED_ON(channel.enabled.isOn()));
       sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, channel.crossfadeGroup.getValuei());
-      sendNoteOn(index, CHANNEL_SOLO, channel.cueActive.isOn() ? LED_ON : LED_OFF);
-      sendNoteOn(index, CHANNEL_ARM, (isPerformanceMode() ? channel.auxActive.isOn() : channel.arm.isOn()) ? LED_ON : LED_OFF);
+      sendNoteOn(index, CHANNEL_SOLO, LED_ON(channel.cueActive.isOn()));
+      sendNoteOn(index, CHANNEL_ARM, LED_ON(isPerformanceMode() ? channel.auxActive.isOn() : channel.arm.isOn()));
     } else {
       sendNoteOn(index, CHANNEL_ACTIVE, LED_OFF);
       sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, LED_OFF);
@@ -1183,10 +1187,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       }
       focusOn = !masterFocusedMain && (i == focusedChannelMain);
 
-      sendNoteOn(i, CLIP_STOP, clipStopOn ? LED_ON : LED_OFF);
-      sendNoteOn(i, CHANNEL_FOCUS, focusOn ? LED_ON : LED_OFF);
+      sendNoteOn(i, CLIP_STOP, LED_ON(clipStopOn));
+      sendNoteOn(i, CHANNEL_FOCUS, LED_ON(focusOn));
     }
-    sendNoteOn(0, MASTER_FOCUS, masterFocusedMain ? LED_ON : LED_OFF);
+    sendNoteOn(0, MASTER_FOCUS, LED_ON(masterFocusedMain));
   }
 
   private final LXMixerEngine.Listener mixerEngineListener = new LXMixerEngine.Listener() {
@@ -1230,18 +1234,18 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private final LXParameterListener auxAListener = (p) -> {
     if (isAuxActive()) {
-      sendNoteOn(0, CLIP_DEVICE_VIEW, this.lx.engine.mixer.auxA.isOn() ? 1 : 0);
+      sendNoteOn(0, CLIP_DEVICE_VIEW, LED_ON(this.lx.engine.mixer.auxA.isOn()));
     }
   };
 
   private final LXParameterListener auxBListener = (p) -> {
     if (isAuxActive()) {
-      sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.auxB.isOn() ? 1 : 0);
+      sendNoteOn(0, DETAIL_VIEW, LED_ON(this.lx.engine.mixer.auxB.isOn()));
     }
   };
 
   private final LXParameterListener tempoListener = (p) -> {
-    sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
+    sendNoteOn(0, METRONOME, LED_ON(this.lx.engine.tempo.enabled.isOn()));
   };
 
   private final LXParameterListener performanceModeListener = (p) -> {
@@ -1413,7 +1417,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           resetPaletteVars();
         } else {
           this.bankOn = !this.bankOn;
-          sendNoteOn(note.getChannel(), pitch, this.bankOn ? LED_ON : LED_OFF);
+          sendNoteOn(note.getChannel(), pitch, LED_ON(this.bankOn));
         }
         updateGridMode();
       }
@@ -1421,7 +1425,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     case DEVICE_LOCK:
       if (on) {
         this.deviceLockOn = !this.deviceLockOn;
-        sendNoteOn(note.getChannel(), pitch, this.deviceLockOn ? LED_ON : LED_OFF);
+        sendNoteOn(note.getChannel(), pitch, LED_ON(this.deviceLockOn));
         if (!this.deviceLockOn) {
           resetPaletteVars();
         }
@@ -1456,14 +1460,14 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     switch (pitch) {
     case CLIP_STOP:
       if (this.gridMode == GridMode.CLIP) {
-        sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
+        sendNoteOn(note.getChannel(), pitch, LED_ON(on));
       }
       break;
     case BANK_LEFT:
     case BANK_RIGHT:
     case DEVICE_LEFT:
     case DEVICE_RIGHT:
-      sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
+      sendNoteOn(note.getChannel(), pitch, LED_ON(on));
       break;
     }
     if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX && this.gridMode != GridMode.PALETTE) {
