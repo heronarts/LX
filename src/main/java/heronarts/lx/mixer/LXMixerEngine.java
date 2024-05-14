@@ -131,6 +131,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Condensed", false)
     .setDescription("Whether the mixer view should be condensed");
 
+  public final BooleanParameter viewStacked =
+    new BooleanParameter("Stacked", false)
+    .setDescription("Whether the mixer view is stacked on the device bin");
+
   public LXMixerEngine(LX lx) {
     super(lx, "Mixer");
 
@@ -203,6 +207,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("auxA", this.auxA);
     addParameter("auxB", this.auxB);
     addParameter("viewCondensed", this.viewCondensed);
+    addParameter("viewStacked", this.viewStacked);
   }
 
   @Override

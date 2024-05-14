@@ -1027,7 +1027,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendChannelClips(int index, LXAbstractChannel channel) {
-    int clipOffset = lx.engine.clips.clipViewGridOffset.getValuei();
+    int clipOffset = lx.engine.clips.gridViewOffset.getValuei();
     for (int i = 0; i < CLIP_LAUNCH_ROWS; ++i) {
       LXClip clip = null;
       int clipIndex = clipOffset + i;
@@ -1039,7 +1039,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void sendClip(int channelIndex, LXAbstractChannel channel, int clipIndex, LXClip clip) {
-    int slotIndex = clipIndex - lx.engine.clips.clipViewGridOffset.getValuei();
+    int slotIndex = clipIndex - lx.engine.clips.gridViewOffset.getValuei();
     if (this.gridMode != GridMode.CLIP ||
             channelIndex >= CLIP_LAUNCH_COLUMNS || slotIndex >= CLIP_LAUNCH_ROWS) {
       return;
@@ -1282,7 +1282,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
     this.lx.engine.performanceMode.addListener(this.performanceModeListener, true);
 
-    this.lx.engine.clips.clipViewGridOffset.addListener(this.clipGridListener);
+    this.lx.engine.clips.gridViewOffset.addListener(this.clipGridListener);
     this.lx.engine.clips.numScenes.addListener(this.clipGridListener);
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
@@ -1306,7 +1306,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     this.lx.engine.performanceMode.removeListener(this.performanceModeListener);
-    this.lx.engine.clips.clipViewGridOffset.removeListener(this.clipGridListener);
+    this.lx.engine.clips.gridViewOffset.removeListener(this.clipGridListener);
     this.lx.engine.clips.numScenes.removeListener(this.clipGridListener);
     this.lx.engine.mixer.removeListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
@@ -1410,7 +1410,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     case BANK:
       if (on) {
         if (this.shiftOn) {
-          this.lx.engine.clips.clipViewExpanded.toggle();
+          this.lx.engine.clips.gridViewExpanded.toggle();
         } else if (this.deviceLockOn) {
           this.deviceLockOn = false;
           sendNoteOn(note.getChannel(), DEVICE_LOCK, LED_OFF);
@@ -1508,7 +1508,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       case BANK_SELECT_UP:
         bus = getFocusedChannel();
         if (this.shiftOn) {
-          lx.engine.clips.clipViewGridOffset.decrement();
+          lx.engine.clips.gridViewOffset.decrement();
         } else if (bus instanceof LXChannel) {
           ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
@@ -1516,7 +1516,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       case BANK_SELECT_DOWN:
         bus = getFocusedChannel();
         if (this.shiftOn) {
-          lx.engine.clips.clipViewGridOffset.increment();
+          lx.engine.clips.gridViewOffset.increment();
         } else  if (bus instanceof LXChannel) {
           ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1, false);
         }
@@ -1574,7 +1574,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             sendSwatch(MASTER_SWATCH);
           }
         } else {
-          this.lx.engine.clips.launchScene(index + lx.engine.clips.clipViewGridOffset.getValuei());
+          this.lx.engine.clips.launchScene(index + lx.engine.clips.gridViewOffset.getValuei());
         }
         return;
       }
@@ -1626,7 +1626,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               }
             }
           } else {
-            int clipIndex = index + lx.engine.clips.clipViewGridOffset.getValuei();
+            int clipIndex = index + lx.engine.clips.gridViewOffset.getValuei();
             LXClip clip = channel.getClip(clipIndex);
             if (clip == null) {
               clip = channel.addClip(clipIndex);

@@ -22,6 +22,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -55,20 +56,24 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     }
   };
 
-  public static final int MIN_SCENES = 5;
+  public static final int MIN_SCENES = 8;
   public static final int MAX_SCENES = 128;
 
   private final TriggerParameter[] scenes = new TriggerParameter[MAX_SCENES];
 
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
-  public final BooleanParameter clipViewExpanded =
-    new BooleanParameter("Clip View", false)
+  public final BooleanParameter gridViewExpanded =
+    new BooleanParameter("Grid View", false)
     .setDescription("Whether the clip grid view is expanded");
 
-  public final DiscreteParameter clipViewGridOffset =
-    new DiscreteParameter("Clip View Grid Offset", 0, 1)
+  public final DiscreteParameter gridViewOffset =
+    new DiscreteParameter("Grid View Offset", 0, 1)
     .setDescription("Offset of the clip grid view");
+
+  public final BooleanParameter clipInspectorExpanded =
+    new BooleanParameter("Clip Inspector", false)
+    .setDescription("Whether the clip inspector is expanded");
 
   public final DiscreteParameter numScenes =
     new DiscreteParameter("Num Scenes", MIN_SCENES, MAX_SCENES + 1)
@@ -92,8 +97,9 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("numScenes", this.numScenes);
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
-    addParameter("clipViewGridOffset", this.clipViewGridOffset);
-    addParameter("clipViewExpanded", this.clipViewExpanded);
+    addParameter("gridViewOffset", this.gridViewOffset);
+    addParameter("gridViewExpanded", this.gridViewExpanded);
+    addParameter("clipInspectorExpanded", this.clipInspectorExpanded);
 
     // Scenes
     for (int i = 0; i < this.scenes.length; ++i) {
@@ -109,7 +115,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   @Override
   public void onParameterChanged(LXParameter p) {
     if (this.numScenes == p) {
-      this.clipViewGridOffset.setRange(this.numScenes.getValuei() - MIN_SCENES + 1);
+      this.gridViewOffset.setRange(this.numScenes.getValuei() - MIN_SCENES + 1);
     }
   }
 
@@ -177,11 +183,22 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     return this;
   }
 
+  private static void legacyNumScenes(JsonObject obj) {
+    // Legacy support for update from min 5 -> 8 scenes
+    if (LXSerializable.Utils.hasParameter(obj, "numScenes")) {
+      int numScenes = LXSerializable.Utils.getParameter(obj, "numScenes").getAsInt();
+      if (numScenes < MIN_SCENES) {
+        obj.get(LXComponent.KEY_PARAMETERS).getAsJsonObject().addProperty("numScenes", MIN_SCENES);
+      }
+    }
+  }
+
   @Override
   public void load(LX lx, JsonObject obj) {
+    legacyNumScenes(obj);
     super.load(lx, obj);
     if (obj.has(LXComponent.KEY_RESET)) {
-      this.clipViewGridOffset.reset();
+      this.gridViewOffset.reset();
       this.numScenes.reset();
     }
   }
