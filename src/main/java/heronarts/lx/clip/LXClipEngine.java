@@ -110,6 +110,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new DiscreteParameter("Num Patterns", MIN_SCENES, 4097)
     .setDescription("Number of active patterns");
 
+  public final TriggerParameter stopClips =
+    new TriggerParameter("Stop Clips", this::stopClips)
+    .setDescription("Stops all clips running in the whole project");
+
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
    */
@@ -128,6 +132,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("numScenes", this.numScenes);
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
+    addParameter("stopClips", this.stopClips);
     addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
     addParameter("gridPatternOffset", this.gridPatternOffset);
@@ -202,6 +207,25 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     clip = this.lx.engine.mixer.masterBus.getClip(index);
     if (clip != null) {
       clip.trigger();
+    }
+    return this;
+  }
+
+  /**
+   * Launches all patterns at the given index
+   *
+   * @param index Pattern index
+   * @return this
+   */
+  public LXClipEngine launchPatternScene(int index) {
+    for (LXAbstractChannel channel : lx.engine.mixer.channels) {
+      if (channel instanceof LXChannel) {
+        LXChannel c = (LXChannel) channel;
+        if (index < c.patterns.size()) {
+          c.goPatternIndex(index);
+        }
+
+      }
     }
     return this;
   }
