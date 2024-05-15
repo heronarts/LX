@@ -24,6 +24,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -32,6 +33,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.TriggerParameter;
+import heronarts.lx.utils.LXUtils;
 
 public class LXClipEngine extends LXComponent implements LXOscComponent {
 
@@ -92,6 +94,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new EnumParameter<GridMode>("Grid Mode", GridMode.CLIPS)
     .setDescription("Whether the grid activates clips or patterns");
 
+  public final DiscreteParameter gridPatternOffset =
+    new DiscreteParameter("Grid Pattern Offset", 0, 1)
+    .setDescription("Offset of the pattern grid view");
+
   public final BooleanParameter clipInspectorExpanded =
     new BooleanParameter("Clip Inspector", false)
     .setDescription("Whether the clip inspector is expanded");
@@ -99,6 +105,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   public final DiscreteParameter numScenes =
     new DiscreteParameter("Num Scenes", MIN_SCENES, MAX_SCENES + 1)
     .setDescription("Number of active scenes");
+
+  public final DiscreteParameter numPatterns =
+    new DiscreteParameter("Num Patterns", MIN_SCENES, 4097)
+    .setDescription("Number of active patterns");
 
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
@@ -120,6 +130,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
     addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
+    addParameter("gridPatternOffset", this.gridPatternOffset);
     addParameter("gridViewExpanded", this.gridViewExpanded);
     addParameter("clipInspectorExpanded", this.clipInspectorExpanded);
 
@@ -132,6 +143,17 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       addParameter("scene-" + (i+1), this.scenes[i]);
     }
 
+  }
+
+  public void updatePatternGridSize() {
+    int max = 0;
+    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+      if (channel instanceof LXChannel) {
+        max = LXUtils.max(max, ((LXChannel) channel).patterns.size());
+      }
+    }
+    this.numPatterns.setValue(LXUtils.max(MIN_SCENES, max));
+    this.gridPatternOffset.setRange(LXUtils.max(1, max - MIN_SCENES + 1));
   }
 
   @Override

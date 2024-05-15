@@ -531,6 +531,7 @@ public class LXChannel extends LXAbstractChannel {
     for (Listener listener : this.listenerSnapshot) {
       listener.patternAdded(this, pattern);
     }
+    this.lx.engine.clips.updatePatternGridSize();
 
     // If this was the first pattern, focusedPattern has "changed" going from 0 -> 0
     if (this.mutablePatterns.size() == 1) {
@@ -600,6 +601,8 @@ public class LXChannel extends LXAbstractChannel {
     for (Listener listener : this.listenerSnapshot) {
       listener.patternRemoved(this, pattern);
     }
+    this.lx.engine.clips.updatePatternGridSize();
+
     if (activateNext && !this.patterns.isEmpty()) {
       LXPattern newActive = getActivePattern();
       newActive.activate(LXMixerEngine.patternFriendAccess);
