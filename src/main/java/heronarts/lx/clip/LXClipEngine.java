@@ -80,6 +80,8 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
 
   private final TriggerParameter[] scenes = new TriggerParameter[MAX_SCENES];
 
+  private final TriggerParameter[] patternScenes = new TriggerParameter[MAX_SCENES];
+
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
   public final BooleanParameter gridViewExpanded =
@@ -151,8 +153,12 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
         new TriggerParameter("Scene-" + (i+1), () -> { launchScene(sceneIndex); })
         .setDescription("Launches scene " + (i+1));
       addParameter("scene-" + (i+1), this.scenes[i]);
-    }
 
+      this.patternScenes[i] =
+        new TriggerParameter("Pattern-" + (i+1), () -> { launchPatternScene(sceneIndex); })
+        .setDescription("Triggers all patterns at index " + (i+1));
+      addParameter("pattern-" + (i+1), this.patternScenes[i]);
+    }
   }
 
   public void updatePatternGridSize() {
@@ -193,6 +199,19 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       throw new IllegalArgumentException("Cannot request scene less than 0: " + index);
     }
     return this.scenes[index];
+  }
+
+  /**
+   * Get the boolean parameter that launches a pattern scene
+   *
+   * @param index Index of pattern scene
+   * @return Pattern scene at index
+   */
+  public TriggerParameter getPatternScene(int index) {
+    if (index < 0) {
+      throw new IllegalArgumentException("Cannot request scene less than 0: " + index);
+    }
+    return this.patternScenes[index];
   }
 
   /**
