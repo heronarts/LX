@@ -224,7 +224,23 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
         if (index < c.patterns.size()) {
           c.goPatternIndex(index);
         }
+      }
+    }
+    return this;
+  }
 
+  /**
+   * Cycle the patterns on every eligible channel
+   *
+   * @return this
+   */
+  public LXClipEngine launchPatternCycle() {
+    for (LXAbstractChannel channel : lx.engine.mixer.channels) {
+      if (channel instanceof LXChannel) {
+        LXChannel c = (LXChannel) channel;
+        if (c.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
+          c.triggerPatternCycle.trigger();
+        }
       }
     }
     return this;
