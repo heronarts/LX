@@ -1416,9 +1416,8 @@ public abstract class LXCommand {
       private ComponentReference<LXGroup> group;
 
       public GroupSelectedChannels(LX lx) {
-        List<LXChannel> channels = lx.engine.mixer.getSelectedChannelsForGroup();
-        for (LXChannel channel : channels) {
-          groupChannels.add(new ComponentReference<LXChannel>(channel));
+        for (LXChannel channel : lx.engine.mixer.getSelectedChannelsForGroup()) {
+          this.groupChannels.add(new ComponentReference<LXChannel>(channel));
         }
       }
 
@@ -1429,16 +1428,26 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        List<LXChannel> channels = new ArrayList<LXChannel>(this.groupChannels.size());
-        for (ComponentReference<LXChannel> channel : this.groupChannels) {
-          channels.add(channel.get());
+        if (!isIgnored()) {
+
+          final List<LXChannel> channels = new ArrayList<LXChannel>(this.groupChannels.size());
+          for (ComponentReference<LXChannel> channel : this.groupChannels) {
+            channels.add(channel.get());
+          }
+          this.group = new ComponentReference<LXGroup>(lx.engine.mixer.addGroup(channels));
         }
-        this.group = new ComponentReference<LXGroup>(lx.engine.mixer.addGroup(channels));
       }
 
       @Override
       public void undo(LX lx) {
-        this.group.get().ungroup();
+        if (this.group != null) {
+          this.group.get().ungroup();
+        }
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return this.groupChannels.isEmpty();
       }
 
     }
