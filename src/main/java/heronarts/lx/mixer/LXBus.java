@@ -31,6 +31,7 @@ import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -98,6 +99,10 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     new BooleanParameter("Selected")
     .setDescription("Whether the channel is selected");
 
+  public final TriggerParameter stopClips =
+    new TriggerParameter("Stop Clips", this::stopClips)
+    .setDescription("Stops all clips running on the bus");
+
   public final BooleanParameter controlsExpandedCue =
     new BooleanParameter("Expanded Cue", true)
     .setDescription("Whether the control elements for this channel are expanded in cue view");
@@ -126,6 +131,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     addArray("clip", this.clips);
     addParameter("arm", this.arm);
     addParameter("selected", this.selected);
+    addParameter("stopClips", this.stopClips);
     addInternalParameter("controlsExpandedCue", this.controlsExpandedCue);
     addInternalParameter("controlsExpandedAux", this.controlsExpandedAux);
   }
