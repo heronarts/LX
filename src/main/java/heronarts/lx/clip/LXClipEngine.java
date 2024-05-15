@@ -114,6 +114,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new TriggerParameter("Stop Clips", this::stopClips)
     .setDescription("Stops all clips running in the whole project");
 
+  public final TriggerParameter triggerPatternCycle =
+    new TriggerParameter("Trigger Pattern Cycle", this::launchPatternCycle)
+    .setDescription("Triggers a pattern cycle on every eligble channel");
+
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
    */
@@ -133,6 +137,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
     addParameter("stopClips", this.stopClips);
+    addParameter("triggerPatternCycle", this.triggerPatternCycle);
     addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
     addParameter("gridPatternOffset", this.gridPatternOffset);
