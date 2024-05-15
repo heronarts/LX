@@ -28,11 +28,28 @@ import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.TriggerParameter;
 
 public class LXClipEngine extends LXComponent implements LXOscComponent {
+
+  public enum GridMode {
+    CLIPS("Clips"),
+    PATTERNS("Patterns");
+
+    public final String label;
+
+    private GridMode(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
 
   public class FocusedClipParameter extends MutableParameter {
 
@@ -71,6 +88,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new DiscreteParameter("Grid View Offset", 0, 1)
     .setDescription("Offset of the clip grid view");
 
+  public final EnumParameter<GridMode> gridMode =
+    new EnumParameter<GridMode>("Grid Mode", GridMode.CLIPS)
+    .setDescription("Whether the grid activates clips or patterns");
+
   public final BooleanParameter clipInspectorExpanded =
     new BooleanParameter("Clip Inspector", false)
     .setDescription("Whether the clip inspector is expanded");
@@ -97,6 +118,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("numScenes", this.numScenes);
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
+    addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
     addParameter("gridViewExpanded", this.gridViewExpanded);
     addParameter("clipInspectorExpanded", this.clipInspectorExpanded);
