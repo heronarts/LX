@@ -32,7 +32,7 @@ import heronarts.lx.utils.LXUtils;
  * Utility class to access a fixed number of mixer channels, potentially also
  * with clip/pattern grid control.
  */
-public class MixerSurface {
+public class MixerSurface implements LXParameterListener {
 
   public interface Listener {
 
@@ -62,13 +62,22 @@ public class MixerSurface {
     new DiscreteParameter("Channel Num", 1, 2)
     .setDescription("Channel number that the mixer surface begins at");
 
+  public final DiscreteParameter gridClipOffset =
+    new DiscreteParameter("Grid Clip Offset", 0, 1)
+    .setDescription("Row offset for grid clip triggering");
+
+  public final DiscreteParameter gridPatternOffset =
+    new DiscreteParameter("Grid Pattern Offset", 0, 1)
+    .setDescription("Row offset for grid pattern triggering");
+
   private final LXAbstractChannel[] channels;
 
   private boolean hasGrid = false;
 
   private LXClipEngine.GridMode gridMode = LXClipEngine.GridMode.PATTERNS;
 
-  private final LXParameterListener onChannelIndexChanged;
+  private final LXParameterListener onChannelIndexChanged = this::onChannelIndexChanged;
+  private final LXParameterListener onGridOffsetChanged = this::onGridOffsetChanged;
 
   public MixerSurface(LX lx, Listener listener, int bankWidth) {
     this(lx, listener, bankWidth, 0);
@@ -80,8 +89,17 @@ public class MixerSurface {
     this.bankWidth = bankWidth;
     this.bankHeight = bankHeight;
     this.channels = new LXAbstractChannel[bankWidth];
-    this.onChannelIndexChanged = this::onChannelIndexChanged;
     setChannelIndexRange();
+    lx.engine.clips.numScenes.addListener(this, true);
+    lx.engine.clips.numPatterns.addListener(this, true);
+  }
+
+  public void onParameterChanged(LXParameter p) {
+    if (p == this.lx.engine.clips.numScenes) {
+      this.gridClipOffset.setRange(this.lx.engine.clips.numScenes.getValuei());
+    } else if (p == this.lx.engine.clips.numPatterns) {
+      this.gridPatternOffset.setRange(this.lx.engine.clips.numPatterns.getValuei());
+    }
   }
 
   public MixerSurface setGridMode(LXClipEngine.GridMode gridMode) {
@@ -109,6 +127,16 @@ public class MixerSurface {
 
   public int getChannelIndex() {
     return this.channelNumber.getValuei() - 1;
+  }
+
+  public int getGridOffset() {
+    switch (this.gridMode) {
+    case CLIPS:
+      return this.gridClipOffset.getValuei();
+    case PATTERNS:
+      return this.gridPatternOffset.getValuei();
+    }
+    return 0;
   }
 
   public int getBankWidth() {
@@ -139,6 +167,12 @@ public class MixerSurface {
     if (this.isRegistered) {
       lx.engine.clips.controlSurfaceSemaphore.bang();
       refreshChannels();
+    }
+  }
+
+  private void onGridOffsetChanged(LXParameter p) {
+    if (this.isRegistered) {
+      lx.engine.clips.controlSurfaceSemaphore.bang();
     }
   }
 
@@ -205,6 +239,8 @@ public class MixerSurface {
 
     setChannelIndexRange();
     this.channelNumber.addListener(this.onChannelIndexChanged);
+    this.gridClipOffset.addListener(this.onGridOffsetChanged);
+    this.gridPatternOffset.addListener(this.onGridOffsetChanged);
     this.lx.engine.clips.addControlSurface(this);
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
     refreshChannels();
@@ -218,6 +254,8 @@ public class MixerSurface {
     }
 
     this.channelNumber.removeListener(this.onChannelIndexChanged);
+    this.gridClipOffset.removeListener(this.onGridOffsetChanged);
+    this.gridPatternOffset.removeListener(this.onGridOffsetChanged);
     this.lx.engine.mixer.removeListener(this.mixerEngineListener);
     this.lx.engine.clips.removeControlSurface(this);
 
@@ -256,5 +294,7 @@ public class MixerSurface {
       unregister();
       this.isRegistered = false;
     }
+    this.lx.engine.clips.numScenes.removeListener(this);
+    this.lx.engine.clips.numPatterns.removeListener(this);
   }
 }

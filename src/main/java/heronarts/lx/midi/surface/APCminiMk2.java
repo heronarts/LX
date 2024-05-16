@@ -670,6 +670,8 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("faderMode", this.faderMode);
     addSetting("channelNumber", this.mixerSurface.channelNumber);
+    addSetting("gridClipOffset", this.mixerSurface.gridClipOffset);
+    addSetting("gridPatternOffset", this.mixerSurface.gridPatternOffset);
   }
 
   @Override
@@ -690,8 +692,13 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   }
 
   private void setGridMode(GridMode gridMode) {
-    this.gridMode = gridMode;
-    this.mixerSurface.setGridMode(gridMode.engineGridMode);
+    if (this.gridMode != gridMode) {
+      this.gridMode = gridMode;
+      this.mixerSurface.setGridMode(gridMode.engineGridMode);
+      if (gridMode.engineGridMode != null) {
+        lx.engine.clips.gridMode.setValue(gridMode.engineGridMode);
+      }
+    }
   }
 
   @Override
