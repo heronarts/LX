@@ -182,8 +182,6 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   public void onParameterChanged(LXParameter p) {
     if (this.numScenes == p) {
       this.gridViewOffset.setRange(this.numScenes.getValuei() - MIN_SCENES + 1);
-    } else if (this.numPatterns == p) {
-      this.gridPatternOffset.setRange(LXUtils.max(1, this.numPatterns.getValuei() - MIN_SCENES + 1));
     }
   }
 
@@ -223,6 +221,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       }
     }
     this.numPatterns.setValue(LXUtils.max(MIN_SCENES, max));
+    this.gridPatternOffset.setRange(LXUtils.max(1, max));
   }
 
   public LXComponent addControlSurface(MixerSurface surface) {
