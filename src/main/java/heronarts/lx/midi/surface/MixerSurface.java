@@ -24,6 +24,7 @@ import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.utils.LXUtils;
 
@@ -67,6 +68,8 @@ public class MixerSurface {
 
   private LXClipEngine.GridMode gridMode = LXClipEngine.GridMode.PATTERNS;
 
+  private final LXParameterListener onChannelIndexChanged;
+
   public MixerSurface(LX lx, Listener listener, int bankWidth) {
     this(lx, listener, bankWidth, 0);
   }
@@ -77,6 +80,7 @@ public class MixerSurface {
     this.bankWidth = bankWidth;
     this.bankHeight = bankHeight;
     this.channels = new LXAbstractChannel[bankWidth];
+    this.onChannelIndexChanged = this::onChannelIndexChanged;
     setChannelIndexRange();
   }
 
@@ -131,11 +135,12 @@ public class MixerSurface {
     this.channelNumber.decrement(this.bankWidth);
   }
 
-  private final LXParameterListener onChannelIndexChanged = p -> {
+  private void onChannelIndexChanged(LXParameter p) {
     if (this.isRegistered) {
+      lx.engine.clips.controlSurfaceSemaphore.bang();
       refreshChannels();
     }
-  };
+  }
 
   /**
    * Retrieve channel for a given surface index, relative to current index.
