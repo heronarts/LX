@@ -65,9 +65,9 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     .setUnits(LXParameter.Units.PERCENT)
     .setMappable(false);
 
-  public final BooleanParameter showHelpBar =
-    new BooleanParameter("Help Bar", true)
-    .setDescription("Whether to show a bottom bar on the UI with helpful tips");
+  public final BooleanParameter showHelpMessages =
+    new BooleanParameter("Help Messages", true)
+    .setDescription("Whether to show contextual help messages in the status bar");
 
   public final BooleanParameter schedulerEnabled =
     new BooleanParameter("Project Scheduler Enabed", false)
@@ -100,7 +100,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.sendCueToOutput.addListener(this);
     this.uiZoom.addListener(this);
     this.uiTheme.addListener(this);
-    this.showHelpBar.addListener(this);
+    this.showHelpMessages.addListener(this);
     this.schedulerEnabled.addListener(this);
     this.showCpuLoad.addListener(this);
 
@@ -189,7 +189,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_FOCUS_CHANNEL_ON_CUE = "focusChannelOnCue";
   private static final String KEY_FOCUS_ACTIVE_PATTERN = "focusActivePattern";
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
-  private static final String KEY_SHOW_HELP_BAR = "showHelpBar";
+  private static final String KEY_SHOW_HELP_MESSAGES = "showHelpMessages";
   private static final String KEY_SCHEDULER_ENABLED = "schedulerEnabled";
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
   private static final String KEY_REGISTRY = "registry";
@@ -214,7 +214,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_FOCUS_CHANNEL_ON_CUE, this.focusChannelOnCue.isOn());
     object.addProperty(KEY_FOCUS_ACTIVE_PATTERN, this.focusActivePattern.isOn());
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
-    object.addProperty(KEY_SHOW_HELP_BAR, this.showHelpBar.isOn());
+    object.addProperty(KEY_SHOW_HELP_MESSAGES, this.showHelpMessages.isOn());
     object.addProperty(KEY_SCHEDULER_ENABLED, this.schedulerEnabled.isOn());
     object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
 
@@ -227,7 +227,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.focusChannelOnCue, object, KEY_FOCUS_CHANNEL_ON_CUE);
     LXSerializable.Utils.loadBoolean(this.focusActivePattern, object, KEY_FOCUS_ACTIVE_PATTERN);
     LXSerializable.Utils.loadBoolean(this.sendCueToOutput, object, KEY_SEND_CUE_TO_OUTPUT);
-    LXSerializable.Utils.loadBoolean(this.showHelpBar, object, KEY_SHOW_HELP_BAR);
+    LXSerializable.Utils.loadBoolean(this.showHelpMessages, object, KEY_SHOW_HELP_MESSAGES);
     LXSerializable.Utils.loadBoolean(this.schedulerEnabled, object, KEY_SCHEDULER_ENABLED);
     LXSerializable.Utils.loadBoolean(this.showCpuLoad, object, KEY_SHOW_CPU_LOAD);
     LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
