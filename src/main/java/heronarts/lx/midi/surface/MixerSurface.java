@@ -20,6 +20,7 @@
 package heronarts.lx.midi.surface;
 
 import heronarts.lx.LX;
+import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -27,8 +28,8 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.utils.LXUtils;
 
 /**
- * Utility class to access a fixed number of mixer channels.
- * Adds channel banking and an option to hide channels.
+ * Utility class to access a fixed number of mixer channels, potentially also
+ * with clip/pattern grid control.
  */
 public class MixerSurface {
 
@@ -52,7 +53,9 @@ public class MixerSurface {
   /**
    * How many mixer channels this surface can control at once
    */
-  public final int bankSize;
+  public final int bankWidth;
+
+  private int bankHeight = 0;
 
   public final DiscreteParameter channelNumber =
     new DiscreteParameter("Channel Num", 1, 2)
@@ -60,20 +63,56 @@ public class MixerSurface {
 
   private final LXAbstractChannel[] channels;
 
-  public MixerSurface(LX lx, Listener listener, int bankSize) {
+  private boolean hasGrid = false;
+
+  private LXClipEngine.GridMode gridMode = LXClipEngine.GridMode.PATTERNS;
+
+  public MixerSurface(LX lx, Listener listener, int bankWidth) {
+    this(lx, listener, bankWidth, 0);
+  }
+
+  public MixerSurface(LX lx, Listener listener, int bankWidth, int bankHeight) {
     this.lx = lx;
     this.listener = listener;
-    this.bankSize = bankSize;
-    this.channels = new LXAbstractChannel[bankSize];
+    this.bankWidth = bankWidth;
+    this.bankHeight = bankHeight;
+    this.channels = new LXAbstractChannel[bankWidth];
     setChannelIndexRange();
+  }
+
+  public MixerSurface setGridMode(LXClipEngine.GridMode gridMode) {
+    if (this.gridMode != gridMode) {
+      this.hasGrid = (gridMode != null);
+      this.gridMode = gridMode;
+      if (this.isRegistered) {
+        this.lx.engine.clips.controlSurfaceSemaphore.bang();
+      }
+    }
+    return this;
+  }
+
+  public boolean hasGrid() {
+    return this.hasGrid;
+  }
+
+  public LXClipEngine.GridMode getGridMode() {
+    return this.gridMode;
   }
 
   private void setChannelIndexRange() {
     this.channelNumber.setRange(1, LXUtils.max(2, 1 + this.lx.engine.mixer.channels.size()));
   }
 
-  private int getChannelIndex() {
+  public int getChannelIndex() {
     return this.channelNumber.getValuei() - 1;
+  }
+
+  public int getBankWidth() {
+    return this.bankWidth;
+  }
+
+  public int getBankHeight() {
+    return this.bankHeight;
   }
 
   public void incrementChannel() {
@@ -85,11 +124,11 @@ public class MixerSurface {
   }
 
   public void incrementBank() {
-    this.channelNumber.increment(this.bankSize);
+    this.channelNumber.increment(this.bankWidth);
   }
 
   public void decrementBank() {
-    this.channelNumber.decrement(this.bankSize);
+    this.channelNumber.decrement(this.bankWidth);
   }
 
   private final LXParameterListener onChannelIndexChanged = p -> {
@@ -161,6 +200,7 @@ public class MixerSurface {
 
     setChannelIndexRange();
     this.channelNumber.addListener(this.onChannelIndexChanged);
+    this.lx.engine.clips.addControlSurface(this);
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
     refreshChannels();
 
@@ -174,6 +214,7 @@ public class MixerSurface {
 
     this.channelNumber.removeListener(this.onChannelIndexChanged);
     this.lx.engine.mixer.removeListener(this.mixerEngineListener);
+    this.lx.engine.clips.removeControlSurface(this);
 
     clearChannels();
     this.isRegistered = false;
@@ -186,7 +227,7 @@ public class MixerSurface {
   }
 
   private void setChannel(int index, LXAbstractChannel channel) {
-    if (index < 0 || index >= this.bankSize) {
+    if (index < 0 || index >= this.bankWidth) {
       throw new IllegalArgumentException("setChannel() index must be in bounds: " + index);
     }
     if (this.channels[index] != channel) {
@@ -199,7 +240,7 @@ public class MixerSurface {
   private void refreshChannels() {
     final int indexOffset = getChannelIndex();
     final int numChannels = lx.engine.mixer.channels.size();
-    for (int i = 0; i < this.bankSize; i++) {
+    for (int i = 0; i < this.bankWidth; i++) {
       int targetIndex = indexOffset + i;
       setChannel(i, (targetIndex < numChannels) ? lx.engine.mixer.channels.get(targetIndex) : null);
     }

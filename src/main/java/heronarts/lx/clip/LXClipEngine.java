@@ -18,11 +18,15 @@
 
 package heronarts.lx.clip;
 
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.midi.surface.MixerSurface;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
@@ -38,8 +42,8 @@ import heronarts.lx.utils.LXUtils;
 public class LXClipEngine extends LXComponent implements LXOscComponent {
 
   public enum GridMode {
-    CLIPS("Clips"),
-    PATTERNS("Patterns");
+    PATTERNS("Patterns"),
+    CLIPS("Clips");
 
     public final String label;
 
@@ -93,8 +97,8 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     .setDescription("Offset of the clip grid view");
 
   public final EnumParameter<GridMode> gridMode =
-    new EnumParameter<GridMode>("Grid Mode", GridMode.CLIPS)
-    .setDescription("Whether the grid activates clips or patterns");
+    new EnumParameter<GridMode>("Grid Mode", GridMode.PATTERNS)
+    .setDescription("Whether the grid activates patterns or clips");
 
   public final DiscreteParameter gridPatternOffset =
     new DiscreteParameter("Grid Pattern Offset", 0, 1)
@@ -132,6 +136,19 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Snapshot Transitions", false)
     .setDescription("When enabled, transitions between clip snapshots use interpolation");
 
+  /**
+   * A semaphore used to keep count of how many remote control surfaces may be
+   * controlling this component. This may be used by UI implementations to indicate
+   * to the user that this component is under remote control.
+   */
+  public final MutableParameter controlSurfaceSemaphore = (MutableParameter)
+    new MutableParameter("Control-Surfaces", 0)
+    .setDescription("How many control surfaces are controlling this component");
+
+  // Must use a thread-safe set here because it's also accessed from the UI thread!
+  private final CopyOnWriteArraySet<MixerSurface> controlSurfaces =
+    new CopyOnWriteArraySet<MixerSurface>();
+
   public LXClipEngine(LX lx) {
     super(lx);
     addParameter("focusedClip", this.focusedClip);
@@ -161,6 +178,41 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     }
   }
 
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    if (this.numScenes == p) {
+      this.gridViewOffset.setRange(this.numScenes.getValuei() - MIN_SCENES + 1);
+    }
+  }
+
+  public DiscreteParameter getGridOffsetParameter() {
+    switch (this.gridMode.getEnum()) {
+    case CLIPS:
+      return this.gridViewOffset;
+    default:
+    case PATTERNS:
+      return this.gridPatternOffset;
+    }
+  }
+
+  public DiscreteParameter getGridSizeParameter() {
+    switch (this.gridMode.getEnum()) {
+    case CLIPS:
+      return this.numScenes;
+    default:
+    case PATTERNS:
+      return this.numPatterns;
+    }
+  }
+
+  public int getGridOffset() {
+    return getGridOffsetParameter().getValuei();
+  }
+
+  public int getGridSize() {
+    return getGridSizeParameter().getValuei();
+  }
+
   public void updatePatternGridSize() {
     int max = 0;
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
@@ -172,11 +224,26 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     this.gridPatternOffset.setRange(LXUtils.max(1, max - MIN_SCENES + 1));
   }
 
-  @Override
-  public void onParameterChanged(LXParameter p) {
-    if (this.numScenes == p) {
-      this.gridViewOffset.setRange(this.numScenes.getValuei() - MIN_SCENES + 1);
+  public LXComponent addControlSurface(MixerSurface surface) {
+    if (this.controlSurfaces.contains(surface)) {
+      throw new IllegalStateException("Cannot add same control surface to device twice: " + surface);
     }
+    this.controlSurfaces.add(surface);
+    this.controlSurfaceSemaphore.increment();
+    return this;
+  }
+
+  public LXComponent removeControlSurface(MixerSurface surface) {
+    if (!this.controlSurfaces.contains(surface)) {
+      throw new IllegalStateException("Cannot remove control surface that is not added: " + surface);
+    }
+    this.controlSurfaces.remove(surface);
+    this.controlSurfaceSemaphore.decrement();
+    return this;
+  }
+
+  public Set<MixerSurface> getControlSurfaces() {
+    return this.controlSurfaces;
   }
 
   public LXClip getFocusedClip() {

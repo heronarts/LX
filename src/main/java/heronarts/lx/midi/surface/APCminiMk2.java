@@ -25,6 +25,7 @@ import java.util.Map;
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
@@ -100,7 +101,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   public static final int PARAMETER_ROW_STRIDE = -4;
   public static final int PARAMETER_NUM = PARAMETER_COLUMNS * PARAMETER_ROWS;
   public static final int PARAMETER_START = (CLIP_LAUNCH_ROWS - 1) * CLIP_LAUNCH_COLUMNS + CLIP_LAUNCH;
-
 
   // Notes in combination with Shift
   public static final int SHIFT = 122;
@@ -196,9 +196,16 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
   private ChannelButtonMode channelButtonMode = ChannelButtonMode.FOCUS;
 
   public enum GridMode {
-    PATTERNS,
-    PARAMETERS,
-    CLIPS
+    PATTERNS(LXClipEngine.GridMode.PATTERNS),
+    PARAMETERS(null),
+    CLIPS(LXClipEngine.GridMode.CLIPS);
+
+    public final LXClipEngine.GridMode engineGridMode;
+
+    private GridMode(LXClipEngine.GridMode engineGridMode) {
+      this.engineGridMode = engineGridMode;
+    }
+
   };
 
   private GridMode gridMode = GridMode.PATTERNS;
@@ -656,7 +663,9 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     }
     updateFaderMode();
 
-    this.mixerSurface = new MixerSurface(lx, this.mixerSurfaceListener, NUM_CHANNELS);
+    this.mixerSurface =
+      new MixerSurface(lx, this.mixerSurfaceListener, NUM_CHANNELS, CLIP_LAUNCH_ROWS)
+      .setGridMode(this.gridMode.engineGridMode);
 
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("faderMode", this.faderMode);
@@ -678,6 +687,11 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
   private boolean isGridModeParameters() {
     return this.gridMode == GridMode.PARAMETERS;
+  }
+
+  private void setGridMode(GridMode gridMode) {
+    this.gridMode = gridMode;
+    this.mixerSurface.setGridMode(gridMode.engineGridMode);
   }
 
   @Override
@@ -702,7 +716,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       register();
     } else {
       this.deviceListener.register(null);
-      for (int i = 0; i < this.mixerSurface.bankSize; ++i) {
+      for (int i = 0; i < this.mixerSurface.bankWidth; ++i) {
         LXAbstractChannel channel = this.mixerSurface.getChannel(i);
         if (channel instanceof LXChannel) {
           ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
@@ -1061,11 +1075,11 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       if (on) {
         switch (pitch) {
           case TOGGLE_CLIPS:
-            this.gridMode = isGridModeClips() ? GridMode.PATTERNS : GridMode.CLIPS;
+            setGridMode(isGridModeClips() ? GridMode.PATTERNS : GridMode.CLIPS);
             sendGrid();
             return;
           case TOGGLE_PARAMETERS:
-            this.gridMode = isGridModeParameters() ? GridMode.PATTERNS : GridMode.PARAMETERS;
+            setGridMode(isGridModeParameters() ? GridMode.PATTERNS : GridMode.PARAMETERS);
             sendGrid();
             return;
         }
