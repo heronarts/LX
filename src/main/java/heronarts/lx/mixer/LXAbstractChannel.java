@@ -222,6 +222,14 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     return this;
   }
 
+  public boolean isPlaylist() {
+    return false;
+  }
+
+  public boolean isComposite() {
+    return false;
+  }
+
   void updateChannelBlendOptions() {
     for (LXBlend blend : this.blendMode.getObjects()) {
       if (blend != null) {

@@ -253,6 +253,16 @@ public class LXChannel extends LXAbstractChannel {
     addParameter("triggerPatternCycle", this.triggerPatternCycle);
   }
 
+  @Override
+  public boolean isPlaylist() {
+    return this.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST;
+  }
+
+  @Override
+  public boolean isComposite() {
+    return this.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND;
+  }
+
   void updateTransitionBlendOptions() {
     for (LXBlend blend : this.transitionBlendMode.getObjects()) {
       if (blend != null) {
