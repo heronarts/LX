@@ -45,6 +45,8 @@ public class MixerSurface implements LXParameterListener {
      */
     public void onChannelChanged(int index, LXAbstractChannel channel, LXAbstractChannel previous);
 
+    public void onGridOffsetChanged();
+
   }
 
   private final LX lx;
@@ -129,6 +131,28 @@ public class MixerSurface implements LXParameterListener {
     return this.channelNumber.getValuei() - 1;
   }
 
+  public void incrementGridOffset() {
+    switch (this.gridMode) {
+    case CLIPS:
+      this.gridClipOffset.increment();
+      break;
+    case PATTERNS:
+      this.gridPatternOffset.increment();
+      break;
+    }
+  }
+
+  public void decrementGridOffset() {
+    switch (this.gridMode) {
+    case CLIPS:
+      this.gridClipOffset.decrement();
+      break;
+    case PATTERNS:
+      this.gridPatternOffset.decrement();
+      break;
+    }
+  }
+
   public int getGridOffset() {
     switch (this.gridMode) {
     case CLIPS:
@@ -137,6 +161,14 @@ public class MixerSurface implements LXParameterListener {
       return this.gridPatternOffset.getValuei();
     }
     return 0;
+  }
+
+  public int getGridClipOffset() {
+    return this.gridClipOffset.getValuei();
+  }
+
+  public int getGridPatternOffset() {
+    return this.gridPatternOffset.getValuei();
   }
 
   public int getBankWidth() {
@@ -172,6 +204,7 @@ public class MixerSurface implements LXParameterListener {
 
   private void onGridOffsetChanged(LXParameter p) {
     if (this.isRegistered) {
+      this.listener.onGridOffsetChanged();
       lx.engine.clips.controlSurfaceSemaphore.bang();
     }
   }
