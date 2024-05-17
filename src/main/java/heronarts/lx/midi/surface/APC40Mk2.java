@@ -1982,6 +1982,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     if (this.enabled.isOn()) {
       setApcMode(GENERIC_MODE);
     }
+    this.masterFader.dispose();
+    this.crossfader.dispose();
+    for (LXMidiParameterControl fader : this.channelFaders) {
+      fader.dispose();
+    }
     this.deviceListener.dispose();
     super.dispose();
   }
