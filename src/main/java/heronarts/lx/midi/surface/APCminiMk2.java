@@ -200,8 +200,8 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
   public enum GridMode {
     PATTERNS(LXClipEngine.GridMode.PATTERNS),
-    PARAMETERS(null),
-    CLIPS(LXClipEngine.GridMode.CLIPS);
+    CLIPS(LXClipEngine.GridMode.CLIPS),
+    PARAMETERS(null);
 
     public final LXClipEngine.GridMode engineGridMode;
 
@@ -463,7 +463,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     }
 
     public void onParameterChanged(LXParameter p) {
-      int index = mixerSurface.getIndex(this.channel);
+      final int index = mixerSurface.getIndex(this.channel);
 
       if (p == this.channel.cueActive) {
         if (channelButtonMode == ChannelButtonMode.CUE) {
