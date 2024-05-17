@@ -682,9 +682,9 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("faderMode", this.faderMode);
-    addSetting("channelNumber", this.mixerSurface.channelNumber);
-    addSetting("gridClipOffset", this.mixerSurface.gridClipOffset);
-    addSetting("gridPatternOffset", this.mixerSurface.gridPatternOffset);
+    addState("channelNumber", this.mixerSurface.channelNumber);
+    addState("gridClipOffset", this.mixerSurface.gridClipOffset);
+    addState("gridPatternOffset", this.mixerSurface.gridPatternOffset);
   }
 
   @Override
