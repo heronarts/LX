@@ -19,6 +19,7 @@
 
 package heronarts.lx.midi.surface;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -218,65 +219,28 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
   private final DeviceListener deviceListener = new DeviceListener();
 
-  private class DeviceListener implements LXParameterListener {
+  private class DeviceListener implements FocusedDevice.Listener, LXParameterListener {
 
+    private final FocusedDevice focusedDevice;
     private LXDeviceComponent device = null;
-    private LXEffect effect = null;
-    private LXPattern pattern = null;
-    private LXBus channel = null;
 
     private final LXListenableNormalizedParameter[] knobs =
       new LXListenableNormalizedParameter[PARAMETER_NUM];
 
-    DeviceListener() {
-      for (int i = 0; i < this.knobs.length; ++i) {
-        this.knobs[i] = null;
-      }
+    private DeviceListener() {
+      Arrays.fill(this.knobs, null);
+      this.focusedDevice = new FocusedDevice(lx, APCminiMk2.this, this);
     }
 
-    void registerChannel(LXBus channel) {
-      unregisterChannel();
-      this.channel = channel;
-      if (channel instanceof LXChannel) {
-        ((LXChannel) channel).focusedPattern.addListener(this);
-        register(((LXChannel) channel).getFocusedPattern());
-      } else if (channel.effects.size() > 0) {
-        register(channel.getEffect(0));
-      } else {
-        register(null);
-      }
+    @Override
+    public void onDeviceFocused(LXDeviceComponent device) {
+      registerDevice(device);
     }
 
-    void registerPrevious() {
-      if (this.effect != null) {
-        int effectIndex = this.effect.getIndex();
-        if (effectIndex > 0) {
-          register(this.effect.getBus().getEffect(effectIndex - 1));
-        } else if (this.channel instanceof LXChannel) {
-          register(((LXChannel) this.channel).getFocusedPattern());
-        }
-      }
-    }
-
-    void registerNext() {
-      if (this.effect != null) {
-        int effectIndex = this.effect.getIndex();
-        if (effectIndex < this.effect.getBus().effects.size() - 1) {
-          register(this.effect.getBus().getEffect(effectIndex + 1));
-        }
-      } else if (this.pattern != null) {
-        if (channel.effects.size() > 0) {
-          register(channel.getEffect(0));
-        }
-      }
-    }
-
-    void register(LXDeviceComponent device) {
+    private void registerDevice(LXDeviceComponent device) {
       if (this.device != device) {
-        unregister(false);
+        unregisterDevice(false);
         this.device = device;
-        this.pattern = (this.device instanceof LXPattern) ? (LXPattern) this.device : null;
-        this.effect = (this.device instanceof LXEffect) ? (LXEffect) this.device : null;
 
         int i = 0;
         if (this.device != null) {
@@ -330,13 +294,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
     @Override
     public void onParameterChanged(LXParameter parameter) {
-      if ((this.channel != null) &&
-          (this.channel instanceof LXChannel) &&
-          (parameter == ((LXChannel)this.channel).focusedPattern)) {
-        if ((this.device == null) || (this.device instanceof LXPattern)) {
-          register(((LXChannel) this.channel).getFocusedPattern());
-        }
-      } else if (isGridModeParameters()) {
+      if (isGridModeParameters()) {
         for (int i = 0; i < this.knobs.length; ++i) {
           if (parameter == this.knobs[i]) {
             int patternButton = getParameterButton(i);
@@ -351,7 +309,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       }
     }
 
-    void resend() {
+    private void resend() {
       if (isGridModeParameters()) {
         for (int i = 0; i < this.knobs.length; ++i) {
           LXListenableNormalizedParameter parameter = this.knobs[i];
@@ -374,13 +332,13 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       }
     }
 
-    int getParameterButton(int index) {
+    private int getParameterButton(int index) {
       int row = index / PARAMETER_COLUMNS;
       int column = index % PARAMETER_COLUMNS;
       return PARAMETER_START + (row * CLIP_LAUNCH_COLUMNS * PARAMETER_ROW_STRIDE) + (column * PARAMETER_COLUMN_STRIDE);
     }
 
-    void onParameterButton(int columnIndex, int rowIndex) {
+    private void onParameterButton(int columnIndex, int rowIndex) {
       int paramIndex = 0;
       int button = rowIndex;
       while (button > 3) {
@@ -417,7 +375,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       }
     }
 
-    private void unregister(boolean clearParams) {
+    private void unregisterDevice(boolean clearParams) {
       if (this.device != null) {
         for (int i = 0; i < this.knobs.length; ++i) {
           if (this.knobs[i] != null) {
@@ -434,23 +392,11 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
         }
         this.device.controlSurfaceSemaphore.decrement();
       }
-      this.pattern = null;
-      this.effect = null;
       this.device = null;
     }
 
-    private void unregisterChannel() {
-      if (this.channel != null) {
-        if (this.channel instanceof LXChannel) {
-          ((LXChannel) this.channel).focusedPattern.removeListener(this);
-        }
-      }
-      this.channel = null;
-    }
-
     private void dispose() {
-      unregister(true);
-      unregisterChannel();
+      unregisterDevice(true);
     }
 
   }
@@ -516,30 +462,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       }
     }
 
-    public void dispose() {
-      if (this.channel instanceof LXChannel) {
-        ((LXChannel) this.channel).removeListener(this);
-      } else {
-        this.channel.removeListener(this);
-      }
-      this.channel.removeClipListener(this);
-      this.channel.cueActive.removeListener(this);
-      this.channel.enabled.removeListener(this);
-      this.channel.crossfadeGroup.removeListener(this);
-      this.channel.arm.removeListener(this);
-      if (this.channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) this.channel;
-        c.focusedPattern.removeListener(this);
-        c.controlSurfaceFocusLength.setValue(0);
-        c.controlSurfaceFocusIndex.setValue(0);
-      }
-      for (LXClip clip : this.channel.clips) {
-        if (clip != null) {
-          clip.running.removeListener(this);
-        }
-      }
-    }
-
     public void onParameterChanged(LXParameter p) {
       int index = mixerSurface.getIndex(this.channel);
 
@@ -572,6 +494,30 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
             c.controlSurfaceFocusIndex.setValue(focusedPatternIndex - CLIP_LAUNCH_ROWS + 1);
           }
           sendChannelPatterns(index, c);
+        }
+      }
+    }
+
+    public void dispose() {
+      if (this.channel instanceof LXChannel) {
+        ((LXChannel) this.channel).removeListener(this);
+      } else {
+        this.channel.removeListener(this);
+      }
+      this.channel.removeClipListener(this);
+      this.channel.cueActive.removeListener(this);
+      this.channel.enabled.removeListener(this);
+      this.channel.crossfadeGroup.removeListener(this);
+      this.channel.arm.removeListener(this);
+      if (this.channel instanceof LXChannel) {
+        LXChannel c = (LXChannel) this.channel;
+        c.focusedPattern.removeListener(this);
+        c.controlSurfaceFocusLength.setValue(0);
+        c.controlSurfaceFocusIndex.setValue(0);
+      }
+      for (LXClip clip : this.channel.clips) {
+        if (clip != null) {
+          clip.running.removeListener(this);
         }
       }
     }
@@ -737,7 +683,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       initialize(false);
       register();
     } else {
-      this.deviceListener.register(null);
       for (int i = 0; i < this.mixerSurface.bankWidth; ++i) {
         LXAbstractChannel channel = this.mixerSurface.getChannel(i);
         if (channel instanceof LXChannel) {
@@ -1007,26 +952,26 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     sendNoteOn(MIDI_CHANNEL_SINGLE, CHANNEL_BUTTON + index, color);
   }
 
-  private final LXParameterListener focusedChannelListener = (p) -> {
+  private final LXParameterListener focusedChannelListener = p -> {
     sendChannelFocus();
-    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
   };
 
   private boolean isRegistered = false;
 
   private void register() {
+
     this.isRegistered = true;
 
     this.mixerSurface.register();
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
-
-    this.deviceListener.registerChannel(this.lx.engine.mixer.getFocusedChannel());
+    this.deviceListener.focusedDevice.register();
   }
 
   private void unregister() {
     this.isRegistered = false;
 
     this.mixerSurface.unregister();
+    this.deviceListener.focusedDevice.unregister();
     this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
 
     clearGrid();
@@ -1210,7 +1155,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
         switch (note.getPitch()) {
         case SELECT_LEFT:
           if (isGridModeParameters()) {
-            this.deviceListener.registerPrevious();
+            this.deviceListener.focusedDevice.previousDevice();
           } else {
             this.mixerSurface.channelNumber.decrement();
           }
@@ -1218,7 +1163,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
         case SELECT_RIGHT:
           if (isGridModeParameters()) {
-            this.deviceListener.registerNext();
+            this.deviceListener.focusedDevice.nextDevice();
           } else {
             this.mixerSurface.channelNumber.increment();
           }
