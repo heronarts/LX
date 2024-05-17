@@ -837,6 +837,10 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
             if (channel.patterns.get(baseIndex + y).enabled.isOn()) {
               behavior = LED_PATTERN_ENABLED_BEHAVIOR;
               color = LED_PATTERN_ENABLED_COLOR;
+            } else if (y == focusedIndex) {
+              // This pattern is not enabled, but it is focused
+              behavior = LED_PATTERN_FOCUSED_BEHAVIOR;
+              color = LED_PATTERN_FOCUSED_COLOR;
             } else {
               behavior = LED_PATTERN_INACTIVE_BEHAVIOR;
               color = LED_PATTERN_INACTIVE_COLOR;
