@@ -173,18 +173,28 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     protected Segment(int start, int num, int stride, int repeat, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder) {
-      this.length = num * repeat;
+      this(start, num, stride, repeat, 0, 0, reverse, byteEncoder);
+    }
+
+    protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder) {
+      this.length = num * repeat + padPre + padPost;
       this.indexBuffer = new int[this.length];
       if (reverse) {
         start = start + stride * (num-1);
         stride = -stride;
       }
       int i = 0;
+      for (int p = 0; p < padPre; ++p) {
+        this.indexBuffer[i++] = -1;
+      }
       for (int s = 0; s < num; ++s) {
         final int index = start + s * stride;
         for (int r = 0; r < repeat; ++r) {
           this.indexBuffer[i++] = index;
         }
+      }
+      for (int p = 0; p < padPost; ++p) {
+        this.indexBuffer[i++] = -1;
       }
       this.byteEncoder = byteEncoder;
       this.numChannels = this.length * byteEncoder.getNumBytes();

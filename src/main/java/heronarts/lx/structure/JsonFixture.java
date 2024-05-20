@@ -164,6 +164,8 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_COMPONENT_ID = "componentId";
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
+  private static final String KEY_PAD_PRE = "padPre";
+  private static final String KEY_PAD_POST = "padPost";
   private static final String KEY_REPEAT = "repeat";
   private static final String KEY_DUPLICATE = "duplicate";
   private static final String KEY_REVERSE = "reverse";
@@ -521,17 +523,21 @@ public class JsonFixture extends LXFixture {
     private final int num;
     private final int stride;
     private final int repeat;
+    private final int padPre;
+    private final int padPost;
     private final boolean reverse;
 
     // May or may not be specified, if null then the parent output definition is used
     private final JsonByteEncoderDefinition byteEncoder;
 
-    private JsonSegmentDefinition(int start, int num, int stride, int repeat, boolean reverse, JsonByteEncoderDefinition byteEncoder) {
+    private JsonSegmentDefinition(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, JsonByteEncoderDefinition byteEncoder) {
       this.start = start;
       this.num = num;
       this.stride = stride;
       this.repeat = repeat;
       this.reverse = reverse;
+      this.padPre = padPre;
+      this.padPost = padPost;
       this.byteEncoder = byteEncoder;
     }
   }
@@ -2193,7 +2199,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_COMPONENT_ID, KEY_STRIDE, KEY_REVERSE };
+  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_COMPONENT_ID, KEY_STRIDE, KEY_REVERSE, KEY_PAD_PRE, KEY_PAD_POST };
 
   private void loadSegments(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject outputObj, JsonByteEncoderDefinition defaultByteOrder) {
     if (outputObj.has(KEY_SEGMENTS)) {
@@ -2317,6 +2323,18 @@ public class JsonFixture extends LXFixture {
       }
     }
 
+    int padPre = 0, padPost = 0;
+    if (segmentObj.has(KEY_PAD_PRE)) {
+      padPre = loadInt(segmentObj, KEY_PAD_PRE, true, "Output " + KEY_PAD_PRE + " must be a valid integer");
+    }
+    if (segmentObj.has(KEY_PAD_POST)) {
+      padPost = loadInt(segmentObj, KEY_PAD_POST, true, "Output " + KEY_PAD_POST+ " must be a valid integer");
+    }
+    if (padPre < 0 || padPost < 0) {
+      addWarning("Output padding must be a non-negative value");
+      return;
+    }
+
     boolean reverse = loadBoolean(segmentObj, KEY_REVERSE, true, "Output " + KEY_REVERSE + " must be a valid boolean");
 
     JsonByteEncoderDefinition segmentByteOrder = null;
@@ -2337,7 +2355,7 @@ public class JsonFixture extends LXFixture {
     }
 
     // Duplicate the definition N times (typically 1)
-    final JsonSegmentDefinition segment = new JsonSegmentDefinition(start, num, stride, repeat, reverse, segmentByteOrder);
+    final JsonSegmentDefinition segment = new JsonSegmentDefinition(start, num, stride, repeat, padPre, padPost, reverse, segmentByteOrder);
     for (int i = 0; i < duplicate; ++i) {
       segments.add(segment);
     }
@@ -2411,6 +2429,8 @@ public class JsonFixture extends LXFixture {
         num,
         segment.stride,
         segment.repeat,
+        segment.padPre,
+        segment.padPost,
         segment.reverse,
         (segment.byteEncoder != null) ? segment.byteEncoder.byteEncoder : output.byteEncoder.byteEncoder
        ));
