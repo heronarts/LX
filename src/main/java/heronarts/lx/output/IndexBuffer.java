@@ -36,6 +36,13 @@ import heronarts.lx.parameter.LXParameter;
 public class IndexBuffer {
 
   /**
+   * Placeholder value that can be used in index buffers to output an empty
+   * pixel with all byte values of 0, rather than a value from the colors
+   * array.
+   */
+  public static final int EMPTY_PIXEL = -1;
+
+  /**
    * A Segment is a continous portion of an index buffer which specifies the indices
    * into the final color buffer which are to be sent, along with the byte ordering.
    */

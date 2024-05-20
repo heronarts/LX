@@ -36,6 +36,7 @@ import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
+import heronarts.lx.output.IndexBuffer;
 import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXOutput;
@@ -185,7 +186,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       }
       int i = 0;
       for (int p = 0; p < padPre; ++p) {
-        this.indexBuffer[i++] = -1;
+        this.indexBuffer[i++] = IndexBuffer.EMPTY_PIXEL;
       }
       for (int s = 0; s < num; ++s) {
         final int index = start + s * stride;
@@ -194,7 +195,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         }
       }
       for (int p = 0; p < padPost; ++p) {
-        this.indexBuffer[i++] = -1;
+        this.indexBuffer[i++] = IndexBuffer.EMPTY_PIXEL;
       }
       this.byteEncoder = byteEncoder;
       this.numChannels = this.length * byteEncoder.getNumBytes();
