@@ -225,7 +225,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     protected int[] toIndexBuffer(int start, int len) {
       int[] indices = new int[len];
       for (int i = 0; i < len; ++i) {
-        indices[i] = getPoint(this.indexBuffer[start + i]).index;
+        int localIndex = this.indexBuffer[start + i];
+        indices[i] = (localIndex == IndexBuffer.EMPTY_PIXEL) ? IndexBuffer.EMPTY_PIXEL : getPoint(localIndex).index;
       }
       return indices;
     }
