@@ -153,70 +153,75 @@ public abstract class LXBufferOutput extends LXOutput {
     final byte[] buffer = getDataBuffer();
 
     for (IndexBuffer.Segment segment : this.indexBuffer.segments) {
-      // Determine the appropriate gamma curve for segment brightness
-      final int glutIndex = (int) Math.round(255. * brightness * segment.brightness.getValue());
-      final GammaTable.Curve gamma = glut.level[glutIndex];
 
-      final ByteEncoder byteEncoder = segment.byteEncoder;
-      final int numBytes = byteEncoder.getNumBytes();
-
-      // Determine data offsets and byte size
+      // Determine data offsets
       int offset = getDataBufferOffset() + segment.startChannel;
 
-      // TODO(mcslee): determine if there's actually any performance gain at all here by
-      // putting branches outside of the for loops? If not just nuke this...
-      if (byteEncoder instanceof ByteOrder) {
-        final ByteOrder byteOrder = (ByteOrder) byteEncoder;
-        final int[] byteOffset = byteOrder.getByteOffset();
+      // Segments of static byte data are a flat copy and we're done
+      if (segment.staticBytes != null) {
+        System.arraycopy(segment.staticBytes, 0, buffer, offset, segment.staticBytes.length);
+      } else if (segment.indices != null) {
+        // Determine the appropriate gamma curve for segment brightness
+        final int glutIndex = (int) Math.round(255. * brightness * segment.brightness.getValue());
+        final GammaTable.Curve gamma = glut.level[glutIndex];
 
-        if (byteOrder.hasWhite) {
-          if (numBytes == 1) {
-            for (int i = 0; i < segment.indices.length; ++i) {
-              int index = segment.indices[i];
-              int color = (index >= 0) ? colors[index] : 0;
-              int r = ((color >> 16) & 0xff);
-              int g = ((color >> 8) & 0xff);
-              int b = (color & 0xff);
-              int w = (r + b + g) / 3;
-              buffer[offset] = gamma.white[w];
-              offset += numBytes;
+        final ByteEncoder byteEncoder = segment.byteEncoder;
+        final int numBytes = byteEncoder.getNumBytes();
+
+        // TODO(mcslee): determine if there's actually any performance gain at all here by
+        // putting branches outside of the for loops? If not just nuke this...
+        if (byteEncoder instanceof ByteOrder) {
+          final ByteOrder byteOrder = (ByteOrder) byteEncoder;
+          final int[] byteOffset = byteOrder.getByteOffset();
+
+          if (byteOrder.hasWhite) {
+            if (numBytes == 1) {
+              for (int i = 0; i < segment.indices.length; ++i) {
+                int index = segment.indices[i];
+                int color = (index >= 0) ? colors[index] : 0;
+                int r = ((color >> 16) & 0xff);
+                int g = ((color >> 8) & 0xff);
+                int b = (color & 0xff);
+                int w = (r + b + g) / 3;
+                buffer[offset] = gamma.white[w];
+                offset += numBytes;
+              }
+            } else {
+              for (int i = 0; i < segment.indices.length; ++i) {
+                int index = segment.indices[i];
+                int color = (index >= 0) ? colors[index] : 0;
+                int r = ((color >> 16) & 0xff);
+                int g = ((color >> 8) & 0xff);
+                int b = (color & 0xff);
+                int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
+                r -= w;
+                g -= w;
+                b -= w;
+                buffer[offset + byteOffset[0]] = gamma.red[r];
+                buffer[offset + byteOffset[1]] = gamma.green[g];
+                buffer[offset + byteOffset[2]] = gamma.blue[b];
+                buffer[offset + byteOffset[3]] = gamma.white[w];
+                offset += numBytes;
+              }
             }
           } else {
             for (int i = 0; i < segment.indices.length; ++i) {
               int index = segment.indices[i];
               int color = (index >= 0) ? colors[index] : 0;
-              int r = ((color >> 16) & 0xff);
-              int g = ((color >> 8) & 0xff);
-              int b = (color & 0xff);
-              int w = (r < g) ? ((r < b) ? r : b) : ((g < b) ? g : b);
-              r -= w;
-              g -= w;
-              b -= w;
-              buffer[offset + byteOffset[0]] = gamma.red[r];
-              buffer[offset + byteOffset[1]] = gamma.green[g];
-              buffer[offset + byteOffset[2]] = gamma.blue[b];
-              buffer[offset + byteOffset[3]] = gamma.white[w];
+              buffer[offset + byteOffset[0]] = gamma.red[((color >> 16) & 0xff)]; // R
+              buffer[offset + byteOffset[1]] = gamma.green[((color >> 8) & 0xff)]; // G
+              buffer[offset + byteOffset[2]] = gamma.blue[(color & 0xff)]; // B
               offset += numBytes;
             }
           }
         } else {
+          // Generic ByteEncoder implementation
           for (int i = 0; i < segment.indices.length; ++i) {
             int index = segment.indices[i];
             int color = (index >= 0) ? colors[index] : 0;
-            buffer[offset + byteOffset[0]] = gamma.red[((color >> 16) & 0xff)]; // R
-            buffer[offset + byteOffset[1]] = gamma.green[((color >> 8) & 0xff)]; // G
-            buffer[offset + byteOffset[2]] = gamma.blue[(color & 0xff)]; // B
+            byteEncoder.writeBytes(color, gamma, buffer, offset);
             offset += numBytes;
           }
-        }
-      } else {
-
-        // Generic ByteEncoder implementation
-        for (int i = 0; i < segment.indices.length; ++i) {
-          int index = segment.indices[i];
-          int color = (index >= 0) ? colors[index] : 0;
-          byteEncoder.writeBytes(color, gamma, buffer, offset);
-          offset += numBytes;
         }
       }
     }

@@ -141,8 +141,14 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Length of the index buffer (# of color index values))
     protected final int length;
 
-    // Total number of single-byte channels (# of individual color output bytes)
+    // Total number of single-byte channels (# of individual color output bytes, does not include prefix/suffix)
     protected final int numChannels;
+
+    // Static bytes to prefix the output with
+    protected final byte[] headerBytes;
+
+    // Static bytes to suffix the output with
+    protected final byte[] footerBytes;
 
     private final FunctionalParameter brightness = new FunctionalParameter() {
       @Override
@@ -178,6 +184,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder) {
+      this(start, num, stride, repeat, padPre, padPost, reverse, byteEncoder, null, null);
+    }
+
+    protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder, byte[] headerBytes, byte[] footerBytes) {
       this.length = num * repeat + padPre + padPost;
       this.indexBuffer = new int[this.length];
       if (reverse) {
@@ -199,6 +209,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       }
       this.byteEncoder = byteEncoder;
       this.numChannels = this.length * byteEncoder.getNumBytes();
+      this.headerBytes = headerBytes;
+      this.footerBytes = footerBytes;
     }
 
     /**
@@ -210,9 +222,11 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      */
     protected Segment(int[] indexBuffer, LXBufferOutput.ByteEncoder byteEncoder) {
       this.indexBuffer = indexBuffer;
-      this.byteEncoder = byteEncoder;
       this.length = indexBuffer.length;
+      this.byteEncoder = byteEncoder;
       this.numChannels = indexBuffer.length * byteEncoder.getNumBytes();
+      this.headerBytes = null;
+      this.footerBytes = null;
     }
 
     /**

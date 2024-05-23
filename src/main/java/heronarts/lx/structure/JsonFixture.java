@@ -169,6 +169,8 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_REPEAT = "repeat";
   private static final String KEY_DUPLICATE = "duplicate";
   private static final String KEY_REVERSE = "reverse";
+  private static final String KEY_HEADER_BYTES = "headerBytes";
+  private static final String KEY_FOOTER_BYTES = "footerBytes";
   private static final String KEY_SEGMENTS = "segments";
 
   // Metadata
@@ -525,12 +527,14 @@ public class JsonFixture extends LXFixture {
     private final int repeat;
     private final int padPre;
     private final int padPost;
+    private final byte[] headerBytes;
+    private final byte[] footerBytes;
     private final boolean reverse;
 
     // May or may not be specified, if null then the parent output definition is used
     private final JsonByteEncoderDefinition byteEncoder;
 
-    private JsonSegmentDefinition(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, JsonByteEncoderDefinition byteEncoder) {
+    private JsonSegmentDefinition(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, JsonByteEncoderDefinition byteEncoder, byte[] headerBytes, byte[] footerBytes) {
       this.start = start;
       this.num = num;
       this.stride = stride;
@@ -539,6 +543,8 @@ public class JsonFixture extends LXFixture {
       this.padPre = padPre;
       this.padPost = padPost;
       this.byteEncoder = byteEncoder;
+      this.headerBytes = headerBytes;
+      this.footerBytes = footerBytes;
     }
   }
 
@@ -2199,7 +2205,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_COMPONENT_ID, KEY_STRIDE, KEY_REVERSE, KEY_PAD_PRE, KEY_PAD_POST };
+  private static final String[] SEGMENT_KEYS = { KEY_NUM, KEY_START, KEY_COMPONENT_INDEX, KEY_COMPONENT_ID, KEY_STRIDE, KEY_REVERSE, KEY_PAD_PRE, KEY_PAD_POST, KEY_HEADER_BYTES, KEY_FOOTER_BYTES };
 
   private void loadSegments(LXFixture fixture, List<JsonSegmentDefinition> segments, JsonObject outputObj, JsonByteEncoderDefinition defaultByteOrder) {
     if (outputObj.has(KEY_SEGMENTS)) {
@@ -2354,11 +2360,66 @@ public class JsonFixture extends LXFixture {
       }
     }
 
+    // Static header / footer bytes
+    byte[] headerBytes = loadStaticBytes(segmentObj, KEY_HEADER_BYTES);
+    byte[] footerBytes = loadStaticBytes(segmentObj, KEY_FOOTER_BYTES);
+
     // Duplicate the definition N times (typically 1)
-    final JsonSegmentDefinition segment = new JsonSegmentDefinition(start, num, stride, repeat, padPre, padPost, reverse, segmentByteOrder);
+    final JsonSegmentDefinition segment = new JsonSegmentDefinition(start, num, stride, repeat, padPre, padPost, reverse, segmentByteOrder, headerBytes, footerBytes);
     for (int i = 0; i < duplicate; ++i) {
       segments.add(segment);
     }
+  }
+
+  private byte[] loadStaticBytes(JsonObject segmentObj, String key) {
+    if (segmentObj.has(key)) {
+      final JsonElement elem = segmentObj.get(key);
+
+      if (elem.isJsonPrimitive() && elem.getAsJsonPrimitive().isString()) {
+        // Static bytes supplied as a hex string
+        final String hex = elem.getAsJsonPrimitive().getAsString();
+        if (hex.isEmpty() || (hex.length() % 2) != 0) {
+          addWarning("Byte hex string " + key + " must have positive, even length");
+          return null;
+        }
+        final byte[] bytes = new byte[hex.length() / 2];
+        try {
+          int b = 0;
+          for (int offset = 0; offset < hex.length(); offset += 2) {
+            bytes[b++] = (byte) Integer.parseInt(hex.substring(offset, offset+2), 16);
+          }
+        } catch (NumberFormatException nfx) {
+          addWarning("Bad hex byte string " + key + ": " + hex);
+          return null;
+        }
+        return bytes;
+      } else if (elem.isJsonArray()) {
+        // Static bytes as an array of numeric values
+        final JsonArray arr = elem.getAsJsonArray();
+        if (arr.size() == 0) {
+          addWarning("Byte array for " + key + " is empty");
+          return null;
+        }
+        final byte[] bytes = new byte[arr.size()];
+        for (int i = 0; i < arr.size(); ++i) {
+          final JsonElement byteElem = arr.get(i);
+          try {
+            // GSON doesn't handle 0x prefixed hex numbers natively, they come back as strings
+            if (byteElem.getAsJsonPrimitive().isString() && byteElem.getAsString().toLowerCase().startsWith("0x")) {
+              bytes[i] = (byte) Integer.parseInt(byteElem.getAsString().substring(2), 16);
+            } else {
+              bytes[i] = (byte) byteElem.getAsJsonPrimitive().getAsInt();
+            }
+          } catch (Exception x) {
+            addWarning("Bad byte value " + key + "[" + i + "] = " + byteElem);
+          }
+        }
+        return bytes;
+      } else {
+        addWarning("Bad static byte data for " + key + ": " + elem);
+      }
+    }
+    return null;
   }
 
   private JsonByteEncoderDefinition loadByteOrder(JsonObject obj, JsonByteEncoderDefinition defaultByteOrder) {
@@ -2432,7 +2493,9 @@ public class JsonFixture extends LXFixture {
         segment.padPre,
         segment.padPost,
         segment.reverse,
-        (segment.byteEncoder != null) ? segment.byteEncoder.byteEncoder : output.byteEncoder.byteEncoder
+        (segment.byteEncoder != null) ? segment.byteEncoder.byteEncoder : output.byteEncoder.byteEncoder,
+        segment.headerBytes,
+        segment.footerBytes
        ));
     }
 
