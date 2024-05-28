@@ -432,6 +432,8 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
   };
 
+  private final FocusedChannel focusedChannel;
+
   private class ChannelListener implements LXChannel.Listener, LXBus.ClipListener, LXParameterListener {
 
     private final LXAbstractChannel channel;
@@ -451,9 +453,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       if (channel instanceof LXChannel) {
         LXChannel c = (LXChannel) channel;
         c.focusedPattern.addListener(this);
-        c.controlSurfaceFocusLength.setValue(CLIP_LAUNCH_ROWS);
-        int focusedPatternIndex = c.getFocusedPatternIndex();
-        c.controlSurfaceFocusIndex.setValue(focusedPatternIndex < CLIP_LAUNCH_ROWS ? 0 : (focusedPatternIndex - CLIP_LAUNCH_ROWS + 1));
       }
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
@@ -486,13 +485,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
         if (p == c.focusedPattern) {
-          int focusedPatternIndex = c.getFocusedPatternIndex();
-          int channelSurfaceIndex = c.controlSurfaceFocusIndex.getValuei();
-          if (focusedPatternIndex < channelSurfaceIndex) {
-            c.controlSurfaceFocusIndex.setValue(focusedPatternIndex);
-          } else if (focusedPatternIndex >= channelSurfaceIndex + CLIP_LAUNCH_ROWS) {
-            c.controlSurfaceFocusIndex.setValue(focusedPatternIndex - CLIP_LAUNCH_ROWS + 1);
-          }
           sendChannelPatterns(index, c);
         }
       }
@@ -512,8 +504,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
         c.focusedPattern.removeListener(this);
-        c.controlSurfaceFocusLength.setValue(0);
-        c.controlSurfaceFocusIndex.setValue(0);
       }
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
@@ -626,6 +616,8 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       new MixerSurface(lx, this.mixerSurfaceListener, NUM_CHANNELS, CLIP_LAUNCH_ROWS)
       .setGridMode(this.gridMode.engineGridMode);
 
+    this.focusedChannel = new FocusedChannel(lx, bus -> { sendChannelFocus(); });
+
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("faderMode", this.faderMode);
     addState("channelNumber", this.mixerSurface.channelNumber);
@@ -683,12 +675,6 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
       initialize(false);
       register();
     } else {
-      for (int i = 0; i < this.mixerSurface.bankWidth; ++i) {
-        LXAbstractChannel channel = this.mixerSurface.getChannel(i);
-        if (channel instanceof LXChannel) {
-          ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
-        }
-      }
       if (this.isRegistered) {
         unregister();
       }
@@ -952,18 +938,13 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
     sendNoteOn(MIDI_CHANNEL_SINGLE, CHANNEL_BUTTON + index, color);
   }
 
-  private final LXParameterListener focusedChannelListener = p -> {
-    sendChannelFocus();
-  };
-
   private boolean isRegistered = false;
 
   private void register() {
-
     this.isRegistered = true;
 
     this.mixerSurface.register();
-    this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
+    this.focusedChannel.register();
     this.deviceListener.focusedDevice.register();
   }
 
@@ -972,7 +953,7 @@ public class APCminiMk2 extends LXMidiSurface implements LXMidiSurface.Bidirecti
 
     this.mixerSurface.unregister();
     this.deviceListener.focusedDevice.unregister();
-    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
+    this.focusedChannel.unregister();
 
     clearGrid();
     clearChannelButtonRow();

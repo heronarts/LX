@@ -180,13 +180,24 @@ public class LXChannel extends LXAbstractChannel {
   private final List<LXPattern> mutablePatterns = new ArrayList<LXPattern>();
   public final List<LXPattern> patterns = Collections.unmodifiableList(mutablePatterns);
 
+  @Deprecated
   public final MutableParameter controlSurfaceFocusIndex = (MutableParameter)
     new MutableParameter("SurfaceFocusIndex", 0)
     .setDescription("Control surface focus index");
 
+  @Deprecated
   public final MutableParameter controlSurfaceFocusLength = (MutableParameter)
     new MutableParameter("SurfaceFocusLength", 0)
     .setDescription("Control surface focus length");
+
+  /**
+   * A semaphore used to keep count of how many remote control surfaces may be
+   * controlling this channel's patterns. This may be used by UI implementations to indicate
+   * to the user that this component is under remote control.
+   */
+  public final MutableParameter controlSurfaceSemaphore = (MutableParameter)
+    new MutableParameter("Control-Surfaces", 0)
+    .setDescription("How many control surfaces are controlling this component");
 
   public final TriggerParameter triggerPatternCycle =
     new TriggerParameter("Trigger Pattern", this::onTriggerPatternCycle)

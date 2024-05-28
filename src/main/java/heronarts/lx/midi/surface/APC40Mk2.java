@@ -297,10 +297,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private void setAux(boolean isAux) {
     this.isAux = isAux;
+    this.lx.engine.performanceMode.setValue(true);
     if (isDeviceControl()) {
       this.deviceListener.focusedDevice.setAux(isAux);
     }
-    this.lx.engine.performanceMode.setValue(true);
     sendPerformanceLights();
     sendCueLights();
     sendChannelFocus();
@@ -678,6 +678,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   };
 
+  private final FocusedChannel focusedChannel;
+  private final FocusedChannel focusedChannelAux;
+
   private class ChannelListener implements LXChannel.Listener, LXBus.ClipListener, LXParameterListener {
 
     private final LXAbstractChannel channel;
@@ -701,9 +704,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       if (channel instanceof LXChannel) {
         LXChannel c = (LXChannel) channel;
         c.focusedPattern.addListener(this);
-        c.controlSurfaceFocusLength.setValue(CLIP_LAUNCH_ROWS);
-        int focusedPatternIndex = c.getFocusedPatternIndex();
-        c.controlSurfaceFocusIndex.setValue(focusedPatternIndex < CLIP_LAUNCH_ROWS ? 0 : (focusedPatternIndex - CLIP_LAUNCH_ROWS + 1));
       }
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
@@ -729,8 +729,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
         c.focusedPattern.removeListener(this);
-        c.controlSurfaceFocusLength.setValue(0);
-        c.controlSurfaceFocusIndex.setValue(0);
       }
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
@@ -771,13 +769,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
         if (p == c.focusedPattern) {
-          int focusedPatternIndex = c.getFocusedPatternIndex();
-          int channelSurfaceIndex = c.controlSurfaceFocusIndex.getValuei();
-          if (focusedPatternIndex < channelSurfaceIndex) {
-            c.controlSurfaceFocusIndex.setValue(focusedPatternIndex);
-          } else if (focusedPatternIndex >= channelSurfaceIndex + CLIP_LAUNCH_ROWS) {
-            c.controlSurfaceFocusIndex.setValue(focusedPatternIndex - CLIP_LAUNCH_ROWS + 1);
-          }
           sendChannelPatterns(index, c);
         }
       }
@@ -873,6 +864,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       new MixerSurface(lx, this.mixerSurfaceListener, NUM_CHANNELS, CLIP_LAUNCH_ROWS)
       .setGridMode(this.gridMode.engineGridMode);
 
+    this.focusedChannel = new FocusedChannel(lx, false, bus -> { sendChannelFocus(); });
+    this.focusedChannelAux = new FocusedChannel(lx, true, bus -> { sendChannelFocus(); });
+
     this.deviceListener = new DeviceListener(lx);
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("crossfaderEnabled", this.crossfaderEnabled);
@@ -911,11 +905,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       initialize(false);
       register();
     } else {
-      for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-        if (channel instanceof LXChannel) {
-          ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
-        }
-      }
       if (this.isRegistered) {
         unregister();
       }
@@ -1329,10 +1318,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     sendChannelCues();
   }
 
-  private final LXParameterListener focusedChannelListener = (p) -> {
-    sendChannelFocus();
-  };
-
   private final LXParameterListener clipGridListener = (p) -> {
     sendChannelGrid();
   };
@@ -1347,11 +1332,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     this.mixerSurface.register();
+    this.focusedChannel.register();
+    this.focusedChannelAux.register();
 
     this.lx.engine.performanceMode.addListener(this.performanceModeListener, true);
     this.lx.engine.clips.numScenes.addListener(this.clipGridListener);
-    this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
-    this.lx.engine.mixer.focusedChannelAux.addListener(this.focusedChannelListener);
     this.lx.engine.mixer.cueA.addListener(this.cueAListener, true);
     this.lx.engine.mixer.cueB.addListener(this.cueBListener, true);
     this.lx.engine.mixer.auxA.addListener(this.auxAListener, true);
@@ -1367,11 +1352,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     this.mixerSurface.unregister();
+    this.focusedChannel.unregister();
+    this.focusedChannelAux.unregister();
 
     this.lx.engine.performanceMode.removeListener(this.performanceModeListener);
     this.lx.engine.clips.numScenes.removeListener(this.clipGridListener);
-    this.lx.engine.mixer.focusedChannel.removeListener(this.focusedChannelListener);
-    this.lx.engine.mixer.focusedChannelAux.removeListener(this.focusedChannelListener);
     this.lx.engine.mixer.cueA.removeListener(this.cueAListener);
     this.lx.engine.mixer.cueB.removeListener(this.cueBListener);
     this.lx.engine.mixer.auxA.removeListener(this.auxAListener);
