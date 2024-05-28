@@ -582,6 +582,15 @@ public class LXRegistry implements LXSerializable {
     return installPackage(file, false);
   }
 
+  public void reinstallPackageMedia(LXClassLoader.Package pack) {
+    try {
+      installPackageMedia(pack.jarFile);
+      reloadContent();
+    } catch (Throwable x) {
+      this.lx.pushError(x, "Error re-installing package media " + pack.jarFile.getName() + ": " + x.getLocalizedMessage());
+    }
+  }
+
   public boolean installPackage(File file, boolean overwrite) {
     if (!file.exists() || file.isDirectory()) {
       this.lx.pushError(null, "Package file does not exist or is a directory: " + file);
