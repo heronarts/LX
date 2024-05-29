@@ -27,6 +27,7 @@ import java.util.Map;
 import heronarts.lx.LX;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
@@ -42,6 +43,7 @@ import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
@@ -144,9 +146,20 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   public static final int LED_YELLOW = 5;
   public static final int LED_YELLOW_BLINK = 6;
 
+  private static int LED_ON(boolean condition) {
+    return condition ? LED_ON : LED_OFF;
+  }
+
   public enum GridMode {
-    PATTERN,
-    CLIP;
+    PATTERN(LXClipEngine.GridMode.PATTERNS),
+    CLIP(LXClipEngine.GridMode.CLIPS);
+
+    public final LXClipEngine.GridMode engineGridMode;
+
+    private GridMode(LXClipEngine.GridMode engineGridMode) {
+      this.engineGridMode = engineGridMode;
+    }
+
   };
 
   private GridMode gridMode = GridMode.PATTERN;
@@ -194,7 +207,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         LXPattern pattern = (LXPattern) this.device;
         isEnabled = isPatternEnabled(pattern);
       }
-      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
+      sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isEnabled));
     }
 
     private boolean isPatternEnabled(LXPattern pattern) {
@@ -235,7 +248,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         this.device.remoteControlsChanged.addListener(this);
       }
 
-      sendNoteOn(0, DEVICE_ON_OFF, isEnabled ? LED_ON : LED_OFF);
+      sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isEnabled));
       if (this.device == null) {
         clearKnobsAfter(0);
         return;
@@ -275,10 +288,9 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         unregisterDeviceKnobs();
         registerDeviceKnobs();
       } else if ((effect != null) && (parameter == effect.enabled)) {
-        sendNoteOn(0, DEVICE_ON_OFF, effect.enabled.isOn() ? LED_ON : LED_OFF);
+        sendNoteOn(0, DEVICE_ON_OFF, LED_ON(effect.enabled.isOn()));
       } else if ((pattern != null) && (parameter == pattern.enabled)) {
-        sendNoteOn(0, DEVICE_ON_OFF, isPatternEnabled(pattern) ? LED_ON : LED_OFF);
-        sendChannelPatterns(pattern.getChannel().getIndex(), pattern.getChannel());
+        sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isPatternEnabled(pattern)));
       } else {
         for (int i = 0; i < this.knobs.length; ++i) {
           if (parameter == this.knobs[i]) {
@@ -308,7 +320,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         } else {
           pattern.getChannel().goPatternIndex(pattern.getIndex());
         }
-        sendNoteOn(0, DEVICE_ON_OFF, isPatternEnabled(pattern) ? LED_ON : LED_OFF);
+        sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isPatternEnabled(pattern)));
       } else if (this.device instanceof LXEffect) {
         LXEffect effect = (LXEffect) this.device;
         effect.enabled.toggle();
@@ -364,6 +376,34 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
 
   }
 
+  protected final MixerSurface mixerSurface;
+
+  private final MixerSurface.Listener mixerSurfaceListener = new MixerSurface.Listener() {
+    @Override
+    public void onChannelChanged(int index, LXAbstractChannel channel, LXAbstractChannel previousChannel) {
+      if (previousChannel != null && !mixerSurface.contains(previousChannel)) {
+        unregisterChannel(previousChannel);
+      }
+      if (channel != null) {
+        registerChannel(channel);
+        channelFaders[index].setTarget(channel.fader);
+      } else {
+        channelFaders[index].setTarget(null);
+      }
+      sendChannel(index, channel);
+      sendChannelFocus();
+    }
+
+    @Override
+    public void onGridOffsetChanged() {
+      sendChannels();
+      sendChannelFocus();
+    }
+
+  };
+
+  private final FocusedChannel focusedChannel;
+
   private class ChannelListener implements LXChannel.Listener, LXBus.ClipListener, LXParameterListener {
 
     private final LXAbstractChannel channel;
@@ -385,9 +425,6 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       if (channel instanceof LXChannel) {
         LXChannel c = (LXChannel) channel;
         c.focusedPattern.addListener(this);
-        c.controlSurfaceFocusLength.setValue(CLIP_LAUNCH_ROWS);
-        int focusedPatternIndex = c.getFocusedPatternIndex();
-        c.controlSurfaceFocusIndex.setValue(focusedPatternIndex < CLIP_LAUNCH_ROWS ? 0 : (focusedPatternIndex - CLIP_LAUNCH_ROWS + 1));
       }
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
@@ -411,8 +448,6 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
         c.focusedPattern.removeListener(this);
-        c.controlSurfaceFocusLength.setValue(0);
-        c.controlSurfaceFocusIndex.setValue(0);
       }
       for (LXClip clip : this.channel.clips) {
         if (clip != null) {
@@ -422,28 +457,22 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     }
 
     private void onCompositeModeChanged(LXParameter p) {
-      final int index = this.channel.getIndex();
-      if (index >= CLIP_LAUNCH_COLUMNS) {
-        return;
-      }
+      final int index = mixerSurface.getIndex(this.channel);
       sendChannelPatterns(index, this.channel);
     }
 
     public void onParameterChanged(LXParameter p) {
-      int index = this.channel.getIndex();
-      if (index >= CLIP_LAUNCH_COLUMNS) {
-        return;
-      }
+      final int index = mixerSurface.getIndex(this.channel);
 
       if (p == this.channel.cueActive) {
-        sendNoteOn(index, CHANNEL_SOLO, this.channel.cueActive.isOn() ? LED_ON : LED_OFF);
+        sendNoteOn(index, CHANNEL_SOLO, LED_ON(this.channel.cueActive.isOn()));
       } else if (p == this.channel.enabled) {
-        sendNoteOn(index, CHANNEL_ACTIVE, this.channel.enabled.isOn() ? LED_ON : LED_OFF);
+        sendNoteOn(index, CHANNEL_ACTIVE, LED_ON(this.channel.enabled.isOn()));
       } else if (p == this.channel.crossfadeGroup) {
         sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, this.channel.crossfadeGroup.getValuei());
       } else if (p == this.channel.arm) {
-        sendNoteOn(index, CHANNEL_ARM, this.channel.arm.isOn() ? LED_ON : LED_OFF);
-        sendChannelClips(this.channel.getIndex(), this.channel);
+        sendNoteOn(index, CHANNEL_ARM, LED_ON(this.channel.arm.isOn()));
+        sendChannelClips(index, this.channel);
       } else if (p.getParent() instanceof LXClip) {
         // TODO(mcslee): could be more efficient...
         sendChannelClips(index, this.channel);
@@ -451,13 +480,6 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
         if (p == c.focusedPattern) {
-          int focusedPatternIndex = c.getFocusedPatternIndex();
-          int channelSurfaceIndex = c.controlSurfaceFocusIndex.getValuei();
-          if (focusedPatternIndex < channelSurfaceIndex) {
-            c.controlSurfaceFocusIndex.setValue(focusedPatternIndex);
-          } else if (focusedPatternIndex >= channelSurfaceIndex + CLIP_LAUNCH_ROWS) {
-            c.controlSurfaceFocusIndex.setValue(focusedPatternIndex - CLIP_LAUNCH_ROWS + 1);
-          }
           sendChannelPatterns(index, c);
         }
       }
@@ -488,39 +510,48 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
 
     @Override
     public void patternAdded(LXChannel channel, LXPattern pattern) {
-      sendChannelPatterns(channel.getIndex(), channel);
+      sendChannelPatterns(mixerSurface.getIndex(channel), channel);
     }
 
     @Override
     public void patternRemoved(LXChannel channel, LXPattern pattern) {
-      sendChannelPatterns(channel.getIndex(), channel);
+      sendChannelPatterns(mixerSurface.getIndex(channel), channel);
     }
 
     @Override
     public void patternMoved(LXChannel channel, LXPattern pattern) {
-      sendChannelPatterns(channel.getIndex(), channel);
+      sendChannelPatterns(mixerSurface.getIndex(channel), channel);
     }
 
     @Override
     public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
-      sendChannelPatterns(channel.getIndex(), channel);
+      sendChannelPatterns(mixerSurface.getIndex(channel), channel);
     }
 
     @Override
     public void patternDidChange(LXChannel channel, LXPattern pattern) {
-      sendChannelPatterns(channel.getIndex(), channel);
+      sendChannelPatterns(mixerSurface.getIndex(channel), channel);
+    }
+
+    @Override
+    public void patternEnabled(LXChannel channel, LXPattern pattern) {
+      if (gridMode == GridMode.PATTERN) {
+        if (channel.isComposite()) {
+          sendChannelPatterns(mixerSurface.getIndex(channel), channel);
+        }
+      }
     }
 
     @Override
     public void clipAdded(LXBus bus, LXClip clip) {
       clip.running.addListener(this);
-      sendChannelClips(this.channel.getIndex(), this.channel);
+      sendChannelClips(mixerSurface.getIndex(this.channel), this.channel);
     }
 
     @Override
     public void clipRemoved(LXBus bus, LXClip clip) {
       clip.running.removeListener(this);
-      sendChannelClips(this.channel.getIndex(), this.channel);
+      sendChannelClips(mixerSurface.getIndex(this.channel), this.channel);
     }
 
   }
@@ -537,22 +568,57 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     new BooleanParameter("Clip Launch", true)
     .setDescription("Whether the clip launch buttons are enabled");
 
+  public final EnumParameter<LXMidiParameterControl.Mode> faderMode =
+    new EnumParameter<LXMidiParameterControl.Mode>("Fader Mode", LXMidiParameterControl.Mode.SCALE)
+    .setDescription("Parameter control mode for faders");
+
+  private final LXMidiParameterControl masterFader;
+  private final LXMidiParameterControl crossfader;
+  private final LXMidiParameterControl[] channelFaders;
+
   public APC40(LX lx, LXMidiInput input, LXMidiOutput output) {
     super(lx, input, output);
+
+    this.masterFader = new LXMidiParameterControl(this.lx.engine.mixer.masterBus.fader);
+    this.crossfader = new LXMidiParameterControl(this.lx.engine.mixer.crossfader);
+    this.channelFaders = new LXMidiParameterControl[NUM_CHANNELS];
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+      this.channelFaders[i] = new LXMidiParameterControl();
+    }
+    updateFaderMode();
+
+    this.mixerSurface =
+      new MixerSurface(lx, this.mixerSurfaceListener, NUM_CHANNELS, CLIP_LAUNCH_ROWS)
+      .setGridMode(this.gridMode.engineGridMode);
+
+    this.focusedChannel = new FocusedChannel(lx, bus -> { sendChannelFocus(); });
+
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("crossfaderEnabled", this.crossfaderEnabled);
     addSetting("clipLaunchEnabled", this.clipLaunchEnabled);
+    addSetting("faderMode", this.faderMode);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
-    if (p == this.clipLaunchEnabled) {
+    if (p == this.faderMode) {
+      updateFaderMode();
+    } if (p == this.clipLaunchEnabled) {
       if (this.clipLaunchEnabled.isOn()) {
         sendChannels();
       } else {
         clearClipLaunch();
       }
+    }
+  }
+
+  private void updateFaderMode() {
+    final LXMidiParameterControl.Mode mode = this.faderMode.getEnum();
+    this.masterFader.setMode(mode);
+    this.crossfader.setMode(mode);
+    for (LXMidiParameterControl channelFader : this.channelFaders) {
+      channelFader.setMode(mode);
     }
   }
 
@@ -564,11 +630,6 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       register();
     } else {
       this.deviceListener.registerDevice(null);
-      for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-        if (channel instanceof LXChannel) {
-          ((LXChannel)channel).controlSurfaceFocusLength.setValue(0);
-        }
-      }
       if (this.isRegistered) {
         unregister();
       }
@@ -652,10 +713,10 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
 
   private void sendChannel(int index, LXAbstractChannel channel) {
     if (channel != null) {
-      sendNoteOn(index, CHANNEL_ACTIVE, channel.enabled.isOn() ? LED_ON : LED_OFF);
+      sendNoteOn(index, CHANNEL_ACTIVE, LED_ON(channel.enabled.isOn()));
       sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, channel.crossfadeGroup.getValuei());
-      sendNoteOn(index, CHANNEL_SOLO, channel.cueActive.isOn() ? LED_ON : LED_OFF);
-      sendNoteOn(index, CHANNEL_ARM, channel.arm.isOn() ? LED_ON : LED_OFF);
+      sendNoteOn(index, CHANNEL_SOLO, LED_ON(channel.cueActive.isOn()));
+      sendNoteOn(index, CHANNEL_ARM, LED_ON(channel.arm.isOn()));
     } else {
       sendNoteOn(index, CHANNEL_ACTIVE, LED_OFF);
       sendNoteOn(index, CHANNEL_CROSSFADE_GROUP, LED_OFF);
@@ -676,7 +737,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     if (channelBus instanceof LXChannel) {
       final LXChannel channel = (LXChannel) channelBus;
       final boolean blendMode = channel.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND;
-      final int baseIndex = channel.controlSurfaceFocusIndex.getValuei();
+      final int baseIndex = this.mixerSurface.getGridPatternOffset();
       final int endIndex = channel.patterns.size() - baseIndex;
       final int activeIndex = channel.getActivePatternIndex() - baseIndex;
       final int nextIndex = channel.getNextPatternIndex() - baseIndex;
@@ -690,6 +751,9 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
             if (channel.patterns.get(baseIndex + y).enabled.isOn()) {
               // Pattern is enabled!
               color = LED_GREEN;
+            } else if (y == focusedIndex) {
+              // This pattern is not active, but it is focused
+              color = LED_YELLOW;
             } else {
               // Pattern is present but off
               color = LED_RED;
@@ -704,10 +768,10 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
             color = LED_GREEN_BLINK;
           } else if (y == focusedIndex) {
             // This pattern is not active, but it is focused
-            color = LED_RED;
+            color = LED_YELLOW;
           } else if (y < endIndex) {
             // There is a pattern present
-            color = LED_YELLOW;
+            color = LED_RED;
           }
         }
 
@@ -727,11 +791,14 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     if (index >= CLIP_LAUNCH_COLUMNS || (this.gridMode != GridMode.CLIP)) {
       return;
     }
+    final int clipOffset = this.mixerSurface.getGridClipOffset();
+
     for (int i = 0; i < CLIP_LAUNCH_ROWS; ++i) {
       int pitch = CLIP_LAUNCH + i;
       int color = LED_OFF;
+      int clipIndex = clipOffset + i;
       if (channel != null) {
-        LXClip clip = channel.getClip(i);
+        LXClip clip = channel.getClip(clipIndex);
         if (clip != null) {
           color = clip.isRunning() ? LED_GREEN : (channel.arm.isOn() ? LED_RED : LED_YELLOW);
         }
@@ -760,15 +827,15 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   };
 
   private final LXParameterListener cueAListener = p -> {
-    sendNoteOn(0, DETAIL_VIEW, this.lx.engine.mixer.cueA.isOn() ? 1 : 0);
+    sendNoteOn(0, DETAIL_VIEW, LED_ON(this.lx.engine.mixer.cueA.isOn()));
   };
 
   private final LXParameterListener cueBListener = p -> {
-    sendNoteOn(0, REC_QUANTIZE, this.lx.engine.mixer.cueB.isOn() ? 1 : 0);
+    sendNoteOn(0, REC_QUANTIZE, LED_ON(this.lx.engine.mixer.cueB.isOn()));
   };
 
   private final LXParameterListener tempoListener = p -> {
-    sendNoteOn(0, METRONOME, this.lx.engine.tempo.enabled.isOn() ? LED_ON : LED_OFF);
+    sendNoteOn(0, METRONOME, LED_ON(this.lx.engine.tempo.enabled.isOn()));
   };
 
   private final LXParameterListener focusedChannelListener = p -> { sendChannelFocus(); };
@@ -777,9 +844,9 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     int focusedChannel = this.lx.engine.mixer.focusedChannel.getValuei();
     boolean masterFocused = (focusedChannel == this.lx.engine.mixer.channels.size());
     for (int i = 0; i < NUM_CHANNELS; ++i) {
-      sendNoteOn(i, CHANNEL_FOCUS, (!masterFocused && (i == focusedChannel)) ? LED_ON : LED_OFF);
+      sendNoteOn(i, CHANNEL_FOCUS, LED_ON(!masterFocused && (i == focusedChannel)));
     }
-    sendNoteOn(0, MASTER_FOCUS, masterFocused ? LED_ON : LED_OFF);
+    sendNoteOn(0, MASTER_FOCUS, LED_ON(masterFocused));
   }
 
   private boolean isRegistered = false;
@@ -789,10 +856,8 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     this.isRegistered = true;
 
     this.deviceListener.focusedDevice.register();
-
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      registerChannel(channel);
-    }
+    this.mixerSurface.register();
+    this.focusedChannel.register();
 
     this.lx.engine.mixer.addListener(this.mixerEngineListener);
     this.lx.engine.mixer.focusedChannel.addListener(this.focusedChannelListener);
@@ -806,6 +871,8 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     this.isRegistered = false;
 
     this.deviceListener.focusedDevice.unregister();
+    this.mixerSurface.unregister();
+    this.focusedChannel.unregister();
 
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       unregisterChannel(channel);
@@ -821,7 +888,9 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   }
 
   private void registerChannel(LXAbstractChannel channel) {
-    this.channelListeners.put(channel, new ChannelListener(channel));
+    if (!this.channelListeners.containsKey(channel)) {
+      this.channelListeners.put(channel, new ChannelListener(channel));
+    }
   }
 
   private void unregisterChannel(LXAbstractChannel channel) {
@@ -832,10 +901,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   }
 
   private LXAbstractChannel getChannel(int index) {
-    if (index < this.lx.engine.mixer.channels.size()) {
-      return this.lx.engine.mixer.channels.get(index);
-    }
-    return null;
+    return this.mixerSurface.getChannel(index);
   }
 
   private LXAbstractChannel getChannel(LXShortMessage message) {
@@ -876,14 +942,14 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     case SEND_A:
     case SEND_B:
     case SEND_C:
-      sendNoteOn(note.getChannel(), pitch, on ? LED_ON : LED_OFF);
+      sendNoteOn(note.getChannel(), pitch, LED_ON(on));
       break;
     }
     if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
-      sendNoteOn(note.getChannel(), pitch, on ? LED_GREEN : LED_OFF);
+      sendNoteOn(note.getChannel(), pitch, LED_ON(on));
     }
     if (!this.clipLaunchEnabled.isOn() && pitch >= CLIP_LAUNCH && pitch <= CLIP_LAUNCH_MAX ) {
-      sendNoteOn(note.getChannel(), pitch, on ? LED_GREEN : LED_OFF);
+      sendNoteOn(note.getChannel(), pitch, LED_ON(on));
     }
 
     // Global momentary
@@ -895,23 +961,39 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         lx.engine.mixer.focusedChannel.setValue(lx.engine.mixer.channels.size());
         return;
       case BANK_SELECT_LEFT:
-        this.lx.engine.mixer.focusedChannel.decrement(false);
-        lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        if (this.shiftOn) {
+          this.deviceListener.focusedDevice.previousChannel();
+          lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        } else {
+          this.mixerSurface.decrementChannel();
+        }
         return;
       case BANK_SELECT_RIGHT:
-        this.lx.engine.mixer.focusedChannel.increment(false);
-        lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        if (this.shiftOn) {
+          this.deviceListener.focusedDevice.nextChannel();
+          lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
+        } else {
+          this.mixerSurface.incrementChannel();
+        }
         return;
       case BANK_SELECT_UP:
-        bus = this.lx.engine.mixer.getFocusedChannel();
-        if (bus instanceof LXChannel) {
-          ((LXChannel) bus).focusedPattern.decrement(this.shiftOn ? CLIP_LAUNCH_ROWS : 1 , false);
+        if (this.shiftOn) {
+          bus = lx.engine.mixer.getFocusedChannel();
+          if (bus instanceof LXChannel) {
+            ((LXChannel) bus).focusedPattern.decrement(1, false);
+          }
+        } else {
+          this.mixerSurface.decrementGridOffset();
         }
         return;
       case BANK_SELECT_DOWN:
-        bus = this.lx.engine.mixer.getFocusedChannel();
-        if (bus instanceof LXChannel) {
-          ((LXChannel) bus).focusedPattern.increment(this.shiftOn ? CLIP_LAUNCH_ROWS : 1 , false);
+        if (this.shiftOn) {
+          bus = lx.engine.mixer.getFocusedChannel();
+          if (bus instanceof LXChannel) {
+            ((LXChannel) bus).focusedPattern.increment(1, false);
+          }
+        } else {
+          this.mixerSurface.incrementGridOffset();
         }
         return;
       case DETAIL_VIEW:
@@ -929,7 +1011,12 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
 
       if (pitch >= SCENE_LAUNCH && pitch <= SCENE_LAUNCH_MAX) {
         if (this.clipLaunchEnabled.isOn()) {
-          this.lx.engine.clips.launchScene(pitch - SCENE_LAUNCH);
+          int index = pitch - SCENE_LAUNCH;
+          if (this.gridMode == GridMode.PATTERN) {
+            this.lx.engine.clips.launchPatternScene(index + this.mixerSurface.getGridPatternOffset());
+          } else if (this.gridMode == GridMode.CLIP) {
+            this.lx.engine.clips.launchScene(index + this.mixerSurface.getGridClipOffset());
+          }
         }
         return;
       }
@@ -946,29 +1033,31 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
           if (this.gridMode == GridMode.PATTERN) {
             if (channel instanceof LXChannel) {
               LXChannel c = (LXChannel) channel;
-              index += c.controlSurfaceFocusIndex.getValuei();
-              if (index < c.getPatterns().size()) {
-                c.focusedPattern.setValue(index);
+              final int patternIndex = index + this.mixerSurface.getGridPatternOffset();
+              if (patternIndex < c.getPatterns().size()) {
+                c.focusedPattern.setValue(patternIndex);
                 if (!this.shiftOn) {
                   if (c.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND) {
-                    c.patterns.get(index).enabled.toggle();
+                    c.patterns.get(patternIndex).enabled.toggle();
                   } else {
-                    c.goPatternIndex(index);
+                    c.goPatternIndex(patternIndex);
                   }
                 }
               }
             }
           } else if (this.gridMode == GridMode.CLIP) {
-            LXClip clip = channel.getClip(index);
+            final int clipIndex = index + this.mixerSurface.getGridClipOffset();
+            LXClip clip = channel.getClip(clipIndex);
             if (clip == null) {
-              clip = channel.addClip(index);
+              clip = channel.addClip(clipIndex);
+              clip.loop.setValue(this.shiftOn);
+            } else if (this.shiftOn) {
+              clip.loop.toggle();
+            } else if (clip.isRunning()) {
+              clip.stop();
             } else {
-              if (clip.isRunning()) {
-                clip.stop();
-              } else {
-                clip.trigger();
-                this.lx.engine.clips.setFocusedClip(clip);
-              }
+              clip.trigger();
+              this.lx.engine.clips.setFocusedClip(clip);
             }
           }
         }
@@ -1035,7 +1124,10 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       LXBus focusedChannel = this.lx.engine.mixer.getFocusedChannel();
       if (focusedChannel instanceof LXChannel) {
         LXChannel patternChannel = (LXChannel) focusedChannel;
-        patternChannel.goPattern(patternChannel.getFocusedPattern());
+        LXPattern focusedPattern = patternChannel.getFocusedPattern();
+        if ((focusedPattern != null) && patternChannel.isPlaylist()) {
+          patternChannel.goPattern(focusedPattern);
+        }
       }
       return;
 
@@ -1054,16 +1146,17 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   private void toggleGridMode() {
     if (this.gridMode == GridMode.PATTERN) {
       this.gridMode = GridMode.CLIP;
-      sendChannelGrid();
     } else {
       this.gridMode = GridMode.PATTERN;
-      sendChannelGrid();
     }
+    this.mixerSurface.setGridMode(this.gridMode.engineGridMode);
+    lx.engine.clips.gridMode.setValue(gridMode.engineGridMode);
+    sendChannelGrid();
     sendGridMode();
   }
 
   private void sendGridMode() {
-    sendNoteOn(0, CLIP_TRACK, this.gridMode == GridMode.CLIP ? LED_ON : LED_OFF);
+    sendNoteOn(0, CLIP_TRACK, LED_ON(this.gridMode == GridMode.CLIP));
   }
 
   @Override
