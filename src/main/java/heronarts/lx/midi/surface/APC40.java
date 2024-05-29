@@ -1181,19 +1181,19 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       }
       return;
     case CHANNEL_FADER:
-      int channel = cc.getChannel();
-      if (channel < this.lx.engine.mixer.channels.size()) {
-        this.lx.engine.mixer.channels.get(channel).fader.setNormalized(cc.getNormalized());
+      int fader = cc.getChannel();
+      if (this.channelFaders[fader] != null) {
+        this.channelFaders[fader].setValue(cc);
       }
       return;
     case MASTER_FADER:
       if (this.masterFaderEnabled.isOn()) {
-        this.lx.engine.mixer.masterBus.fader.setNormalized(cc.getNormalized());
+        this.masterFader.setValue(cc);
       }
       return;
     case CROSSFADER:
       if (this.crossfaderEnabled.isOn()) {
-        this.lx.engine.mixer.crossfader.setNormalized(cc.getNormalized());
+        this.crossfader.setValue(cc);
       }
       return;
     }
@@ -1218,6 +1218,11 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     }
     if (this.enabled.isOn()) {
       setApcMode(GENERIC_MODE);
+    }
+    this.masterFader.dispose();
+    this.crossfader.dispose();
+    for (LXMidiParameterControl fader : this.channelFaders) {
+      fader.dispose();
     }
     this.deviceListener.dispose();
     super.dispose();
