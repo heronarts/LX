@@ -882,6 +882,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       updateFaderMode();
     } else if (this.enabled.isOn()) {
       if (p == this.performanceLock) {
+        this.deviceListener.focusedDevice.setAuxSticky(this.performanceLock.isOn());
         updatePerformanceMode();
       } else if (p == this.deviceControl) {
         onDeviceControlChanged();
