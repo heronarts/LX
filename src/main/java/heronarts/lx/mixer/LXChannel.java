@@ -750,6 +750,10 @@ public class LXChannel extends LXAbstractChannel {
     return (this.nextPatternIndex >= 0) ? this.mutablePatterns.get(this.nextPatternIndex) : null;
   }
 
+  public boolean isInTransition() {
+    return this.transition != null;
+  }
+
   /**
    * Activates the previous pattern in this channel's pattern list
    *
