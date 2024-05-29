@@ -1204,20 +1204,19 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
   @Override
   public void dispose() {
-    List<LXAbstractChannel> toRemove = new ArrayList<LXAbstractChannel>(this.channels);
-    Collections.reverse(toRemove);
-    for (LXAbstractChannel channel : toRemove) {
-      removeChannel(channel);
-    }
+    clear();
     LX.dispose(this.masterBus);
     super.dispose();
   }
 
+  /**
+   * Removes all channels and clears the master bus
+   */
   public void clear() {
-    // Remove all channels
     for (int i = this.mutableChannels.size() - 1; i >= 0; --i) {
       removeChannel(this.mutableChannels.get(i));
     }
+    this.masterBus.clear();
   }
 
   public void loadChannel(JsonObject channelObj) {

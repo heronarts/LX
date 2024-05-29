@@ -475,6 +475,19 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     LXSerializable.Utils.stripParameter(obj, this.selected);
   }
 
+  public void clear() {
+    // Remove clips
+    for (LXClip clip : this.clips) {
+      if (clip != null) {
+        removeClip(clip);
+      }
+    }
+    // Remove effects
+    for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
+      removeEffect(this.mutableEffects.get(i));
+    }
+  }
+
   private static final String KEY_EFFECTS = "effects";
   private static final String KEY_CLIPS = "clips";
 
@@ -493,16 +506,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    // Remove clips
-    for (LXClip clip : this.clips) {
-      if (clip != null) {
-        removeClip(clip);
-      }
-    }
-    // Remove effects
-    for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
-      removeEffect(this.mutableEffects.get(i));
-    }
+    clear();
 
     // Add the effects
     if (obj.has(KEY_EFFECTS)) {
