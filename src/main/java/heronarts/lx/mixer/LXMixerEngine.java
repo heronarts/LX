@@ -128,12 +128,16 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private final ModelBuffer blendBufferRight;
 
   public final BooleanParameter viewCondensed =
-    new BooleanParameter("Condensed", false)
+    new BooleanParameter("View Condensed", false)
     .setDescription("Whether the mixer view should be condensed");
 
   public final BooleanParameter viewStacked =
-    new BooleanParameter("Stacked", false)
+    new BooleanParameter("View Stacked", false)
     .setDescription("Whether the mixer view is stacked on the device bin");
+
+  public final BooleanParameter viewDeviceBin =
+    new BooleanParameter("View Device Bin", true)
+    .setDescription("Whether the device bin is shown in stacked view");
 
   public LXMixerEngine(LX lx) {
     super(lx, "Mixer");
@@ -208,6 +212,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("auxB", this.auxB);
     addParameter("viewCondensed", this.viewCondensed);
     addParameter("viewStacked", this.viewStacked);
+    addParameter("viewDeviceBin", this.viewDeviceBin);
   }
 
   @Override
