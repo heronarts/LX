@@ -26,6 +26,8 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.modulation.LXModulationContainer;
+import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
@@ -46,7 +48,7 @@ import com.google.gson.JsonObject;
  * Abstract representation of a channel, which could be a normal channel with patterns
  * or the master channel.
  */
-public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent {
+public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent, LXModulationContainer {
 
   /**
    * Listener interface for objects which want to be notified when the internal
@@ -76,6 +78,8 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   protected LXModulatorComponent.Profiler constructProfiler() {
     return new Profiler();
   }
+
+  public final LXModulationEngine modulation;
 
   /**
    * Level fader for this bus
@@ -111,6 +115,10 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     new BooleanParameter("Expanded Aux", true)
     .setDescription("Whether the control elements for this channel are expanded in aux view");
 
+  public final BooleanParameter modulationExpanded =
+    new BooleanParameter("Modulation Expanded", false)
+    .setDescription("Whether the device modulation section is expanded");
+
   protected final List<LXEffect> mutableEffects = new ArrayList<LXEffect>();
   public final List<LXEffect> effects = Collections.unmodifiableList(mutableEffects);
 
@@ -126,6 +134,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
 
   LXBus(LX lx, String label) {
     super(lx, label);
+    addChild("modulation", this.modulation = new LXModulationEngine(lx));
     addArray("effect", this.effects);
     addParameter("fader", this.fader);
     addArray("clip", this.clips);
@@ -134,6 +143,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     addParameter("stopClips", this.stopClips);
     addInternalParameter("controlsExpandedCue", this.controlsExpandedCue);
     addInternalParameter("controlsExpandedAux", this.controlsExpandedAux);
+    addInternalParameter("modulationExpanded", this.modulationExpanded);
   }
 
   public abstract int getIndex();
@@ -194,6 +204,19 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     }
     return super.handleOscMessage(message, parts, index);
 
+  }
+
+  /**
+   * Get the modulation engine associated with this bus
+   */
+  @Override
+  public LXModulationEngine getModulationEngine() {
+    return this.modulation;
+  }
+
+  @Override
+  public BooleanParameter getModulationExpanded() {
+    return this.modulationExpanded;
   }
 
   /**
@@ -435,6 +458,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
 
     // Run modulators and components
     if (runComponents) {
+      this.modulation.loop(deltaMs);
       super.loop(deltaMs);
     }
 

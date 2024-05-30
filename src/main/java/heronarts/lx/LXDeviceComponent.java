@@ -353,8 +353,14 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     }
   }
 
+  @Override
   public LXModulationEngine getModulationEngine() {
     return this.modulation;
+  }
+
+  @Override
+  public BooleanParameter getModulationExpanded() {
+    return this.modulationExpanded;
   }
 
   /**
