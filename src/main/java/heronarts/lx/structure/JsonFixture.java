@@ -96,6 +96,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_SCALE = "scale";
   private static final String KEY_DIRECTION = "direction";
   private static final String KEY_NORMAL = "normal";
+  private static final String KEY_END = "end";
   private static final String KEY_TRANSFORMS = "transforms";
   private static final String KEY_BRIGHTNESS = "brightness";
 
@@ -782,6 +783,9 @@ public class JsonFixture extends LXFixture {
   }
 
   private void addWarning(String warning) {
+    if (warning == null) {
+      return;
+    }
     this.warnings.add(warning);
     if (this.warning.isOn()) {
       this.warning.bang();
@@ -1735,34 +1739,67 @@ public class JsonFixture extends LXFixture {
     // Strip spacing default to 1
     float spacing = 1f;
 
-    // Load the strip direction if specified (which implies spacing)
+    // Load the strip direction if specified (which implies a spacing, but spacing can be overridden explicitly)
     if (stripObj.has(KEY_DIRECTION)) {
-      if (stripObj.has(KEY_YAW) || stripObj.has(KEY_PITCH) || stripObj.has(KEY_ROLL)) {
-        addWarning("Strip object should not specify both " + KEY_DIRECTION + " and yaw/pitch/roll, only using " + KEY_DIRECTION);
-      }
-      JsonObject directionObj = loadObject(stripObj, KEY_DIRECTION, "Strip direction should be a vector object");
-      if (directionObj != null) {
-        LXVector direction = loadVector(directionObj, "Strip direction should specify at least one x/y/z value");
-        if (direction.isZero()) {
-          addWarning("Strip direction vector should not be all 0");
-        } else {
-          spacing = direction.mag();
-          strip.yaw.setValue(Math.toDegrees(Math.atan2(-direction.z, direction.x)));
-          strip.roll.setValue(Math.toDegrees(Math.asin(direction.y / spacing)));
-          strip.pitch.setValue(0);
+      if (stripObj.has(KEY_END)) {
+        addWarning("Strip object should not specify both " + KEY_DIRECTION + " and " + KEY_END + ", ignoring " + KEY_DIRECTION);
+      } else if (stripObj.has(KEY_YAW) || stripObj.has(KEY_PITCH) || stripObj.has(KEY_ROLL)) {
+        addWarning("Strip object should not specify both " + KEY_DIRECTION + " and yaw/pitch/roll, ignoring " + KEY_DIRECTION);
+      } else {
+        JsonObject directionObj = loadObject(stripObj, KEY_DIRECTION, "Strip direction should be a vector object");
+        if (directionObj != null) {
+          LXVector direction = loadVector(directionObj, "Strip direction should specify at least one x/y/z value");
+          if (direction.isZero()) {
+            addWarning("Strip direction vector should not be all 0");
+          } else {
+            spacing = direction.mag();
+            strip.yaw.setValue(Math.toDegrees(Math.atan2(-direction.z, direction.x)));
+            strip.roll.setValue(Math.toDegrees(Math.asin(direction.y / spacing)));
+            strip.pitch.setValue(0);
+          }
         }
       }
     }
 
     // Explicit spacing specified?
     if (stripObj.has(KEY_SPACING)) {
-      float testSpacing = loadFloat(stripObj, KEY_SPACING, true, "Strip must specify a positive " + KEY_SPACING);
-      if (testSpacing >= 0) {
-        spacing = testSpacing;
+      if (stripObj.has(KEY_END)) {
+        addWarning("Strip object should not specify both " + KEY_SPACING + " and " + KEY_END + ", ignoring " + KEY_SPACING);
       } else {
-        addWarning("Strip may not specify a negative spacing");
+        float testSpacing = loadFloat(stripObj, KEY_SPACING, true, "Strip must specify a positive " + KEY_SPACING);
+        if (testSpacing >= 0) {
+          spacing = testSpacing;
+        } else {
+          addWarning("Strip may not specify a negative spacing");
+        }
       }
     }
+
+    // End-point specified
+    if (stripObj.has(KEY_END)) {
+      if (stripObj.has(KEY_YAW) || stripObj.has(KEY_PITCH) || stripObj.has(KEY_ROLL)) {
+        addWarning("Strip object should not specify both " + KEY_END + " and yaw/pitch/roll, ignoring " + KEY_END);
+      } else {
+        JsonObject endObj = loadObject(stripObj, KEY_END, "Strip " + KEY_END + " should be a vector object");
+        if (endObj != null) {
+          LXVector direction =
+            loadVector(endObj, "Strip " + KEY_END + " should specify at least one x/y/z value")
+            .sub(loadVector(stripObj, null));
+          if (direction.isZero()) {
+            addWarning("Strip " + KEY_END + " vector cannot match strip origin");
+          } else {
+            float magnitude = direction.mag();
+            if (numPoints > 1) {
+              spacing = magnitude / (numPoints-1);
+            }
+            strip.yaw.setValue(Math.toDegrees(Math.atan2(-direction.z, direction.x)));
+            strip.roll.setValue(Math.toDegrees(Math.asin(direction.y / magnitude)));
+            strip.pitch.setValue(0);
+          }
+        }
+      }
+    }
+
     strip.spacing.setValue(spacing);
 
     return strip;
