@@ -59,6 +59,7 @@ public class LXClassLoader extends URLClassLoader {
 
     private Throwable error = null;
     private int numClasses = 0;
+    private int numFailedClasses = 0;
 
     private Package(File jarFile) {
       this.jarFile = jarFile;
@@ -86,6 +87,10 @@ public class LXClassLoader extends URLClassLoader {
 
     public int getNumClasses() {
       return this.numClasses;
+    }
+
+    public int getNumFailedClasses() {
+      return this.numFailedClasses;
     }
 
     public boolean hasError() {
@@ -193,7 +198,7 @@ public class LXClassLoader extends URLClassLoader {
     } catch (IOException iox) {
       LX.error(iox, "IOException unpacking JAR file " + file + " - " + iox.getLocalizedMessage());
       pack.setError(iox);
-    } catch (Exception | Error e) {
+    } catch (Throwable e) {
       LX.error(e, "Unhandled exception loading JAR file " + file + " - " + e.getLocalizedMessage());
       pack.setError(e);
     }
@@ -207,29 +212,34 @@ public class LXClassLoader extends URLClassLoader {
 
   private void loadClassEntry(Package pack, JarFile jarFile, String className) {
     try {
-      // This might be slightly slower, but just let URL loader find it...
+      // This might be slightly slower, but just let URLClassLoader find it...
       // Let's not re-invent the wheel on parsing JAR files and all that.
-      Class<?> clz = loadClass(className, false);
+      final Class<?> clz = loadClass(className, false);
 
-      // TODO(mcslee): there must be some better way of checking this explicitly,
-      // without instantiating the class, but more clear than getSimpleName()
-
-      // Okay, we loaded the class. But can we actually operate on it? Let's try
-      // to get the name of this class to ensure it's not going to bork things
-      // later due to unresolved dependencies that will throw NoClassDefFoundError
-      clz.getSimpleName();
-
-      // Register all public, non-abstract components that we discover
-      int modifiers = clz.getModifiers();
+      // Try to register public non-abstract classes
+      final int modifiers = clz.getModifiers();
       if (Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers)) {
+
+        if (this.lx.registry.isInstantiableComponent(clz)) {
+          // Okay, we loaded the class. But can we actually operate on it? Let's try
+          // to get the name of this class to ensure it's not going to bork things
+          // later due to unresolved dependencies that could throw an
+          // Error (e.g. NoClassDefFoundError)
+
+          // TODO(mcslee): there must be some better way of checking this explicitly,
+          // without instantiating the class, but more clear than getSimpleName()??
+          clz.getSimpleName();
+        }
+
+        // Register all public, non-abstract components that we discover
         ++pack.numClasses;
         this.classes.add(clz);
         this.lx.registry.addClass(clz);
       }
-
-    } catch (ClassNotFoundException cnfx) {
-      LX.error(cnfx, "Class not actually found, expected in JAR file: " + className + " " + jarFile.getName());
-    } catch (Exception x) {
+    } catch (ClassNotFoundException | NoClassDefFoundError cnfx) {
+      LX.error(cnfx, "Dependency class not found, required by JAR file: " + className + " " + jarFile.getName());
+      ++pack.numFailedClasses;
+    } catch (Throwable x) {
       LX.error(x, "Unhandled exception in class loading: " + className);
     }
   }

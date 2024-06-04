@@ -682,6 +682,23 @@ public class LXRegistry implements LXSerializable {
     }
   }
 
+  private static final Class<?>[] COMPONENT_CLASSES = {
+    LXPattern.class,
+    LXEffect.class,
+    LXModulator.class,
+    LXFixture.class,
+    LXPlugin.class
+  };
+
+  protected boolean isInstantiableComponent(Class<?> clz) {
+    for (Class<?> componentClass : COMPONENT_CLASSES) {
+      if (componentClass.isAssignableFrom(clz)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   protected void addClass(Class<?> clz) {
     if (LXPattern.class.isAssignableFrom(clz)) {
       addPattern(clz.asSubclass(LXPattern.class));
