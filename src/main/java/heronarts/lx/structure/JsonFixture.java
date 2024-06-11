@@ -433,24 +433,39 @@ public class JsonFixture extends LXFixture {
       parameter.addListener(this);
     }
 
-    private ParameterDefinition(String name, String label, String description, String defaultStr) {
-      this(name, label, description, ParameterType.STRING, new StringParameter(label, defaultStr));
+    private ParameterDefinition(String name, String label, String description, String value, String defaultStr) {
+      this(name, label, description, ParameterType.STRING,
+        new StringParameter(label, defaultStr)
+        .setValue(value)
+      );
     }
 
-    private ParameterDefinition(String name, String label, String description, int defaultInt, int minInt, int maxInt) {
-      this(name, label, description, ParameterType.INT, new DiscreteParameter(label, defaultInt, minInt, maxInt + 1));
+    private ParameterDefinition(String name, String label, String description, int value, int defaultInt, int minInt, int maxInt) {
+      this(name, label, description, ParameterType.INT,
+        (DiscreteParameter) new DiscreteParameter(label, defaultInt, minInt, maxInt + 1)
+        .setValue(value)
+      );
     }
 
-    private ParameterDefinition(String name, String label, String description, float defaultFloat, float minFloat, float maxFloat) {
-      this(name, label, description, ParameterType.FLOAT, new BoundedParameter(label, defaultFloat, minFloat, maxFloat));
+    private ParameterDefinition(String name, String label, String description, float value, float defaultFloat, float minFloat, float maxFloat) {
+      this(name, label, description, ParameterType.FLOAT,
+        (BoundedParameter) new BoundedParameter(label, defaultFloat, minFloat, maxFloat)
+        .setValue(value)
+      );
     }
 
-    private ParameterDefinition(String name, String label, String description, boolean defaultBoolean) {
-      this(name, label, description, ParameterType.BOOLEAN, new BooleanParameter(label, defaultBoolean));
+    private ParameterDefinition(String name, String label, String description, boolean value, boolean defaultBoolean) {
+      this(name, label, description, ParameterType.BOOLEAN,
+        new BooleanParameter(label, defaultBoolean)
+        .setValue(value)
+      );
     }
 
-    private ParameterDefinition(String name, String label, String description, String defaultStr, List<String> stringOptions) {
-      this(name, label, description, ParameterType.STRING_SELECT, new ObjectParameter<String>(label, stringOptions.toArray(new String[0]), defaultStr));
+    private ParameterDefinition(String name, String label, String description, String value, String defaultStr, List<String> stringOptions) {
+      this(name, label, description, ParameterType.STRING_SELECT,
+        new ObjectParameter<String>(label, stringOptions.toArray(new String[0]), defaultStr)
+        .setValue(value)
+      );
     }
 
     private void dispose() {
@@ -1542,7 +1557,8 @@ public class JsonFixture extends LXFixture {
 
       switch (type) {
       case FLOAT:
-        float floatValue = defaultElem.getAsFloat();
+        final float defaultFloat = defaultElem.getAsFloat();
+        float floatValue = defaultFloat;
         if (this.jsonParameterValues.has(parameterName)) {
           floatValue = this.jsonParameterContext.loadFloat(this.jsonParameterValues, parameterName, true);
         } else if (reloadDefinition != null) {
@@ -1560,7 +1576,7 @@ public class JsonFixture extends LXFixture {
           addWarning("Parameter minimum may not be greater than maximum: " + minFloat + ">" + maxFloat);
           break;
         }
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, floatValue, minFloat, maxFloat));
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, floatValue, defaultFloat, minFloat, maxFloat));
         break;
       case INT:
         int minInt = 0;
@@ -1571,29 +1587,32 @@ public class JsonFixture extends LXFixture {
         if (parameterObj.has(KEY_PARAMETER_MAX)) {
           maxInt = loadInt(parameterObj, KEY_PARAMETER_MAX, false, "Parameter min value must be an integer");
         }
+        final int defaultInt = defaultElem.getAsInt();
+        int intValue = defaultInt;
         if (minInt > maxInt) {
           addWarning("Parameter minimum may not be greater than maximum: " + minInt + ">" + maxInt);
           break;
         }
-        int intValue = defaultElem.getAsInt();
         if (this.jsonParameterValues.has(parameterName)) {
           intValue = this.jsonParameterContext.loadInt(this.jsonParameterValues, parameterName, true, "Child parameter should be an int: " + parameterName);
         } else if (reloadDefinition != null) {
           intValue = LXUtils.constrain(reloadDefinition.intParameter.getValuei(), minInt, maxInt);
         }
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, intValue, minInt, maxInt));
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, intValue, defaultInt, minInt, maxInt));
         break;
       case STRING:
-        String stringValue = defaultElem.getAsString();
+        final String defaultString = defaultElem.getAsString();
+        String stringValue = defaultString;
         if (this.jsonParameterValues.has(parameterName)) {
           stringValue = this.jsonParameterContext.loadString(this.jsonParameterValues, parameterName, true, "Child parameter should be an string: " + parameterName);
         } else if (reloadDefinition != null) {
           stringValue = reloadDefinition.stringParameter.getString();
         }
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringValue));
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringValue, defaultString));
         break;
       case STRING_SELECT:
-        String stringSelectValue = defaultElem.getAsString();
+        final String defaultStringSelect = defaultElem.getAsString();
+        String stringSelectValue = defaultStringSelect;
         if (this.jsonParameterValues.has(parameterName)) {
           stringSelectValue = this.jsonParameterContext.loadString(this.jsonParameterValues, parameterName, true, "Child parameter should be an string: " + parameterName);
         } else if (reloadDefinition != null) {
@@ -1615,16 +1634,17 @@ public class JsonFixture extends LXFixture {
           addWarning(KEY_PARAMETER_OPTIONS + " must contain default value " + stringSelectValue);
           stringValue = stringOptions.get(0);
         }
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringSelectValue, stringOptions));
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, stringSelectValue, defaultStringSelect, stringOptions));
         break;
       case BOOLEAN:
-        boolean booleanValue = defaultElem.getAsBoolean();
+        final boolean defaultBoolean = defaultElem.getAsBoolean();
+        boolean booleanValue = defaultBoolean;
         if (this.jsonParameterValues.has(parameterName)) {
           booleanValue = this.jsonParameterContext.loadBoolean(this.jsonParameterValues, parameterName, true, "Child parameter should be a boolean: " + parameterName);
         } else if (reloadDefinition != null) {
           booleanValue = reloadDefinition.booleanParameter.isOn();
         }
-        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, booleanValue));
+        addJsonParameter(new ParameterDefinition(parameterName, parameterLabel, parameterDescription, booleanValue, defaultBoolean));
         break;
       }
 
