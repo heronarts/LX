@@ -259,6 +259,18 @@ public class LXMatrix {
   }
 
   public LXMatrix rotateX(float rx) {
+    return rotateX((double) rx);
+  }
+
+  public LXMatrix rotateY(float ry) {
+    return rotateY((double) ry);
+  }
+
+  public LXMatrix rotateZ(float rz) {
+    return rotateZ((double) rz);
+  }
+
+  public LXMatrix rotateX(double rx) {
     float cos = LXUtils.cosf(rx);
     float sin = LXUtils.sinf(rx);
     return multiply(
@@ -269,7 +281,7 @@ public class LXMatrix {
     );
   }
 
-  public LXMatrix rotateY(float ry) {
+  public LXMatrix rotateY(double ry) {
     float cos = LXUtils.cosf(ry);
     float sin = LXUtils.sinf(ry);
     return multiply(
@@ -280,7 +292,7 @@ public class LXMatrix {
     );
   }
 
-  public LXMatrix rotateZ(float rz) {
+  public LXMatrix rotateZ(double rz) {
     float cos = LXUtils.cosf(rz);
     float sin = LXUtils.sinf(rz);
     return multiply(

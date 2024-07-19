@@ -854,9 +854,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    */
   protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
     geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
-    geometryMatrix.rotateY((float) Math.toRadians(this.yaw.getValue()));
-    geometryMatrix.rotateX((float) Math.toRadians(this.pitch.getValue()));
-    geometryMatrix.rotateZ((float) Math.toRadians(this.roll.getValue()));
+    geometryMatrix.rotateY(Math.toRadians(this.yaw.getValue()));
+    geometryMatrix.rotateX(Math.toRadians(this.pitch.getValue()));
+    geometryMatrix.rotateZ(Math.toRadians(this.roll.getValue()));
     geometryMatrix.scale(this.scale.getValuef());
     for (Transform transform : this.transforms) {
       switch (transform.type) {
