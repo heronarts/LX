@@ -102,6 +102,10 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     new BooleanParameter("Enabled", true)
     .setDescription("Whether the effect is enabled");
 
+  public final BooleanParameter locked =
+    new BooleanParameter("Locked", false)
+    .setDescription("Whether the effect is locked");
+
   protected boolean hasDamping = true;
   protected final MutableParameter enabledDampingAttack = new MutableParameter(250);
   protected final MutableParameter enabledDampingRelease =  new MutableParameter(250);
@@ -120,6 +124,9 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   private int index = -1;
 
   private final LXParameterListener enabledListener = (p) -> {
+    if (this.locked.isOn()) {
+      LX.error(new IllegalStateException("LXEffect.enabled was toggled while LXEffect.locked was true, UX should not make this possible."));
+    }
     if (this.enabled.isOn()) {
       if (this.hasDamping) {
         this.enabledDamped.setRangeFromHereTo(1, this.enabledDampingAttack.getValue()).start();
@@ -138,6 +145,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     this.label.setDescription("The name of this effect");
     this.enabled.addListener(this.enabledListener);
     addParameter("enabled", this.enabled);
+    addParameter("locked", this.locked);
     addModulator(this.enabledDamped);
   }
 
@@ -145,6 +153,7 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   public boolean isHiddenControl(LXParameter parameter) {
     return
       (parameter == this.enabled) ||
+      (parameter == this.locked) ||
       super.isHiddenControl(parameter);
   }
 

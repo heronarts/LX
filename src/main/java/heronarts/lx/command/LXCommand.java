@@ -956,11 +956,14 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Delete Effect";
+        return "Remove Effect";
       }
 
       @Override
       public void perform(LX lx) {
+        if (this.effect.get().locked.isOn()) {
+          throw new IllegalStateException("Locked effects cannot be removed, UI should disallow this");
+        }
         LXComponent parent = this.parent.get();
         if (parent instanceof LXBus) {
           ((LXBus) parent).removeEffect(this.effect.get());

@@ -323,7 +323,9 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isPatternEnabled(pattern)));
       } else if (this.device instanceof LXEffect) {
         LXEffect effect = (LXEffect) this.device;
-        effect.enabled.toggle();
+        if (!effect.locked.isOn()) {
+          effect.enabled.toggle();
+        }
       }
     }
 
