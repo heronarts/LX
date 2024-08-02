@@ -1446,6 +1446,14 @@ public class LX {
     _log(System.err, x, LOG_PREFIX, message);
   }
 
+  public static void error(String message, boolean trace) {
+    if (trace) {
+      error(new Exception(message));
+    } else {
+      error(message);
+    }
+  }
+
   private static final DateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
   private static final String LOG_PREFIX = "LX";
