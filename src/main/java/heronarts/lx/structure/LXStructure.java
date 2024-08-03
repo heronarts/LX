@@ -806,8 +806,10 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       if (this.syncModelFile.isOn()) {
         if (loadModelFile == null) {
           LX.error("Project specifies external model sync, but no file name was found");
+          this.syncModelFile.setValue(false);
         } else if (!loadModelFile.exists()) {
           LX.error("Referenced external model file does not exist: " + loadModelFile.toURI());
+          this.syncModelFile.setValue(false);
         } else {
           importModel(loadModelFile, true);
         }
