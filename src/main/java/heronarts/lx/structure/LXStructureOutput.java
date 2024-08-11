@@ -131,7 +131,8 @@ public class LXStructureOutput extends LXOutput {
     }
 
     private void addDynamicSegment(LXFixture.Segment segment, int startChannel, int chunkStart, int chunkLength, float fps) {
-      final int endChannel = startChannel + segment.numChannels - 1;
+      final int endChannel = startChannel + chunkLength - 1;
+
       checkSegmentCollisions(startChannel, endChannel);
 
       // Translate the fixture-scoped Segment into global address space
