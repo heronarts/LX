@@ -176,6 +176,12 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
   private final Map<String, List<LXModel>> subDict =
     new HashMap<String, List<LXModel>>();
 
+  private final Map<String, List<LXModel>> metaChildDict =
+    new HashMap<String, List<LXModel>>();
+
+  private final Map<String, List<LXModel>> metaSubDict =
+    new HashMap<String, List<LXModel>>();
+
   final List<LXView> derivedViews = new ArrayList<LXView>();
 
   /**
@@ -670,6 +676,8 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     }
     addSubmodels(children, this.childDict, false);
     addSubmodels(children, this.subDict, true);
+    addMetaSubmodels(children, this.metaChildDict, false);
+    addMetaSubmodels(children, this.metaSubDict, true);
   }
 
   private void addSubmodels(LXModel[] submodels, Map<String, List<LXModel>> dict, boolean recurse) {
@@ -683,6 +691,21 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
       }
       if (recurse) {
         addSubmodels(submodel.children, dict, recurse);
+      }
+    }
+  }
+
+  private void addMetaSubmodels(LXModel[] submodels, Map<String, List<LXModel>> dict, boolean recurse) {
+    for (LXModel submodel : submodels) {
+      for (String key : submodel.metaData.keySet()) {
+        List<LXModel> sub = dict.get(key);
+        if (sub == null) {
+          dict.put(key, sub = new ArrayList<LXModel>());
+        }
+        sub.add(submodel);
+      }
+      if (recurse) {
+        addMetaSubmodels(submodel.children, dict, recurse);
       }
     }
   }
@@ -706,7 +729,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * deep. If the index is invalid, null is returned
    *
    * @param tag Child tag type
-   * @return List of direct children by type
+   * @return Direct child by type
    */
   public LXModel child(String tag, int index) {
     if (index < 0) {
@@ -768,6 +791,30 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    */
   public String meta(String key) {
     return this.metaData.get(key);
+  }
+
+  /**
+   * Returns a list of all the direct child components containing particular meta data.
+   * Children are only one-level deep.
+   *
+   * @param key Meta data key
+   * @return List of direct children containing meta data
+   */
+  public List<LXModel> metaChildren(String key) {
+    final List<LXModel> children = this.metaChildDict.get(key);
+    return (children == null) ? EMPTY_LIST : children;
+  }
+
+  /**
+   * Returns a list of all the submodel components containing particular meta data,
+   * at any level of depth, may be many levels of descendants contained here.
+   *
+   * @param key Meta data key
+   * @return List of descendant submodels containing meta data
+   */
+  public List<LXModel> metaSub(String key) {
+    final List<LXModel> sub = this.metaSubDict.get(key);
+    return (sub == null) ? EMPTY_LIST : sub;
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -1116,6 +1163,11 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     while (!this.derivedViews.isEmpty()) {
       this.derivedViews.get(this.derivedViews.size() - 1).dispose();
     }
+
+    this.childDict.clear();
+    this.subDict.clear();
+    this.metaChildDict.clear();
+    this.metaSubDict.clear();
 
     for (LXModel child : this.children) {
       child.dispose();
