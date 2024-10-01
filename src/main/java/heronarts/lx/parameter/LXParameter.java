@@ -91,12 +91,13 @@ public interface LXParameter extends LXPath {
     }
 
     public boolean changed() {
+      boolean changed = false;
       for (Monitor monitor : this.monitors) {
         if (monitor.changed()) {
-          return true;
+          changed = true;
         }
       }
-      return false;
+      return changed;
     }
   }
 
