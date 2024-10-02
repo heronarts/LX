@@ -89,6 +89,10 @@ public class BlurEffect extends LXEffect {
 
   @Override
   public void run(double deltaMs, double amount) {
+    if (!isEnabled()) {
+      return;
+    }
+
     final int blurAlpha = (int) (LXColor.BLEND_ALPHA_FULL * amount * this.level.getValue());
     final int[] blurColors = this.blurBuffer.getArray();
 
@@ -100,7 +104,7 @@ public class BlurEffect extends LXEffect {
       // Apply exponential decay to the blur
       blurColors[i] = LXColor.multiply(blurColors[i], decayColor, LXColor.BLEND_ALPHA_FULL);
       // Add the new blur buffer frame
-      blurColors[i] = LXColor.add(blurColors[i], this.colors[i], LXColor.BLEND_ALPHA_FULL);
+      blurColors[i] = LXColor.lightest(blurColors[i], this.colors[i], LXColor.BLEND_ALPHA_FULL);
     }
 
     // If blur value is present, blend the blur value into the color buffer
