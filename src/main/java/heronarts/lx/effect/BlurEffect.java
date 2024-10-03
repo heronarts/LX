@@ -89,10 +89,6 @@ public class BlurEffect extends LXEffect {
 
   @Override
   public void run(double deltaMs, double amount) {
-    if (!isEnabled()) {
-      return;
-    }
-
     final int blurAlpha = (int) (LXColor.BLEND_ALPHA_FULL * amount * this.level.getValue());
     final int[] blurColors = this.blurBuffer.getArray();
 
