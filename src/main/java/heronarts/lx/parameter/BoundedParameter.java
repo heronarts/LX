@@ -357,7 +357,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   }
 
   public BoundedParameter incrementValue(double amount, boolean wrap) {
-    double newValue = getValue() + amount;
+    double newValue = getBaseValue() + amount;
     if (wrap) {
       if (newValue > this.range.max) {
         newValue = this.range.min + ((newValue - this.range.max) % this.range.range);
