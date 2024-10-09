@@ -25,6 +25,7 @@ import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.CORE)
 public class BlurEffect extends LXEffect {
@@ -87,6 +88,20 @@ public class BlurEffect extends LXEffect {
     }
   }
 
+  private static int decrementColor(int argb) {
+    int r = (argb & LXColor.R_MASK) >> LXColor.R_SHIFT;
+    int g = (argb & LXColor.G_MASK) >> LXColor.G_SHIFT;
+    int b = (argb & LXColor.B_MASK);
+    r = LXUtils.max(0, r-1);
+    g = LXUtils.max(0, g-1);
+    b = LXUtils.max(0, b-1);
+    return
+      (argb & LXColor.ALPHA_MASK) |
+      (r << LXColor.R_SHIFT) |
+      (g << LXColor.G_SHIFT) |
+      b;
+  }
+
   @Override
   public void run(double deltaMs, double amount) {
     final int blurAlpha = (int) (LXColor.BLEND_ALPHA_FULL * amount * this.level.getValue());
@@ -98,8 +113,19 @@ public class BlurEffect extends LXEffect {
     for (LXPoint p : model.points) {
       int i = p.index;
       // Apply exponential decay to the blur
+      int pre = blurColors[i];
       blurColors[i] = LXColor.multiply(blurColors[i], decayColor, LXColor.BLEND_ALPHA_FULL);
-      // Add the new blur buffer frame
+
+      // Prevent blur decay from sticking, integer multiplication rounding errors
+      // can particularly often result in getting stuck on low byte values, e.g. 0x01
+      if (blurColors[i] == pre) {
+        if (pre != LXColor.BLACK) {
+          blurColors[i] = decrementColor(pre);
+        }
+      }
+
+      // Mix into the new blur buffer frame, use lightest so that blur cannot
+      // accumulate brightness beyond what is present in the source material
       blurColors[i] = LXColor.lightest(blurColors[i], this.colors[i], LXColor.BLEND_ALPHA_FULL);
     }
 
