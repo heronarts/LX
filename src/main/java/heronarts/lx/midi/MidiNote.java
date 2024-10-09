@@ -55,6 +55,10 @@ public abstract class MidiNote extends LXShortMessage {
     return getData2();
   }
 
+  public double getVelocityNormalized() {
+    return getVelocity() / 127.;
+  }
+
   public boolean isNoteOn() {
     return (this.getCommand() == ShortMessage.NOTE_ON) && (getVelocity() > 0);
   }
