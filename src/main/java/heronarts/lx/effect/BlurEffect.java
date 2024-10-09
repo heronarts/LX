@@ -100,7 +100,7 @@ public class BlurEffect extends LXEffect {
       // Apply exponential decay to the blur
       blurColors[i] = LXColor.multiply(blurColors[i], decayColor, LXColor.BLEND_ALPHA_FULL);
       // Add the new blur buffer frame
-      blurColors[i] = LXColor.add(blurColors[i], this.colors[i], LXColor.BLEND_ALPHA_FULL);
+      blurColors[i] = LXColor.lightest(blurColors[i], this.colors[i], LXColor.BLEND_ALPHA_FULL);
     }
 
     // If blur value is present, blend the blur value into the color buffer
