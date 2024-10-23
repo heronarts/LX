@@ -30,7 +30,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -699,7 +701,19 @@ public class LXRegistry implements LXSerializable {
     return false;
   }
 
-  protected void addClass(Class<?> clz) {
+  private final Map<String, LXClassLoader.Package> duplicates = new HashMap<String, LXClassLoader.Package>();
+
+  protected void addClass(Class<?> clz, LXClassLoader.Package pack) {
+    final String className = clz.getName();
+    final LXClassLoader.Package duplicate = duplicates.get(className);
+    if (duplicate != null) {
+      String thisFile = lx.getMediaPath(LX.Media.PACKAGES, pack.jarFile);
+      String originalFile = lx.getMediaPath(LX.Media.PACKAGES, duplicate.jarFile);
+      LX.error("Ignoring duplicate class: " + className + " in " + thisFile + " + " + originalFile);
+      return;
+    }
+    this.duplicates.put(className, pack);
+
     if (LXPattern.class.isAssignableFrom(clz)) {
       addPattern(clz.asSubclass(LXPattern.class));
     }
@@ -718,6 +732,8 @@ public class LXRegistry implements LXSerializable {
   }
 
   protected void removeClass(Class<?> clz) {
+    this.duplicates.remove(clz.getName());
+
     if (LXPattern.class.isAssignableFrom(clz)) {
       removePattern(clz.asSubclass(LXPattern.class));
     }

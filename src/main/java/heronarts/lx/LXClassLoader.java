@@ -234,7 +234,7 @@ public class LXClassLoader extends URLClassLoader {
         // Register all public, non-abstract components that we discover
         ++pack.numClasses;
         this.classes.add(clz);
-        this.lx.registry.addClass(clz);
+        this.lx.registry.addClass(clz, pack);
       }
     } catch (ClassNotFoundException | NoClassDefFoundError cnfx) {
       LX.error(cnfx, "Dependency class not found, required by JAR file: " + className + " " + jarFile.getName());
