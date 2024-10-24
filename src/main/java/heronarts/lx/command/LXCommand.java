@@ -51,6 +51,7 @@ import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.modulation.LXParameterModulation;
 import heronarts.lx.modulation.LXTriggerModulation;
 import heronarts.lx.modulator.LXModulator;
+import heronarts.lx.osc.LXOscConnection;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
@@ -2016,7 +2017,6 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         lx.engine.palette.removeSwatch(this.swatch.get());
-
       }
 
       @Override
@@ -2906,6 +2906,109 @@ public abstract class LXCommand {
         this.clip.get().load(lx, this.clipObjPre);
       }
 
+    }
+  }
+
+  public static class Osc {
+
+    public static class AddInput extends LXCommand {
+
+      private LXOscConnection.Input input;
+
+      public AddInput() {}
+
+      @Override
+      public String getDescription() {
+        return "Add OSC input";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.input = lx.engine.osc.addInput();
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.osc.removeInput(this.input);
+      }
+    }
+
+    public static class RemoveInput extends RemoveComponent {
+
+      private final ComponentReference<LXOscConnection.Input> input;
+      private final JsonObject inputObj;
+
+      public RemoveInput(LXOscConnection.Input input) {
+        super(input);
+        this.input = new ComponentReference<LXOscConnection.Input>(input);
+        this.inputObj = LXSerializable.Utils.toObject(input);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Delete OSC input";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.engine.osc.removeInput(this.input.get());
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.osc.addInput(this.inputObj, -1);
+        super.undo(lx);
+      }
+    }
+
+    public static class AddOutput extends LXCommand {
+
+      private LXOscConnection.Output output;
+
+      public AddOutput() {}
+
+      @Override
+      public String getDescription() {
+        return "Add OSC output";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.output = lx.engine.osc.addOutput();
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.osc.removeOutput(this.output);
+      }
+    }
+
+    public static class RemoveOutput extends RemoveComponent {
+
+      private final ComponentReference<LXOscConnection.Output> output;
+      private final JsonObject outputObj;
+
+      public RemoveOutput(LXOscConnection.Output output) {
+        super(output);
+        this.output = new ComponentReference<LXOscConnection.Output>(output);
+        this.outputObj = LXSerializable.Utils.toObject(output);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Delete OSC output";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.engine.osc.removeOutput(this.output.get());
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.osc.addOutput(this.outputObj, -1);
+        super.undo(lx);
+      }
     }
   }
 
