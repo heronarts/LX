@@ -1089,7 +1089,9 @@ public class LX {
         LXSerializable.Utils.resetObject(this, external);
       }
 
-      LXChannel channel = this.engine.mixer.addChannel(new LXPattern[] { new SolidPattern(this, 0xffff0000) });
+      final LXChannel channel = this.engine.mixer.addChannel(new LXPattern[] { new SolidPattern(this, 0xffff0000) });
+      this.engine.mixer.selectChannel(channel);
+      this.engine.mixer.setFocusedChannel(channel);
       channel.fader.setValue(1);
 
       setProject(null, ProjectListener.Change.NEW);
