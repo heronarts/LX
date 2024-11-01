@@ -45,6 +45,12 @@ public class TriggerParameter extends BooleanParameter {
     return (TriggerParameter) super.setDescription(description);
   }
 
+  @Override
+  public TriggerParameter setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
   private final LXParameterListener listener = p -> {
     if (isOn()) {
       if (this.onTrigger != null) {
@@ -68,7 +74,7 @@ public class TriggerParameter extends BooleanParameter {
   }
 
   @Override
-  public BooleanParameter setMode(Mode mode) {
+  public TriggerParameter setMode(Mode mode) {
     if (mode != Mode.MOMENTARY) {
       throw new IllegalArgumentException("TriggerParameter may only have MOMENTARY mode");
     }

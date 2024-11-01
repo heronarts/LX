@@ -40,8 +40,20 @@ public class EnumParameter<T extends Enum<?>> extends ObjectParameter<T> {
   }
 
   @Override
+  public EnumParameter<T> setIncrementMode(IncrementMode incrementMode) {
+    super.setIncrementMode(incrementMode);
+    return this;
+  }
+
+  @Override
   public EnumParameter<T> setMappable(boolean mappable) {
     super.setMappable(mappable);
+    return this;
+  }
+
+  @Override
+  public EnumParameter<T> setWrappable(boolean wrappable) {
+    super.setWrappable(wrappable);
     return this;
   }
 
