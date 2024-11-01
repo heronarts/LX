@@ -84,7 +84,7 @@ public class Randomizer extends LXPeriodicModulator implements LXNormalizedParam
 
   public final EnumParameter<InterpolationMode> lerpMode =
     new EnumParameter<InterpolationMode>("Lerp Mode", InterpolationMode.DIRECT)
-    .setDescription("Whether triggers are internally or externally generated");
+    .setDescription("How the randomizer moves between values");
 
   public final CompoundParameter periodMs =
     new CompoundParameter("Interval", 1000, 10, 1000*60)
