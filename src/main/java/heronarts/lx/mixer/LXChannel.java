@@ -404,7 +404,9 @@ public class LXChannel extends LXAbstractChannel {
       switch (this.compositeMode.getEnum()) {
       case PLAYLIST:
         final LXPattern activePattern = getActivePattern();
-        activePattern.midiDispatch(message);
+        if (activePattern != null) {
+          activePattern.midiDispatch(message);
+        }
         LXPattern nextPattern = getNextPattern();
         if (nextPattern != null && nextPattern != activePattern) {
           nextPattern.midiDispatch(message);
