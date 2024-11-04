@@ -63,4 +63,45 @@ public abstract class MidiNote extends LXShortMessage {
     return (this.getCommand() == ShortMessage.NOTE_ON) && (getVelocity() > 0);
   }
 
+  public boolean isNoteOff() {
+    return !isNoteOn();
+  }
+
+  /**
+   * Keeps count of a stack of midi notes
+   */
+  public static class Stack {
+    private int[] notes = new int[128];
+    private int noteCount = 0;
+
+    public void onMidiNote(MidiNote note) {
+      final int pitch = note.getPitch();
+      if (note.isNoteOn()) {
+        ++this.notes[pitch];
+        ++this.noteCount;
+      } else {
+        if (this.notes[pitch] > 0) {
+          --this.notes[pitch];
+          --this.noteCount;
+        }
+      }
+    }
+
+    public int getNoteCount() {
+      return this.noteCount;
+    }
+
+    public boolean isNoteHeld() {
+      return this.noteCount > 0;
+    }
+
+    public void reset() {
+      for (int i = 0; i < this.notes.length; ++i) {
+        this.notes[i] = 0;
+      }
+      this.noteCount = 0;
+    }
+
+  }
+
 }
