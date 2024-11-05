@@ -149,7 +149,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * A color used to identify this component when it or one of its parameters
    * is used as a modulation source.
    */
-  public final DiscreteColorParameter modulationColor = (DiscreteColorParameter)
+  public final DiscreteColorParameter modulationColor =
     new DiscreteColorParameter("Modulation Color")
     .setDescription("The color used to indicate this modulation source");
 

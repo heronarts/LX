@@ -151,7 +151,7 @@ public abstract class LXMidiMapping implements LXSerializable {
     final int min = parameter.getMinValue();
     final int max = parameter.getMaxValue();
 
-    return (DiscreteParameter)
+    return
       new DiscreteParameter(label, on ? max : min, min, max+1)
       .setUnits(parameter.getUnits())
       .setOptions(parameter.getOptions(), false)
@@ -172,7 +172,7 @@ public abstract class LXMidiMapping implements LXSerializable {
       v0 = bounded.range.v0;
       v1 = bounded.range.v1;
     }
-    return (BoundedParameter)
+    return
       new BoundedParameter(label, on ? v1 : v0, v0, v1)
       .setNormalizationCurve(normalizationCurve)
       .setExponent(parameter.getExponent())

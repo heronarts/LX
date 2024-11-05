@@ -46,7 +46,7 @@ public abstract class LXOscConnection extends LXComponent {
     .setMappable(false)
     .setDescription("Enables or disables the OSC connection");
 
-  public final StringParameter host = (StringParameter)
+  public final StringParameter host =
     new StringParameter("Host", (this instanceof Input) ? DEFAULT_INPUT_HOST : DEFAULT_OUTPUT_HOST)
     .setMappable(false)
     .setDescription("Hostname to which OSC messages are sent/received");
@@ -71,7 +71,7 @@ public abstract class LXOscConnection extends LXComponent {
     .setMappable(false)
     .setDescription("The state of the OSC connection");
 
-  public final TriggerParameter activity = (TriggerParameter)
+  public final TriggerParameter activity =
     new TriggerParameter("OSC Activity")
     .setMappable(false)
     .setDescription("Triggers when the OSC connection is active");

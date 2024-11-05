@@ -136,7 +136,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     new DiscreteParameter("Time Signature", 4, 1, MAX_BEATS_PER_BAR + 1)
     .setDescription("Beats per bar");
 
-  public final BoundedParameter bpm = (BoundedParameter)
+  public final BoundedParameter bpm =
     new BoundedParameter("BPM", DEFAULT_BPM, this.minOscBpm, this.maxOscBpm)
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Beats per minute of the master tempo");
@@ -166,7 +166,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
   private final LinearEnvelope nudge = new LinearEnvelope(1, 1, 5000);
 
-  public final MutableParameter period = (MutableParameter)
+  public final MutableParameter period =
     new MutableParameter(MS_PER_MINUTE / DEFAULT_BPM)
     .setUnits(MutableParameter.Units.MILLISECONDS)
     .setDescription("Reports the duration between beats (ms)");

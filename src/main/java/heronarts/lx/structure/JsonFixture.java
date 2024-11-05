@@ -583,11 +583,11 @@ public class JsonFixture extends LXFixture {
     new BooleanParameter("Warning", false)
     .setDescription("Whether there are warnings from the loading of the JSON file");
 
-  public final MutableParameter parametersDisposed = (MutableParameter)
+  public final MutableParameter parametersDisposed =
     new MutableParameter("Dispose")
     .setDescription("Monitor for when fixture parameters are disposed");
 
-  public final MutableParameter parametersReloaded = (MutableParameter)
+  public final MutableParameter parametersReloaded =
     new MutableParameter("Reload")
     .setDescription("Monitor for when fixture parameters are reloaded");
 

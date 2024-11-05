@@ -40,8 +40,13 @@ public class StringParameter extends LXListenableParameter {
     return this;
   }
 
+  public StringParameter setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
   @Override
-  public LXParameter reset() {
+  public StringParameter reset() {
     this.string = this.defaultString;
     super.reset();
     return this;

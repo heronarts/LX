@@ -126,7 +126,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * controlling this component. This may be used by UI implementations to indicate
    * to the user that this component is under remote control.
    */
-  public final MutableParameter controlSurfaceSemaphore = (MutableParameter)
+  public final MutableParameter controlSurfaceSemaphore =
     new MutableParameter("Control-Surfaces", 0)
     .setDescription("How many control surfaces are controlling this component");
 

@@ -47,6 +47,31 @@ public class MutableParameter extends LXListenableParameter {
     return (MutableParameter) setValue(getValue() - 1);
   }
 
+  public MutableParameter setDescription(String description) {
+    super.setDescription(description);
+    return this;
+  }
+
+  public MutableParameter setFormatter(Formatter formatter) {
+    super.setFormatter(formatter);
+    return this;
+  }
+
+  public MutableParameter setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
+  public MutableParameter setPolarity(Polarity polarity) {
+    super.setPolarity(polarity);
+    return this;
+  }
+
+  public MutableParameter setUnits(Units units) {
+    super.setUnits(units);
+    return this;
+  }
+
   @Override
   protected double updateValue(double value) {
     return value;

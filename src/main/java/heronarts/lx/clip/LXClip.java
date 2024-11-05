@@ -57,7 +57,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   double cursor = 0;
 
-  public final MutableParameter length = (MutableParameter)
+  public final MutableParameter length =
     new MutableParameter("Length", 0)
     .setDescription("The length of the clip")
     .setUnits(LXParameter.Units.MILLISECONDS);

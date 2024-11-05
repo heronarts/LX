@@ -45,7 +45,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
    * track and restore that number here. When the sound objects are actually instantiated,
    * their names will be restored to the selector.
    */
-  final MutableParameter numSoundObjects = (MutableParameter)
+  final MutableParameter numSoundObjects =
     new MutableParameter("Sound Objects", 0)
     .setDescription("Number of registered sound objects");
 
