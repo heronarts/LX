@@ -78,6 +78,24 @@ public class ObjectParameter<T> extends DiscreteParameter {
     return this;
   }
 
+  @Override
+  public DiscreteParameter setIncrementMode(IncrementMode incrementMode) {
+    super.setIncrementMode(incrementMode);
+    return this;
+  }
+
+  @Override
+  public ObjectParameter<T> setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
+  @Override
+  public ObjectParameter<T> setWrappable(boolean wrappable) {
+    super.setWrappable(wrappable);
+    return this;
+  }
+
   /**
    * Set a list of objects for the parameter
    *

@@ -122,6 +122,12 @@ public class CompoundParameter extends BoundedParameter implements LXCompoundMod
   }
 
   @Override
+  public CompoundParameter setFormatter(Formatter formatter) {
+    super.setFormatter(formatter);
+    return this;
+  }
+
+  @Override
   public CompoundParameter setUnits(CompoundParameter.Units units) {
     super.setUnits(units);
     return this;
@@ -148,6 +154,12 @@ public class CompoundParameter extends BoundedParameter implements LXCompoundMod
   @Override
   public CompoundParameter setDescription(String description) {
     super.setDescription(description);
+    return this;
+  }
+
+  @Override
+  public CompoundParameter setOscMode(OscMode oscMode) {
+    super.setOscMode(oscMode);
     return this;
   }
 

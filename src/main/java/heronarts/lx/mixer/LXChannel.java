@@ -185,7 +185,7 @@ public class LXChannel extends LXAbstractChannel {
    * controlling this channel's patterns. This may be used by UI implementations to indicate
    * to the user that this component is under remote control.
    */
-  public final MutableParameter controlSurfaceSemaphore = (MutableParameter)
+  public final MutableParameter controlSurfaceSemaphore =
     new MutableParameter("Control-Surfaces", 0)
     .setDescription("How many control surfaces are controlling this component");
 

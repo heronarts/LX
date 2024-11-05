@@ -102,6 +102,12 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   @Override
+  public DiscreteParameter setFormatter(Formatter formatter) {
+    super.setFormatter(formatter);
+    return this;
+  }
+
+  @Override
   public DiscreteParameter setUnits(DiscreteParameter.Units units) {
     super.setUnits(units);
     return this;

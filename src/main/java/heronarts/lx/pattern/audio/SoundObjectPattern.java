@@ -72,7 +72,7 @@ public class SoundObjectPattern extends LXPattern {
 
   public static class Engine {
 
-    public final SoundObject.Selector selector = (SoundObject.Selector)
+    public final SoundObject.Selector selector =
       new SoundObject.Selector("Object")
       .setDescription("Which sound object to render");
 

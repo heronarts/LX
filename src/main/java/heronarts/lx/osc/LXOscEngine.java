@@ -100,7 +100,7 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("The state of the OSC receiver");
 
-  public final TriggerParameter receiveActivity = (TriggerParameter)
+  public final TriggerParameter receiveActivity =
     new TriggerParameter("RX Activity")
     .setMappable(false)
     .setDescription("Triggers when OSC data is received");
@@ -115,7 +115,7 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("Enables or disables OSC engine output");
 
-  public final StringParameter transmitHost = (StringParameter)
+  public final StringParameter transmitHost =
     new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST)
     .setMappable(false)
     .setDescription("Hostname to which OSC messages are sent");
@@ -130,7 +130,7 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("The state of the OSC transmitter");
 
-  public final TriggerParameter transmitActivity = (TriggerParameter)
+  public final TriggerParameter transmitActivity =
     new TriggerParameter("TX Activity")
     .setMappable(false)
     .setDescription("Triggers when OSC data is sent");
