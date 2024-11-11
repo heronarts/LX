@@ -300,7 +300,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
         if (message instanceof MidiPanic) {
           modulator.midiFilter.midiPanic();
           message.dispatch(listener);
-        } else if (modulator.running.isOn() && modulator.midiFilter.filter(message)) {
+        } else if (modulator.running.isOn() && modulator.midiSource.matches(message.getSource()) && modulator.midiFilter.filter(message)) {
           message.dispatch(listener);
         }
       }

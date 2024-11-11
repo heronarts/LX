@@ -34,6 +34,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXRunnableComponent;
+import heronarts.lx.midi.LXMidiSource;
 import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -144,6 +145,9 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
     new BooleanParameter("Crashed", false)
     .setDescription("Set to true by the engine if this component fails in an unexpected way");
 
+  public final LXMidiSource.FilterSelector midiSource =
+    new LXMidiSource.FilterSelector("MIDI Source");
+
   public final MidiFilterParameter midiFilter =
     new MidiFilterParameter("MIDI Filter", true)
     .setDescription("MIDI filter settings for this modulator");
@@ -155,6 +159,7 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    */
   protected LXModulator(String label) {
     super(label);
+    addParameter("midiSource", this.midiSource);
     addParameter("midiFilter", this.midiFilter);
   }
 
