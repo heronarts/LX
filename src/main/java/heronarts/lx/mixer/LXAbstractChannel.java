@@ -31,6 +31,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.midi.LXMidiSource;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.midi.MidiPanic;
@@ -119,6 +120,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     new BooleanParameter("Aux", false)
     .setDescription("Toggles the channel AUX state, determining whether it is shown in the auxiliary window");
 
+  public final LXMidiSource.FilterSelector midiSource =
+    new LXMidiSource.FilterSelector("MIDI Source");
+
   public final MidiFilterParameter midiFilter =
     new MidiFilterParameter("MIDI Filter", false)
     .setDescription("Filter controls for incoming MIDI messages");
@@ -199,6 +203,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("aux", this.auxActive);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
+    addParameter("midiSource", this.midiSource);
     addParameter("midiFilter", this.midiFilter);
     addLegacyParameter("midiMonitor", this.midiFilter.enabled);
     addLegacyParameter("midiChannel", this.midiFilter.channel);

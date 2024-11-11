@@ -263,6 +263,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
         // Now, schedule the engine thread to perform any blocked whenReady tasks
         lx.engine.addTask(() -> {
+          LXMidiSource._Sources.update(inputs);
           for (Runnable runnable : initializationLock.whenReady) {
             runnable.run();
           }
@@ -498,6 +499,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     for (DeviceListener listener : this.deviceListeners) {
       listener.inputAdded(this, input);
     }
+    LXMidiSource._Sources.update(inputs);
   }
 
   private void addOutput(MidiDevice.Info deviceInfo, MidiDevice device) {
@@ -809,25 +811,26 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
     try {
-      String path = parts[index];
+      final String path = parts[index];
+      LXShortMessage oscMidiMessage = null;
       if (path.equals(PATH_NOTE)) {
         int pitch = message.getInt();
         int velocity = message.getInt();
         int channel = message.getInt();
-        dispatch(new MidiNoteOn(channel, pitch, velocity));
-        return true;
-      }
-      if (path.equals(PATH_CC)) {
+        oscMidiMessage = new MidiNoteOn(channel, pitch, velocity);
+      } else if (path.equals(PATH_CC)) {
         int value = message.getInt();
         int cc = message.getInt();
         int channel = message.getInt();
-        dispatch(new MidiControlChange(channel, cc, value));
-        return true;
-      }
-      if (parts[index].equals(PATH_PITCHBEND)) {
+        oscMidiMessage = new MidiControlChange(channel, cc, value);
+      } else if (parts[index].equals(PATH_PITCHBEND)) {
         int msb = message.getInt();
         int channel = message.getInt();
-        dispatch(new MidiPitchBend(channel, msb));
+        oscMidiMessage = new MidiPitchBend(channel, msb).setSource(LXMidiSource.OSC);
+      }
+      if (oscMidiMessage != null) {
+        oscMidiMessage.setSource(LXMidiSource.OSC);
+        dispatch(oscMidiMessage);
         return true;
       }
     } catch (InvalidMidiDataException imdx) {
@@ -978,7 +981,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public void dispatch(LXShortMessage message) {
-    LXMidiInput input = message.getInput();
+    final LXMidiInput input = message.getInput();
     if (input != null) {
       if (input.controlEnabled.isOn()) {
         if (lx.engine.mapping.getMode() == LXMappingEngine.Mode.MIDI) {
@@ -1013,7 +1016,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
     if (input == null || input.channelEnabled.isOn()) {
       for (LXAbstractChannel channelBus : this.lx.engine.mixer.channels) {
-        if (channelBus.midiFilter.filter(message)) {
+        if (channelBus.midiSource.matches(message.getSource()) && channelBus.midiFilter.filter(message)) {
           channelBus.midiMessage(message);
         }
       }

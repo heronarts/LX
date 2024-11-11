@@ -105,6 +105,11 @@ public abstract class LXMidiDevice {
     return LXMidiEngine.getDeviceName(this.device.getDeviceInfo());
   }
 
+  @Override
+  public String toString() {
+    return getName();
+  }
+
   /**
    * Get a description of this device
    *

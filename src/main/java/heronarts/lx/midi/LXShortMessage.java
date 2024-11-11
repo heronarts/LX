@@ -23,7 +23,7 @@ import javax.sound.midi.ShortMessage;
 
 public abstract class LXShortMessage extends ShortMessage {
 
-  private LXMidiInput input = null;
+  private LXMidiSource source = LXMidiSource.UNKNOWN;
 
   public static LXShortMessage fromShortMessage(ShortMessage message) {
     switch (message.getCommand()) {
@@ -62,13 +62,17 @@ public abstract class LXShortMessage extends ShortMessage {
     }
   }
 
-  LXShortMessage setInput(LXMidiInput input) {
-    this.input = input;
+  public LXShortMessage setSource(LXMidiSource source) {
+    this.source = source;
     return this;
   }
 
+  LXMidiSource getSource() {
+    return this.source;
+  }
+
   LXMidiInput getInput() {
-    return this.input;
+    return (this.source instanceof LXMidiInput) ? (LXMidiInput) this.source : null;
   }
 
   public final void dispatch(LXMidiListener listener) {

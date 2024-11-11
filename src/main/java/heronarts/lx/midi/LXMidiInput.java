@@ -36,7 +36,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
-public class LXMidiInput extends LXMidiDevice implements LXSerializable {
+public class LXMidiInput extends LXMidiDevice implements LXMidiSource, LXSerializable {
 
   private final List<LXMidiListener> listeners = new ArrayList<LXMidiListener>();
   private boolean isOpen = false;
@@ -207,7 +207,7 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
         }
 
         if (message != null) {
-          message.setInput(LXMidiInput.this);
+          message.setSource(LXMidiInput.this);
           engine.queueInputMessage(message);
         }
       }
