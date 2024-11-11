@@ -67,7 +67,7 @@ public abstract class LXShortMessage extends ShortMessage {
     return this;
   }
 
-  LXMidiSource getSource() {
+  public LXMidiSource getSource() {
     return this.source;
   }
 

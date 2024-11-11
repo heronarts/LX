@@ -21,6 +21,7 @@ package heronarts.lx.midi;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -88,12 +89,19 @@ public interface LXMidiSource {
     static final List<Selector> selectors = new ArrayList<Selector>();
 
     protected static void update(List<LXMidiInput> inputs) {
-      final ArrayList<LXMidiSource> filterList = new ArrayList<LXMidiSource>(FilterSelector.DEFAULT_FILTERS.size() + inputs.size());
-      filterList.addAll(LXMidiSource.FilterSelector.DEFAULT_FILTERS);
-      filterList.addAll(inputs);
-      filter = filterList.toArray(new LXMidiSource[0]);
-      device = inputs.toArray(new LXMidiSource[0]);
+      // Filter on all the available inputs
+      final List<LXMidiSource> availableDevices = inputs.stream().filter(input -> input.channelEnabled.isOn()).collect(Collectors.toList());
 
+      // Device selectors use all available devices
+      device = availableDevices.toArray(new LXMidiSource[0]);
+
+      // Filter selectors have available default virtual filters + hardware devices
+      final ArrayList<LXMidiSource> filterList = new ArrayList<LXMidiSource>(FilterSelector.DEFAULT_FILTERS.size() + availableDevices.size());
+      filterList.addAll(LXMidiSource.FilterSelector.DEFAULT_FILTERS);
+      filterList.addAll(availableDevices);
+      filter = filterList.toArray(new LXMidiSource[0]);
+
+      // Update options in all the selectors
       for (LXMidiSource.Selector selector : selectors) {
         selector.update();
       }
@@ -118,7 +126,7 @@ public interface LXMidiSource {
 
     protected Selector(String label) {
       super(label);
-      setDescription("Filter MIDI messages from the given source");
+      setDescription("Receive MIDI messages from the given source");
 
       // NOTE: order important here, name will be restored *after* index when
       // re-loading, and this is handled in onSubparameterUpdate()
