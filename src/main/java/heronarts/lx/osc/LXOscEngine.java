@@ -59,7 +59,7 @@ import heronarts.lx.parameter.TriggerParameter;
 public class LXOscEngine extends LXComponent {
 
   public final static int DEFAULT_RECEIVE_PORT = 3030;
-  public final static int DEFAULT_TRANSMIT_PORT = 3131;
+  public final static int DEFAULT_TRANSMIT_PORT = 4040;
 
   public final static String DEFAULT_RECEIVE_HOST = "0.0.0.0";
   public final static String DEFAULT_TRANSMIT_HOST = "localhost";

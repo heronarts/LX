@@ -38,8 +38,6 @@ public abstract class LXOscConnection extends LXComponent {
 
   public static final String DEFAULT_INPUT_HOST = "0.0.0.0";
   public static final String DEFAULT_OUTPUT_HOST = "localhost";
-  public static final int DEFAULT_INPUT_PORT = 3232;
-  public static final int DEFAULT_OUTPUT_PORT = 3333;
 
   public final BooleanParameter active =
     new BooleanParameter("Active", false)
@@ -51,11 +49,7 @@ public abstract class LXOscConnection extends LXComponent {
     .setMappable(false)
     .setDescription("Hostname to which OSC messages are sent/received");
 
-  public final DiscreteParameter port =
-    new DiscreteParameter("Port", (this instanceof Input) ? DEFAULT_INPUT_PORT : DEFAULT_OUTPUT_PORT, 1, 65535)
-    .setDescription("UDP port on which OSC messages are sent/received")
-    .setMappable(false)
-    .setUnits(LXParameter.Units.INTEGER);
+  public final DiscreteParameter port;
 
   public final BooleanParameter log =
     new BooleanParameter("Log", false)
@@ -78,6 +72,16 @@ public abstract class LXOscConnection extends LXComponent {
 
   LXOscConnection(LX lx) {
     super(lx);
+
+    final int defaultPort = (this instanceof Input) ?
+      LXOscEngine.DEFAULT_RECEIVE_PORT + lx.engine.osc.inputs.size() + 1 :
+      LXOscEngine.DEFAULT_TRANSMIT_PORT + lx.engine.osc.outputs.size() + 1;
+
+    this.port =
+      new DiscreteParameter("Port", defaultPort, 1, 65535)
+      .setDescription("UDP port on which OSC messages are sent/received")
+      .setMappable(false)
+      .setUnits(LXParameter.Units.INTEGER);
 
     // NOTE: order matters here, put active last so that when load() is called the
     // host and port are recalled first, then the connection turned on
