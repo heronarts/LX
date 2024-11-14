@@ -33,55 +33,85 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.parameter.TriggerParameter;
+import heronarts.lx.utils.LXUtils;
 
 public abstract class LXOscConnection extends LXComponent {
 
   public static final String DEFAULT_INPUT_HOST = "0.0.0.0";
   public static final String DEFAULT_OUTPUT_HOST = "localhost";
 
+  private final boolean isInput = (this instanceof Input);
+
+  private final String prefix = isInput ? "RX" : "TX";
+
   public final BooleanParameter active =
-    new BooleanParameter("Active", false)
+    new BooleanParameter(prefix + " Active", false)
     .setMappable(false)
-    .setDescription("Enables or disables the OSC connection");
+    .setDescription(isInput ?
+      "Enables or disables OSC engine input" :
+      "Enables or disables OSC engine output"
+    );
 
   public final StringParameter host =
-    new StringParameter("Host", (this instanceof Input) ? DEFAULT_INPUT_HOST : DEFAULT_OUTPUT_HOST)
+    new StringParameter(prefix + " Host", isInput ? DEFAULT_INPUT_HOST : DEFAULT_OUTPUT_HOST)
     .setMappable(false)
-    .setDescription("Hostname to which OSC messages are sent/received");
+    .setDescription(isInput ?
+      "Hostname to which OSC input socket is bound" :
+      "Hostname to which OSC messages are sent"
+    );
 
-  public final DiscreteParameter port;
+  private int _defaultInputPort() {
+    int max = lx.engine.osc.receivePort.getValuei();
+    for (LXOscConnection connection : lx.engine.osc.inputs) {
+      max = LXUtils.max(max, connection.port.getValuei());
+    }
+    return max + 1;
+  }
+
+  private int _defaultOutputPort() {
+    int max = lx.engine.osc.transmitPort.getValuei();
+    for (LXOscConnection connection : lx.engine.osc.outputs) {
+      max = LXUtils.max(max, connection.port.getValuei());
+    }
+    return max + 1;
+  }
+
+  public final DiscreteParameter port =
+    new DiscreteParameter(prefix + " Port", isInput ? _defaultInputPort() : _defaultOutputPort(), 1, 65535)
+    .setMappable(false)
+    .setUnits(LXParameter.Units.INTEGER)
+    .setDescription(this.isInput ?
+      "UDP port on which the engine listens for OSC messages" :
+      "UDP port on which the engine transmits OSC messages"
+    );
 
   public final BooleanParameter log =
-    new BooleanParameter("Log", false)
-    .setDescription("Whether to log sent/received OSC messages");
+    new BooleanParameter(prefix + " Log", false)
+    .setDescription(isInput ?
+      "Whether to log OSC input messages" :
+      "Whether to log OSC output messages"
+    );
 
   public final BooleanParameter unknownHost =
     new BooleanParameter("Unknown Host", false)
     .setMappable(false)
-    .setDescription("Set to true if the host is unknown");
+    .setDescription(isInput ?
+      "Set to true if the receive host is unknown" :
+      "Set to true if the transmit host is unknown"
+    );
 
   public final EnumParameter<IOState> state =
-    new EnumParameter<IOState>("State", IOState.STOPPED)
+    new EnumParameter<IOState>(prefix + " State", IOState.STOPPED)
     .setMappable(false)
     .setDescription("The state of the OSC connection");
 
   public final TriggerParameter activity =
-    new TriggerParameter("OSC Activity")
+    new TriggerParameter(prefix + " Activity")
     .setMappable(false)
-    .setDescription("Triggers when the OSC connection is active");
+    .setDescription("Triggers when there is activity on the OSC connection");
 
   LXOscConnection(LX lx) {
     super(lx);
-
-    final int defaultPort = (this instanceof Input) ?
-      LXOscEngine.DEFAULT_RECEIVE_PORT + lx.engine.osc.inputs.size() + 1 :
-      LXOscEngine.DEFAULT_TRANSMIT_PORT + lx.engine.osc.outputs.size() + 1;
-
-    this.port =
-      new DiscreteParameter("Port", defaultPort, 1, 65535)
-      .setDescription("UDP port on which OSC messages are sent/received")
-      .setMappable(false)
-      .setUnits(LXParameter.Units.INTEGER);
 
     // NOTE: order matters here, put active last so that when load() is called the
     // host and port are recalled first, then the connection turned on

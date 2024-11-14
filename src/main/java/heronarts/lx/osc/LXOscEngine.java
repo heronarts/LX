@@ -107,7 +107,7 @@ public class LXOscEngine extends LXComponent {
 
     public final DiscreteParameter receivePort =
     new DiscreteParameter("RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
-    .setDescription("UDP port on which the engine listens for OSC message")
+    .setDescription("UDP port on which the engine listens for OSC messages")
     .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
   public final BooleanParameter transmitActive =
@@ -142,12 +142,12 @@ public class LXOscEngine extends LXComponent {
     .setUnits(LXParameter.Units.INTEGER);
 
   public final BooleanParameter logInput =
-    new BooleanParameter("Log OSC Input", false)
-    .setDescription("Whether to log all OSC input messages");
+    new BooleanParameter("RX Log", false)
+    .setDescription("Whether to log OSC input messages");
 
   public final BooleanParameter logOutput =
-    new BooleanParameter("Log OSC Output", false)
-    .setDescription("Whether to log all OSC output messages");
+    new BooleanParameter("TX Log", false)
+    .setDescription("Whether to log OSC output messages");
 
   private final List<Receiver> receivers =
     new CopyOnWriteArrayList<Receiver>();
@@ -1028,6 +1028,10 @@ public class LXOscEngine extends LXComponent {
     if (obj.has(LXComponent.KEY_RESET)) {
       this.receiveActive.setValue(false);
       this.transmitActive.setValue(false);
+      this.receivePort.reset();
+      this.transmitPort.reset();
+      this.receiveHost.reset();
+      this.transmitHost.reset();
     }
     removeIO();
     if (obj.has(KEY_INPUTS)) {
