@@ -29,6 +29,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXMidiOutput;
+import heronarts.lx.midi.LXMidiSource;
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
@@ -55,18 +56,26 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
   /**
    * The midi input device for this control surface. Never null.
    */
-  public final LXMidiInput input;
+  private LXMidiInput input;
 
   /**
    * The midi output device for this control surface. May be null in cases where the
    * control surface does not implement the OutputRequired interface
    */
-  public final LXMidiOutput output;
+  private LXMidiOutput output;
+
+  public final LXMidiSource.DeviceSelector sourceDevice =
+    new LXMidiSource.DeviceSelector("Source");
 
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled")
     .setMappable(false)
     .setDescription("Whether the control surface is enabled");
+
+  public final BooleanParameter connected =
+    new BooleanParameter("Connected", false)
+    .setMappable(false)
+    .setDescription("Whether the control surface is connected");
 
   protected final LXParameter.Collection mutableSettings = new LXParameter.Collection();
   public final Map<String, LXParameter> settings = Collections.unmodifiableMap(this.mutableSettings);
@@ -79,21 +88,14 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
 
   protected LXMidiSurface(LX lx, final LXMidiInput input, final LXMidiOutput output) {
     this.lx = lx;
-    this.input = input;
-    this.output = output;
-    if ((this instanceof Bidirectional) && (output == null)) {
-      throw new IllegalArgumentException("Surface " + getClass().getSimpleName() + " requires MIDI output");
-    }
-    this.enabled.addListener((p) -> {
-      boolean on = this.enabled.isOn();
+    setInput(input);
+    setOutput(output);
+    this.enabled.addListener(p -> {
+      final boolean on = this.enabled.isOn();
       if (on) {
         // Make sure I/O channels are enabled
-        this.input.open();
-        if (this.output != null) {
-          this.output.open();
-        }
-        // Listen to the input
-        this.input.addListener(this);
+        setInputState(on);
+        setOutputState(on);
 
         // Enable sending and turn on the surface
         this._enabled = on;
@@ -104,19 +106,95 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
         onEnable(on);
         this._enabled = on;
 
-        // Stop listening to the input
-        this.input.removeListener(this);
+        setInputState(on);
+        setOutputState(on);
       }
-
     });
 
-    this.output.connected.addListener((p) -> {
-      if (this.output.connected.isOn()) {
+    this.connected.addListener(p -> {
+      if (this.connected.isOn()) {
         this.input.open();
         this.output.open();
         onReconnect();
       }
     });
+  }
+
+  private boolean hasInputListener = false;
+
+  private void setInputState(boolean on) {
+    if (this.input != null) {
+      if (on) {
+        this.input.open();
+        if (!this.hasInputListener) {
+          this.input.addListener(this);
+          this.hasInputListener = true;
+        }
+      } else {
+        // Stop listening to the input when off
+        if (this.hasInputListener) {
+          this.input.removeListener(this);
+          this.hasInputListener = false;
+        }
+      }
+    }
+  }
+
+  private void setOutputState(boolean on) {
+    if (this.output != null) {
+      if (on) {
+        this.output.open();
+      }
+    }
+  }
+
+  private void _setConnected() {
+    final boolean requiresOutput = this instanceof Bidirectional;
+    final boolean inputConnected = (this.input != null) && this.input.connected.isOn();
+    final boolean outputConnected = (this.output != null) && this.output.connected.isOn();
+    this.connected.setValue(inputConnected && (!requiresOutput || outputConnected));
+  }
+
+  private final LXParameterListener onInputConnected = p -> {
+    if (this.input.connected.isOn()) {
+      this.input.open();
+    }
+    _setConnected();
+  };
+
+  public LXMidiSurface setInput(LXMidiInput input) {
+    if (this.input != null) {
+      setInputState(false);
+      this.input.connected.removeListener(this.onInputConnected);
+    }
+    this.input = input;
+    if (this.input != null) {
+      setInputState(this._enabled);
+      this.input.connected.addListener(this.onInputConnected, true);
+    } else {
+      this.connected.setValue(false);
+    }
+    return this;
+  }
+
+  private final LXParameterListener onOutputConnected = p -> {
+    if (this.output.connected.isOn()) {
+      this.output.open();
+    }
+    _setConnected();
+  };
+
+  public LXMidiSurface setOutput(LXMidiOutput output) {
+    if (this.output != null) {
+      setOutputState(false);
+      this.output.connected.removeListener(this.onOutputConnected);
+    }
+    this.output = output;
+    if (this.output != null) {
+      setOutputState(this._enabled);
+      this.output.connected.addListener(this.onOutputConnected, true);
+    }
+    return this;
   }
 
   public void onParameterChanged(LXParameter p) {}
@@ -137,9 +215,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     state.addListener(this);
   }
 
-  public String getName() {
-    return this.input.getName();
-  }
+  public abstract String getName();
 
   public LXMidiInput getInput() {
     return this.input;
@@ -163,14 +239,20 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
   protected void onReconnect() {}
 
   protected void sendNoteOn(int channel, int note, int velocity) {
-    if (this._enabled) {
+    if (this._enabled && (this.output != null)) {
       this.output.sendNoteOn(channel, note, velocity);
     }
   }
 
   protected void sendControlChange(int channel, int cc, int value) {
-    if (this._enabled) {
+    if (this._enabled && (this.output != null)) {
       this.output.sendControlChange(channel, cc, value);
+    }
+  }
+
+  protected void sendSysex(byte[] sysex) {
+    if (this._enabled && (this.output != null)) {
+      this.output.sendSysex(sysex);
     }
   }
 
@@ -252,6 +334,8 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
   }
 
   public void dispose() {
+    setOutput(null);
+    setInput(null);
     for (LXParameter setting : this.settings.values()) {
       ((LXListenableParameter) setting).removeListener(this);
       setting.dispose();

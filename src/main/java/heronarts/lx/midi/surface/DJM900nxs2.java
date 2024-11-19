@@ -333,6 +333,11 @@ public class DJM900nxs2 extends LXMidiSurface {
   }
 
   @Override
+  public String getName() {
+    return DEVICE_NAME;
+  }
+
+  @Override
   protected void onEnable(boolean on) {
     if (on) {
       initialize();

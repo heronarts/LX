@@ -602,6 +602,11 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   }
 
   @Override
+  public String getName() {
+    return DEVICE_NAME;
+  }
+
+  @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.faderMode) {
@@ -649,7 +654,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   }
 
   private void setApcMode(byte mode) {
-    this.output.sendSysex(new byte[] {
+    sendSysex(new byte[] {
       (byte) 0xf0, // sysex start
       0x47, // manufacturers id
       0x00, // device id

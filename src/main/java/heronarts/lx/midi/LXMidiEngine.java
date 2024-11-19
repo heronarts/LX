@@ -522,7 +522,8 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   private void checkForNewSurfaceDevice(MidiDevice device) {
     // Is there already a control surface for this device?
     for (LXMidiSurface surface : this.mutableSurfaces) {
-      if (surface.input.device == device) {
+      LXMidiInput input = surface.getInput();
+      if ((input != null) && (input.device == device)) {
         return;
       }
     }

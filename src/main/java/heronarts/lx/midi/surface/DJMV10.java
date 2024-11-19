@@ -579,6 +579,11 @@ public class DJMV10 extends LXMidiSurface {
   }
 
   @Override
+  public String getName() {
+    return DEVICE_NAME;
+  }
+
+  @Override
   protected void onEnable(boolean on) {
     if (on) {
       initialize();

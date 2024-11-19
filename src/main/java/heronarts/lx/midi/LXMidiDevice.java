@@ -133,9 +133,10 @@ public abstract class LXMidiDevice {
       if (this.device.isOpen()) {
         this.device.close();
       }
-    } catch (Exception ignored) {
+    } catch (Exception x) {
       // Technically should never happen, but just to beware of weird
       // MIDI implementations on strange systems
+      LXMidiEngine.error(x, "Unexpected exception closing device " + getName());
     }
   }
 

@@ -418,6 +418,11 @@ public class DJMA9 extends LXMidiSurface {
   }
 
   @Override
+  public String getName() {
+    return DEVICE_NAME;
+  }
+
+  @Override
   protected void onEnable(boolean on) {
     if (on) {
       initialize();

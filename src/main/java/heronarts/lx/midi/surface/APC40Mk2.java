@@ -877,6 +877,11 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   @Override
+  public String getName() {
+    return DEVICE_NAME;
+  }
+
+  @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.faderMode) {
@@ -926,7 +931,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void setApcMode(byte mode) {
-    this.output.sendSysex(new byte[] {
+    sendSysex(new byte[] {
       (byte) 0xf0, // sysex start
       0x47, // manufacturers id
       0x00, // device id
@@ -943,8 +948,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
   }
 
   private void initialize(boolean reconnect) {
-    this.output.sendNoteOn(0, BANK, LED_ON(this.bankOn));
-    this.output.sendNoteOn(0, DEVICE_LOCK, LED_ON(this.deviceLockOn));
+    sendNoteOn(0, BANK, LED_ON(this.bankOn));
+    sendNoteOn(0, DEVICE_LOCK, LED_ON(this.deviceLockOn));
 
     if (!reconnect) {
       resetPaletteVars();

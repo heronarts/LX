@@ -402,7 +402,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
             }
 
             // LXMidiEngine.log("MFT Encoder sysex(" + this.encoderIndex + "): " + bytesToString(payload));
-            output.sendSysex(payload);
+            sendSysex(payload);
           }
         }
 
@@ -427,7 +427,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         payload[7] = (byte)0xf7;                    // End sysex
 
         // LXMidiEngine.log("MFT Encoder sysex(" + this.encoderIndex + "): " + bytesToString(payload));
-        output.sendSysex(payload);
+        sendSysex(payload);
 
         // TODO: Process response
       }
@@ -500,7 +500,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       sysex[iSys] = (byte)0xf7;
 
       // LXMidiEngine.log("MFT System sysex:      " + bytesToString(sysex));
-      output.sendSysex(sysex);
+      sendSysex(sysex);
     }
 
     private void initializeLXDefaults() {
@@ -944,6 +944,11 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     addSetting("focusMode", this.focusMode);
     addSetting("isAux", this.isAux);
     addSetting("currentBank", this.currentBank);
+  }
+
+  @Override
+  public String getName() {
+    return DEVICE_NAME;
   }
 
   @Override

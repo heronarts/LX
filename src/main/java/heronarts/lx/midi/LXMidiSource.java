@@ -21,8 +21,6 @@ package heronarts.lx.midi;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
-
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -56,6 +54,17 @@ public interface LXMidiSource {
     }
   };
 
+  public final static LXMidiSource NONE = new LXMidiSource() {
+    @Override
+    public String toString() {
+      return "None";
+    }
+
+    public boolean matches(LXMidiSource source) {
+      return false;
+    }
+  };
+
   public final static LXMidiSource ALL_INS = new LXMidiSource() {
     @Override
     public String toString() {
@@ -84,21 +93,22 @@ public interface LXMidiSource {
   static class _Sources {
 
     static LXMidiSource[] filter = FilterSelector.DEFAULT_FILTERS.toArray(new LXMidiSource[0]);
-    static LXMidiSource[] device = {};
+    static LXMidiSource[] device = new LXMidiSource[] { LXMidiSource.NONE };
 
     static final List<Selector> selectors = new ArrayList<Selector>();
 
     protected static void update(List<LXMidiInput> inputs) {
-      // Filter on all the available inputs
-      final List<LXMidiSource> availableDevices = inputs.stream().filter(input -> input.channelEnabled.isOn()).collect(Collectors.toList());
-
       // Device selectors use all available devices
-      device = availableDevices.toArray(new LXMidiSource[0]);
+      device = inputs.isEmpty() ? new LXMidiSource[] { LXMidiSource.NONE } : inputs.toArray(new LXMidiSource[0]);
 
-      // Filter selectors have available default virtual filters + hardware devices
-      final ArrayList<LXMidiSource> filterList = new ArrayList<LXMidiSource>(FilterSelector.DEFAULT_FILTERS.size() + availableDevices.size());
+      // Filter selectors are for channel-enabled devices only
+      final ArrayList<LXMidiSource> filterList = new ArrayList<LXMidiSource>(FilterSelector.DEFAULT_FILTERS.size() + inputs.size());
       filterList.addAll(LXMidiSource.FilterSelector.DEFAULT_FILTERS);
-      filterList.addAll(availableDevices);
+      for (LXMidiInput input : inputs) {
+        if (input.channelEnabled.isOn()) {
+          filterList.add(input);
+        }
+      }
       filter = filterList.toArray(new LXMidiSource[0]);
 
       // Update options in all the selectors
@@ -254,6 +264,7 @@ public interface LXMidiSource {
       }
       this.missingDevice = false;
       updateNameAndIndex(this.source.getObject());
+      bang();
     }
 
     @Override
@@ -301,7 +312,7 @@ public interface LXMidiSource {
 
   public static class DeviceSelector extends Selector {
 
-    public DeviceSelector(LXMidiEngine midi, String label) {
+    public DeviceSelector(String label) {
       super(label);
     }
 
