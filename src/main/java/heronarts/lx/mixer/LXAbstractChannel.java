@@ -100,6 +100,21 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     .setDescription("Sets whether this channel is on or off");
 
   /**
+   * Whether this channel automatically behaves as if enabled is false
+   * whenever the fader level is at 0.
+   */
+  public final BooleanParameter autoMute =
+    new BooleanParameter("Auto-Mute", false)
+    .setDescription("Whether to disable channel processing if fader is off");
+
+  /**
+   * Read-only parameter, used to monitor when auto-muting is taking place
+   */
+  public final BooleanParameter isAutoMuted =
+    new BooleanParameter("Auto-Muted", false)
+    .setDescription("Set to true by the engine when the channel is auto-disabled");
+
+  /**
    * Crossfade group this channel belongs to
    */
   public final EnumParameter<CrossfadeGroup> crossfadeGroup =
@@ -203,6 +218,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("aux", this.auxActive);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
+    addParameter("autoMute", this.autoMute);
     addParameter("midiSource", this.midiSource);
     addParameter("midiFilter", this.midiFilter);
     addLegacyParameter("midiMonitor", this.midiFilter.enabled);
@@ -271,7 +287,11 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
           this.lx.engine.mixer.setFocusedChannel(this);
         }
       }
-    } if (p == this.auxActive) {
+    } else if (p == this.autoMute) {
+      if (!this.autoMute.isOn()) {
+        this.isAutoMuted.setValue(false);
+      }
+    } else if (p == this.auxActive) {
       if (this.auxActive.isOn()) {
         this.lx.engine.mixer.auxA.setValue(false);
         this.lx.engine.mixer.auxB.setValue(false);
@@ -320,6 +340,10 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     if (!this.enabled.isOn()) {
       return false;
     }
+    // Are we auto-disabled by our fader being at 0? Done.
+    if (this.isAutoMuted.isOn()) {
+      return false;
+    }
     // Are we a group? Cool, we should animate.
     if (this instanceof LXGroup) {
       return true;
@@ -332,6 +356,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   @Override
   public void loop(double deltaMs) {
+    if (this.autoMute.isOn()) {
+      this.isAutoMuted.setValue(this.fader.getValue() == 0);
+    }
     // Figure out if we need to loop components and modulators etc.
     this.isAnimating = isAnimating();
     super.loop(deltaMs, this.isAnimating);
