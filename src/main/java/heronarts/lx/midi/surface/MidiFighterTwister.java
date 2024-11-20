@@ -43,6 +43,7 @@ import heronarts.lx.parameter.DiscreteParameter.IncrementMode;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.utils.LXUtils;
 
+@LXMidiSurface.Name("DJTT Midi Fighter Twister")
 public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
   public static final String DEVICE_NAME = "Midi Fighter Twister";
@@ -947,7 +948,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
   }
 
   @Override
-  public String getName() {
+  public String getDeviceName() {
     return DEVICE_NAME;
   }
 
@@ -999,9 +1000,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   @Override
   protected void onReconnect() {
-    if (this.enabled.isOn()) {
-      this.deviceListener.resend();
-    }
+    // MFT may have power-cycled or lost settings, re-initialize global sysex state
+    initialize();
+    this.deviceListener.resend();
   }
 
   private void initialize() {

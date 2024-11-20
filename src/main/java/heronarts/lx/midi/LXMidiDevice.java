@@ -21,7 +21,7 @@ package heronarts.lx.midi;
 import javax.sound.midi.MidiDevice;
 import heronarts.lx.parameter.BooleanParameter;
 
-public abstract class LXMidiDevice {
+public abstract class LXMidiDevice implements LXMidiTerminal {
 
   protected final LXMidiEngine engine;
   protected MidiDevice device;

@@ -64,7 +64,7 @@ public class LXMidiInput extends LXMidiDevice implements LXMidiSource, LXSeriali
 
     final LXParameterListener enabledListener = p -> {
       if (p == this.channelEnabled) {
-        LXMidiSource._Sources.update(engine.inputs);
+        MidiSelector.updateInputs(engine.inputs);
       }
       this.enabled.setValue(this.channelEnabled.isOn() || this.controlEnabled.isOn() || this.syncEnabled.isOn());
     };

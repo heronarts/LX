@@ -31,10 +31,10 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
-import heronarts.lx.midi.LXMidiSource;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.midi.MidiPanic;
+import heronarts.lx.midi.MidiSelector;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -120,8 +120,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     new BooleanParameter("Aux", false)
     .setDescription("Toggles the channel AUX state, determining whether it is shown in the auxiliary window");
 
-  public final LXMidiSource.FilterSelector midiSource =
-    new LXMidiSource.FilterSelector("MIDI Source");
+  public final MidiSelector.Source.Channel midiSource =
+    new MidiSelector.Source.Channel("MIDI Source");
 
   public final MidiFilterParameter midiFilter =
     new MidiFilterParameter("MIDI Filter", false)

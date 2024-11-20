@@ -49,6 +49,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
 
+@LXMidiSurface.Name("Akai APC40")
 public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
 
   public static final String DEVICE_NAME = "Akai APC40";
@@ -602,7 +603,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
   }
 
   @Override
-  public String getName() {
+  public String getDeviceName() {
     return DEVICE_NAME;
   }
 
@@ -646,11 +647,9 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
 
   @Override
   protected void onReconnect() {
-    if (this.enabled.isOn()) {
-      setApcMode(ABLETON_ALTERNATE_MODE);
-      initialize(true);
-      this.deviceListener.resend();
-    }
+    setApcMode(ABLETON_ALTERNATE_MODE);
+    initialize(true);
+    this.deviceListener.resend();
   }
 
   private void setApcMode(byte mode) {

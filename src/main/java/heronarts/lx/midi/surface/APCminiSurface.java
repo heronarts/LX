@@ -800,7 +800,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
   @Override
   protected void onEnable(boolean on) {
     if (on) {
-      initialize(false);
+      initialize();
       register();
     } else {
       if (this.isRegistered) {
@@ -811,13 +811,11 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
 
   @Override
   protected void onReconnect() {
-    if (this.enabled.isOn()) {
-      initialize(true);
-      this.deviceListener.resend();
-    }
+    initialize();
+    this.deviceListener.resend();
   }
 
-  private void initialize(boolean reconnect) {
+  private void initialize() {
     sendGrid();
     sendChannelButtonRow();
     sendSceneLaunchButtons();

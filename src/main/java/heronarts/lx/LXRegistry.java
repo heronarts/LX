@@ -514,6 +514,10 @@ public class LXRegistry implements LXSerializable {
     this.classLoader = new LXClassLoader(lx);
   }
 
+  public Class<?> getClass(String className) throws ClassNotFoundException {
+    return Class.forName(className, true, this.classLoader);
+  }
+
   protected void initialize() {
     this.contentReloading = true;
     this.classLoader.load();

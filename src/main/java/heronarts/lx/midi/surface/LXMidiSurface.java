@@ -18,6 +18,11 @@
 
 package heronarts.lx.midi.surface;
 
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 import java.util.Collections;
 import java.util.Map;
 
@@ -25,23 +30,31 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXMidiOutput;
-import heronarts.lx.midi.LXMidiSource;
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.midi.MidiPitchBend;
 import heronarts.lx.midi.MidiProgramChange;
+import heronarts.lx.midi.MidiSelector;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
-public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, LXParameterListener {
+public abstract class LXMidiSurface extends LXComponent implements LXMidiListener, LXSerializable, LXParameterListener {
+
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Name {
+    String value();
+  }
 
   /**
    * Marker interface for Midi Surface implementations which require an output
@@ -64,8 +77,11 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
    */
   private LXMidiOutput output;
 
-  public final LXMidiSource.DeviceSelector sourceDevice =
-    new LXMidiSource.DeviceSelector("Source");
+  public final MidiSelector.Source.Device sourceDevice =
+    new MidiSelector.Source.Device("Source");
+
+  public final MidiSelector.Destination.Device destinationDevice =
+    new MidiSelector.Destination.Device("Destination");
 
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled")
@@ -86,16 +102,33 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
   // Internal flag for enabled state, pre/post-teardown
   private boolean _enabled = false;
 
+  private boolean remember = false;
+
   protected LXMidiSurface(LX lx, final LXMidiInput input, final LXMidiOutput output) {
+    super(lx);
     this.lx = lx;
+
+    // Initialize input parameter before registering to avoid initial listener trigger
+    this.sourceDevice.setInput(input);
+    addParameter("sourceDevice", this.sourceDevice);
+
+    // Same for output, but skip it if a non-bidirectional surface
+    if (this instanceof Bidirectional) {
+      this.destinationDevice.setOutput(output);
+      addParameter("destinationDevice", this.destinationDevice);
+    }
+
+    // Set the I/O objects
     setInput(input);
     setOutput(output);
+
     this.enabled.addListener(p -> {
+      this.remember = false;
       final boolean on = this.enabled.isOn();
       if (on) {
+
         // Make sure I/O channels are enabled
         setInputState(on);
-        setOutputState(on);
 
         // Enable sending and turn on the surface
         this._enabled = on;
@@ -105,54 +138,61 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
         // wants to turn off LED lights, etc.
         onEnable(on);
         this._enabled = on;
-
         setInputState(on);
-        setOutputState(on);
       }
     });
 
     this.connected.addListener(p -> {
-      if (this.connected.isOn()) {
-        this.input.open();
-        this.output.open();
+      if (this.connected.isOn() && this._enabled) {
         onReconnect();
       }
     });
   }
 
-  private boolean hasInputListener = false;
+  public LXMidiSurface setRememberFlag() {
+    this.remember = true;
+    return this;
+  }
 
-  private void setInputState(boolean on) {
-    if (this.input != null) {
-      if (on) {
-        this.input.open();
-        if (!this.hasInputListener) {
-          this.input.addListener(this);
-          this.hasInputListener = true;
-        }
-      } else {
-        // Stop listening to the input when off
-        if (this.hasInputListener) {
-          this.input.removeListener(this);
-          this.hasInputListener = false;
-        }
-      }
+  public boolean hasRememberFlag() {
+    return this.remember;
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (p == this.sourceDevice) {
+      setInput(this.sourceDevice.getInput());
+    } else if (p == this.destinationDevice) {
+      setOutput(this.destinationDevice.getOutput());
     }
   }
 
-  private void setOutputState(boolean on) {
-    if (this.output != null) {
-      if (on) {
-        this.output.open();
+  private boolean hasInputListener = false;
+
+  private void setInputState(boolean on) {
+    if (this.input == null) {
+      return;
+    }
+    if (on) {
+      if (!this.hasInputListener) {
+        this.input.addListener(this);
+        this.hasInputListener = true;
+      }
+    } else {
+      // Stop listening to the input when off
+      if (this.hasInputListener) {
+        this.input.removeListener(this);
+        this.hasInputListener = false;
       }
     }
   }
 
   private void _setConnected() {
-    final boolean requiresOutput = this instanceof Bidirectional;
+    final boolean isBidirectional = this instanceof Bidirectional;
     final boolean inputConnected = (this.input != null) && this.input.connected.isOn();
     final boolean outputConnected = (this.output != null) && this.output.connected.isOn();
-    this.connected.setValue(inputConnected && (!requiresOutput || outputConnected));
+    this.connected.setValue(inputConnected && (!isBidirectional || outputConnected));
   }
 
   private final LXParameterListener onInputConnected = p -> {
@@ -162,17 +202,17 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     _setConnected();
   };
 
-  public LXMidiSurface setInput(LXMidiInput input) {
+  private LXMidiSurface setInput(LXMidiInput input) {
     if (this.input != null) {
       setInputState(false);
       this.input.connected.removeListener(this.onInputConnected);
+      this.input = null;
     }
+    _setConnected();
     this.input = input;
     if (this.input != null) {
       setInputState(this._enabled);
       this.input.connected.addListener(this.onInputConnected, true);
-    } else {
-      this.connected.setValue(false);
     }
     return this;
   }
@@ -184,20 +224,18 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     _setConnected();
   };
 
-  public LXMidiSurface setOutput(LXMidiOutput output) {
+  private LXMidiSurface setOutput(LXMidiOutput output) {
     if (this.output != null) {
-      setOutputState(false);
       this.output.connected.removeListener(this.onOutputConnected);
+      this.output = null;
     }
+    _setConnected();
     this.output = output;
     if (this.output != null) {
-      setOutputState(this._enabled);
       this.output.connected.addListener(this.onOutputConnected, true);
     }
     return this;
   }
-
-  public void onParameterChanged(LXParameter p) {}
 
   protected void addSetting(String key, LXListenableParameter setting) {
     if (this.mutableSettings.containsKey(key)) {
@@ -215,18 +253,69 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     state.addListener(this);
   }
 
-  public abstract String getName();
+  /**
+   * Do not use this method, replaced by getDeviceName() for clarity
+   *
+   * @deprecated Replaced with the clearer getDeviceName()
+   * @return default MIDI device name for this surface
+   */
+  @Deprecated
+  public String getName() {
+    return getDeviceName();
+  }
 
+  /**
+   * Returns the default USB/MIDI driver name of the device for this surface
+   *
+   * @return Surface default USB/MIDI driver name
+   */
+  public abstract String getDeviceName();
+
+  /**
+   * Gets the user-facing name of this surface class
+   *
+   * @return User-facing name of the MIDI surface
+   */
+  public String getSurfaceName() {
+    return getSurfaceName(getClass());
+  }
+
+  /**
+   * Gets the name of a midi surface to be presented to the user
+   *
+   * @param clazz Midi surface class
+   * @return Name of this surface to be shown to the user
+   */
+  public static String getSurfaceName(Class<? extends LXMidiSurface> clazz) {
+    LXMidiSurface.Name annotation = clazz.getAnnotation(LXMidiSurface.Name.class);
+    if (annotation != null) {
+      return annotation.value();
+    }
+    return clazz.getSimpleName();
+  }
+
+  /**
+   * Get the current MIDI input for this service
+   *
+   * @return MIDI input (or null)
+   */
   public LXMidiInput getInput() {
     return this.input;
   }
 
+  /**
+   * Get the current MIDI output for this service
+   *
+   * @return MIDI output (or null if not found)
+   */
   public LXMidiOutput getOutput() {
     return this.output;
   }
 
   /**
-   * Subclasses may override, invoked automatically when surface is enabled/disabled
+   * Subclasses may override, invoked automatically when surface is enabled/disabled. This
+   * is the typical place to send MIDI messages that configure the state and behavior of a
+   * MIDI control surface that has different modes or customization available
    *
    * @param isOn Whether surface is enabled
    */
@@ -234,7 +323,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
 
   /**
    * Subclasses may override, invoked when the control surface was disconnected but
-   * has now reconnected. Re-initialization may be necessary.
+   * has now reconnected, while still being in the enabled state.
    */
   protected void onReconnect() {}
 
@@ -275,6 +364,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
 
   @Override
   public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
     if (obj.has(KEY_SETTINGS)) {
       final JsonElement settingsElem = obj.get(KEY_SETTINGS);
       if (settingsElem.isJsonObject()) {
@@ -291,8 +381,8 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
 
   @Override
   public void save(LX lx, JsonObject obj) {
-    obj.addProperty(KEY_CLASS, getClass().getName());
-    obj.addProperty(KEY_NAME, getName());
+    super.save(lx, obj);
+    obj.addProperty(KEY_NAME, getDeviceName());
     if (!this.settings.isEmpty()) {
       obj.add(KEY_SETTINGS, LXSerializable.Utils.saveParameters(this.mutableSettings));
     }
@@ -305,7 +395,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
     // NOTE: legacy compabitility, pre-1.0.1 didn't store the surface CLASS
     // here when there was only one surface type per device name supported
     final String surfaceClass = surface.has(KEY_CLASS) ? surface.get(KEY_CLASS).getAsString() : null;
-    return getName().equals(surface.get(KEY_NAME).getAsString()) &&
+    return getDeviceName().equals(surface.get(KEY_NAME).getAsString()) &&
       ((surfaceClass == null) || surfaceClass.equals(getClass().getName()));
   }
 
@@ -333,6 +423,7 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
   public void aftertouchReceived(MidiAftertouch aftertouch) {
   }
 
+  @Override
   public void dispose() {
     setOutput(null);
     setInput(null);
@@ -344,7 +435,9 @@ public abstract class LXMidiSurface implements LXMidiListener, LXSerializable, L
       ((LXListenableParameter) state).removeListener(this);
       state.dispose();
     }
+    this.mutableState.clear();
     this.mutableSettings.clear();
+    super.dispose();
   }
 
 }

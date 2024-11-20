@@ -23,6 +23,7 @@ import heronarts.lx.LX;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
 
+@LXMidiSurface.Name("Akai APC Mini mk2")
 public class APCminiMk2 extends APCminiSurface {
 
   public static final String DEVICE_NAME = "APC mini mk2 Control";
@@ -116,7 +117,7 @@ public class APCminiMk2 extends APCminiSurface {
   }
 
   @Override
-  public String getName() {
+  public String getDeviceName() {
     return "APCmini mk2";
   }
 

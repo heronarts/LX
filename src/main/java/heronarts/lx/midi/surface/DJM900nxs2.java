@@ -33,6 +33,7 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.LXParameter.Polarity;
 import heronarts.lx.utils.LXUtils;
 
+@LXMidiSurface.Name("Pioneer DJM-900NXS2")
 public class DJM900nxs2 extends LXMidiSurface {
 
   public static final String DEVICE_NAME = "DJM-900NXS2";
@@ -333,7 +334,7 @@ public class DJM900nxs2 extends LXMidiSurface {
   }
 
   @Override
-  public String getName() {
+  public String getDeviceName() {
     return DEVICE_NAME;
   }
 

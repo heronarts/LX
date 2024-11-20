@@ -26,7 +26,7 @@ import javax.sound.midi.Receiver;
 import javax.sound.midi.ShortMessage;
 import javax.sound.midi.SysexMessage;
 
-public class LXMidiOutput extends LXMidiDevice implements Receiver {
+public class LXMidiOutput extends LXMidiDevice implements LXMidiDestination, Receiver {
 
   private Receiver receiver = null;
   private boolean isOpen = false;
