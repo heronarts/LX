@@ -41,6 +41,7 @@ import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiMapping;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.template.LXMidiTemplate;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
@@ -3043,7 +3044,7 @@ public abstract class LXCommand {
     }
 
     public static class RemoveMapping extends LXCommand {
-      private final LXMidiMapping mapping;
+      private LXMidiMapping mapping;
       private final JsonObject mappingObj;
 
       public RemoveMapping(LX lx, LXMidiMapping mapping) {
@@ -3063,8 +3064,116 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        lx.engine.midi.addMapping(LXMidiMapping.create(lx, this.mappingObj));
+        lx.engine.midi.addMapping(this.mapping = LXMidiMapping.create(lx, this.mappingObj));
       }
+    }
+
+    public static class AddTemplate extends LXCommand {
+
+      private ComponentReference<LXMidiTemplate> template = null;
+      private final Class<? extends LXMidiTemplate> templateClass;
+      private JsonObject templateObj = null;
+
+      public AddTemplate(Class<? extends LXMidiTemplate> templateClass) {
+        this.templateClass = templateClass;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add MIDI Template";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          final LXMidiTemplate template = lx.instantiateComponent(this.templateClass, LXMidiTemplate.class);
+          this.template = new ComponentReference<LXMidiTemplate>(template);
+          if (this.templateObj != null) {
+            template.load(lx, this.templateObj);
+          } else {
+            template.initializeDefaultIO();
+          }
+          lx.engine.midi.addTemplate(template);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        if (this.template == null) {
+          throw new IllegalStateException("Template was not successfully added, cannot undo");
+        }
+        final LXMidiTemplate template = this.template.get();
+        this.templateObj = LXSerializable.Utils.toObject(template);
+        lx.engine.midi.removeTemplate(template);
+      }
+
+    }
+
+    public static class RemoveTemplate extends LXCommand {
+
+      private final ComponentReference<LXMidiTemplate> midiTemplate;
+      private JsonObject templateObj;
+      private int fromIndex;
+
+      public RemoveTemplate(LXMidiTemplate midiTemplate) {
+        this.midiTemplate = new ComponentReference<LXMidiTemplate>(midiTemplate);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Delete MIDI Template";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        final LXMidiTemplate midiTemplate = this.midiTemplate.get();
+        this.fromIndex = midiTemplate.getIndex();
+        this.templateObj = LXSerializable.Utils.toObject(midiTemplate);
+        lx.engine.midi.removeTemplate(midiTemplate);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        try {
+          final LXMidiTemplate template = lx.instantiateComponent(this.templateObj.get(LXComponent.KEY_CLASS).getAsString(), LXMidiTemplate.class);
+          template.load(lx, this.templateObj);
+          lx.engine.midi.addTemplate(template);
+          lx.engine.midi.moveTemplate(template, this.fromIndex);
+        } catch (LX.InstantiationException x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+    }
+
+    public static class MoveTemplate extends LXCommand {
+
+      private final ComponentReference<LXMidiTemplate> midiTemplate;
+      private final int fromIndex;
+      private final int toIndex;
+
+      public MoveTemplate(LXMidiTemplate midiTemplate, int toIndex) {
+        this.midiTemplate = new ComponentReference<LXMidiTemplate>(midiTemplate);
+        this.fromIndex = midiTemplate.getIndex();
+        this.toIndex = toIndex;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move MIDI Template";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        lx.engine.midi.moveTemplate(this.midiTemplate.get(), this.toIndex);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        lx.engine.midi.moveTemplate(this.midiTemplate.get(), this.fromIndex);
+      }
+
     }
   }
 }
