@@ -402,7 +402,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     LX.initProfiler.log("Engine: Mixer");
 
     // Modulation matrix
-    addChild("modulation", this.modulation = new LXModulationEngine(lx));
+    addChild(KEY_MODULATION, this.modulation = new LXModulationEngine(lx));
     LX.initProfiler.log("Engine: Modulation");
 
     // Master output
@@ -1354,6 +1354,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return super.handleOscMessage(message, parts, index);
   }
 
+  private static final String KEY_MODULATION = "modulation";
+
   @Override
   public void load(LX lx, JsonObject obj) {
     // TODO(mcslee): remove loop tasks that other things might have added? maybe
@@ -1361,11 +1363,21 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Clear all the modulation and mixer content
     this.snapshots.clear();
+    this.modulation.setFlagLoadModulations(false);
     this.modulation.clear();
     this.mixer.clear();
 
     // Invoke super-loader
     super.load(lx, obj);
+
+    // We need to load global modulations LAST! They can reference stuff in
+    // snapshots, MIDI templates, etc.
+    if (obj.has(KEY_CHILDREN)) {
+      JsonObject children = obj.getAsJsonObject(KEY_CHILDREN);
+      if (children.has(KEY_MODULATION)) {
+        this.modulation.loadModulations(lx, children.getAsJsonObject(KEY_MODULATION));
+      }
+    }
 
     // Override project output mode if flag is set
     switch (lx.flags.outputMode) {

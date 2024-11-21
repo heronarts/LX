@@ -74,10 +74,17 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   private final List<LXTriggerModulation> mutableTriggers = new ArrayList<LXTriggerModulation>();
   public final List<LXTriggerModulation> triggers = Collections.unmodifiableList(this.mutableTriggers);
 
+  private boolean flagLoadModulations = true;
+
   public LXModulationEngine(LX lx) {
     super(lx, "Modulation");
     addArray("modulation", this.modulations);
     addArray("trigger", this.triggers);
+  }
+
+  public LXModulationEngine setFlagLoadModulations(boolean flagLoadModulations) {
+    this.flagLoadModulations = flagLoadModulations;
+    return this;
   }
 
   public boolean isValidTarget(LXParameter target) {
@@ -366,6 +373,13 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
         modulator.load(lx, modulatorObj);
       }
     }
+
+    if (this.flagLoadModulations) {
+      loadModulations(lx, obj);
+    }
+  }
+
+  public void loadModulations(LX lx, JsonObject obj) {
     if (obj.has(KEY_MODULATIONS)) {
       JsonArray modulationArr = obj.getAsJsonArray(KEY_MODULATIONS);
       for (JsonElement modulationElement : modulationArr) {
