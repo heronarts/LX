@@ -1206,17 +1206,6 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     removeTemplates();
     super.load(lx, object);
 
-    if (object.has(KEY_MAPPINGS)) {
-      JsonArray mappings = object.getAsJsonArray(KEY_MAPPINGS);
-      for (JsonElement element : mappings) {
-        try {
-          addMapping(LXMidiMapping.create(this.lx, element.getAsJsonObject()));
-        } catch (Exception x) {
-          error(x, "Could not load MIDI mapping: " + element.toString());
-        }
-      }
-    }
-
     if (object.has(KEY_TEMPLATES)) {
       JsonArray templates = object.getAsJsonArray(KEY_TEMPLATES);
       for (JsonElement templateElem : templates) {
@@ -1228,6 +1217,17 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
           addTemplate(template);
         } catch (InstantiationException ix) {
           error(ix, "Could not create MidiTemplate");
+        }
+      }
+    }
+
+    if (object.has(KEY_MAPPINGS)) {
+      JsonArray mappings = object.getAsJsonArray(KEY_MAPPINGS);
+      for (JsonElement element : mappings) {
+        try {
+          addMapping(LXMidiMapping.create(this.lx, element.getAsJsonObject()));
+        } catch (Exception x) {
+          error(x, "Could not load MIDI mapping: " + element.toString());
         }
       }
     }
