@@ -3111,13 +3111,14 @@ public abstract class LXCommand {
 
     }
 
-    public static class RemoveTemplate extends LXCommand {
+    public static class RemoveTemplate extends RemoveComponent {
 
       private final ComponentReference<LXMidiTemplate> midiTemplate;
       private JsonObject templateObj;
       private int fromIndex;
 
       public RemoveTemplate(LXMidiTemplate midiTemplate) {
+        super(midiTemplate);
         this.midiTemplate = new ComponentReference<LXMidiTemplate>(midiTemplate);
       }
 
@@ -3141,6 +3142,7 @@ public abstract class LXCommand {
           template.load(lx, this.templateObj);
           lx.engine.midi.addTemplate(template);
           lx.engine.midi.moveTemplate(template, this.fromIndex);
+          super.undo(lx);
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
         }
