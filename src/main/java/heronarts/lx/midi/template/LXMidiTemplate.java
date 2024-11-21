@@ -26,6 +26,7 @@ import java.lang.annotation.Target;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.midi.LXMidiEngine;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXMidiOutput;
@@ -94,6 +95,11 @@ public abstract class LXMidiTemplate extends LXComponent implements LXComponent.
 
   public int getIndex() {
     return this.lx.engine.midi.templates.indexOf(this);
+  }
+
+  @Override
+  public String getPath() {
+    return LXMidiEngine.TEMPLATE_PATH + "/" + (getIndex() + 1);
   }
 
   private final LXParameterListener onConnected = p -> {

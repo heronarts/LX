@@ -76,6 +76,7 @@ import com.google.gson.stream.JsonWriter;
 
 public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
+  public static final String TEMPLATE_PATH = "template";
   private static final String COREMIDI4J_HEADER = "CoreMIDI4J - ";
 
   public enum Channel {
@@ -203,7 +204,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
     addParameter("computerKeyboardOctave", this.computerKeyboardOctave);
     addParameter("computerKeyboardVelocity", this.computerKeyboardVelocity);
-    addArray("template", this.templates);
+    addArray(TEMPLATE_PATH, this.templates);
   }
 
   private void _registerTemplate(Class <? extends LXMidiTemplate> templateClass) {
@@ -1216,6 +1217,21 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       }
     }
 
+    if (object.has(KEY_TEMPLATES)) {
+      JsonArray templates = object.getAsJsonArray(KEY_TEMPLATES);
+      for (JsonElement templateElem : templates) {
+        try {
+          JsonObject templateObj = templateElem.getAsJsonObject();
+          LXMidiTemplate template;
+          template = this.lx.instantiateComponent(templateObj.get(KEY_CLASS).getAsString(), LXMidiTemplate.class);
+          template.load(this.lx, templateObj);
+          addTemplate(template);
+        } catch (InstantiationException ix) {
+          error(ix, "Could not create MidiTemplate");
+        }
+      }
+    }
+
     // NOTE: this is performed later on the engine thread, after the MIDI engine
     // is fully initialized, because we need to make sure that we've detected
     // all the available inputs and control surfaces
@@ -1275,20 +1291,6 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
                 error(x, "Could not restore surface class type: " + className);
               }
             }
-          }
-        }
-      }
-      if (object.has(KEY_TEMPLATES)) {
-        JsonArray templates = object.getAsJsonArray(KEY_TEMPLATES);
-        for (JsonElement templateElem : templates) {
-          try {
-            JsonObject templateObj = templateElem.getAsJsonObject();
-            LXMidiTemplate template;
-            template = this.lx.instantiateComponent(templateObj.get(KEY_CLASS).getAsString(), LXMidiTemplate.class);
-            template.load(this.lx, templateObj);
-            addTemplate(template);
-          } catch (InstantiationException ix) {
-            error(ix, "Could not create MidiTemplate");
           }
         }
       }
