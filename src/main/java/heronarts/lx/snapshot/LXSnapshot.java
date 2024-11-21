@@ -26,6 +26,7 @@ import java.util.Objects;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -262,7 +263,8 @@ public abstract class LXSnapshot extends LXComponent {
         this.stringValue = null;
         obj.addProperty(KEY_VALUE, this.intValue);
       } else if (parameter instanceof StringParameter) {
-        this.stringValue = obj.get(KEY_VALUE).getAsString();
+        final JsonElement value = obj.get(KEY_VALUE);
+        this.stringValue = (value instanceof JsonNull) ? null : value.getAsString();
         this.intValue = 0;
         this.value = 0;
       } else {
