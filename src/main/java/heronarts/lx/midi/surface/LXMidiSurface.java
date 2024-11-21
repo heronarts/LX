@@ -80,8 +80,7 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
   public final MidiSelector.Source.Device sourceDevice =
     new MidiSelector.Source.Device("Source");
 
-  public final MidiSelector.Destination.Device destinationDevice =
-    new MidiSelector.Destination.Device("Destination");
+  public final MidiSelector.Destination.Device destinationDevice;
 
   public final BooleanParameter enabled =
     new BooleanParameter("Enabled")
@@ -114,8 +113,11 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
 
     // Same for output, but skip it if a non-bidirectional surface
     if (this instanceof Bidirectional) {
+      this.destinationDevice = new MidiSelector.Destination.Device("Destination");
       this.destinationDevice.setOutput(output);
       addParameter("destinationDevice", this.destinationDevice);
+    } else {
+      this.destinationDevice = null;
     }
 
     // Set the I/O objects
@@ -189,10 +191,11 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
   }
 
   private void _setConnected() {
-    final boolean isBidirectional = this instanceof Bidirectional;
-    final boolean inputConnected = (this.input != null) && this.input.connected.isOn();
-    final boolean outputConnected = (this.output != null) && this.output.connected.isOn();
-    this.connected.setValue(inputConnected && (!isBidirectional || outputConnected));
+    boolean connected = (this.input != null) && this.input.connected.isOn();
+    if (connected && (this instanceof Bidirectional)) {
+      connected = (this.output != null) && this.output.connected.isOn();
+    }
+    this.connected.setValue(connected);
   }
 
   private final LXParameterListener onInputConnected = p -> {
