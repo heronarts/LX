@@ -157,21 +157,21 @@ public class AkaiMPD218 extends LXMidiTemplate implements LXMidiTemplate.Bidirec
   public void noteOnReceived(MidiNoteOn note) {
     int pad = NOTE_TO_PAD[note.getPitch()];
     if (pad >= 0) {
-      pads[pad].setValue(true);
+      this.pads[pad].setValue(true);
     }
   }
 
   public void noteOffReceived(MidiNote note) {
     int pad = NOTE_TO_PAD[note.getPitch()];
     if (pad >= 0) {
-      pads[pad].setValue(false);
+      this.pads[pad].setValue(false);
     }
   }
 
   public void controlChangeReceived(MidiControlChange cc) {
     int knob = CC_TO_KNOB[cc.getCC()];
     if (knob >= 0) {
-      knobs[knob].setNormalized(cc.getNormalized());
+      this.knobs[knob].setNormalized(cc.getNormalized());
     }
   }
 }

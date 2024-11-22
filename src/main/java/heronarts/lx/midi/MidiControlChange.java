@@ -86,6 +86,6 @@ public class MidiControlChange extends LXShortMessage {
 
   @Override
   public String toString() {
-    return "MidiControlChange:" + getChannel() + ":CC:" + getCC() + ":Value: " + getValue();
+    return "MidiControlChange:" + getChannel() + ":CC:" + getCC() + ":Value:" + getValue();
   }
 }
