@@ -154,6 +154,7 @@ public class AkaiMPD218 extends LXMidiTemplate implements LXMidiTemplate.Bidirec
     }
   }
 
+  @Override
   public void noteOnReceived(MidiNoteOn note) {
     int pad = NOTE_TO_PAD[note.getPitch()];
     if (pad >= 0) {
@@ -161,6 +162,7 @@ public class AkaiMPD218 extends LXMidiTemplate implements LXMidiTemplate.Bidirec
     }
   }
 
+  @Override
   public void noteOffReceived(MidiNote note) {
     int pad = NOTE_TO_PAD[note.getPitch()];
     if (pad >= 0) {
@@ -168,10 +170,18 @@ public class AkaiMPD218 extends LXMidiTemplate implements LXMidiTemplate.Bidirec
     }
   }
 
+  @Override
   public void controlChangeReceived(MidiControlChange cc) {
     int knob = CC_TO_KNOB[cc.getCC()];
     if (knob >= 0) {
       this.knobs[knob].setNormalized(cc.getNormalized());
+    }
+  }
+
+  @Override
+  public void midiPanicReceived() {
+    for (BooleanParameter  pad : this.pads) {
+      pad.setValue(false);
     }
   }
 }

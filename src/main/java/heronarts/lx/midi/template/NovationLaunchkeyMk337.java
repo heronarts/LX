@@ -75,20 +75,31 @@ public class NovationLaunchkeyMk337 extends LXMidiTemplate {
       }
     }
   }
+
+  @Override
   public void noteOnReceived(MidiNoteOn note) {
     setPad(note, true);
   }
 
+  @Override
   public void noteOffReceived(MidiNote note) {
     setPad(note, false);
   }
 
+  @Override
   public void controlChangeReceived(MidiControlChange cc) {
     if (cc.getChannel() == KNOB_CHANNEL) {
       final int knobIndex = cc.getCC() - KNOB_1;
       if (LXUtils.inRange(knobIndex, 0, NUM_KNOBS - 1)) {
         this.knobs[knobIndex].setNormalized(cc.getNormalized());
       }
+    }
+  }
+
+  @Override
+  public void midiPanicReceived() {
+    for (BooleanParameter pad : this.pads) {
+      pad.setValue(false);
     }
   }
 

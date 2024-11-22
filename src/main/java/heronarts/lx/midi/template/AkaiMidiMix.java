@@ -125,6 +125,7 @@ public class AkaiMidiMix extends LXMidiTemplate implements LXMidiTemplate.Bidire
     }
   }
 
+  @Override
   public void noteOnReceived(MidiNoteOn note) {
     final BooleanParameter button = this.noteMap[note.getPitch()];
     if (button != null) {
@@ -132,6 +133,7 @@ public class AkaiMidiMix extends LXMidiTemplate implements LXMidiTemplate.Bidire
     }
   }
 
+  @Override
   public void controlChangeReceived(MidiControlChange cc) {
     final BoundedParameter control = this.controlMap[cc.getCC()];
     if (control != null) {
