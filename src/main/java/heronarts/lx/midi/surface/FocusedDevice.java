@@ -76,8 +76,10 @@ public class FocusedDevice {
 
   public FocusedDevice setAux(boolean isAux) {
     this.isAux = isAux;
-    onChannelFocusChange();
-    updateRemoteControlFocus();
+    if (this.isRegistered) {
+      onChannelFocusChange();
+      updateRemoteControlFocus();
+    }
     return this;
   }
 

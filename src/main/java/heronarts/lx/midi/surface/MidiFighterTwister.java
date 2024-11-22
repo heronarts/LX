@@ -951,7 +951,9 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     super.onParameterChanged(p);
     if (this.isAux == p) {
       this.deviceListener.focusedDevice.setAux(this.isAux.isOn());
-      this.deviceListener.resend();
+      if (this.enabled.isOn()) {
+        this.deviceListener.resend();
+      }
     } else if (this.currentBank == p) {
       updateBank(this.currentBank.getValuei(), false);
     }
