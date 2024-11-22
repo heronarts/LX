@@ -52,9 +52,8 @@ import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
 @LXMidiSurface.Name("Akai APC40 mkII")
+@LXMidiSurface.DeviceName("APC40 mkII")
 public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
-
-  public static final String DEVICE_NAME = "APC40 mkII";
 
   public static final byte GENERIC_MODE = 0x40;
   public static final byte ABLETON_MODE = 0x41;
@@ -875,11 +874,6 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     addSetting("faderMode", this.faderMode);
     addSetting("deviceControl", this.deviceControl);
     addSetting("performanceLock", this.performanceLock);
-  }
-
-  @Override
-  public String getDeviceName() {
-    return DEVICE_NAME;
   }
 
   @Override

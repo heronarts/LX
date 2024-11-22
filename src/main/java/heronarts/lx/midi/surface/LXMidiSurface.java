@@ -56,6 +56,13 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
     String value();
   }
 
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface DeviceName {
+    String value();
+  }
+
   /**
    * Marker interface for Midi Surface implementations which require an output
    * to be functional. Many surfaces are fine with just an input for control,
@@ -158,6 +165,15 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
 
   public boolean hasRememberFlag() {
     return this.remember;
+  }
+
+  public LXMidiSurface initializeDefaultIO() {
+    String deviceName = getDeviceName();
+    this.sourceDevice.setInput(this.lx.engine.midi.findInput(deviceName));
+    if (this instanceof Bidirectional) {
+      this.destinationDevice.setOutput(this.lx.engine.midi.findOutput(deviceName));
+    }
+    return this;
   }
 
   @Override
@@ -272,7 +288,17 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
    *
    * @return Surface default USB/MIDI driver name
    */
-  public abstract String getDeviceName();
+  public String getDeviceName() {
+    return getDeviceName(getClass());
+  }
+
+  public static String getDeviceName(Class<? extends LXMidiSurface> surfaceClass) {
+    LXMidiSurface.DeviceName annotation = surfaceClass.getAnnotation(LXMidiSurface.DeviceName.class);
+    if (annotation != null) {
+      return annotation.value();
+    }
+    return surfaceClass.getSimpleName();
+  }
 
   /**
    * Gets the user-facing name of this surface class

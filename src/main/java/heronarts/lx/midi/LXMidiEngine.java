@@ -110,9 +110,10 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public interface DeviceListener {
-    public void inputAdded(LXMidiEngine engine, LXMidiInput input);
-    public void outputAdded(LXMidiEngine engine, LXMidiOutput output);
-    public void surfaceAdded(LXMidiEngine engine, LXMidiSurface surface);
+    public default void inputAdded(LXMidiEngine engine, LXMidiInput input) {};
+    public default void outputAdded(LXMidiEngine engine, LXMidiOutput output) {};
+    public default void surfaceAdded(LXMidiEngine engine, LXMidiSurface surface) {};
+    public default void surfaceRemoved(LXMidiEngine engine, LXMidiSurface surface) {};
   }
 
   public interface TemplateListener {
@@ -185,14 +186,14 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   public LXMidiEngine(LX lx) {
     super(lx);
-    _registerSurface(APC40.DEVICE_NAME, APC40.class);
-    _registerSurface(APC40Mk2.DEVICE_NAME, APC40Mk2.class);
-    _registerSurface(APCmini.DEVICE_NAME, APCmini.class);
-    _registerSurface(APCminiMk2.DEVICE_NAME, APCminiMk2.class);
-    _registerSurface(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
-    _registerSurface(DJMA9.DEVICE_NAME, DJMA9.class);
-    _registerSurface(DJMV10.DEVICE_NAME, DJMV10.class);
-    _registerSurface(MidiFighterTwister.DEVICE_NAME, MidiFighterTwister.class);
+    _registerSurface(APC40.class);
+    _registerSurface(APC40Mk2.class);
+    _registerSurface(APCmini.class);
+    _registerSurface(APCminiMk2.class);
+    _registerSurface(DJM900nxs2.class);
+    _registerSurface(DJMA9.class);
+    _registerSurface(DJMV10.class);
+    _registerSurface(MidiFighterTwister.class);
 
     _registerTemplate(heronarts.lx.midi.template.AkaiMidiMix.class);
     _registerTemplate(heronarts.lx.midi.template.AkaiMPD218.class);
@@ -220,6 +221,14 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     _registerTemplate(templateClass);
   }
 
+  public List<Class<? extends LXMidiTemplate>> getRegisteredTemplateClasses() {
+    return Collections.unmodifiableList(this.registeredTemplates);
+  }
+
+  private void _registerSurface(Class<? extends LXMidiSurface> surfaceClass) {
+    _registerSurface(LXMidiSurface.getDeviceName(surfaceClass), surfaceClass);
+  }
+
   private void _registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
     List<Class<? extends LXMidiSurface>> surfaces;
     if (!this.registeredSurfaces.containsKey(deviceName)) {
@@ -233,8 +242,41 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     surfaces.add(surfaceClass);
   }
 
-  public List<Class<? extends LXMidiTemplate>> getRegisteredTemplateClasses() {
-    return Collections.unmodifiableList(this.registeredTemplates);
+  @Deprecated
+  /**
+   * Registers a new MIDI surface implementation with the MIDI engine
+   *
+   * @param deviceName Device name
+   * @param surfaceClass Surface class type
+   * @deprecated Should use registerSurface with no deviceName parameter
+   * @return midi engine
+   */
+  public LXMidiEngine registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
+    this.lx.registry.checkRegistration();
+    _registerSurface(deviceName, surfaceClass);
+
+    // NOTE: the MIDI initialize() thread has been kicked off at this point. We
+    // might not get in until after it has already attempted to initialize MIDI surfaces
+    // in which case we need to check again for this newly registered surface
+    whenReady(() -> { checkForNewSurfaceType(deviceName); });
+    return this;
+  }
+
+  /**
+   * Registers a new MIDI surface implementation with the MIDI engine
+   *
+   * @param surfaceClass MIDI surface class name
+   * @return this
+   */
+  public LXMidiEngine registerSurface(Class<? extends LXMidiSurface> surfaceClass) {
+    this.lx.registry.checkRegistration();
+    _registerSurface(surfaceClass);
+
+    // NOTE: the MIDI initialize() thread has been kicked off at this point. We
+    // might not get in until after it has already attempted to initialize MIDI surfaces
+    // in which case we need to check again for this newly registered surface
+    whenReady(() -> { checkForNewSurfaceType(LXMidiSurface.getDeviceName(surfaceClass)); });
+    return this;
   }
 
   public List<Class<? extends LXMidiSurface>> getRegisteredSurfaceClasses() {
@@ -253,17 +295,6 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       }
     });
     return surfaceClasses;
-  }
-
-  public LXMidiEngine registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
-    this.lx.registry.checkRegistration();
-    _registerSurface(deviceName, surfaceClass);
-
-    // NOTE: the MIDI initialize() thread has been kicked off at this point. We
-    // might not get in until after it has already attempted to initialize MIDI surfaces
-    // in which case we need to check again for this newly registered surface
-    whenReady(() -> { checkForNewSurfaceType(deviceName); });
-    return this;
   }
 
   public void initialize() {
@@ -634,6 +665,18 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     for (DeviceListener listener : this.deviceListeners) {
       listener.surfaceAdded(this, surface);
     }
+    return this;
+  }
+
+  public LXMidiEngine removeSurface(LXMidiSurface surface) {
+    if (!this.mutableSurfaces.remove(surface)) {
+      throw new IllegalArgumentException("Cannot remove non-existent MIDI surface: " + surface);
+    }
+    surface.enabled.setValue(false);
+    for (DeviceListener listener : this.deviceListeners) {
+      listener.surfaceRemoved(this, surface);
+    }
+    LX.dispose(surface);
     return this;
   }
 

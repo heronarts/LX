@@ -43,9 +43,8 @@ import heronarts.lx.utils.LXUtils;
  *  -Any midi channel is usable, just set this class' midiChannel parameter to match.
  */
 @LXMidiSurface.Name("Pioneer DJM-A9")
+@LXMidiSurface.DeviceName("DJM-A9")
 public class DJMA9 extends LXMidiSurface {
-
-  public static final String DEVICE_NAME = "DJM-A9";
 
   public enum MidiChannel {
     CH1(0),
@@ -416,11 +415,6 @@ public class DJMA9 extends LXMidiSurface {
     this.eqRangeMax.addListener(this.eqRangeMaxListener);
     this.smartXF.addListener(this.smartXFListener);
     this.xfMode.addListener(this.xfModeListener);
-  }
-
-  @Override
-  public String getDeviceName() {
-    return DEVICE_NAME;
   }
 
   @Override

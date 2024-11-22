@@ -50,9 +50,8 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.pattern.LXPattern;
 
 @LXMidiSurface.Name("Akai APC40")
+@LXMidiSurface.DeviceName("Akai APC40")
 public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional {
-
-  public static final String DEVICE_NAME = "Akai APC40";
 
   public static final byte GENERIC_MODE = 0x40;
   public static final byte ABLETON_MODE = 0x41;
@@ -600,11 +599,6 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     addSetting("crossfaderEnabled", this.crossfaderEnabled);
     addSetting("clipLaunchEnabled", this.clipLaunchEnabled);
     addSetting("faderMode", this.faderMode);
-  }
-
-  @Override
-  public String getDeviceName() {
-    return DEVICE_NAME;
   }
 
   @Override

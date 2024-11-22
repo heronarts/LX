@@ -34,9 +34,8 @@ import heronarts.lx.parameter.LXParameter.Polarity;
 import heronarts.lx.utils.LXUtils;
 
 @LXMidiSurface.Name("Pioneer DJM-900NXS2")
+@LXMidiSurface.DeviceName("DJM-900NXS2")
 public class DJM900nxs2 extends LXMidiSurface {
-
-  public static final String DEVICE_NAME = "DJM-900NXS2";
 
   public enum Channel {
     ONE(0),
@@ -331,11 +330,6 @@ public class DJM900nxs2 extends LXMidiSurface {
     this.eqRangeMax.addListener(this.eqRangeMaxListener);
     this.smartXF.addListener(this.smartXFListener);
     this.xfMode.addListener(this.xfModeListener);
-  }
-
-  @Override
-  public String getDeviceName() {
-    return DEVICE_NAME;
   }
 
   @Override

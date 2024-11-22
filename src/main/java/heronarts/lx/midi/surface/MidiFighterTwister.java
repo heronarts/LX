@@ -44,9 +44,8 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXMidiSurface.Name("DJTT Midi Fighter Twister")
+@LXMidiSurface.DeviceName("Midi Fighter Twister")
 public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.Bidirectional {
-
-  public static final String DEVICE_NAME = "Midi Fighter Twister";
 
   // MIDI Channels
   public static final int CHANNEL_ROTARY_ENCODER = 0;
@@ -945,11 +944,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     addSetting("focusMode", this.focusMode);
     addSetting("isAux", this.isAux);
     addSetting("currentBank", this.currentBank);
-  }
-
-  @Override
-  public String getDeviceName() {
-    return DEVICE_NAME;
   }
 
   @Override
