@@ -18,6 +18,9 @@
 
 package heronarts.lx.midi.template;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import heronarts.lx.LX;
 import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
@@ -38,9 +41,40 @@ public class NovationLaunchkeyMk337 extends LXMidiTemplate {
   private static final int PAD_CHANNEL = 9;
   private static final int PAD_1 = 36;
 
+  private static final int BUTTON_CHANNEL = 15;
+
   public final BoundedParameter[] knobs = new BoundedParameter[NUM_KNOBS];
 
   public final BooleanParameter[] pads = new BooleanParameter[NUM_PADS];
+
+  private final BooleanParameter[] buttonMap = new BooleanParameter[128];
+
+  private final List<BooleanParameter> buttons = new ArrayList<BooleanParameter>();
+
+  private BooleanParameter button(String path, String label, int cc) {
+    BooleanParameter button =
+      new BooleanParameter(label)
+      .setMode(BooleanParameter.Mode.MOMENTARY)
+      .setDescription(label + " button");
+    addParameter(path, button);
+    this.buttonMap[cc] = button;
+    this.buttons.add(button);
+    return button;
+  }
+
+  public final BooleanParameter capture = button("capture", "Capture", 74);
+  public final BooleanParameter quantise = button("quantise", "Quantise", 75);
+  public final BooleanParameter click = button("click", "Click", 76);
+  public final BooleanParameter undo = button("undo", "Undo", 77);
+  public final BooleanParameter play = button("play", "Play", 115);
+  public final BooleanParameter stop = button("stop", "Stop", 116);
+  public final BooleanParameter rec = button("Rec", "Rec", 117);
+  public final BooleanParameter loop = button("loop", "Loop", 118);
+
+  public final BooleanParameter up = button("up", "▲", 106);
+  public final BooleanParameter down = button("down", "▼", 107);
+  public final BooleanParameter right = button("right", ">", 104);
+  public final BooleanParameter ssm = button("ssm", "S", 105);
 
   public NovationLaunchkeyMk337(LX lx) {
     super(lx);
@@ -88,11 +122,19 @@ public class NovationLaunchkeyMk337 extends LXMidiTemplate {
 
   @Override
   public void controlChangeReceived(MidiControlChange cc) {
-    if (cc.getChannel() == KNOB_CHANNEL) {
+    switch (cc.getChannel()) {
+    case KNOB_CHANNEL:
       final int knobIndex = cc.getCC() - KNOB_1;
       if (LXUtils.inRange(knobIndex, 0, NUM_KNOBS - 1)) {
         this.knobs[knobIndex].setNormalized(cc.getNormalized());
       }
+      break;
+    case BUTTON_CHANNEL:
+      final BooleanParameter button = this.buttonMap[cc.getCC()];
+      if (button != null) {
+        button.setNormalized(cc.getNormalized());
+      }
+      break;
     }
   }
 
@@ -100,6 +142,9 @@ public class NovationLaunchkeyMk337 extends LXMidiTemplate {
   public void midiPanicReceived() {
     for (BooleanParameter pad : this.pads) {
       pad.setValue(false);
+    }
+    for (BooleanParameter button : this.buttons) {
+      button.setValue(false);
     }
   }
 
