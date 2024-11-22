@@ -180,6 +180,7 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Scaler.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Smoother.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Spring.class);
+    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Stepper.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.StepSequencer.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.Timer.class);
     DEFAULT_MODULATORS.add(heronarts.lx.modulator.VariableLFO.class);

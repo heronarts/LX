@@ -21,34 +21,50 @@ package heronarts.lx.modulator;
 import heronarts.lx.LXCategory;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.LXNormalizedParameter;
 
-@LXModulator.Global("Step Sequencer")
-@LXModulator.Device("Step Sequencer")
-@LXCategory(LXCategory.TRIGGER)
-public class StepSequencer extends StepModulator implements LXTriggerSource, LXOscComponent {
+@LXModulator.Global("Stepper")
+@LXModulator.Device("Stepper")
+@LXCategory(LXCategory.CORE)
+public class Stepper extends StepModulator implements LXNormalizedParameter, LXTriggerSource, LXOscComponent {
 
-  public final BooleanParameter[] steps = new BooleanParameter[MAX_STEPS];
+  public final BoundedParameter[] steps = new BoundedParameter[MAX_STEPS];
 
-  public StepSequencer() {
-    super("Step Sequencer");
-    setMappingSource(false);
+  public Stepper() {
+    super("Stepper");
 
     for (int i = 0; i < this.steps.length; ++i) {
       this.steps[i] =
-        new BooleanParameter("Step-" + (i+1), false)
-        .setDescription("Whether the sequencer triggers on step " + (i+1));
+        new BoundedParameter("Step-" + (i+1))
+        .setUnits(BoundedParameter.Units.PERCENT_NORMALIZED)
+        .setDescription("Stepper value on step " + (i+1));
       addParameter("step-" + (i+1), this.steps[i]);
-
     }
 
-    setDescription("Step sequencer that triggers on active steps");
+    setDescription("Step modulator that changes values on trigger events");
   }
 
   @Override
   protected void onStep(boolean trigger) {
-    if (trigger && this.steps[this.step].isOn()) {
+    if (trigger) {
       this.triggerOut.trigger();
     }
+  }
+
+  @Override
+  public LXNormalizedParameter setNormalized(double value) {
+    throw new UnsupportedOperationException("Stepper does not support setNormalized()");
+  }
+
+  @Override
+  public double getNormalized() {
+    return getValue();
+  }
+
+  @Override
+  protected double getStepValue(double deltaMs, double basis) {
+    return this.steps[this.step].getValue();
   }
 
   @Override
