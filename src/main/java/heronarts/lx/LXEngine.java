@@ -421,7 +421,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     LX.initProfiler.log("Engine: DMX");
 
     // Midi engine
-    addChild("midi", this.midi = new LXMidiEngine(lx));
+    addChild(KEY_MIDI, this.midi = new LXMidiEngine(lx));
     LX.initProfiler.log("Engine: Midi");
 
     // OSC engine
@@ -1354,6 +1354,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return super.handleOscMessage(message, parts, index);
   }
 
+  private static final String KEY_MIDI = "midi";
   private static final String KEY_MODULATION = "modulation";
 
   @Override
@@ -1371,11 +1372,15 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     super.load(lx, obj);
 
     // We need to load global modulations LAST! They can reference stuff in
-    // snapshots, MIDI templates, etc.
+    // snapshots, MIDI templates, etc. And we need to load MIDI mappings even
+    // *after* that, since a MIDI mapping could control a modulation depth!!
     if (obj.has(KEY_CHILDREN)) {
-      JsonObject children = obj.getAsJsonObject(KEY_CHILDREN);
+      final JsonObject children = obj.getAsJsonObject(KEY_CHILDREN);
       if (children.has(KEY_MODULATION)) {
         this.modulation.loadModulations(lx, children.getAsJsonObject(KEY_MODULATION));
+      }
+      if (children.has(KEY_MIDI)) {
+        this.midi.loadMappings(lx, children.getAsJsonObject(KEY_MIDI));
       }
     }
 

@@ -1221,17 +1221,6 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       }
     }
 
-    if (object.has(KEY_MAPPINGS)) {
-      JsonArray mappings = object.getAsJsonArray(KEY_MAPPINGS);
-      for (JsonElement element : mappings) {
-        try {
-          addMapping(LXMidiMapping.create(this.lx, element.getAsJsonObject()));
-        } catch (Exception x) {
-          error(x, "Could not load MIDI mapping: " + element.toString());
-        }
-      }
-    }
-
     // NOTE: this is performed later on the engine thread, after the MIDI engine
     // is fully initialized, because we need to make sure that we've detected
     // all the available inputs and control surfaces
@@ -1295,6 +1284,19 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
     });
+  }
+
+  public void loadMappings(LX lx, JsonObject obj) {
+    if (obj.has(KEY_MAPPINGS)) {
+      JsonArray mappings = obj.getAsJsonArray(KEY_MAPPINGS);
+      for (JsonElement element : mappings) {
+        try {
+          addMapping(LXMidiMapping.create(this.lx, element.getAsJsonObject()));
+        } catch (Exception x) {
+          error(x, "Could not load MIDI mapping: " + element.toString());
+        }
+      }
+    }
   }
 
   public void removeMappings() {
