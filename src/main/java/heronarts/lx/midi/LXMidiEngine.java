@@ -1161,6 +1161,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   public void panic() {
     try {
       dispatch(new MidiPanic());
+      for (LXMidiTemplate template : this.templates) {
+        template.midiPanicReceived();
+      }
       lx.pushStatusMessage("Sent a MIDI panic to all devices");
     } catch (InvalidMidiDataException imdx) {
       LX.error(imdx, "Failed to generate MIDI panic");
