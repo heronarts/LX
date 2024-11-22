@@ -20,6 +20,8 @@ package heronarts.lx.midi.template;
 
 import heronarts.lx.LX;
 import heronarts.lx.midi.MidiControlChange;
+import heronarts.lx.midi.MidiNote;
+import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -91,8 +93,36 @@ public class DJTTMidiFighterTwister extends LXMidiTemplate implements LXMidiTemp
     }
   }
 
+  // NOTE: these notes are received by the mode that the
+  // control surface implementation restores after being
+  // switched off
+  private void setSwitch(MidiNote note, boolean on) {
+    if (note.getChannel() == SWITCH_CHANNEL) {
+      int pitch = note.getPitch();
+      if (pitch < NUM_KNOBS) {
+        this.switches[pitch].setValue(on);
+      }
+    }
+  }
+
+  public void noteOnReceived(MidiNoteOn note) {
+    setSwitch(note, true);
+  }
+
+  public void noteOffReceived(MidiNote note) {
+    setSwitch(note, false);
+  }
+
+  public void midiPanicReceived() {
+    for (Switch s : this.switches) {
+      s.setValue(false);
+    }
+  }
+
   @Override
   public void controlChangeReceived(MidiControlChange cc) {
+    // NOTE: these CCs are received by the Midi Fighter Utility
+    // Factory Reset option
     int knobIndex = cc.getCC();
     if (knobIndex < NUM_KNOBS) {
       switch (cc.getChannel()) {
