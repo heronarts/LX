@@ -1719,13 +1719,14 @@ public abstract class LXCommand {
 
     }
 
-    public static class RemoveModulation extends LXCommand {
+    public static class RemoveModulation extends RemoveComponent {
 
       private final ComponentReference<LXModulationEngine> engine;
       private ComponentReference<LXCompoundModulation> modulation;
       private final JsonObject modulationObj;
 
       public RemoveModulation(LXModulationEngine engine, LXCompoundModulation modulation) {
+        super(modulation);
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.modulation = new ComponentReference<LXCompoundModulation>(modulation);
         this.modulationObj = LXSerializable.Utils.toObject(modulation);
@@ -1748,6 +1749,7 @@ public abstract class LXCommand {
           this.engine.get().addModulation(modulation);
           modulation.load(lx, this.modulationObj);
           this.modulation = new ComponentReference<LXCompoundModulation>(modulation);
+          super.undo(lx);
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
@@ -1821,13 +1823,14 @@ public abstract class LXCommand {
 
     }
 
-    public static class RemoveTrigger extends LXCommand {
+    public static class RemoveTrigger extends RemoveComponent {
 
       private final ComponentReference<LXModulationEngine> engine;
       private ComponentReference<LXTriggerModulation> trigger;
       private final JsonObject triggerObj;
 
       public RemoveTrigger(LXModulationEngine engine, LXTriggerModulation trigger) {
+        super(trigger);
         this.engine = new ComponentReference<LXModulationEngine>(engine);
         this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
         this.triggerObj = LXSerializable.Utils.toObject(trigger);
@@ -1850,6 +1853,7 @@ public abstract class LXCommand {
           this.engine.get().addTrigger(trigger);
           trigger.load(lx, this.triggerObj);
           this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
+          super.undo(lx);
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
