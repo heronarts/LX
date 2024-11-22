@@ -66,10 +66,6 @@ public abstract class LXMidiTemplate extends LXComponent implements LXComponent.
 
   public final MidiSelector.Destination.Device destinationDevice;
 
-  public final BooleanParameter controlsExpanded =
-    new BooleanParameter("Expanded", true)
-    .setDescription("Whether UI controls are expanded");
-
   public final BooleanParameter connected =
     new BooleanParameter("Connected", false)
     .setDescription("Active when the device is connected");
@@ -90,7 +86,6 @@ public abstract class LXMidiTemplate extends LXComponent implements LXComponent.
     } else {
       this.destinationDevice = null;
     }
-    addInternalParameter("controlsExpanded", this.controlsExpanded);
   }
 
   public int getIndex() {
