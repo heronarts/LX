@@ -197,6 +197,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
     _registerTemplate(heronarts.lx.midi.template.AkaiMidiMix.class);
     _registerTemplate(heronarts.lx.midi.template.AkaiMPD218.class);
+    _registerTemplate(heronarts.lx.midi.template.DJTTMidiFighterTwister.class);
     _registerTemplate(heronarts.lx.midi.template.NovationLaunchkeyMk337.class);
 
     this.computerKeyboardEnabled.setMappable(false);
