@@ -45,7 +45,10 @@ public abstract class MidiSelector<T extends LXMidiTerminal> extends AggregatePa
 
   protected static void updateInputs(List<LXMidiInput> inputs) {
     // Device selectors use all available devices
-    sourceDevice = inputs.isEmpty() ? new LXMidiSource[] { LXMidiSource.NONE } : inputs.toArray(new LXMidiSource[0]);
+    final ArrayList<LXMidiSource> deviceList = new ArrayList<LXMidiSource>(1 + inputs.size());
+    deviceList.add(LXMidiSource.NONE);
+    deviceList.addAll(inputs);
+    sourceDevice = deviceList.toArray(new LXMidiSource[0]);
 
     // Channel filter selectors are for channel-enabled devices only
     final ArrayList<LXMidiSource> filterList = new ArrayList<LXMidiSource>(SOURCE_CHANNEL_FILTERS.size() + inputs.size());
@@ -66,7 +69,10 @@ public abstract class MidiSelector<T extends LXMidiTerminal> extends AggregatePa
   }
 
   protected static void updateOutputs(List<LXMidiOutput> outputs) {
-    destinationDevice = outputs.isEmpty() ? new LXMidiDestination[] { LXMidiDestination.NONE } : outputs.toArray(new LXMidiDestination[0]);
+    final ArrayList<LXMidiDestination> deviceList = new ArrayList<LXMidiDestination>(1 + outputs.size());
+    deviceList.add(LXMidiDestination.NONE);
+    deviceList.addAll(outputs);
+    destinationDevice = deviceList.toArray(new LXMidiDestination[0]);
 
     // Update options in all the selectors
     for (MidiSelector<?> selector : selectors) {
@@ -114,12 +120,6 @@ public abstract class MidiSelector<T extends LXMidiTerminal> extends AggregatePa
   protected abstract T[] getMidiTerminals();
 
   private boolean flagOptionsUpdate = false;
-
-  public MidiSelector<T> setMissing() {
-    this.missingDevice = true;
-    bang();
-    return this;
-  }
 
   void update() {
     if (this.flagOptionsUpdate) {
@@ -246,11 +246,7 @@ public abstract class MidiSelector<T extends LXMidiTerminal> extends AggregatePa
     }
 
     public Source setInput(LXMidiInput input) {
-      if (input == null) {
-        setMissing();
-      } else {
-        this.terminal.setValue(input);
-      }
+      this.terminal.setValue((input == null) ? LXMidiSource.NONE : input);
       return this;
     }
 
@@ -312,11 +308,7 @@ public abstract class MidiSelector<T extends LXMidiTerminal> extends AggregatePa
     }
 
     public Destination setOutput(LXMidiOutput output) {
-      if (output == null) {
-        setMissing();
-      } else {
-        this.terminal.setValue(output);
-      }
+      this.terminal.setValue((output == null) ? LXMidiDestination.NONE : output);
       return this;
     }
 

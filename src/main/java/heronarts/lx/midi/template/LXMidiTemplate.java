@@ -75,13 +75,11 @@ public abstract class LXMidiTemplate extends LXComponent implements LXComponent.
 
   protected LXMidiTemplate(LX lx) {
     super(lx);
-    this.sourceDevice.setMissing();
     this.label.setValue(getTemplateName());
     setParent(lx.engine.midi);
     addParameter("sourceDevice", this.sourceDevice);
     if (this instanceof Bidirectional) {
       this.destinationDevice = new MidiSelector.Destination.Device("Destination");
-      this.destinationDevice.setMissing();
       addParameter("destinationDevice", this.destinationDevice);
     } else {
       this.destinationDevice = null;
