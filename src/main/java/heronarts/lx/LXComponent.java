@@ -690,7 +690,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
           LXOscEngine.error("Component " + this + " did not find anything at OSC path: " + path + " (" + message + ")");
           return false;
         }
-      } else {
+      } else if (parameter instanceof ColorParameter) {
         ((ColorParameter) parameter).setColor(message.getInt());
       }
     } else if (parameter instanceof DiscreteParameter) {
