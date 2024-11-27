@@ -7,8 +7,8 @@ public class LXSysexMessage extends SysexMessage implements LXMidiMessage {
 
   // Universal SysEx Messages
   // https://midi.org/midi-1-0-universal-system-exclusive-messages
-  public static final byte START_SYSEX = (byte) (SYSTEM_EXCLUSIVE & 0xFF);
-  public static final byte END_SYSEX = (byte) (ShortMessage.END_OF_EXCLUSIVE & 0xFF);
+  public static final byte START_SYSEX = (byte) SYSTEM_EXCLUSIVE;
+  public static final byte END_SYSEX = (byte) ShortMessage.END_OF_EXCLUSIVE;
   public static final byte REALTIME = 0x7F;
   public static final byte NON_REALTIME = 0x7E;
   public static final byte ANY_DEVICE = 0x7F;
@@ -21,14 +21,14 @@ public class LXSysexMessage extends SysexMessage implements LXMidiMessage {
   }
 
   public static LXSysexMessage newIdentityRequest(byte deviceId) {
-    byte[] data = new byte[6];
-    data[0] = START_SYSEX;
-    data[1] = NON_REALTIME;
-    data[2] = deviceId;
-    data[3] = GENERAL_INFORMATION;
-    data[4] = IDENTITY_REQUEST;
-    data[5] = END_SYSEX;
-    return new LXSysexMessage(data);
+    return new LXSysexMessage(new byte[] {
+      START_SYSEX,
+      NON_REALTIME,
+      deviceId,
+      GENERAL_INFORMATION,
+      IDENTITY_REQUEST,
+      END_SYSEX
+    });
   }
 
   private LXMidiSource source = LXMidiSource.UNKNOWN;
