@@ -71,10 +71,6 @@ public abstract class LXShortMessage extends ShortMessage implements LXMidiMessa
     return this.source;
   }
 
-  public LXMidiInput getInput() {
-    return (this.source instanceof LXMidiInput) ? (LXMidiInput) this.source : null;
-  }
-
   public final void dispatch(LXMidiListener listener) {
     if (this instanceof MidiPanic) {
       listener.midiPanicReceived();

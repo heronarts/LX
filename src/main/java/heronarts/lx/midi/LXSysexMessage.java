@@ -38,7 +38,7 @@ public class LXSysexMessage extends SysexMessage implements LXMidiMessage {
   }
 
   LXSysexMessage(SysexMessage message) {
-    super(message.getMessage());
+    this(message.getMessage());
   }
 
   public LXSysexMessage setSource(LXMidiSource source) {
@@ -50,17 +50,13 @@ public class LXSysexMessage extends SysexMessage implements LXMidiMessage {
     return this.source;
   }
 
-  public LXMidiInput getInput() {
-    return (this.source instanceof LXMidiInput) ? (LXMidiInput) this.source : null;
-  }
-
   public final void dispatch(LXMidiListener listener) {
     listener.sysexReceived(this);
   }
 
   @Override
   public String toString() {
-    return "MidiSysEx: " + bytesToString(getMessage());
+    return "MidiSysEx:" + bytesToString(getMessage());
   }
 
   private static String bytesToString(byte[] bytes) {

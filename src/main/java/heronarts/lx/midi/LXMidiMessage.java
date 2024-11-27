@@ -5,12 +5,15 @@ package heronarts.lx.midi;
  */
 public interface LXMidiMessage {
 
-  LXMidiMessage setSource(LXMidiSource source);
+  public LXMidiMessage setSource(LXMidiSource source);
 
-  LXMidiSource getSource();
+  public LXMidiSource getSource();
 
-  LXMidiInput getInput();  // Clashes with non-public getInput() methods
+  public default LXMidiInput getInput() {
+    LXMidiSource source = getSource();
+    return (source instanceof LXMidiInput) ? (LXMidiInput) source : null;
+  }
 
-  void dispatch(LXMidiListener listener);
+  public void dispatch(LXMidiListener listener);
 
 }

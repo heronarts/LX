@@ -1114,12 +1114,18 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         LXMidiInput input = message.getInput();
         input.dispatch(message);
         if (input.enabled.isOn()) {
-          if (message instanceof LXShortMessage) {
-            dispatch((LXShortMessage)message);
-          } else if (message instanceof LXSysexMessage) {
-            dispatch((LXSysexMessage)message);
-          }
+          _dispatch(message);
         }
+      }
+    }
+  }
+
+  private void _dispatch(LXMidiMessage message) {
+    if (message instanceof LXShortMessage) {
+      dispatch((LXShortMessage) message);
+    } else if (message instanceof LXSysexMessage) {
+      for (LXMidiListener listener : this.listeners) {
+        message.dispatch(listener);
       }
     }
   }
@@ -1165,12 +1171,6 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
       lx.engine.modulation.midiDispatch(message);
-    }
-  }
-
-  public void dispatch(LXSysexMessage message) {
-    for (LXMidiListener listener : this.listeners) {
-      message.dispatch(listener);
     }
   }
 
