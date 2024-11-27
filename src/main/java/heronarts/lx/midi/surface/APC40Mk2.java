@@ -1973,6 +1973,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       fader.dispose();
     }
     this.deviceListener.dispose();
+    this.mixerSurface.dispose();
     super.dispose();
   }
 
