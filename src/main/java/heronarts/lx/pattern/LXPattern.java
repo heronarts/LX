@@ -47,6 +47,7 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -153,6 +154,10 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     new TriggerParameter("Recall", () -> { getChannel().goPattern(this); })
     .setDescription("Recalls this pattern to become active on the channel");
 
+  public final QuantizedTriggerParameter launch =
+    new QuantizedTriggerParameter.Launch(lx, "Launch", this.recall::trigger)
+    .setDescription("Launches this pattern to become active on the channel");
+
   public final ObjectParameter<LXBlend> compositeMode =
     new ObjectParameter<LXBlend>("Composite Blend", new LXBlend[1])
     .setDescription("Specifies the blending function used for blending of patterns on the channel");
@@ -222,6 +227,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     addParameter("enabled", this.enabled);
 
     addParameter("recall", this.recall);
+    addParameter("launch", this.launch);
     addParameter("compositeMode", this.compositeMode);
     addParameter("compositeLevel", this.compositeLevel);
     addParameter("hasCustomCycleTime", this.hasCustomCycleTime);

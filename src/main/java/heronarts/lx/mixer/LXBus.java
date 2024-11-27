@@ -33,8 +33,7 @@ import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.TriggerParameter;
-
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -103,8 +102,8 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     new BooleanParameter("Selected")
     .setDescription("Whether the channel is selected");
 
-  public final TriggerParameter stopClips =
-    new TriggerParameter("Stop Clips", this::stopClips)
+  public final QuantizedTriggerParameter stopClips =
+    new QuantizedTriggerParameter(lx, "Stop Clips", this::stopClips)
     .setDescription("Stops all clips running on the bus");
 
   public final BooleanParameter controlsExpandedCue =
@@ -141,6 +140,15 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     addParameter("arm", this.arm);
     addParameter("selected", this.selected);
     addParameter("stopClips", this.stopClips);
+
+    // NOTE(mcslee): weird one here, the LXMasterBus is constructed within the LXEngine
+    // constructor, and lx.engine.tempo won't resolve at that point, because lx.engine
+    // is still awaiting assignment. Ugly mess. That one will get handled by Tempo.initialize()
+    // but all other LXBus instances can just assign it here.
+    if (!(this instanceof LXMasterBus)) {
+      this.stopClips.setQuantization(lx.engine.tempo.launchQuantization);
+    }
+
     addInternalParameter("controlsExpandedCue", this.controlsExpandedCue);
     addInternalParameter("controlsExpandedAux", this.controlsExpandedAux);
     addInternalParameter("modulationExpanded", this.modulationExpanded);

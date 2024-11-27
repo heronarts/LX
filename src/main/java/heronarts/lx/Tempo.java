@@ -19,9 +19,12 @@
 package heronarts.lx;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
+import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
@@ -33,6 +36,8 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -61,14 +66,46 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   private double minOscBpm = DEFAULT_MIN_BPM;
   private double maxOscBpm = DEFAULT_MAX_BPM;
 
-  public static enum Division {
+  public interface Quantization {
+    public default boolean hasDivision() {
+      return getDivision() != null;
+    }
+
+    public Division getDivision();
+
+    public static final Quantization NONE = new Quantization() {
+      public Division getDivision() {
+        return null;
+      }
+
+      @Override
+      public String toString() {
+        return "None";
+      }
+    };
+
+    public static Quantization create(Division division, String label) {
+      return new Quantization() {
+        public Division getDivision() {
+          return division;
+        }
+
+        @Override
+        public String toString() {
+          return label;
+        }
+      };
+    }
+  }
+
+  public static enum Division implements Quantization {
 
     SIXTEENTH(4, "1/16"),
     EIGHTH_TRIPLET(3, "1/8T"),
     EIGHTH(2, "1/8"),
     EIGHTH_DOT(1.5, "3/16"),
-    QUARTER_TRIPLET(4/3., "1/4T"),
     QUARTER(1, "1/4"),
+    QUARTER_TRIPLET(2/3., "1/4T"),
     HALF_TRIPLET(.75, "1/2T"),
     QUARTER_DOT(2/3., "3/8"),
     HALF(.5, "1/2"),
@@ -80,7 +117,14 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     EIGHT(1/32., "8"),
     SIXTEEN(1/64., "16");
 
+    /**
+     * Ratio between the duration of this division and a quarter note, where
+     * the quarter note is the numerator and this division is the divisor, e.g.
+     * QUARTER is 1 and an EIGHTH note is QUARTER / EIGTH = 2. Can also be
+     * expressed as "how many of this division make one beat"
+     */
     public final double multiplier;
+
     public final String label;
 
     Division(double multiplier, String label) {
@@ -91,6 +135,24 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     @Override
     public String toString() {
       return this.label;
+    }
+
+    @Override
+    public Division getDivision() {
+      return this;
+    }
+
+    public Quantization toQuantization(String label) {
+      return new Quantization() {
+        public Division getDivision() {
+          return Division.this;
+        }
+
+        @Override
+        public String toString() {
+          return label;
+        }
+      };
     }
   }
 
@@ -141,6 +203,20 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Beats per minute of the master tempo");
 
+  public final ObjectParameter<Quantization> launchQuantization =
+    new ObjectParameter<Quantization>("Launch Quantization", new Quantization[] {
+      Quantization.NONE,
+      Division.EIGHT.toQuantization("8 Bars"),
+      Division.FOUR.toQuantization("4 Bars"),
+      Division.DOUBLE.toQuantization("2 Bars"),
+      Division.WHOLE.toQuantization("1 Bar"),
+      Division.HALF,
+      Division.QUARTER,
+      Division.EIGHTH,
+      Division.SIXTEENTH
+    })
+    .setDescription("Choose the quantization used when launching clips and patterns from the grid");
+
   public final TriggerParameter trigger =
     new TriggerParameter("Trigger", () -> {
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_BEAT, 1 + beatCountWithinBar());
@@ -179,9 +255,26 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   private boolean running = true;
   private boolean oscParIsPlaying = true;
 
+  private final Map<Division, Integer> divisionCycleCount =
+    new HashMap<Division, Integer>();
+
+  private final Map<Division, Boolean> divisionActive =
+    new HashMap<Division, Boolean>();
+
   private class Cursor {
+    /**
+     * Whether this cursor has just passed a new beat
+     */
     private boolean isBeat = false;
+
+    /**
+     * Discrete count of how many beats this cursor has ticked past thus far
+     */
     private int beatCount = 0;
+
+    /**
+     * Position within the current beat from [0-1)
+     */
     private double basis = 0;
 
     private void advance(double progress) {
@@ -274,9 +367,29 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     addParameter("beatsPerBar", this.beatsPerBar);
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
+    addParameter("launchQuantization", this.launchQuantization);
     addModulator("nudge", this.nudge);
 
     addLegacyParameter("beatsPerMeasure", this.beatsPerBar);
+
+    // Initialize division cycle counters
+    for (Division division : Division.values()) {
+      this.divisionCycleCount.put(division, 0);
+      this.divisionActive.put(division, false);
+    }
+  }
+
+  public void initialize() {
+    // These parameters were all created before lx.engine had been assigned, from within LXEngine()
+    // constructor, so they annoyingly couldn't reference lx.engine.tempo.launchQuantization. We
+    // late-initialize them here after LXEngine construction is complete
+    for (int i = 0; i < LXClipEngine.MAX_SCENES; ++i) {
+      this.lx.engine.clips.getScene(i).setQuantization(this.launchQuantization);
+      this.lx.engine.clips.getPatternScene(i).setQuantization(this.launchQuantization);
+    }
+    this.lx.engine.clips.stopClips.setQuantization(this.launchQuantization);
+    this.lx.engine.clips.triggerPatternCycle.setQuantization(this.launchQuantization);
+    this.lx.engine.mixer.masterBus.stopClips.setQuantization(this.launchQuantization);
   }
 
   private static final String PATH_BEAT = "beat";
@@ -509,7 +622,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
   public int getCycleCount(double multiplier) {
     // NB - a bit of tricky casting and math games needed here to avoid rounding
-    // errors when summing
+    // errors when summing, same example as in getBasis() illustrates the problem:
+    // beatCount=19 basis=0.9999999999999996 and division = WHOLE
     final double beatMultiple = this.smooth.beatCount * multiplier;
     final double basisMultiple = this.smooth.basis * multiplier;
     return
@@ -915,6 +1029,21 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
         this.trigger.trigger();
       }
     }
+
+    // Iterate through valid tempo divisions and fire off quantized listeners
+    for (Division division : Division.values()) {
+      int cycleCount = getCycleCount(division);
+      boolean divisionActive = cycleCount != this.divisionCycleCount.get(division);
+      this.divisionActive.put(division, divisionActive);
+      this.divisionCycleCount.put(division, cycleCount);
+      if (divisionActive) {
+        QuantizedTriggerParameter.resolve(this.lx, division);
+      }
+    }
+  }
+
+  public boolean isDivisionActive(Division division) {
+    return this.divisionActive.get(division);
   }
 
   @Override

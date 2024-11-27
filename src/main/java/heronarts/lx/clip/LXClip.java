@@ -44,6 +44,7 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.snapshot.LXClipSnapshot;
 
 public abstract class LXClip extends LXRunnableComponent implements LXOscComponent, LXComponent.Renamable, LXBus.Listener {
@@ -63,7 +64,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     .setUnits(LXParameter.Units.MILLISECONDS);
 
   public final BooleanParameter loop = new BooleanParameter("Loop")
-  .setDescription("Whether to loop the clip");
+    .setDescription("Whether to loop the clip");
+
+  public final QuantizedTriggerParameter launch =
+    new QuantizedTriggerParameter.Launch(lx, "Launch", this::trigger)
+    .setDescription("Launch this clip");
+
+  public final QuantizedTriggerParameter stop =
+    new QuantizedTriggerParameter.Launch(lx, "Stop", this::stop)
+    .setDescription("Stop this clip");
 
   protected final List<LXClipLane> mutableLanes = new ArrayList<LXClipLane>();
   public final List<LXClipLane> lanes = Collections.unmodifiableList(this.mutableLanes);
@@ -111,6 +120,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.index = index;
     this.busListener = registerListener;
     setParent(this.bus);
+    addParameter("launch", this.launch);
+    addParameter("stop", this.stop);
     addParameter("length", this.length);
     addParameter("loop", this.loop);
     addParameter("snapshotEnabled", this.snapshotEnabled);
@@ -130,6 +141,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (registerListener) {
       bus.addListener(this);
     }
+  }
+
+  /**
+   * Launches the clip, subject to global launch quantization
+   *
+   * @return this
+   */
+  public LXClip launch() {
+    this.launch.trigger();
+    return this;
   }
 
   @Override

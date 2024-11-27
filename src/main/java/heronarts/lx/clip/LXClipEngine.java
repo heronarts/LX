@@ -36,7 +36,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
-import heronarts.lx.parameter.TriggerParameter;
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 public class LXClipEngine extends LXComponent implements LXOscComponent {
@@ -82,9 +82,9 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   public static final int MIN_SCENES = 8;
   public static final int MAX_SCENES = 128;
 
-  private final TriggerParameter[] scenes = new TriggerParameter[MAX_SCENES];
+  private final QuantizedTriggerParameter[] scenes = new QuantizedTriggerParameter[MAX_SCENES];
 
-  private final TriggerParameter[] patternScenes = new TriggerParameter[MAX_SCENES];
+  private final QuantizedTriggerParameter[] patternScenes = new QuantizedTriggerParameter[MAX_SCENES];
 
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
@@ -116,12 +116,12 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new DiscreteParameter("Num Patterns", MIN_SCENES, 4097)
     .setDescription("Number of active patterns");
 
-  public final TriggerParameter stopClips =
-    new TriggerParameter("Stop Clips", this::stopClips)
+  public final QuantizedTriggerParameter stopClips =
+    new QuantizedTriggerParameter(lx, "Stop Clips", this::stopClips)
     .setDescription("Stops all clips running in the whole project");
 
-  public final TriggerParameter triggerPatternCycle =
-    new TriggerParameter("Trigger Pattern Cycle", this::launchPatternCycle)
+  public final QuantizedTriggerParameter triggerPatternCycle =
+    new QuantizedTriggerParameter(lx, "Trigger Pattern Cycle", this::launchPatternCycle)
     .setDescription("Triggers a pattern cycle on every eligble channel");
 
   /**
@@ -167,12 +167,12 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     for (int i = 0; i < this.scenes.length; ++i) {
       final int sceneIndex = i;
       this.scenes[i] =
-        new TriggerParameter("Scene-" + (i+1), () -> { launchScene(sceneIndex); })
+        new QuantizedTriggerParameter(lx, "Scene-" + (i+1), () -> { launchScene(sceneIndex); })
         .setDescription("Launches scene " + (i+1));
       addParameter("scene-" + (i+1), this.scenes[i]);
 
       this.patternScenes[i] =
-        new TriggerParameter("Pattern-" + (i+1), () -> { launchPatternScene(sceneIndex); })
+        new QuantizedTriggerParameter(lx, "Pattern-" + (i+1), () -> { launchPatternScene(sceneIndex); })
         .setDescription("Triggers all patterns at index " + (i+1));
       addParameter("pattern-" + (i+1), this.patternScenes[i]);
     }
@@ -261,7 +261,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
    * @param index Index of scene
    * @return Scene at index
    */
-  public TriggerParameter getScene(int index) {
+  public QuantizedTriggerParameter getScene(int index) {
     if (index < 0) {
       throw new IllegalArgumentException("Cannot request scene less than 0: " + index);
     }
@@ -274,7 +274,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
    * @param index Index of pattern scene
    * @return Pattern scene at index
    */
-  public TriggerParameter getPatternScene(int index) {
+  public QuantizedTriggerParameter getPatternScene(int index) {
     if (index < 0) {
       throw new IllegalArgumentException("Cannot request scene less than 0: " + index);
     }

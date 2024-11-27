@@ -1410,6 +1410,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.lx.registry.disposePlugins();
 
     // And now remove core engine components
+    LX.dispose(this.clips);
     LX.dispose(this.modulation);
     LX.dispose(this.mixer);
     LX.dispose(this.audio);

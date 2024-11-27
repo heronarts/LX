@@ -37,7 +37,9 @@ public class TriggerParameter extends BooleanParameter {
     super(label, false);
     setMode(Mode.MOMENTARY);
     addListener(this.listener);
-    onTrigger(onTrigger);
+    if (onTrigger != null) {
+      onTrigger(onTrigger);
+    }
   }
 
   @Override
@@ -53,12 +55,16 @@ public class TriggerParameter extends BooleanParameter {
 
   private final LXParameterListener listener = p -> {
     if (isOn()) {
-      if (this.onTrigger != null) {
-        this.onTrigger.run();
-      }
+      _onTrigger();
       setValue(false);
     }
   };
+
+  protected void _onTrigger() {
+    if (this.onTrigger != null) {
+      this.onTrigger.run();
+    }
+  }
 
   public TriggerParameter onTrigger(Runnable onTrigger) {
     if (this.onTrigger != null) {

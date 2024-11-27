@@ -2839,19 +2839,19 @@ public abstract class LXCommand {
 
     }
 
-    public static class Trigger extends LXCommand {
+    public static class Launch extends LXCommand {
 
       private final ComponentReference<LXClip> clip;
       private final List<LXCommand> commands = new ArrayList<LXCommand>();
       private boolean ignore = false;
 
-      public Trigger(LXClip clip) {
+      public Launch(LXClip clip) {
         this.clip = new ComponentReference<LXClip>(clip);
       }
 
       @Override
       public String getDescription() {
-        return "Trigger Clip";
+        return "Launch Clip";
       }
 
       @Override
@@ -2863,7 +2863,7 @@ public abstract class LXCommand {
         if (!this.ignore) {
           clip.snapshot.getCommands(this.commands);
         }
-        clip.trigger();
+        clip.launch();
       }
 
       @Override

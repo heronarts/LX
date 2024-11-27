@@ -38,6 +38,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
@@ -189,6 +190,14 @@ public class LXChannel extends LXAbstractChannel {
     new MutableParameter("Control-Surfaces", 0)
     .setDescription("How many control surfaces are controlling this component");
 
+  public final QuantizedTriggerParameter launchPatternCycle =
+    new QuantizedTriggerParameter.Launch(lx, "Launch Pattern", () -> {
+      // NB(mcslee): do this via parameter in case there are modulation mappings
+      // from the trigger cycle parameter!
+      this.triggerPatternCycle.trigger();
+    })
+    .setDescription("Launches a pattern change on the channel");
+
   public final TriggerParameter triggerPatternCycle =
     new TriggerParameter("Trigger Pattern", this::onTriggerPatternCycle)
     .setDescription("Triggers a pattern change on the channel");
@@ -252,6 +261,7 @@ public class LXChannel extends LXAbstractChannel {
     addParameter("transitionBlendMode", this.transitionBlendMode);
     addParameter("focusedPattern", this.focusedPattern);
     addParameter("triggerPatternCycle", this.triggerPatternCycle);
+    addParameter("launchPatternCycle", this.launchPatternCycle);
   }
 
   @Override

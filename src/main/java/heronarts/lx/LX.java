@@ -487,6 +487,10 @@ public class LX {
     this.command = new LXCommandEngine(this);
     LX.initProfiler.log("Engine");
 
+
+    // Initialize tempo
+    this.engine.tempo.initialize();
+
     // Midi
     this.engine.midi.initialize();
 
