@@ -91,7 +91,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private Dispatch inputDispatch = null;
 
+  private boolean inLoopTasks = false;
   private final List<LXLoopTask> loopTasks = new ArrayList<LXLoopTask>();
+  private final List<LXLoopTask> removedLoopTasks = new ArrayList<LXLoopTask>();
 
   private final AtomicBoolean hasTask = new AtomicBoolean(false);
   private final List<Runnable> threadSafeTaskQueue = Collections.synchronizedList(new ArrayList<Runnable>());
@@ -936,8 +938,57 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
    * @return this
    */
   public LXEngine removeLoopTask(LXLoopTask loopTask) {
-    this.loopTasks.remove(loopTask);
+    if (this.inLoopTasks) {
+      this.removedLoopTasks.add(loopTask);
+    } else {
+      this.loopTasks.remove(loopTask);
+    }
     return this;
+  }
+
+  /**
+   * A timeout task which
+   */
+  public class Timer implements LXLoopTask {
+
+    private double elapsedMs = 0;
+    private final double timerMs;
+    private final Runnable runnable;
+
+    private Timer(double timerMs, Runnable runnable) {
+      if (timerMs <= 0 || !Double.isFinite(timerMs)) {
+        throw new IllegalArgumentException("Timer must have a finite positive value: " + timerMs);
+      }
+      this.timerMs = timerMs;
+      this.runnable = runnable;
+    }
+
+    public void cancel() {
+      removeLoopTask(this);
+    }
+
+    @Override
+    public void loop(double deltaMs) {
+      this.elapsedMs += deltaMs;
+      if (this.elapsedMs >= this.timerMs) {
+        this.runnable.run();
+        cancel();
+      }
+    }
+  }
+
+  /**
+   * Add a task to the engine that will run if the specified duration
+   * of milliseconds expires and the timeout has not been canceled.
+   *
+   * @param timerMs Timeout in milliseconds
+   * @param runnable Function to run after timeout expires
+   * @return Timeout object which can be stopped via cancel()
+   */
+  public Timer addTimer(double timerMs, Runnable runnable) {
+    final Timer timer = new Timer(timerMs, runnable);
+    addLoopTask(timer);
+    return timer;
   }
 
   /**
@@ -1105,10 +1156,20 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Run the color control
     this.lx.engine.palette.loop(deltaMs);
 
-    // Run top-level loop tasks
+    // Run top-level loop tasks, take care to handle removals that
+    // are scheduled from within the loop tasks themselves
+    this.inLoopTasks = true;
     for (LXLoopTask loopTask : this.loopTasks) {
       loopTask.loop(deltaMs);
     }
+    this.inLoopTasks = false;
+
+    // Remove any loop tasks that had remove called from within
+    // the iteration loop
+    for (LXLoopTask loopTask : this.removedLoopTasks) {
+      removeLoopTask(loopTask);
+    }
+    this.removedLoopTasks.clear();
 
     // Okay, time for the real work, to run and blend all of our channels
     // First, set up a bunch of state to keep track of which buffers we
