@@ -34,4 +34,5 @@ public interface LXMidiListener {
 
   public default void midiPanicReceived() {}
 
+  public default void sysexReceived(LXSysexMessage sysex) {}
 }

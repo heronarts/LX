@@ -35,6 +35,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXMidiOutput;
+import heronarts.lx.midi.LXSysexMessage;
 import heronarts.lx.midi.MidiAftertouch;
 import heronarts.lx.midi.MidiControlChange;
 import heronarts.lx.midi.MidiNote;
@@ -450,6 +451,10 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
 
   @Override
   public void aftertouchReceived(MidiAftertouch aftertouch) {
+  }
+
+  @Override
+  public void sysexReceived(LXSysexMessage sysex) {
   }
 
   @Override
