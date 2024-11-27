@@ -134,11 +134,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   private final AtomicBoolean hasInputMessage = new AtomicBoolean(false);
 
-  private final List<LXShortMessage> threadSafeInputQueue =
-    Collections.synchronizedList(new ArrayList<LXShortMessage>());
+  private final List<LXMidiMessage> threadSafeInputQueue =
+    Collections.synchronizedList(new ArrayList<LXMidiMessage>());
 
-  private final List<LXShortMessage> engineThreadInputQueue =
-    new ArrayList<LXShortMessage>();
+  private final List<LXMidiMessage> engineThreadInputQueue =
+    new ArrayList<LXMidiMessage>();
 
   private final List<LXMidiInput> mutableInputs = new CopyOnWriteArrayList<LXMidiInput>();
   private final List<LXMidiOutput> mutableOutputs = new CopyOnWriteArrayList<LXMidiOutput>();
@@ -939,7 +939,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return this;
   }
 
-  void queueInputMessage(LXShortMessage message) {
+  void queueInputMessage(LXMidiMessage message) {
     this.threadSafeInputQueue.add(message);
     this.hasInputMessage.set(true);
   }
@@ -1110,12 +1110,22 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         this.engineThreadInputQueue.addAll(this.threadSafeInputQueue);
         this.threadSafeInputQueue.clear();
       }
-      for (LXShortMessage message : this.engineThreadInputQueue) {
+      for (LXMidiMessage message : this.engineThreadInputQueue) {
         LXMidiInput input = message.getInput();
         input.dispatch(message);
         if (input.enabled.isOn()) {
-          dispatch(message);
+          _dispatch(message);
         }
+      }
+    }
+  }
+
+  private void _dispatch(LXMidiMessage message) {
+    if (message instanceof LXShortMessage) {
+      dispatch((LXShortMessage) message);
+    } else if (message instanceof LXSysexMessage) {
+      for (LXMidiListener listener : this.listeners) {
+        message.dispatch(listener);
       }
     }
   }

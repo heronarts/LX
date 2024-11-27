@@ -213,6 +213,10 @@ public class LXMidiInput extends LXMidiDevice implements LXMidiSource, LXSeriali
           message.setSource(LXMidiInput.this);
           engine.queueInputMessage(message);
         }
+      } else if (midiMessage instanceof SysexMessage) {
+        LXSysexMessage message = new LXSysexMessage((SysexMessage) midiMessage);
+        message.setSource(LXMidiInput.this);
+        engine.queueInputMessage(message);
       }
     }
   }
@@ -222,7 +226,7 @@ public class LXMidiInput extends LXMidiDevice implements LXMidiSource, LXSeriali
    *
    * @param message Midi message
    */
-  void dispatch(LXShortMessage message) {
+  void dispatch(LXMidiMessage message) {
     for (LXMidiListener listener : this.listeners) {
       message.dispatch(listener);
     }
