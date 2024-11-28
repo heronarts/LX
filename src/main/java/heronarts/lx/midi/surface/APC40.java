@@ -1225,6 +1225,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       fader.dispose();
     }
     this.deviceListener.dispose();
+    this.mixerSurface.dispose();
     super.dispose();
   }
 
