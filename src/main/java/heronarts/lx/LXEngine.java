@@ -947,32 +947,49 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   }
 
   /**
-   * A timeout task which
+   * A task which runs after an elapsed amount of time, and potentially repeats
    */
   public class Timer implements LXLoopTask {
 
     private double elapsedMs = 0;
     private final double timerMs;
+    public final boolean isInterval;
     private final Runnable runnable;
 
-    private Timer(double timerMs, Runnable runnable) {
+    private Timer(double timerMs, Runnable runnable, boolean isInterval) {
       if (timerMs <= 0 || !Double.isFinite(timerMs)) {
         throw new IllegalArgumentException("Timer must have a finite positive value: " + timerMs);
       }
       this.timerMs = timerMs;
       this.runnable = runnable;
+      this.isInterval = isInterval;
     }
 
+    /**
+     * Cancel any future processing of this timer
+     */
     public void cancel() {
       removeLoopTask(this);
+    }
+
+    /**
+     * Reset the timer state back to 0, so the full timeout period must again
+     * pass before execution
+     */
+    public void reset() {
+      this.elapsedMs = 0;
     }
 
     @Override
     public void loop(double deltaMs) {
       this.elapsedMs += deltaMs;
-      if (this.elapsedMs >= this.timerMs) {
+      while (this.elapsedMs >= this.timerMs) {
         this.runnable.run();
-        cancel();
+        if (!this.isInterval) {
+          cancel();
+          return;
+        }
+        this.elapsedMs -= this.timerMs;
       }
     }
   }
@@ -980,13 +997,28 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   /**
    * Add a task to the engine that will run if the specified duration
    * of milliseconds expires and the timeout has not been canceled.
+   * The timer is automatically canceled once it has run.
    *
    * @param timerMs Timeout in milliseconds
    * @param runnable Function to run after timeout expires
-   * @return Timeout object which can be stopped via cancel()
+   * @return Timer object which can be stopped via cancel()
    */
-  public Timer addTimer(double timerMs, Runnable runnable) {
-    final Timer timer = new Timer(timerMs, runnable);
+  public Timer addTimeout(double timerMs, Runnable runnable) {
+    final Timer timer = new Timer(timerMs, runnable, false);
+    addLoopTask(timer);
+    return timer;
+  }
+
+  /**
+   * Add a task to the engine that will run periodically every time
+   * the interval has passed, until explicitly canceled.
+   *
+   * @param intervalMs Interval in milliseconds
+   * @param runnable Function to run whenever interval has passed
+   * @return Timer object which can be stopped via cancel()
+   */
+  public Timer addInterval(double intervalMs, Runnable runnable) {
+    final Timer timer = new Timer(intervalMs, runnable, true);
     addLoopTask(timer);
     return timer;
   }
