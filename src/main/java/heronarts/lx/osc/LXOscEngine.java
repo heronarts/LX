@@ -477,6 +477,7 @@ public class LXOscEngine extends LXComponent {
 
     private final BooleanParameter active;
     private final EnumParameter<IOState> state;
+    private LXOscConnection connection;
 
     EngineTransmitter(InetAddress address, int port, int bufferSize) throws SocketException {
       super(address, port, bufferSize);
@@ -499,47 +500,65 @@ public class LXOscEngine extends LXComponent {
     private final OscInt oscInt = new OscInt(0);
     private final OscString oscString = new OscString("");
 
+    void setConnection(LXOscConnection connection) {
+      this.connection = connection;
+      setLog(connection.log);
+      setActivity(connection.activity);
+    }
+
     private boolean isActive() {
       return this.active.isOn() && (this.state.getEnum() == IOState.BOUND);
     }
 
     @Override
     public void onParameterChanged(LXParameter parameter) {
-      if (isActive()) {
-        // TODO(mcslee): contemplate accumulating OscMessages into OscBundle
-        // and sending once per engine loop?? Probably a bad tradeoff since
-        // it would require dynamic memory allocations that we can skip here...
-        String address = getOscAddress(parameter);
-        if (address != null) {
-          oscMessage.clearArguments();
-          oscMessage.setAddressPattern(address);
-          if (parameter instanceof BooleanParameter) {
-            oscInt.setValue(((BooleanParameter) parameter).isOn() ? 1 : 0);
-            oscMessage.add(oscInt);
-          } else if (parameter instanceof StringParameter) {
-            oscString.setValue(((StringParameter) parameter).getString());
-            oscMessage.add(oscString);
-          } else if (parameter instanceof ColorParameter) {
-            oscInt.setValue(((ColorParameter) parameter).getBaseColor());
-            oscMessage.add(oscInt);
-          } else if (parameter instanceof DiscreteParameter) {
-            oscInt.setValue(((DiscreteParameter) parameter).getBaseValuei());
-            oscMessage.add(oscInt);
-          } else if (parameter instanceof LXNormalizedParameter) {
-            LXNormalizedParameter normalizedParameter = (LXNormalizedParameter) parameter;
-            if (normalizedParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
-              oscFloat.setValue(normalizedParameter.getBaseValuef());
-            } else {
-              oscFloat.setValue(normalizedParameter.getBaseNormalizedf());
-            }
-            oscMessage.add(oscFloat);
-          } else {
-            oscFloat.setValue(parameter.getBaseValuef());
-            oscMessage.add(oscFloat);
-          }
-          _sendMessage(oscMessage);
-        }
+      // TODO(mcslee): contemplate accumulating OscMessages into OscBundle
+      // and sending once per engine loop?? Maybe a bad tradeoff since
+      // it would require dynamic memory allocations that we can skip here...
+      if (!isActive()) {
+        return;
       }
+
+      // Check parameter has valid OSC address
+      final String address = getOscAddress(parameter);
+      if (address == null) {
+        return;
+      }
+
+      // Apply prefix filter if it exists
+      final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
+      if ((prefixFilter != null) && !OscMessage.hasPrefix(address, prefixFilter)) {
+        return;
+      }
+
+      // This checks out, set the osc message values and ship it
+      oscMessage.clearArguments();
+      oscMessage.setAddressPattern(address);
+      if (parameter instanceof BooleanParameter) {
+        oscInt.setValue(((BooleanParameter) parameter).isOn() ? 1 : 0);
+        oscMessage.add(oscInt);
+      } else if (parameter instanceof StringParameter) {
+        oscString.setValue(((StringParameter) parameter).getString());
+        oscMessage.add(oscString);
+      } else if (parameter instanceof ColorParameter) {
+        oscInt.setValue(((ColorParameter) parameter).getBaseColor());
+        oscMessage.add(oscInt);
+      } else if (parameter instanceof DiscreteParameter) {
+        oscInt.setValue(((DiscreteParameter) parameter).getBaseValuei());
+        oscMessage.add(oscInt);
+      } else if (parameter instanceof LXNormalizedParameter) {
+        LXNormalizedParameter normalizedParameter = (LXNormalizedParameter) parameter;
+        if (normalizedParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
+          oscFloat.setValue(normalizedParameter.getBaseValuef());
+        } else {
+          oscFloat.setValue(normalizedParameter.getBaseNormalizedf());
+        }
+        oscMessage.add(oscFloat);
+      } else {
+        oscFloat.setValue(parameter.getBaseValuef());
+        oscMessage.add(oscFloat);
+      }
+      _sendMessage(oscMessage);
     }
 
     private void sendMessage(String address, int value) {
@@ -606,6 +625,7 @@ public class LXOscEngine extends LXComponent {
 
     private BooleanParameter log;
     private TriggerParameter activity;
+    private LXOscConnection connection;
 
     private Receiver(int port, InetAddress address, int bufferSize)
       throws SocketException {
@@ -625,6 +645,12 @@ public class LXOscEngine extends LXComponent {
       this.packet = new DatagramPacket(this.buffer, bufferSize);
       this.thread = new ReceiverThread();
       this.thread.start();
+    }
+
+    void setConnection(LXOscConnection connection) {
+      this.connection = connection;
+      setLog(connection.log);
+      setActivity(connection.activity);
     }
 
     Receiver setLog(BooleanParameter log) {
@@ -702,18 +728,23 @@ public class LXOscEngine extends LXComponent {
         // listener list
         this.listenerSnapshot.clear();
         this.listenerSnapshot.addAll(this.listeners);
+
+        final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
+
         for (OscMessage message : this.engineThreadEventQueue) {
-          if ((this.log != null) && this.log.isOn()) {
-            log("[RX] [" + this.port + "] " + message.toString());
-          }
-          if (this.activity != null) {
-            this.activity.trigger();
-          }
-          for (LXOscListener listener : this.listenerSnapshot) {
-            try {
-              listener.oscMessage(message);
-            } catch (Exception x) {
-              error(x, "Uncaught exception in OSC listener: " + message.getAddressPattern().getValue());
+          if ((prefixFilter == null) || message.hasPrefix(prefixFilter)) {
+            if ((this.log != null) && this.log.isOn()) {
+              log("[RX] [" + this.port + "] " + message.toString());
+            }
+            if (this.activity != null) {
+              this.activity.trigger();
+            }
+            for (LXOscListener listener : this.listenerSnapshot) {
+              try {
+                listener.oscMessage(message);
+              } catch (Exception x) {
+                error(x, "Uncaught exception in OSC listener: " + message.getAddressPattern().getValue());
+              }
             }
           }
         }

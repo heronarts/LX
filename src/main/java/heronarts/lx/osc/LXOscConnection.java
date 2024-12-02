@@ -60,6 +60,14 @@ public abstract class LXOscConnection extends LXComponent {
       "Hostname to which OSC messages are sent"
     );
 
+  public final BooleanParameter hasFilter =
+    new BooleanParameter("Has Filter", false)
+    .setDescription("Whether prefix filtering is applied to OSC messages");
+
+  public final StringParameter filter =
+    new StringParameter("Filter", "/lx")
+    .setDescription("Filter OSC messages on matching prefix");
+
   private int _defaultInputPort() {
     int max = lx.engine.osc.receivePort.getValuei();
     for (LXOscConnection connection : lx.engine.osc.inputs) {
@@ -118,7 +126,13 @@ public abstract class LXOscConnection extends LXComponent {
     addParameter("host", this.host);
     addParameter("port", this.port);
     addParameter("log", this.log);
+    addParameter("hasFilter", this.hasFilter);
+    addParameter("filter", this.filter);
     addParameter("active", this.active);
+  }
+
+  protected String getFilter() {
+    return this.hasFilter.isOn() ? this.filter.getString() : null;
   }
 
   /**
@@ -169,8 +183,7 @@ public abstract class LXOscConnection extends LXComponent {
       try {
         this.state.setValue(IOState.BINDING);
         this.receiver = lx.engine.osc.receiver(port, host);
-        this.receiver.setLog(this.log);
-        this.receiver.setActivity(this.activity);
+        this.receiver.setConnection(this);
         this.receiver.addListener(lx.engine.osc.engineListener);
         this.unknownHost.setValue(false);
         this.state.setValue(IOState.BOUND);
@@ -258,8 +271,7 @@ public abstract class LXOscConnection extends LXComponent {
           InetAddress address = InetAddress.getByName(host);
           this.unknownHost.setValue(false);
           this.transmitter = lx.engine.osc.transmitter(address, port, this);
-          this.transmitter.setLog(this.log);
-          this.transmitter.setActivity(this.activity);
+          this.transmitter.setConnection(this);
           this.state.setValue(IOState.BOUND);
         } catch (UnknownHostException uhx) {
           LXOscEngine.error("Invalid host: " + uhx.getLocalizedMessage());
