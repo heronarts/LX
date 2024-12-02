@@ -147,7 +147,7 @@ public class QuantizedTriggerParameter extends TriggerParameter {
     increment();
 
     Quantization quantization = getQuantization();
-    if (!quantization.hasDivision() || this.lx.engine.tempo.isDivisionActive(quantization.getDivision())) {
+    if (!quantization.hasDivision() || quantization.getDivision().isActive()) {
       resolve();
     } else {
       this.pending.setValue(true);

@@ -19,9 +19,7 @@
 package heronarts.lx;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import heronarts.lx.clip.LXClipEngine;
@@ -127,9 +125,31 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
     public final String label;
 
+    private boolean isActive = false;
+
+    private int cycleCount = 0;
+
     Division(double multiplier, String label) {
       this.multiplier = multiplier;
       this.label = label;
+    }
+
+    /**
+     * Whether this tempo division is active in the current animation frame
+     *
+     * @return true if division is presently triggering
+     */
+    public boolean isActive() {
+      return this.isActive;
+    }
+
+    /**
+     * How many cycles of this division have taken place
+     *
+     * @return Count of cycles of this tempo division on master metronome
+     */
+    public int getCycleCount() {
+      return this.cycleCount;
     }
 
     @Override
@@ -255,12 +275,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   private boolean running = true;
   private boolean oscParIsPlaying = true;
 
-  private final Map<Division, Integer> divisionCycleCount =
-    new HashMap<Division, Integer>();
-
-  private final Map<Division, Boolean> divisionActive =
-    new HashMap<Division, Boolean>();
-
   private class Cursor {
     /**
      * Whether this cursor has just passed a new beat
@@ -371,12 +385,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     addModulator("nudge", this.nudge);
 
     addLegacyParameter("beatsPerMeasure", this.beatsPerBar);
-
-    // Initialize division cycle counters
-    for (Division division : Division.values()) {
-      this.divisionCycleCount.put(division, 0);
-      this.divisionActive.put(division, false);
-    }
   }
 
   public void initialize() {
@@ -1010,6 +1018,16 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       }
     }
 
+    // Iterate through all tempo divisions and fire off quantized listeners
+    for (Division division : Division.values()) {
+      final int newCycleCount = getCycleCount(division);
+      division.isActive = (newCycleCount != division.cycleCount);
+      division.cycleCount = newCycleCount;
+      if (division.isActive) {
+        QuantizedTriggerParameter.resolve(this.lx, division);
+      }
+    }
+
     // Check if the smoothed tempo has crossed a beat threshold, if so it is
     // time to fire off the listeners
     if (this.smooth.isBeat) {
@@ -1030,20 +1048,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       }
     }
 
-    // Iterate through valid tempo divisions and fire off quantized listeners
-    for (Division division : Division.values()) {
-      int cycleCount = getCycleCount(division);
-      boolean divisionActive = cycleCount != this.divisionCycleCount.get(division);
-      this.divisionActive.put(division, divisionActive);
-      this.divisionCycleCount.put(division, cycleCount);
-      if (divisionActive) {
-        QuantizedTriggerParameter.resolve(this.lx, division);
-      }
-    }
-  }
-
-  public boolean isDivisionActive(Division division) {
-    return this.divisionActive.get(division);
   }
 
   @Override
