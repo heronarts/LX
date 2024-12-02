@@ -18,7 +18,7 @@
 
 package heronarts.lx.parameter;
 
-public class EnumParameter<T extends Enum<?>> extends ObjectParameter<T> {
+public class EnumParameter<T extends Enum<T>> extends ObjectParameter<T> {
 
   @SuppressWarnings("unchecked")
   static <T> T[] valuesFor(T o) {
@@ -29,8 +29,17 @@ public class EnumParameter<T extends Enum<?>> extends ObjectParameter<T> {
     }
   }
 
+  public final Class<T> enumClass;
+
+  @SuppressWarnings("unchecked")
   public EnumParameter(String label, T t) {
     super(label, valuesFor(t), t);
+    this.enumClass = (Class<T>) t.getClass();
+  }
+
+  public EnumParameter<T> setEnum(String enumName) {
+    setValue(Enum.valueOf(this.enumClass, enumName));
+    return this;
   }
 
   @Override
