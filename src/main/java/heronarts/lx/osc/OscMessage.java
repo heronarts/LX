@@ -184,10 +184,17 @@ public class OscMessage extends OscPacket implements Iterable<OscArgument> {
   }
 
   public boolean hasPrefix(String pattern) {
-    String address = this.addressPattern.getValue();
+    return hasPrefix(this.addressPattern.getValue(), pattern);
+  }
+
+  public static boolean hasPrefix(String address, String pattern) {
+    // NOTE: take care to not match on address substrings, e.g.
+    // if the prefix is "/lx/some" we would want it to match for
+    // the address "/lx/some/thing" but NOT for "/lx/something"
     return
       address.startsWith(pattern) && (
         (address.length() == pattern.length()) ||
+        (pattern.charAt(pattern.length() - 1) == '/') ||
         (address.charAt(pattern.length()) == '/')
       );
   }
