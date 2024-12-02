@@ -101,10 +101,14 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     SIXTEENTH(4, "1/16"),
     EIGHTH_TRIPLET(3, "1/8T"),
     EIGHTH(2, "1/8"),
-    EIGHTH_DOT(1.5, "3/16"),
+    EIGHTH_DOT(4/3., "3/16"),
     QUARTER(1, "1/4"),
-    QUARTER_TRIPLET(2/3., "1/4T"),
-    HALF_TRIPLET(.75, "1/2T"),
+    // NOTE(mcslee): this is in the wrong order, a quarter triplet is shorter than a quarter note
+    // but we had a bug here before and the parameters are written into LXP files or other locations
+    // using their specific order! that will be fixed separately, but in the meantime we'll fix this
+    // by leaving this goofy ordering
+    QUARTER_TRIPLET(3/2., "1/4T"),
+    HALF_TRIPLET(3/4., "1/2T"),
     QUARTER_DOT(2/3., "3/8"),
     HALF(.5, "1/2"),
     HALF_DOT(1/3., "3/4"),
