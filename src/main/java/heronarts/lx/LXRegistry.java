@@ -158,6 +158,7 @@ public class LXRegistry implements LXSerializable {
   private static final List<Class<? extends LXModulator>> DEFAULT_MODULATORS;
   static {
     DEFAULT_MODULATORS = new ArrayList<Class<? extends LXModulator>>();
+    DEFAULT_MODULATORS.add(heronarts.lx.audio.BandFilter.class);
     DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
     DEFAULT_MODULATORS.add(heronarts.lx.audio.SoundObject.class);
     DEFAULT_MODULATORS.add(heronarts.lx.dmx.DmxModulator.class);
