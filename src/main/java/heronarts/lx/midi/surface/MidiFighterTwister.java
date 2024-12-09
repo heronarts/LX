@@ -479,9 +479,21 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     private Config() {
+      initGlobal();
       for (int i=0; i<DEVICE_KNOB_NUM; i++) {
         this.encoders[i] = new Encoder(i);
       }
+    }
+
+    private void initGlobal() {
+      // Init global settings array in correct order. Some will be loaded from the first encoder.
+      this.global.clear();
+      for (int g = 0; g <= 24; g++) {
+        this.global.put((byte)g, (byte)0x00);
+      }
+      // Yes this gap matches the Midi Fighter Utility sysex
+      this.global.put((byte)31, (byte)0x00);
+      this.global.put((byte)32, (byte)0x00);
     }
 
     public boolean isPulling() {
@@ -609,8 +621,8 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       int month = byteNumber(m[14]);
       int day = byteNumber(m[15]);
       versionOK = year > 2016;
-      // Too bad they commented out the serial number for the next 4 bytes.
       // LXMidiEngine.log(String.format("Found DJTT MidiFighterTwister, firmware %d-%02d-%02d", year, month, day));
+      // Too bad they commented out the serial number for the next 4 bytes.
       return true;
     }
 
@@ -629,37 +641,14 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         LXMidiEngine.error("Invalid sysex header for global config pull");
         return false;
       }
-      this.global.clear();
+      initGlobal();
       for (int i = 6; i < length - 1; i += 2) {
         Byte address = m[i];
         Byte value = m[i + 1];
         this.global.put(address, value);
       }
-      // Utility software writes these but we will not since we can't read them.
-      // this.global.put((byte)10, (byte)0);                           // 0a has detent
-      // this.global.put((byte)11, CFG_ENC_MOVEMENTTYPE_DIRECT_HIGHRESOLUTION); // 0b sensitivity
-      // this.global.put((byte)12, CFG_ENC_SWACTION_NOTEHOLD);         // 0c switch action type
-      // this.global.put((byte)13, (byte)2);                           // 0d switch midi channel
-      // this.global.put((byte)14, (byte)0);                           // 0e switch midi number
-      // this.global.put((byte)15, (byte)0);                           // 0f switch midi type
-      // this.global.put((byte)16, (byte)1);                           // 10 encoder midi channel
-      // this.global.put((byte)17, (byte)0);                           // 11 encoder midi number
-      // this.global.put((byte)18, CFG_ENC_MIDITYPE_SENDCC);           // 12 encoder midi type
-      // this.global.put((byte)19, (byte)51);                          // 13 active color
-      // this.global.put((byte)20, (byte)1);                           // 14 inactive color
-      // this.global.put((byte)21, (byte)63);                          // 15 detent color
-      // this.global.put((byte)22, CFG_ENC_INDICATORTYPE_BLENDEDBAR);  // 16 indicator type
-      // this.global.put((byte)23, (byte)0);                           // 17 isSuperKnob
-      // this.global.put((byte)24, (byte)0);                           // 18 encoder shift midi channel
+      // Special: Settings 10 (0x0A) through 24 (0x18) will come from the first encoder
       return true;
-    }
-
-    /**
-     * Create a global setting if it did not exist. This covers
-     * for settings missing from the global config pull.
-     */
-    private void setGlobalBackup(byte address, byte value) {
-
     }
 
     /**
@@ -703,6 +692,12 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         // All message parts received. Send to encoder.
         Encoder encoder = this.encoders[pullStep];
         encoder.setBulk(this.encoderBulkResponse);
+        // Special: The first encoder's settings are also sent with the global settings
+        if (pullStep == 0) {
+          for (Map.Entry<Byte, Byte> entry : this.encoderBulkResponse.entrySet()) {
+            this.global.put(entry.getKey(), entry.getValue());
+          }
+        }
         this.encoderBulkResponse.clear();
         return true;
       }
@@ -779,7 +774,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
     }
 
     private void initializeLXDefaults() {
-      this.global.clear();
+      initGlobal();
       this.global.put((byte)0, (byte)4);                            // System MIDI channel
       this.global.put((byte)1, (byte)1);                            // Bank Side Buttons
       this.global.put((byte)2, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Left Button 1 Function
@@ -790,22 +785,21 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       this.global.put((byte)7, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Right Button 3 Function
       this.global.put((byte)8, (byte)63);                           // Super Knob Start Point
       this.global.put((byte)9, (byte)127);                          // Super Knob End Point
-      // These don't get pulled so let's not overwrite them
-      // this.global.put((byte)10, (byte)0);                           // 0a has detent
-      // this.global.put((byte)11, CFG_ENC_MOVEMENTTYPE_DIRECT_HIGHRESOLUTION); // 0b sensitivity
-      // this.global.put((byte)12, CFG_ENC_SWACTION_NOTEHOLD);         // 0c switch action type
-      // this.global.put((byte)13, (byte)2);                           // 0d switch midi channel
-      // this.global.put((byte)14, (byte)0);                           // 0e switch midi number
-      // this.global.put((byte)15, (byte)0);                           // 0f switch midi type
-      // this.global.put((byte)16, (byte)1);                           // 10 encoder midi channel
-      // this.global.put((byte)17, (byte)0);                           // 11 encoder midi number
-      // this.global.put((byte)18, CFG_ENC_MIDITYPE_SENDCC);           // 12 encoder midi type
-      // this.global.put((byte)19, (byte)51);                          // 13 active color
-      // this.global.put((byte)20, (byte)1);                           // 14 inactive color
-      // this.global.put((byte)21, (byte)63);                          // 15 detent color
-      // this.global.put((byte)22, CFG_ENC_INDICATORTYPE_BLENDEDBAR);  // 16 indicator type
-      // this.global.put((byte)23, (byte)0);                           // 17 isSuperKnob
-      // this.global.put((byte)24, (byte)0);                           // 18 encoder shift midi channel
+      this.global.put((byte)10, (byte)0);                           // 0a has detent
+      this.global.put((byte)11, (byte)0);                           // 0b sensitivity
+      this.global.put((byte)12, (byte)0);                           // 0c switch action type
+      this.global.put((byte)13, (byte)2);                           // 0d switch midi channel
+      this.global.put((byte)14, (byte)0);                           // 0e switch midi number
+      this.global.put((byte)15, (byte)0);                           // 0f switch midi type
+      this.global.put((byte)16, (byte)1);                           // 10 encoder midi channel
+      this.global.put((byte)17, (byte)0);                           // 11 encoder midi number
+      this.global.put((byte)18, CFG_ENC_MIDITYPE_SENDRELENC);       // 12 encoder midi type
+      this.global.put((byte)19, (byte)51);                          // 13 active color
+      this.global.put((byte)20, (byte)1);                           // 14 inactive color
+      this.global.put((byte)21, (byte)63);                          // 15 detent color
+      this.global.put((byte)22, CFG_ENC_INDICATORTYPE_BLENDEDBAR);  // 16 indicator type
+      this.global.put((byte)23, (byte)0);                           // 17 isSuperKnob
+      this.global.put((byte)24, (byte)0);                           // 18 encoder shift midi channel
       // Yes this gap matches the Midi Fighter Utility sysex
       this.global.put((byte)31, (byte)127);                         // 1f  RGB LED Brightness
       this.global.put((byte)32, (byte)127);                         // 20  Indicator Global Brightness
@@ -840,7 +834,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
      */
     @SuppressWarnings("unused")
     private void initializeUserDefaults() {
-      this.global.clear();
+      initGlobal();
       this.global.put((byte)0, (byte)4);                            // System MIDI channel
       this.global.put((byte)1, (byte)1);                            // Bank Side Buttons
       this.global.put((byte)2, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Left Button 1 Function
@@ -851,22 +845,21 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       this.global.put((byte)7, CFG_GLOBAL_SSACTION_CCTOGGLE);       // Right Button 3 Function
       this.global.put((byte)8, (byte)63);                           // Super Knob Start Point
       this.global.put((byte)9, (byte)127);                          // Super Knob End Point
-      // These don't get pulled so let's not overwrite them
-      // this.global.put((byte)10, (byte)0);                           // 0a has detent
-      // this.global.put((byte)11, CFG_ENC_MOVEMENTTYPE_DIRECT_HIGHRESOLUTION); // 0b sensitivity
-      // this.global.put((byte)12, CFG_ENC_SWACTION_NOTEHOLD);         // 0c switch action type
-      // this.global.put((byte)13, (byte)2);                           // 0d switch midi channel
-      // this.global.put((byte)14, (byte)0);                           // 0e switch midi number
-      // this.global.put((byte)15, (byte)0);                           // 0f switch midi type
-      // this.global.put((byte)16, (byte)1);                           // 10 encoder midi channel
-      // this.global.put((byte)17, (byte)0);                           // 11 encoder midi number
-      // this.global.put((byte)18, CFG_ENC_MIDITYPE_SENDCC);           // 12 encoder midi type
-      // this.global.put((byte)19, (byte)51);                          // 13 active color
-      // this.global.put((byte)20, (byte)1);                           // 14 inactive color
-      // this.global.put((byte)21, (byte)63);                          // 15 detent color
-      // this.global.put((byte)22, CFG_ENC_INDICATORTYPE_BLENDEDBAR);  // 16 indicator type
-      // this.global.put((byte)23, (byte)0);                           // 17 isSuperKnob
-      // this.global.put((byte)24, (byte)0);                           // 18 encoder shift midi channel
+      this.global.put((byte)10, (byte)0);                           // 0a has detent
+      this.global.put((byte)11, (byte)0);                           // 0b sensitivity
+      this.global.put((byte)12, (byte)0);                           // 0c switch action type
+      this.global.put((byte)13, (byte)2);                           // 0d switch midi channel
+      this.global.put((byte)14, (byte)0);                           // 0e switch midi number
+      this.global.put((byte)15, (byte)0);                           // 0f switch midi type
+      this.global.put((byte)16, (byte)1);                           // 10 encoder midi channel
+      this.global.put((byte)17, (byte)0);                           // 11 encoder midi number
+      this.global.put((byte)18, CFG_ENC_MIDITYPE_SENDCC);           // 12 encoder midi type
+      this.global.put((byte)19, (byte)51);                          // 13 active color
+      this.global.put((byte)20, (byte)1);                           // 14 inactive color
+      this.global.put((byte)21, (byte)63);                          // 15 detent color
+      this.global.put((byte)22, CFG_ENC_INDICATORTYPE_BLENDEDBAR);  // 16 indicator type
+      this.global.put((byte)23, (byte)0);                           // 17 isSuperKnob
+      this.global.put((byte)24, (byte)0);                           // 18 encoder shift midi channel
       // Yes this gap matches the Midi Fighter Utility sysex
       this.global.put((byte)31, (byte)127);                         // 1f  RGB LED Brightness
       this.global.put((byte)32, (byte)127);                         // 20  Indicator Global Brightness
