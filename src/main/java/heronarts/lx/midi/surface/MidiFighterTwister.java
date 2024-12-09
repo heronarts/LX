@@ -617,7 +617,6 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
       int majorVersion = m[10];
       int minorVersion = m[11];
       int year = byteNumber(m[12]) * 100 + byteNumber(m[13]);
-      // TODO: verify month/day parsing correctly. Looks like 2023 version may have gone back to hex encoding for these.
       int month = byteNumber(m[14]);
       int day = byteNumber(m[15]);
       versionOK = year > 2016;
