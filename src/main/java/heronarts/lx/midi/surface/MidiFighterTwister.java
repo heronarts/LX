@@ -287,11 +287,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
 
   private class Config {
 
-    private static final int CONFIG_PULL_TIMEOUT_MS = 10000;
+    private static final int CONFIG_PULL_TIMEOUT_MS = 1000;
     private static final int PART_SIZE_BYTES = 24;
     private static final int PULL_STEP_NONE = -3;
     private static final int PULL_STEP_IDENTITY = -2;
     private static final int PULL_STEP_GLOBAL = -1;
+    private static final int PULL_STEP_FIRST_ENCODER = 0;
+    private static final int NUM_PULL_ENCODERS = DEVICE_KNOB_NUM;
 
     private int pullStep = PULL_STEP_NONE;
     private Encoder pullingEncoder;
@@ -558,7 +560,7 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         // Pull global settings
         this.pullTimer.reset();
         pullGlobal();
-      } else if (this.pullStep < this.encoders.length) {
+      } else if (this.pullStep < NUM_PULL_ENCODERS) {
         // Pull next encoder
         this.pullTimer.reset();
         this.pullingEncoder = this.encoders[this.pullStep];
@@ -688,11 +690,13 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         }
       }
       if (part == totalParts) {
-        // All message parts received. Send to encoder.
+        // All message parts received. Pass to encoder.
         Encoder encoder = this.encoders[pullStep];
         encoder.setBulk(this.encoderBulkResponse);
-        // Special: The first encoder's settings are also sent with the global settings
-        if (pullStep == 0) {
+        if (pullStep == PULL_STEP_FIRST_ENCODER) {
+          // Special: When writing config to device, the command to write global settings needs
+          // to also include the first encoder's settings. To prepare for this we'll append the
+          // first encoder settings to the list of global settings here.
           for (Map.Entry<Byte, Byte> entry : this.encoderBulkResponse.entrySet()) {
             this.global.put(entry.getKey(), entry.getValue());
           }
