@@ -25,6 +25,8 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
 
+import java.util.Map;
+
 public class ParameterClipLane extends LXClipLane {
 
   public final LXNormalizedParameter parameter;
@@ -85,6 +87,15 @@ public class ParameterClipLane extends LXClipLane {
         ((ParameterClipEvent) next).getNormalized(),
         (to - prior.cursor) / (next.cursor - prior.cursor)
       ));
+    }
+  }
+
+  public void setEventsNormalized(Map<ParameterClipEvent, Double> normalized) {
+    for (Map.Entry<ParameterClipEvent, Double> entry : normalized.entrySet()) {
+      ParameterClipEvent event = entry.getKey();
+      if (this.events.contains(event)) {
+        event.setNormalized(entry.getValue());
+      }
     }
   }
 

@@ -34,6 +34,10 @@ public class ParameterClipEvent extends LXClipEvent {
     return this.normalized;
   }
 
+  public float getNormalizedf() {
+    return (float)this.normalized;
+  }
+
   @Override
   public void execute() {
     this.parameter.setNormalized(this.normalized);

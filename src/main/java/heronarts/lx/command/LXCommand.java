@@ -33,6 +33,10 @@ import heronarts.lx.LXPath;
 import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip;
+import heronarts.lx.clip.LXClipEvent;
+import heronarts.lx.clip.LXClipLane;
+import heronarts.lx.clip.ParameterClipEvent;
+import heronarts.lx.clip.ParameterClipLane;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXPalette;
@@ -238,7 +242,7 @@ public abstract class LXCommand {
 
     protected void removeSnapshotViews(LXSnapshotEngine snapshots, LXComponent component) {
       List<LXSnapshot.View> views = snapshots.findSnapshotViews(component);
-      if (views  != null) {
+      if (views != null) {
         for (LXSnapshot.View view : views) {
           this.removeSnapshotViews.add(new Snapshots.RemoveView(view));
         }
@@ -283,6 +287,7 @@ public abstract class LXCommand {
   public static class Parameter {
 
     public static class Reset extends LXCommand {
+
       private final ParameterReference<LXParameter> parameter;
       private final double originalValue;
       private final String originalString;
@@ -403,6 +408,7 @@ public abstract class LXCommand {
     }
 
     public static class SetIndex extends SetValue {
+
       public SetIndex(DiscreteParameter parameter, int index) {
         super(parameter, index + parameter.getMinValue());
       }
@@ -621,6 +627,7 @@ public abstract class LXCommand {
     }
 
     public static class SetString extends LXCommand {
+
       private final ParameterReference<StringParameter> parameter;
       private final String originalValue;
       private final String newValue;
@@ -879,7 +886,7 @@ public abstract class LXCommand {
     }
 
     private static ComponentReference<LXComponent> validateEffectParent(LXComponent parent) {
-      if (! ((parent instanceof LXBus) || (parent instanceof LXPattern))) {
+      if (!((parent instanceof LXBus) || (parent instanceof LXPattern))) {
         throw new IllegalArgumentException("Parent of an LXEffect must be an LXBus or LXPattern");
       }
       return new ComponentReference<LXComponent>(parent);
@@ -1068,6 +1075,7 @@ public abstract class LXCommand {
     }
 
     private static abstract class RemoteControls extends LXCommand {
+
       protected final ComponentReference<LXDeviceComponent> device;
       protected final String[] oldCustomControls;
 
@@ -1194,7 +1202,7 @@ public abstract class LXCommand {
         LXChannel channel;
         if (this.patternClass != null) {
           try {
-            channel = lx.engine.mixer.addChannel(this.index, new LXPattern[] { lx.instantiatePattern(this.patternClass) });
+            channel = lx.engine.mixer.addChannel(this.index, new LXPattern[]{lx.instantiatePattern(this.patternClass)});
           } catch (LX.InstantiationException x) {
             throw new InvalidCommandException(x);
           }
@@ -1288,6 +1296,7 @@ public abstract class LXCommand {
     }
 
     public static class RemoveChannel extends RemoveComponent {
+
       private final ComponentReference<LXAbstractChannel> channel;
       private final JsonObject channelObj;
       private final int index;
@@ -1393,6 +1402,7 @@ public abstract class LXCommand {
     }
 
     public static class Ungroup extends LXCommand {
+
       private final ComponentReference<LXGroup> group;
       private final JsonObject groupObj;
       private final int index;
@@ -1576,7 +1586,7 @@ public abstract class LXCommand {
       private final int toIndex;
 
       public MoveModulator(LXModulationEngine modulation, LXModulator modulator,
-        int index) {
+                           int index) {
         this.modulation = new ComponentReference<LXModulationEngine>(
           modulation);
         this.modulator = new ComponentReference<LXModulator>(modulator);
@@ -1896,6 +1906,7 @@ public abstract class LXCommand {
   }
 
   public static class Palette {
+
     public static class AddColor extends LXCommand {
 
       private final ComponentReference<LXSwatch> swatch;
@@ -1928,6 +1939,7 @@ public abstract class LXCommand {
     }
 
     public static class RemoveColor extends RemoveComponent {
+
       private final ComponentReference<LXSwatch> swatch;
       private final ComponentReference<LXDynamicColor> color;
       private final int index;
@@ -1965,7 +1977,8 @@ public abstract class LXCommand {
       private int index = -1;
       private JsonObject initialObj;
 
-      public SaveSwatch() {}
+      public SaveSwatch() {
+      }
 
       public SaveSwatch(JsonObject initialObj, int index) {
         this.index = index;
@@ -2099,6 +2112,7 @@ public abstract class LXCommand {
     public static class ImportSwatches extends LXCommand {
 
       private static class ImportedSwatch {
+
         private final ComponentReference<LXSwatch> swatch;
         private final JsonObject swatchObj;
 
@@ -2123,7 +2137,7 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         if (this.importedSwatches == null) {
-          this.importedSwatches= new ArrayList<ImportedSwatch>();
+          this.importedSwatches = new ArrayList<ImportedSwatch>();
           final List<LXSwatch> imported = lx.engine.palette.importSwatches(this.file);
           if (imported != null) {
             for (LXSwatch swatch : imported) {
@@ -2558,7 +2572,8 @@ public abstract class LXCommand {
       private final Map<String, LXCommand.Parameter.SetValue> setValues =
         new HashMap<String, LXCommand.Parameter.SetValue>();
 
-      public ModifyFixturePositions() {}
+      public ModifyFixturePositions() {
+      }
 
       @Override
       public String getDescription() {
@@ -2611,7 +2626,8 @@ public abstract class LXCommand {
       private int index = -1;
       private JsonObject initialObj;
 
-      public AddView() {}
+      public AddView() {
+      }
 
       public AddView(JsonObject initialObj, int index) {
         this.index = index;
@@ -2710,6 +2726,7 @@ public abstract class LXCommand {
     public static class ImportViews extends LXCommand {
 
       private static class ImportedView {
+
         private final ComponentReference<LXViewDefinition> view;
         private final JsonObject viewObj;
 
@@ -2855,10 +2872,10 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void perform(LX lx){
+      public void perform(LX lx) {
         this.commands.clear();
         LXClip clip = this.clip.get();
-        // Were we recording, or automation was not enabled?
+        // Were we recording, or snapshot was not enabled?
         this.ignore = clip.bus.arm.isOn() || !clip.snapshotEnabled.isOn();
         if (!this.ignore) {
           clip.snapshot.getCommands(this.commands);
@@ -2912,6 +2929,213 @@ public abstract class LXCommand {
       }
 
     }
+
+    public enum Marker {
+      LOOP_START {
+        @Override
+        public double getValue(LXClip clip) {
+          return clip.getLoopStart();
+        }
+
+        @Override
+        public void setValue(LXClip clip, double value) {
+          clip.setLoopStart(value);
+        }
+      },
+      LOOP_BRACE {
+        @Override
+        public double getValue(LXClip clip) {
+          return clip.getLoopBrace();
+        }
+
+        @Override
+        public void setValue(LXClip clip, double value) {
+          clip.setLoopBrace(value);
+        }
+      },
+      LOOP_END {
+        @Override
+        public double getValue(LXClip clip) {
+          return clip.getLoopEnd();
+        }
+
+        @Override
+        public void setValue(LXClip clip, double value) {
+          clip.setLoopEnd(value);
+        }
+      },
+      PLAY_START {
+        @Override
+        public double getValue(LXClip clip) {
+          return clip.getPlayStart();
+        }
+
+        @Override
+        public void setValue(LXClip clip, double value) {
+          clip.setPlayStart(value);
+        }
+      },
+      PLAY_END {
+        @Override
+        public double getValue(LXClip clip) {
+          return clip.getPlayEnd();
+        }
+
+        @Override
+        public void setValue(LXClip clip, double value) {
+          clip.setPlayEnd(value);
+        }
+      };
+
+      abstract public double getValue(LXClip clip);
+
+      abstract public void setValue(LXClip clip, double value);
+    }
+
+    public static class SetMarker extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      public final Marker marker;
+      private double fromValue;
+      private final double toValue;
+      private boolean ignore = false;
+
+      /**
+       * Move clip marker to a new value (in time units)
+       */
+      public SetMarker(LXClip clip, Marker marker, double toValue) {
+        this.clip = new ComponentReference<LXClip>(clip);
+        this.marker = marker;
+        this.toValue = toValue;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Clip Marker";
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return this.ignore;
+      }
+
+      @Override
+      public void perform(LX lx) {
+        LXClip clip = this.clip.get();
+        this.ignore = clip.isRecording();
+        if (this.ignore) {
+          return;
+        }
+        this.fromValue = this.marker.getValue(clip);
+        this.marker.setValue(clip, this.toValue);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        LXClip clip = this.clip.get();
+        this.marker.setValue(clip, this.fromValue);
+      }
+    }
+
+    public static class MoveMarker extends SetMarker {
+
+      /**
+       * Move clip marker by a given value (in time units)
+       */
+      public MoveMarker(LXClip clip, Marker marker, double toValue) {
+        super(clip, marker, marker.getValue(clip) + toValue);
+      }
+    }
+
+    public static class Event {
+
+      public static class SetCursors extends LXCommand {
+
+        private final LXClipLane clipLane;
+        private final Map<LXClipEvent, Double> fromCursors;
+        private final Map<LXClipEvent, Double> toCursors;
+
+        private static Map<LXClipEvent, Double> getFrom(Map<? extends LXClipEvent, Double> toValues) {
+          Map<LXClipEvent, Double> fromValues = new HashMap<>(toValues);
+          for (LXClipEvent event : fromValues.keySet()) {
+            fromValues.put(event, event.getCursor());
+          }
+          return fromValues;
+        }
+
+        public SetCursors(LXClipLane clipLane, Map<? extends LXClipEvent, Double> toCursors) {
+          this.clipLane = clipLane;
+          this.fromCursors = getFrom(toCursors);
+          this.toCursors = new HashMap<>(toCursors);
+        }
+
+        public SetCursors(LXClipLane clipLane, Map<? extends LXClipEvent, Double> toCursors, Map<? extends LXClipEvent, Double> fromValues) {
+          this.clipLane = clipLane;
+          this.fromCursors = new HashMap<>(fromValues);
+          this.toCursors = new HashMap<>(toCursors);
+        }
+
+        @Override
+        public String getDescription() {
+          return "Set Events Values";
+        }
+
+        @Override
+        public void perform(LX lx) throws InvalidCommandException {
+          this.clipLane.setEventsCursors(this.toCursors);
+        }
+
+        @Override
+        public void undo(LX lx) throws InvalidCommandException {
+          this.clipLane.setEventsCursors(this.fromCursors);
+        }
+      }
+
+      public static class Parameter {
+
+        public static class SetValues extends LXCommand {
+
+          private final ParameterClipLane parameterClipLane;
+          private final Map<ParameterClipEvent, Double> fromValues;
+          private final Map<ParameterClipEvent, Double> toValues;
+
+          private static Map<ParameterClipEvent, Double> getFrom(Map<ParameterClipEvent, Double> toValues) {
+            Map<ParameterClipEvent, Double> fromValues = new HashMap<>(toValues);
+            for (ParameterClipEvent event : fromValues.keySet()) {
+              fromValues.put(event, event.getNormalized());
+            }
+            return fromValues;
+          }
+
+          public SetValues(ParameterClipLane parameterClipLane, Map<ParameterClipEvent, Double> toValues) {
+            this.parameterClipLane = parameterClipLane;
+            this.fromValues = getFrom(toValues);
+            this.toValues = new HashMap<>(toValues);
+          }
+
+          public SetValues(ParameterClipLane parameterClipLane, Map<ParameterClipEvent, Double> toValues, Map<ParameterClipEvent, Double> fromValues) {
+            this.parameterClipLane = parameterClipLane;
+            this.fromValues = new HashMap<>(fromValues);
+            this.toValues = new HashMap<>(toValues);
+          }
+
+          @Override
+          public String getDescription() {
+            return "Set Events Values";
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            this.parameterClipLane.setEventsNormalized(this.toValues);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            this.parameterClipLane.setEventsNormalized(this.fromValues);
+          }
+        }
+      }
+    }
   }
 
   public static class Osc {
@@ -2920,7 +3144,8 @@ public abstract class LXCommand {
 
       private LXOscConnection.Input input;
 
-      public AddInput() {}
+      public AddInput() {
+      }
 
       @Override
       public String getDescription() {
@@ -2970,7 +3195,8 @@ public abstract class LXCommand {
 
       private LXOscConnection.Output output;
 
-      public AddOutput() {}
+      public AddOutput() {
+      }
 
       @Override
       public String getDescription() {
@@ -3048,6 +3274,7 @@ public abstract class LXCommand {
     }
 
     public static class RemoveMapping extends LXCommand {
+
       private LXMidiMapping mapping;
       private final JsonObject mappingObj;
 
