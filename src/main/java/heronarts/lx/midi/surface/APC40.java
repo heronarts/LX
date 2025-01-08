@@ -1013,9 +1013,9 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         if (this.clipLaunchEnabled.isOn()) {
           int index = pitch - SCENE_LAUNCH;
           if (this.gridMode == GridMode.PATTERN) {
-            this.lx.engine.clips.launchPatternScene(index + this.mixerSurface.getGridPatternOffset());
+            this.lx.engine.clips.triggerPatternScene(index + this.mixerSurface.getGridPatternOffset());
           } else if (this.gridMode == GridMode.CLIP) {
-            this.lx.engine.clips.launchScene(index + this.mixerSurface.getGridClipOffset());
+            this.lx.engine.clips.triggerScene(index + this.mixerSurface.getGridClipOffset());
           }
         }
         return;

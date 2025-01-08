@@ -1215,7 +1215,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
         } else if (pitch == NOTE.STOP_ALL_CLIPS) {
           // Global stop/trigger action
           if (isGridModePatterns()) {
-            this.lx.engine.clips.launchPatternCycle();
+            this.lx.engine.clips.triggerPatternCycle();
           } else if (isGridModeClips()) {
             this.lx.engine.clips.stopClips();
           }
@@ -1225,9 +1225,9 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       // Global momentary mode
       sendNoteOn(MIDI_CHANNEL_SINGLE, pitch, LED_ON(on));
       if (isGridModeClips()) {
-        this.lx.engine.clips.launchScene(pitch - NOTE.SCENE_LAUNCH + this.mixerSurface.getGridClipOffset());
+        this.lx.engine.clips.triggerScene(pitch - NOTE.SCENE_LAUNCH + this.mixerSurface.getGridClipOffset());
       } else if (isGridModePatterns()) {
-        this.lx.engine.clips.launchPatternScene(pitch - NOTE.SCENE_LAUNCH + this.mixerSurface.getGridPatternOffset());
+        this.lx.engine.clips.triggerPatternScene(pitch - NOTE.SCENE_LAUNCH + this.mixerSurface.getGridPatternOffset());
       }
     }
   }

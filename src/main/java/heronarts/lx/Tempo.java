@@ -400,7 +400,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       this.lx.engine.clips.getPatternScene(i).setQuantization(this.launchQuantization);
     }
     this.lx.engine.clips.stopClips.setQuantization(this.launchQuantization);
-    this.lx.engine.clips.triggerPatternCycle.setQuantization(this.launchQuantization);
+    this.lx.engine.clips.launchPatternCycle.setQuantization(this.launchQuantization);
     this.lx.engine.mixer.masterBus.stopClips.setQuantization(this.launchQuantization);
   }
 

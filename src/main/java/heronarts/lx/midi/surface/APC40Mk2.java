@@ -1609,7 +1609,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               this.lx.engine.mixer.selectChannel(lx.engine.mixer.masterBus);
             }
           } else {
-            this.lx.engine.clips.launchPatternCycle();
+            this.lx.engine.clips.triggerPatternCycle();
           }
         }
         return;
@@ -1637,9 +1637,9 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             sendSwatch(MASTER_SWATCH);
           }
         } else if (this.gridMode == GridMode.PATTERN) {
-          this.lx.engine.clips.launchPatternScene(index + this.mixerSurface.getGridPatternOffset());
+          this.lx.engine.clips.triggerPatternScene(index + this.mixerSurface.getGridPatternOffset());
         } else if (this.gridMode == GridMode.CLIP) {
-          this.lx.engine.clips.launchScene(index + this.mixerSurface.getGridClipOffset());
+          this.lx.engine.clips.triggerScene(index + this.mixerSurface.getGridClipOffset());
         }
         return;
       }
