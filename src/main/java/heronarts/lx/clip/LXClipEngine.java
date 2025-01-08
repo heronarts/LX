@@ -181,7 +181,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
 
       this.patternScenes[i] =
         new QuantizedTriggerParameter(lx, "Pattern-" + (i+1), () -> { triggerPatternScene(sceneIndex); })
-        .setDescription("Triggers all patterns at index " + (i+1));
+        .setDescription("Launches all patterns at index " + (i+1));
       this.patternScenes[i].addListener(this.patternSceneListener);
       addParameter("pattern-" + (i+1), this.patternScenes[i]);
     }
@@ -418,6 +418,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   @Override
   public void dispose() {
     this.launchPatternCycle.removeListener(this.patternSceneListener);
+    this.stopClips.removeListener(this.clipSceneListener);
     for (QuantizedTriggerParameter scene : this.scenes) {
       scene.removeListener(this.clipSceneListener);
     }
