@@ -35,6 +35,7 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.utils.LXUtils;
@@ -149,6 +150,9 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   private final CopyOnWriteArraySet<MixerSurface> controlSurfaces =
     new CopyOnWriteArraySet<MixerSurface>();
 
+  private final LXParameterListener clipSceneListener = this::onLaunchClipScene;
+  private final LXParameterListener patternSceneListener = this::onLaunchPatternScene;
+
   public LXClipEngine(LX lx) {
     super(lx);
     addParameter("focusedClip", this.focusedClip);
@@ -169,12 +173,36 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       this.scenes[i] =
         new QuantizedTriggerParameter(lx, "Scene-" + (i+1), () -> { launchScene(sceneIndex); })
         .setDescription("Launches scene " + (i+1));
+      this.scenes[i].addListener(this.clipSceneListener);
       addParameter("scene-" + (i+1), this.scenes[i]);
 
       this.patternScenes[i] =
         new QuantizedTriggerParameter(lx, "Pattern-" + (i+1), () -> { launchPatternScene(sceneIndex); })
         .setDescription("Triggers all patterns at index " + (i+1));
+      this.patternScenes[i].addListener(this.patternSceneListener);
       addParameter("pattern-" + (i+1), this.patternScenes[i]);
+    }
+  }
+
+  // Ensure that two clip scenes can't be pending at once
+  private void onLaunchClipScene(LXParameter p) {
+    if (p.getValue() > 0) {
+      for (QuantizedTriggerParameter scene : this.scenes) {
+        if (p != scene) {
+          scene.cancel();
+        }
+      }
+    }
+  }
+
+  // Ensure that two pattern scenes can't be pending at once
+  private void onLaunchPatternScene(LXParameter p) {
+    if (p.getValue() > 0) {
+      for (QuantizedTriggerParameter pattern : this.patternScenes) {
+        if (p != pattern) {
+          pattern.cancel();
+        }
+      }
     }
   }
 
@@ -376,6 +404,17 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       this.gridViewOffset.reset();
       this.numScenes.reset();
     }
+  }
+
+  @Override
+  public void dispose() {
+    for (QuantizedTriggerParameter scene : this.scenes) {
+      scene.removeListener(this.clipSceneListener);
+    }
+    for (QuantizedTriggerParameter pattern : this.patternScenes) {
+      pattern.removeListener(this.patternSceneListener);
+    }
+    super.dispose();
   }
 
 }
