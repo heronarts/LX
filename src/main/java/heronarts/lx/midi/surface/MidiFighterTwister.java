@@ -616,11 +616,11 @@ public class MidiFighterTwister extends LXMidiSurface implements LXMidiSurface.B
         LXMidiEngine.error("Device ID does not match MidiFighterTwister");
         return false;
       }
-      int majorVersion = m[10];
-      int minorVersion = m[11];
+      // int majorVersion = m[10];
+      // int minorVersion = m[11];
       int year = byteNumber(m[12]) * 100 + byteNumber(m[13]);
-      int month = byteNumber(m[14]);
-      int day = byteNumber(m[15]);
+      // int month = byteNumber(m[14]);
+      // int day = byteNumber(m[15]);
       versionOK = year > 2016;
       // LXMidiEngine.log(String.format("Found DJTT MidiFighterTwister, firmware %d-%02d-%02d", year, month, day));
       // Too bad they commented out the serial number for the next 4 bytes.
