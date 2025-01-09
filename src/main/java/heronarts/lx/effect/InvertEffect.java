@@ -62,6 +62,7 @@ public class InvertEffect extends LXEffect {
     addParameter("redAmount", this.redAmount);
     addParameter("greenAmount", this.greenAmount);
     addParameter("blueAmount", this.blueAmount);
+    setDescription("Inverts the brightness output of RGB color channels");
   }
 
   private void buildLookupTable(int[] table, double amount) {

@@ -277,6 +277,7 @@ public class SparklePattern extends LXPattern {
 
   public SparklePattern(LX lx) {
     super(lx);
+    setDescription("Generates pixel-based sparkling");
     addParameters(engine.parameters);
     addParameter("baseLevel", this.baseLevel);
   }

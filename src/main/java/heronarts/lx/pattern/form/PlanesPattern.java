@@ -338,6 +338,7 @@ public class PlanesPattern extends LXPattern {
 
   public PlanesPattern(LX lx) {
     super(lx);
+    setDescription("Renders multiple overlayed planes through the 3D space");
 
     addParameter("yaw", this.yaw);
     addParameter("pitch", this.pitch);

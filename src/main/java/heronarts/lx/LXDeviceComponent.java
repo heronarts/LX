@@ -30,6 +30,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiFilterParameter;
@@ -161,6 +162,17 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
       this.view.setValue(this.viewPriority.getObject());
     });
   }
+
+  @Override
+  protected LXDeviceComponent setDescription(String description) {
+    if (description != null) {
+      super.setDescription(LXComponent.getComponentName(getClass()) + ": " + description);
+    } else {
+      super.setDescription(null);
+    }
+    return this;
+  }
+
 
   public LXModel getModelView() {
     LXViewDefinition view = this.view.getObject();

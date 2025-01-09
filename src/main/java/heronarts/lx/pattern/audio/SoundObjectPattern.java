@@ -263,6 +263,8 @@ public class SoundObjectPattern extends LXPattern {
 
     addParameter("scopeAmount", this.engine.scopeAmount);
     addParameter("scopeTimeMs", this.engine.scopeTimeMs);
+
+    setDescription("Places an orb of light in the position of a sound object");
   }
 
   @Override

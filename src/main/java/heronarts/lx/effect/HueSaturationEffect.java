@@ -52,6 +52,7 @@ public class HueSaturationEffect extends LXEffect {
     addParameter("hue", this.hue);
     addParameter("saturation", this.saturation);
     addParameter("brightness", this.brightness);
+    setDescription("Adjusts the HSB color parameters of output");
   }
 
   @Override

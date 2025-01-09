@@ -67,6 +67,7 @@ public class GraphicEqualizerPattern extends LXPattern {
     addParameter("fade", this.fade);
     addParameter("sharp", this.sharp);
     addParameter("plane", this.plane);
+    setDescription("Renders a vintage-style graphic band equalizer");
   }
 
   @Override

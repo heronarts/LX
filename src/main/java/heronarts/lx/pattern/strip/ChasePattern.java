@@ -211,6 +211,7 @@ public class ChasePattern extends LXPattern {
 
   public ChasePattern(LX lx) {
     super(lx);
+    setDescription("1-D animation of a pixel-based chase with dynamic sizing");
 
     // Motion controls
     addParameter("minChunk", this.minChunk);

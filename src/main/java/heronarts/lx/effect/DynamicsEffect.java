@@ -129,6 +129,8 @@ public class DynamicsEffect extends LXEffect {
     addChannelParameter("blue", this.blueAmount);
 
     buildLookupTable();
+
+    setDescription("Adjusts the shape of brightness response curves");
   }
 
   private void addLookupParameter(String path, CompoundParameter parameter) {

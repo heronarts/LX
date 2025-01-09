@@ -58,6 +58,8 @@ public class AlternatingPattern extends LXPattern {
     addParameter("firstColor", this.firstColor);
     addParameter("secondColor", this.secondColor);
     addParameter("stripeLength", this.stripeLength);
+
+    setDescription("Creates stripes of alternating colors");
   }
 
   @Override

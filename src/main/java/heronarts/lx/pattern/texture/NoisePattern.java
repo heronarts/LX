@@ -268,6 +268,8 @@ public class NoisePattern extends LXPattern {
   public NoisePattern(LX lx) {
     super(lx);
 
+    setDescription("Creates a dynamic 3D light field based on noise algorithms");
+
     addParameter("midpoint", this.level);
     addParameter("contrast", this.contrast);
     addParameter("minLevel", this.minLevel);

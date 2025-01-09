@@ -103,6 +103,7 @@ public class TestPattern extends LXPattern {
     addParameter("cpuTest", this.cpuTest);
     startModulator(this.increment);
     setAutoCycleEligible(false);
+    setDescription("Test utility to address and locate pixels");
   }
 
   @Override

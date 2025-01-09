@@ -483,6 +483,7 @@ public class GradientPattern extends LXPattern {
     super(lx);
     this.engine = new Engine(lx);
     addParameters(this.engine.parameters);
+    setDescription("Creates a dynamic color gradient in 3D space");
   }
 
   @Override

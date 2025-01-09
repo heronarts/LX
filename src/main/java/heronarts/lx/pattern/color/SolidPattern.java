@@ -33,6 +33,7 @@ public class SolidPattern extends LXPattern {
 
   public SolidPattern(LX lx) {
     this(lx, LXColor.RED);
+    setDescription("Renders a single solid color");
   }
 
   public SolidPattern(LX lx, int color) {

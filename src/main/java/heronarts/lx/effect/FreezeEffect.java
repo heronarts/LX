@@ -107,6 +107,8 @@ public class FreezeEffect extends LXEffect {
     addModulator("interval", this.interval);
 
     this.interval.triggerOut.addListener(this);
+
+    setDescription("Freeze-frames the visual output based on controls or tempo");
   }
 
   private boolean capture = false;

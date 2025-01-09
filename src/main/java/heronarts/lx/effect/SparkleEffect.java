@@ -71,6 +71,7 @@ public class SparkleEffect extends LXEffect {
     addParameter("amount", this.amount);
     addParameters(engine.parameters);
     addParameter("maskMode", this.maskMode);
+    setDescription("Masks the output with pixel-based sparkling");
   }
 
   @Override

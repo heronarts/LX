@@ -103,6 +103,7 @@ public class StrobeEffect extends LXEffect {
     addParameter("tempoPhaseOffset", this.tempoPhaseOffset);
     addParameter("minFrequency", this.minFrequency);
     addParameter("maxFrequency", this.maxFrequency);
+    setDescription("Applies periodic strobing to the output");
   }
 
   @Override

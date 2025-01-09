@@ -78,6 +78,8 @@ public class BlurEffect extends LXEffect {
     addParameter("decay", this.decay);
     addParameter("decayFactor", this.decayFactor);
     addParameter("mode", this.mode);
+
+    setDescription("Blends the content from prior frames to create blur motion");
   }
 
   @Override
