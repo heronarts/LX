@@ -154,7 +154,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   private final LXParameterListener patternSceneListener = this::onLaunchPatternScene;
 
   public LXClipEngine(LX lx) {
-    super(lx);
+    super(lx, "Clips");
     addParameter("focusedClip", this.focusedClip);
     addParameter("numScenes", this.numScenes);
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
@@ -174,13 +174,13 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     for (int i = 0; i < this.scenes.length; ++i) {
       final int sceneIndex = i;
       this.scenes[i] =
-        new QuantizedTriggerParameter(lx, "Scene-" + (i+1), () -> { triggerScene(sceneIndex); })
+        new QuantizedTriggerParameter(lx, "Launch Scene-" + (i+1), () -> { triggerScene(sceneIndex); })
         .setDescription("Launches scene " + (i+1));
       this.scenes[i].addListener(this.clipSceneListener);
       addParameter("scene-" + (i+1), this.scenes[i]);
 
       this.patternScenes[i] =
-        new QuantizedTriggerParameter(lx, "Pattern-" + (i+1), () -> { triggerPatternScene(sceneIndex); })
+        new QuantizedTriggerParameter(lx, "Launch Pattern-" + (i+1), () -> { triggerPatternScene(sceneIndex); })
         .setDescription("Launches all patterns at index " + (i+1));
       this.patternScenes[i].addListener(this.patternSceneListener);
       addParameter("pattern-" + (i+1), this.patternScenes[i]);
