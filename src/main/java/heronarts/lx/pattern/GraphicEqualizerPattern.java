@@ -18,8 +18,9 @@
 
 package heronarts.lx.pattern;
 
-import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.audio.GraphicMeter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
@@ -27,6 +28,7 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 
 @LXCategory(LXCategory.FORM)
+@LXComponent.Description("Renders a vintage-style graphic band equalizer")
 public class GraphicEqualizerPattern extends LXPattern {
 
   public enum Plane {
@@ -67,7 +69,6 @@ public class GraphicEqualizerPattern extends LXPattern {
     addParameter("fade", this.fade);
     addParameter("sharp", this.sharp);
     addParameter("plane", this.plane);
-    setDescription("Renders a vintage-style graphic band equalizer");
   }
 
   @Override

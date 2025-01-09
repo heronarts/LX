@@ -20,6 +20,7 @@ package heronarts.lx.pattern.color;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LinkedColorParameter;
 import heronarts.lx.model.LXPoint;
@@ -27,6 +28,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.pattern.LXPattern;
 
 @LXCategory(LXCategory.COLOR)
+@LXComponent.Description("Generates stripes of alternating colors")
 public class AlternatingPattern extends LXPattern {
   public final LinkedColorParameter firstColor =
           new LinkedColorParameter("First Color")
@@ -58,8 +60,6 @@ public class AlternatingPattern extends LXPattern {
     addParameter("firstColor", this.firstColor);
     addParameter("secondColor", this.secondColor);
     addParameter("stripeLength", this.stripeLength);
-
-    setDescription("Creates stripes of alternating colors");
   }
 
   @Override

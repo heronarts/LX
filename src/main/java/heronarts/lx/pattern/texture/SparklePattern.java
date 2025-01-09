@@ -18,7 +18,9 @@
 
 package heronarts.lx.pattern.texture;
 
+import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
@@ -26,11 +28,11 @@ import heronarts.lx.modulator.LXWaveshape;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
-import heronarts.lx.LX;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.TEXTURE)
+@LXComponent.Description("Pixel-based sparkling with range and speed controls")
 public class SparklePattern extends LXPattern {
 
   public static class Engine {
@@ -277,7 +279,6 @@ public class SparklePattern extends LXPattern {
 
   public SparklePattern(LX lx) {
     super(lx);
-    setDescription("Generates pixel-based sparkling");
     addParameters(engine.parameters);
     addParameter("baseLevel", this.baseLevel);
   }

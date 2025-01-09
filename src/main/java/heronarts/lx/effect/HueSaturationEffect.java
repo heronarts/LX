@@ -20,6 +20,7 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
@@ -28,6 +29,7 @@ import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.COLOR)
 @LXComponentName("Hue + Saturation")
+@LXComponent.Description("Adjusts the HSB color parameters of output")
 public class HueSaturationEffect extends LXEffect {
 
   public final CompoundParameter hue =
@@ -52,7 +54,6 @@ public class HueSaturationEffect extends LXEffect {
     addParameter("hue", this.hue);
     addParameter("saturation", this.saturation);
     addParameter("brightness", this.brightness);
-    setDescription("Adjusts the HSB color parameters of output");
   }
 
   @Override

@@ -20,6 +20,7 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.Tempo;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
@@ -35,6 +36,7 @@ import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.CORE)
+@LXComponent.Description("Applies periodic strobing to the output")
 public class StrobeEffect extends LXEffect {
 
   public final ObjectParameter<LXWaveshape> waveshape =
@@ -103,7 +105,6 @@ public class StrobeEffect extends LXEffect {
     addParameter("tempoPhaseOffset", this.tempoPhaseOffset);
     addParameter("minFrequency", this.minFrequency);
     addParameter("maxFrequency", this.maxFrequency);
-    setDescription("Applies periodic strobing to the output");
   }
 
   @Override

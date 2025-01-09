@@ -161,18 +161,12 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     this.viewPriority.addListener(this.viewPriorityListener = p -> {
       this.view.setValue(this.viewPriority.getObject());
     });
-  }
 
-  @Override
-  protected LXDeviceComponent setDescription(String description) {
+    final String description = getComponentDescription(getClass());
     if (description != null) {
-      super.setDescription(LXComponent.getComponentName(getClass()) + ": " + description);
-    } else {
-      super.setDescription(null);
+      setDescription(getComponentName(getClass()) + ": " + description);
     }
-    return this;
   }
-
 
   public LXModel getModelView() {
     LXViewDefinition view = this.view.getObject();

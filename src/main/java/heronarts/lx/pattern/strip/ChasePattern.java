@@ -20,6 +20,7 @@ package heronarts.lx.pattern.strip;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.Tempo;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
@@ -35,6 +36,7 @@ import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.STRIP)
+@LXComponent.Description("Pixel-based chase with dynamic sizing and modulation")
 public class ChasePattern extends LXPattern {
 
   public interface DistanceFunction {
@@ -211,7 +213,6 @@ public class ChasePattern extends LXPattern {
 
   public ChasePattern(LX lx) {
     super(lx);
-    setDescription("1-D animation of a pixel-based chase with dynamic sizing");
 
     // Motion controls
     addParameter("minChunk", this.minChunk);

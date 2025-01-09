@@ -18,11 +18,12 @@
 
 package heronarts.lx.pattern.test;
 
+import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
-import heronarts.lx.LX;
 import heronarts.lx.modulator.Click;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -39,6 +40,7 @@ import heronarts.lx.utils.LXUtils;
  * them on one by one in fixed order.
  */
 @LXCategory(LXCategory.TEST)
+@LXComponent.Description("Utility to address and locate pixels")
 public class TestPattern extends LXPattern {
 
   public enum Mode {
@@ -103,7 +105,6 @@ public class TestPattern extends LXPattern {
     addParameter("cpuTest", this.cpuTest);
     startModulator(this.increment);
     setAutoCycleEligible(false);
-    setDescription("Test utility to address and locate pixels");
   }
 
   @Override

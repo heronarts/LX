@@ -20,6 +20,7 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXModel;
@@ -30,6 +31,7 @@ import heronarts.lx.pattern.texture.SparklePattern;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.TEXTURE)
+@LXComponent.Description("Masks the output with pixel-based sparkling")
 public class SparkleEffect extends LXEffect {
 
   public enum MaskMode {
@@ -71,7 +73,6 @@ public class SparkleEffect extends LXEffect {
     addParameter("amount", this.amount);
     addParameters(engine.parameters);
     addParameter("maskMode", this.maskMode);
-    setDescription("Masks the output with pixel-based sparkling");
   }
 
   @Override

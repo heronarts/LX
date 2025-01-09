@@ -77,6 +77,17 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   /**
+   * An annotation which provides a user-friendly description of the function
+   * of the component, which may be shown in a UI tool tip
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Description {
+    String value();
+  }
+
+  /**
    * Marker interface for components which can have their label changed. Any LXComponent
    * class that has a user-editable label in the UI must have this marker interface
    * attached to it for those edits to be saved and loaded.
@@ -351,6 +362,21 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       generic = generic.getSuperclass().asSubclass(LXComponent.class);
     }
     return getComponentName(cls, suffix);
+  }
+
+  /**
+   * Gets the description for a component class, if one is available and provided
+   * by the description annotation
+   *
+   * @param cls Component class
+   * @return Description of component class
+   */
+  public static String getComponentDescription(Class<? extends LXComponent> cls) {
+    Description description = cls.getAnnotation(Description.class);
+    if (description != null) {
+      return description.value();
+    }
+    return null;
   }
 
   /**

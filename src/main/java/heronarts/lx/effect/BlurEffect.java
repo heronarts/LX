@@ -20,6 +20,7 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
@@ -28,6 +29,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.CORE)
+@LXComponent.Description("Blends the content from prior frames to create blur motion")
 public class BlurEffect extends LXEffect {
 
   public enum Mode {
@@ -78,8 +80,6 @@ public class BlurEffect extends LXEffect {
     addParameter("decay", this.decay);
     addParameter("decayFactor", this.decayFactor);
     addParameter("mode", this.mode);
-
-    setDescription("Blends the content from prior frames to create blur motion");
   }
 
   @Override

@@ -18,8 +18,9 @@
 
 package heronarts.lx.pattern.color;
 
-import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.GradientUtils;
 import heronarts.lx.color.GradientUtils.BlendMode;
@@ -41,6 +42,7 @@ import heronarts.lx.transform.LXParameterizedMatrix;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.COLOR)
+@LXComponent.Description("Creates a dynamic color gradient in 3D space")
 public class GradientPattern extends LXPattern {
 
   public static enum ColorMode {
@@ -483,7 +485,6 @@ public class GradientPattern extends LXPattern {
     super(lx);
     this.engine = new Engine(lx);
     addParameters(this.engine.parameters);
-    setDescription("Creates a dynamic color gradient in 3D space");
   }
 
   @Override

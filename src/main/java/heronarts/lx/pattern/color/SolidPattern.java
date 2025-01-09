@@ -18,13 +18,15 @@
 
 package heronarts.lx.pattern.color;
 
-import heronarts.lx.LXCategory;
 import heronarts.lx.LX;
+import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LinkedColorParameter;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.pattern.LXPattern;
 
 @LXCategory(LXCategory.COLOR)
+@LXComponent.Description("Renders a single solid color")
 public class SolidPattern extends LXPattern {
 
   public final LinkedColorParameter color =
@@ -33,7 +35,6 @@ public class SolidPattern extends LXPattern {
 
   public SolidPattern(LX lx) {
     this(lx, LXColor.RED);
-    setDescription("Renders a single solid color");
   }
 
   public SolidPattern(LX lx, int color) {

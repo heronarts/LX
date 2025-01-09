@@ -20,6 +20,7 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.color.LXColor;
@@ -33,6 +34,7 @@ import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.CORE)
+@LXComponent.Description("Freeze-frames the visual output based on controls or tempo")
 public class FreezeEffect extends LXEffect {
 
   public enum Mode {
@@ -107,8 +109,6 @@ public class FreezeEffect extends LXEffect {
     addModulator("interval", this.interval);
 
     this.interval.triggerOut.addListener(this);
-
-    setDescription("Freeze-frames the visual output based on controls or tempo");
   }
 
   private boolean capture = false;
