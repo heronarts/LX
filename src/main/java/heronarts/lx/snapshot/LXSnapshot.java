@@ -634,14 +634,11 @@ public abstract class LXSnapshot extends LXComponent {
   protected void addDeviceView(ViewScope scope, LXDeviceComponent device) {
     for (LXParameter p : device.getParameters()) {
       AggregateParameter ap = p.getParentParameter();
-      if (ap != null) {
-        p = ap;
-      }
-      if (device.isSnapshotControl(p)) {
+      LXParameter check = (ap != null) ? ap : p;
+      if (device.isSnapshotControl(check)) {
         addParameterView(scope, p);
       }
     }
-
     for (LXLayer layer : device.getLayers()) {
       addLayeredView(scope, layer);
     }
