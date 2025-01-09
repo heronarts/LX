@@ -20,6 +20,7 @@ package heronarts.lx.effect.color;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.GradientUtils.BlendFunction;
 import heronarts.lx.color.GradientUtils.BlendMode;
@@ -38,6 +39,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 
 @LXCategory(LXCategory.COLOR)
+@LXComponent.Description("Dynamically remaps color content")
 public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   private static final float AVG_FACTOR = 1 / (3 * 255f);

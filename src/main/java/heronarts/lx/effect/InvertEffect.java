@@ -20,12 +20,14 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.COLOR)
+@LXComponent.Description("Inverts the brightness output of RGB color channels")
 public class InvertEffect extends LXEffect {
 
   public final CompoundParameter amount =
@@ -62,7 +64,6 @@ public class InvertEffect extends LXEffect {
     addParameter("redAmount", this.redAmount);
     addParameter("greenAmount", this.greenAmount);
     addParameter("blueAmount", this.blueAmount);
-    setDescription("Inverts the brightness output of RGB color channels");
   }
 
   private void buildLookupTable(int[] table, double amount) {
