@@ -227,8 +227,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Beats per minute of the master tempo");
 
-  public final ObjectParameter<Quantization> launchQuantization =
-    new ObjectParameter<Quantization>("Launch Quantization", new Quantization[] {
+  public static ObjectParameter<Quantization> newQuantizationParameter(String label, String description) {
+    ObjectParameter<Quantization> parameter = new ObjectParameter<Quantization>(label, new Quantization[] {
       Quantization.NONE,
       Division.EIGHT.toQuantization("8 Bars"),
       Division.FOUR.toQuantization("4 Bars"),
@@ -238,8 +238,15 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       Division.QUARTER,
       Division.EIGHTH,
       Division.SIXTEENTH
-    })
-    .setDescription("Choose the quantization used when launching clips and patterns from the grid");
+    });
+    parameter.setDescription(description);
+    return parameter;
+  }
+
+  public final ObjectParameter<Quantization> launchQuantization = newQuantizationParameter(
+    "Launch Quantization",
+    "Choose the quantization used when launching clips and patterns from the grid"
+  );
 
   public final TriggerParameter trigger =
     new TriggerParameter("Trigger", () -> {
