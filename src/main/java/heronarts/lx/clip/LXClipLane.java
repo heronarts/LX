@@ -51,7 +51,7 @@ public abstract class LXClipLane implements LXSerializable {
     return this;
   }
 
-  protected LXClipLane insertEvent(LXClipEvent event) {
+  private void _insertEvent(LXClipEvent event) {
     int index = 0;
     while (index < this.events.size()) {
       if (event.cursor < this.events.get(index).cursor) {
@@ -60,6 +60,10 @@ public abstract class LXClipLane implements LXSerializable {
       ++index;
     }
     this.mutableEvents.add(index, event);
+  }
+
+  protected LXClipLane insertEvent(LXClipEvent event) {
+    _insertEvent(event);
     this.onChange.bang();
     return this;
   }
@@ -84,12 +88,26 @@ public abstract class LXClipLane implements LXSerializable {
   }
 
   public void setEventsCursors(Map<? extends LXClipEvent, Double> cursors) {
-    double clipLength = this.clip.length.getValue();
+    boolean changed = false;
+    final double clipLength = this.clip.length.getValue();
+
+    // TODO(mcslee): we could probably make this a lot more efficient with stricter
+    // assumptions about the values coming in, whether re-ordering may have occurred
+    // or not... but in the meantime we do an insertion-sort per-element to avoid
+    // mucking up the state
     for (Map.Entry<? extends LXClipEvent, Double> entry : cursors.entrySet()) {
-      LXClipEvent event = entry.getKey();
+      final LXClipEvent event = entry.getKey();
       if (this.events.contains(event)) {
+        this.mutableEvents.remove(event);
         event.setCursor(LXUtils.constrain(entry.getValue(), 0, clipLength));
+        _insertEvent(event);
+        changed = true;
+      } else {
+        LX.error("LXClipLane.setEventsCursors contains an event not in the events array: " + event);
       }
+    }
+    if (changed) {
+      this.onChange.bang();
     }
   }
 
