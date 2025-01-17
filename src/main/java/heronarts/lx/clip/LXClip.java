@@ -719,9 +719,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private void startPlayback() {
     setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
-    // NOTE(mcslee): removed the following, 99% sure shouldn't be here. Snapshot recall should
-    // be a function of having used the grid/control surface clip trigger button. Not a function
-    // of playback from 0.
   }
 
   private void stopFirstRecording() {
@@ -863,6 +860,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
           advanceCursor(this.cursor, nextCursor);
           setCursor(nextCursor);
         } else {
+
+          // TODO(mcslee): definitely need some special MIDI lane processing here
+          // and in various other stop points, to ensure that we send a MIDI note off
+          // for any MIDI events that have had a Note On, but for which the Note Off
+          // lies outside of the loop region. This happens in the looping case, but
+          // could also happen in any case of stopping recording or stopping playback
+          // where notes are hanging. Need to identify and handle those as well.
+
           // Reached the end
           // Play automation events right up to the end but not past
           advanceCursor(this.cursor, endValue);
@@ -904,6 +909,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
           }
         }
       }
+
+      // NOTE(mcslee): the snapshot might not finish interpolation if
+      // someone manually stops the clip before it's finished. I *think* we can treat
+      // that as expected semantics? Stopping via grid UI will kill the interpolation
+      // as far as it got, which may be useful/desirable. Just keep this in mind.
       if (this.snapshotEnabled.isOn()) {
         this.snapshot.loop(deltaMs);
       }
