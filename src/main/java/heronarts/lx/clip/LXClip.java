@@ -282,10 +282,25 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   @Override
-  public void onTrigger() {
+  protected void onTrigger() {
     super.onTrigger();
     if (isRunning()) {
-      _onRestart();
+      // This is a "restart" operation, we were already running but we've been re-triggered
+      // Retrieve and apply the launchFrom position
+      setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
+    } else {
+      // TODO(mcslee): need to figure this out, we don't want to recall the snapshot when the trigger
+      // event came from internal APIs, not from the UX. For now we've got a messy assumption here that
+      // if we weren't already playing, this was a grid trigger event that started us off. That may
+      // *not* be the case.
+      //
+      // Quantized launch events via the timeline UI or internal UIs need to use a different codepath,
+      // we should reserve LXClip.launch/trigger for the UX operations
+      //
+      // This cursor == 0 check should probably go away once that is sorted out
+      if (!isArmed() && this.cursor == 0 && this.snapshotEnabled.isOn()) {
+        this.snapshot.recall();
+      }
     }
   }
 
@@ -584,9 +599,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         // Wrap cursor to start of loop
         setCursor(this.loopStart.getValue());
         // If loop start is very beginning, run snapshot
-        if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
-          this.snapshot.recall();
-        }
+        // NOTE(mcslee): Don't think so, snapshot recall should only be on explicit
+        // grid or control surface triggers
+        // if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
+        //  this.snapshot.recall();
+        // }
       }
     }
   }
@@ -598,17 +615,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     super.onParameterChanged(p);
     if (p == this.running) {
       if (this.running.isOn()) {
-        _onStart();
+        startRunning();
       } else {
-        _onStop();
+        stopRunning();
       }
     } else if (p == this.bus.arm) {
       if (isRunning()) {
         if (this.bus.arm.isOn()) {
-          _onStartHotOverdub();
+          startHotOverdub();
         } else {
           if (this.hasTimeline) {
-            _onStopHotOverdub();
+            stopHotOverdub();
           }
         }
       }
@@ -622,7 +639,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   /**
    * Start from a stopped state
    */
-  private void _onStart() {
+  private void startRunning() {
     // Stop other clips on the bus
     for (LXClip clip : this.bus.clips) {
       if (clip != null && clip != this) {
@@ -634,43 +651,31 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (this.bus.arm.isOn()) {
       this.isRecording = true;
       if (this.hasTimeline) {
-        _onStartOverdub();
+        startOverdub();
       } else {
-        _onStartFirstRecording();
+        startFirstRecording();
       }
     } else {
       this.isRecording = false;
-      _onStartPlayback();
-    }
-  }
-
-  /**
-   * Restart play from an already-playing state
-   */
-  private void _onRestart() {
-    // Retrieve and apply the launchFrom position
-    setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
-    // If restarting from zero, run the snapshot.
-    if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
-      this.snapshot.recall();
+      startPlayback();
     }
   }
 
   /**
    * Start overdubbing from an already-playing state
    */
-  public void _onStartHotOverdub() {
+  public void startHotOverdub() {
     // TODO: mcslee to review
-    _onStopPlayback();
+    stopPlayback();
     this.isRecording = true;
-    _onStartOverdub();
+    startOverdub();
   }
 
   /**
    * Stop overdubbing from a hot-overdub state
    */
-  public void _onStopHotOverdub() {
-    _onStopOverdub();
+  public void stopHotOverdub() {
+    stopOverdub();
     this.isRecording = false;
     // cursor advancement will continue...
   }
@@ -678,23 +683,23 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   /**
    * Stop from a rec/play state
    */
-  private void _onStop() {
+  private void stopRunning() {
     if (this.isRecording) {
       this.isRecording = false;
-      bus.arm.setValue(false);
+      this.bus.arm.setValue(false);
       if (!this.hasTimeline) {
-        _onStopFirstRecording();
+        stopFirstRecording();
       } else {
-        _onStopOverdub();
+        stopOverdub();
       }
     } else {
-      _onStopPlayback();
+      stopPlayback();
     }
   }
 
   // State management layer 2
 
-  private void _onStartFirstRecording() {
+  private void startFirstRecording() {
     this.cursor = 0;
     this.length.setValue(0);
     this.loopLength.setValue(0);
@@ -707,28 +712,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     onStartRecording();
   }
 
-  private void _onStartOverdub() {
+  private void startOverdub() {
     // TODO(mcslee): toggle an overdub / replace recording mode
     onStartRecording();
   }
 
-  private void _onStartPlayback() {
+  private void startPlayback() {
     setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
-    // Run snapshot only if starting from beginning (mcslee to confirm)
-    // NOTE(mcslee): really, I think we want to know here if we were triggered from the button
-    // on the clip grid or a control surface, in which case we recall the snapshot. If we were
-    // triggered from mouse/key actions within the timeline UI, then we don't recall a snapshot,
-    // even if somebody rewinds and plays from 0.
-    //
-    // Note also that someone could edit their loops and set playStart != 0, and then later trigger
-    // from the clip grid. We *do* still want to recall the snapshot in that case! Lots of potential mess here,
-    // but to me the key semantic point is that it's the grid UI / control surface that can also fire off snapshots.
-    if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
-      this.snapshot.recall();
-    }
+    // NOTE(mcslee): removed the following, 99% sure shouldn't be here. Snapshot recall should
+    // be a function of having used the grid/control surface clip trigger button. Not a function
+    // of playback from 0.
   }
 
-  private void _onStopFirstRecording() {
+  private void stopFirstRecording() {
     this.length.setValue(this.cursor);
     this.loopStart.setValue(0);
     this.loopLength.setValue(this.cursor);
@@ -738,11 +734,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     onStopRecording();
   }
 
-  private void _onStopOverdub() {
+  private void stopOverdub() {
     onStopRecording();
   }
 
-  private void _onStopPlayback() {
+  private void stopPlayback() {
 
   }
 
@@ -878,9 +874,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
               while (nextCursor >= endValue) {
                 nextCursor -= loopLength;
                 // If loop was to very beginning, run snapshot
-                if (loopStart == 0 && this.snapshotEnabled.isOn()) {
-                  this.snapshot.recall();
-                }
+                // NOTE(mcslee): I don't think so, snapshot should be on an explicit UX trigger command
+                // if (loopStart == 0 && this.snapshotEnabled.isOn()) {
+                //   this.snapshot.recall();
+                // }
                 if (endValue < nextCursor) {
                   // Loop is smaller than frame, run automations for each time we would have passed them
                   advanceCursor(loopStart, endValue);
