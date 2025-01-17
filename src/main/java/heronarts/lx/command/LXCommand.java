@@ -3031,8 +3031,8 @@ public abstract class LXCommand {
       /**
        * Move clip marker by a given value (in time units)
        */
-      public MoveMarker(LXClip clip, Marker marker, double toValue) {
-        super(clip, marker, marker.getValue(clip) + toValue);
+      public MoveMarker(LXClip clip, Marker marker, double incrementValue) {
+        super(clip, marker, marker.getValue(clip) + incrementValue);
       }
     }
 
@@ -3040,6 +3040,9 @@ public abstract class LXCommand {
 
       public static class SetCursors extends LXCommand {
 
+        // TODO(mcslee): we'll have to find a reliable way to refer to the clip lane and the
+        // events... this won't survive a deep undo/redo cycle where the clip is deleted and
+        // restored
         private final LXClipLane clipLane;
         private final Map<LXClipEvent, Double> fromCursors;
         private final Map<LXClipEvent, Double> toCursors;
@@ -3084,6 +3087,9 @@ public abstract class LXCommand {
 
         public static class SetValues extends LXCommand {
 
+          // TODO(mcslee): we'll have to find a reliable way to refer to the clip lane and the
+          // events... this won't survive a deep undo/redo cycle where the clip is deleted and
+          // restored
           private final ParameterClipLane parameterClipLane;
           private final Map<ParameterClipEvent, Double> fromValues;
           private final Map<ParameterClipEvent, Double> toValues;
