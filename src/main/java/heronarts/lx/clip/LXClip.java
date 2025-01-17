@@ -469,7 +469,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @param relativeMs Amount of time to move, in milliseconds. Can be negative.
    */
   public LXClip moveLoopBrace(double relativeMs) {
-    retur setLoopBrace(getLoopBrace() + relativeMs);
+    return setLoopBrace(getLoopBrace() + relativeMs);
   }
 
   /**
