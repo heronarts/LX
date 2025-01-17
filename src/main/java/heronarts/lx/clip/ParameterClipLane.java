@@ -91,11 +91,19 @@ public class ParameterClipLane extends LXClipLane {
   }
 
   public void setEventsNormalized(Map<ParameterClipEvent, Double> normalized) {
+    boolean changed = false;
     for (Map.Entry<ParameterClipEvent, Double> entry : normalized.entrySet()) {
       ParameterClipEvent event = entry.getKey();
       if (this.events.contains(event)) {
-        event.setNormalized(entry.getValue());
+        if (event._setNormalized(entry.getValue())) {
+          changed = true;
+        }
+      } else {
+        LX.error("ParameterClipLane.setEventsNormalized called with an event not in the events array: " + event);
       }
+    }
+    if (changed) {
+      this.onChange.bang();
     }
   }
 

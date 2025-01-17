@@ -21,10 +21,17 @@ public class ParameterClipEvent extends LXClipEvent {
     this.normalized = normalized;
   }
 
-  public ParameterClipEvent setNormalized(double normalized) {
+  boolean _setNormalized(double normalized) {
     normalized = LXUtils.constrain(normalized, 0, 1);
     if (this.normalized != normalized) {
       this.normalized = normalized;
+      return true;
+    }
+    return false;
+  }
+
+  public ParameterClipEvent setNormalized(double normalized) {
+    if (_setNormalized(normalized)) {
       this.lane.onChange.bang();
     }
     return this;
@@ -35,7 +42,7 @@ public class ParameterClipEvent extends LXClipEvent {
   }
 
   public float getNormalizedf() {
-    return (float)this.normalized;
+    return (float) this.normalized;
   }
 
   @Override
