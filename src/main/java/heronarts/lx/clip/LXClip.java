@@ -62,68 +62,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   double cursor = 0;
 
-  /**
-   * A mutable parameter with an optional upper or lower limit seems useful, what do you think?
-   */
-  public static class LimitedMutableParameter extends MutableParameter {
-
-    private boolean hasMin = false;
-    private boolean hasMax = false;
-
-    private double min = 0;
-    private double max = 0;
-
-    public LimitedMutableParameter(String label) {
-      super(label);
-    }
-
-    public LimitedMutableParameter(String label, double value) {
-      super(label, value);
-    }
-
-    protected void setMin(double min) {
-      this.hasMin = true;
-      this.min = min;
-      setValue(getValue());
-    }
-
-    protected void setMax(double max) {
-      this.hasMax = true;
-      this.max = max;
-      setValue(getValue());
-    }
-
-    protected void setHasMin(boolean hasMin) {
-      if (this.hasMin != hasMin) {
-        this.hasMin = hasMin;
-      }
-    }
-
-    protected void setHasMax(boolean hasMax) {
-      if (this.hasMax != hasMax) {
-        this.hasMax = hasMax;
-      }
-    }
-
-    @Override
-    protected double updateValue(double value) {
-      if (this.hasMin) {
-        value = LXUtils.max(this.min, value);
-      }
-      if (this.hasMax) {
-        value = LXUtils.min(this.max, value);
-      }
-      return value;
-    }
-
-    // If we keep this, add casting overrides
-  }
-
-  public static class TimeLengthParameter extends LimitedMutableParameter {
+  public static class TimeLengthParameter extends MutableParameter {
 
     public TimeLengthParameter(String label, double value) {
       super(label, value);
-      setMin(0);
+      setMinimum(0);
     }
 
     @Override
@@ -132,6 +75,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return this;
     }
 
+    @Override
     public TimeLengthParameter setUnits(Units units) {
       super.setUnits(units);
       return this;
