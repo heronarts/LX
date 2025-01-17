@@ -2931,65 +2931,54 @@ public abstract class LXCommand {
     }
 
     public enum Marker {
-      LOOP_START {
-        @Override
-        public double getValue(LXClip clip) {
-          return clip.getLoopStart();
-        }
 
-        @Override
-        public void setValue(LXClip clip, double value) {
-          clip.setLoopStart(value);
-        }
-      },
-      LOOP_BRACE {
-        @Override
-        public double getValue(LXClip clip) {
+      LOOP_START("Loop Start"),
+      LOOP_BRACE("Loop"),
+      LOOP_END("Loop End"),
+      PLAY_START("Start"),
+      PLAY_END("End");
+
+      public double getValue(LXClip clip) {
+        switch (this) {
+        case LOOP_BRACE:
           return clip.getLoopBrace();
-        }
-
-        @Override
-        public void setValue(LXClip clip, double value) {
-          clip.setLoopBrace(value);
-        }
-      },
-      LOOP_END {
-        @Override
-        public double getValue(LXClip clip) {
+        case LOOP_END:
           return clip.getLoopEnd();
-        }
-
-        @Override
-        public void setValue(LXClip clip, double value) {
-          clip.setLoopEnd(value);
-        }
-      },
-      PLAY_START {
-        @Override
-        public double getValue(LXClip clip) {
+        case LOOP_START:
+          return clip.getLoopStart();
+        case PLAY_END:
+          return clip.getPlayEnd();
+        case PLAY_START:
           return clip.getPlayStart();
         }
+        return 0;
+      }
 
-        @Override
-        public void setValue(LXClip clip, double value) {
-          clip.setPlayStart(value);
-        }
-      },
-      PLAY_END {
-        @Override
-        public double getValue(LXClip clip) {
-          return clip.getPlayEnd();
-        }
-
-        @Override
-        public void setValue(LXClip clip, double value) {
+      public void setValue(LXClip clip, double value) {
+        switch (this) {
+        case LOOP_BRACE:
+          clip.setLoopBrace(value);
+          break;
+        case LOOP_END:
+          clip.setLoopEnd(value);
+          break;
+        case LOOP_START:
+          clip.setLoopStart(value);
+          break;
+        case PLAY_END:
           clip.setPlayEnd(value);
+          break;
+        case PLAY_START:
+          clip.setPlayStart(value);
+          break;
         }
-      };
+      }
 
-      abstract public double getValue(LXClip clip);
+      private final String label;
 
-      abstract public void setValue(LXClip clip, double value);
+      private Marker(String label) {
+        this.label = label;
+      }
     }
 
     public static class SetMarker extends LXCommand {
@@ -3011,7 +3000,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Move Clip Marker";
+        return "Move Clip " + this.marker.label;
       }
 
       @Override
