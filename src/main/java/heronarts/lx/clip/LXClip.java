@@ -139,7 +139,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   public final LXBus bus;
   public final LXClipSnapshot snapshot;
-  private boolean isFirstRun = true;
+
+  // Whether a timeline has been created. If a clip has never been run in recording mode,
+  // that won't exist yet. The flag is set the first time a clip is recorded to, or if
+  // a clip is loaded that had a non-zero length.
+  private boolean hasTimeline = false;
 
   private int index;
   private final boolean busListener;
@@ -226,13 +230,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   /**
    * Play clip from cursor position without quantization delay.
-   * Does nothing unless clip is not running.
+   * Does nothing if the clip is already running or if it has
+   * not been initialized.
    *
    * @param cursor
    * @return this
    */
   public LXClip playFrom(double cursor) {
-    if (!isRunning() && !isFirstRun) {
+    if (!isRunning() && this.hasTimeline) {
       this.launchFrom.setValue(LXUtils.constrain(cursor, 0, this.length.getValue()));
       trigger();
     }
@@ -394,7 +399,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   public boolean isOverdub() {
-    return isRecording() && !this.isFirstRun;
+    return isRecording() && this.hasTimeline;
   }
 
   // Limiters
@@ -602,7 +607,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         if (this.bus.arm.isOn()) {
           _onStartHotOverdub();
         } else {
-          if (!isFirstRun) {
+          if (this.hasTimeline) {
             _onStopHotOverdub();
           }
         }
@@ -628,10 +633,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
     if (this.bus.arm.isOn()) {
       this.isRecording = true;
-      if (this.isFirstRun) {
-        _onStartFirstRecording();
-      } else {
+      if (this.hasTimeline) {
         _onStartOverdub();
+      } else {
+        _onStartFirstRecording();
       }
     } else {
       this.isRecording = false;
@@ -677,8 +682,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (this.isRecording) {
       this.isRecording = false;
       bus.arm.setValue(false);
-      if (this.isFirstRun) {
-        this.isFirstRun = false;
+      if (!this.hasTimeline) {
         _onStopFirstRecording();
       } else {
         _onStopOverdub();
@@ -711,6 +715,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private void _onStartPlayback() {
     setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
     // Run snapshot only if starting from beginning (mcslee to confirm)
+    // NOTE(mcslee): really, I think we want to know here if we were triggered from the button
+    // on the clip grid or a control surface, in which case we recall the snapshot. If we were
+    // triggered from mouse/key actions within the timeline UI, then we don't recall a snapshot,
+    // even if somebody rewinds and plays from 0.
+    //
+    // Note also that someone could edit their loops and set playStart != 0, and then later trigger
+    // from the clip grid. We *do* still want to recall the snapshot in that case! Lots of potential mess here,
+    // but to me the key semantic point is that it's the grid UI / control surface that can also fire off snapshots.
     if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
       this.snapshot.recall();
     }
@@ -722,6 +734,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.loopLength.setValue(this.cursor);
     this.playStart.setValue(0);
     this.playEnd.setValue(this.cursor);
+    this.hasTimeline = true;
     onStopRecording();
   }
 
@@ -811,7 +824,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   protected void run(double deltaMs) {
     double nextCursor = this.cursor + deltaMs;
     if (this.bus.arm.isOn()) {
-      if (this.isFirstRun) {
+      if (!this.hasTimeline) {
         // Recording mode... lane and event listeners will pick up and record
         // all the events. All we need to do here is update the clip length
         this.length.setValue(nextCursor);
@@ -927,7 +940,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   public void load(LX lx, JsonObject obj) {
     clearLanes();
-    this.isFirstRun = false;
     if (obj.has(KEY_LANES)) {
       JsonArray lanesArr = obj.get(KEY_LANES).getAsJsonArray();
       for (JsonElement laneElement : lanesArr) {
@@ -947,6 +959,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         setPlayEnd(this.length.getValue());
       }
     }
+
+    this.hasTimeline = this.length.getValue() > 0;
   }
 
   protected void loadLane(LX lx, String laneType, JsonObject laneObj) {
