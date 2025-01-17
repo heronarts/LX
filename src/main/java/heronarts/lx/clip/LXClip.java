@@ -62,83 +62,80 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   double cursor = 0;
 
-  public static class TimeLengthParameter extends MutableParameter {
+  public static class TimestampParameter extends MutableParameter {
 
-    public TimeLengthParameter(String label, double value) {
+    public TimestampParameter(String label) {
+      this(label, 0);
+    }
+
+    public TimestampParameter(String label, double value) {
       super(label, value);
       setMinimum(0);
+      setUnits(LXParameter.Units.MILLISECONDS);
     }
 
     @Override
-    public TimeLengthParameter setDescription(String description) {
+    public TimestampParameter setDescription(String description) {
       super.setDescription(description);
-      return this;
-    }
-
-    @Override
-    public TimeLengthParameter setUnits(Units units) {
-      super.setUnits(units);
       return this;
     }
   }
 
   // TODO: also change length to a shielded (read-only) parameter, like cursor?
-  public final TimeLengthParameter length =
-    new TimeLengthParameter("Length", 0)
-      .setDescription("The length of the clip")
-      .setUnits(LXParameter.Units.MILLISECONDS);
+  public final TimestampParameter length =
+    new TimestampParameter("Length")
+    .setDescription("The length of the clip");
 
-  public final BooleanParameter loop = new BooleanParameter("Loop")
+  public final BooleanParameter loop =
+    new BooleanParameter("Loop")
     .setDescription("Whether to loop the clip");
 
-  public final TimeLengthParameter loopStart =
-    new TimeLengthParameter("Loop Start", 0)
-      .setDescription("Where the clip will loop to when loop is enabled")
-      .setUnits(LXParameter.Units.MILLISECONDS);
+  public final TimestampParameter loopStart =
+    new TimestampParameter("Loop Start")
+    .setDescription("Where the clip will loop to when loop is enabled");
 
-  public final TimeLengthParameter loopLength =
-    new TimeLengthParameter("Loop Length", 0)
-      .setDescription("Length of the loop in milliseconds")
-      .setUnits(LXParameter.Units.MILLISECONDS);
+  public final TimestampParameter loopLength =
+    new TimestampParameter("Loop Length")
+    .setDescription("Length of the loop in milliseconds");
 
-  public final TimeLengthParameter playStart =
-    new TimeLengthParameter("Play Start", 0)
-      .setDescription("Where the loop will start playing when it is launched");
+  public final TimestampParameter playStart =
+    new TimestampParameter("Play Start")
+    .setDescription("Where the loop will start playing when it is launched");
 
-  public final TimeLengthParameter playEnd =
-    new TimeLengthParameter("Play End", 0)
-      .setDescription("Where an unlooped clip will stop playing");
+  public final TimestampParameter playEnd =
+    new TimestampParameter("Play End")
+    .setDescription("Where an unlooped clip will stop playing");
 
-  public final TimeLengthParameter launchFrom =
-    new TimeLengthParameter("Launch From", 0)
-      .setDescription("The next launch will start from this position");
+  public final TimestampParameter launchFrom =
+    new TimestampParameter("Launch From")
+    .setDescription("The next launch will start from this position");
 
   public final QuantizedTriggerParameter launch =
     new QuantizedTriggerParameter.Launch(lx, "Launch", this::trigger)
-      .setDescription("Launch this clip");
+    .setDescription("Launch this clip");
 
   public final QuantizedTriggerParameter stop =
     new QuantizedTriggerParameter.Launch(lx, "Stop", this::stop)
-      .setDescription("Stop this clip");
+    .setDescription("Stop this clip");
 
   protected final List<LXClipLane> mutableLanes = new ArrayList<LXClipLane>();
   public final List<LXClipLane> lanes = Collections.unmodifiableList(this.mutableLanes);
 
   public final BooleanParameter snapshotEnabled =
     new BooleanParameter("Snapshot", true)
-      .setDescription("Whether snapshot recall is enabled for this clip");
+    .setDescription("Whether snapshot recall is enabled for this clip");
 
   public final BooleanParameter snapshotTransitionEnabled =
     new BooleanParameter("Transition", true)
-      .setDescription("Whether snapshot transition is enabled for this clip");
+    .setDescription("Whether snapshot transition is enabled for this clip");
 
   public final BooleanParameter automationEnabled =
     new BooleanParameter("Automation", false)
-      .setDescription("Whether automation playback is enabled for this clip");
+    .setDescription("Whether automation playback is enabled for this clip");
 
   public final BooleanParameter customSnapshotTransition =
     new BooleanParameter("Custom Snapshot Transition")
-      .setDescription("Whether to use custom snapshot transition settings for this clip");
+    .setDescription("Whether to use custom snapshot transition settings for this clip");
 
   public final LXBus bus;
   public final LXClipSnapshot snapshot;
