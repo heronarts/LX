@@ -46,10 +46,14 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.snapshot.LXClipSnapshot;
+import heronarts.lx.utils.LXUtils;
 
 public abstract class LXClip extends LXRunnableComponent implements LXOscComponent, LXComponent.Renamable, LXBus.Listener {
 
+  private static final double LOOP_LENGTH_MINIMUM = 125;
+
   public interface Listener {
+    public void cursorChanged(LXClip clip, double from, double to);
     public void parameterLaneAdded(LXClip clip, ParameterClipLane lane);
     public void parameterLaneRemoved(LXClip clip, ParameterClipLane lane);
   }
@@ -58,43 +62,143 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   double cursor = 0;
 
-  public final MutableParameter length =
-    new MutableParameter("Length", 0)
-    .setDescription("The length of the clip")
-    .setUnits(LXParameter.Units.MILLISECONDS);
+  /**
+   * A mutable parameter with an optional upper or lower limit seems useful, what do you think?
+   */
+  public static class LimitedMutableParameter extends MutableParameter {
+
+    private boolean hasMin = false;
+    private boolean hasMax = false;
+
+    private double min = 0;
+    private double max = 0;
+
+    public LimitedMutableParameter(String label) {
+      super(label);
+    }
+
+    public LimitedMutableParameter(String label, double value) {
+      super(label, value);
+    }
+
+    protected void setMin(double min) {
+      this.hasMin = true;
+      this.min = min;
+      setValue(getValue());
+    }
+
+    protected void setMax(double max) {
+      this.hasMax = true;
+      this.max = max;
+      setValue(getValue());
+    }
+
+    protected void setHasMin(boolean hasMin) {
+      if (this.hasMin != hasMin) {
+        this.hasMin = hasMin;
+      }
+    }
+
+    protected void setHasMax(boolean hasMax) {
+      if (this.hasMax != hasMax) {
+        this.hasMax = hasMax;
+      }
+    }
+
+    @Override
+    protected double updateValue(double value) {
+      if (this.hasMin) {
+        value = LXUtils.max(this.min, value);
+      }
+      if (this.hasMax) {
+        value = LXUtils.min(this.max, value);
+      }
+      return value;
+    }
+
+    // If we keep this, add casting overrides
+  }
+
+  public static class TimeLengthParameter extends LimitedMutableParameter {
+
+    public TimeLengthParameter(String label, double value) {
+      super(label, value);
+      setMin(0);
+    }
+
+    @Override
+    public TimeLengthParameter setDescription(String description) {
+      super.setDescription(description);
+      return this;
+    }
+
+    public TimeLengthParameter setUnits(Units units) {
+      super.setUnits(units);
+      return this;
+    }
+  }
+
+  // TODO: also change length to a shielded (read-only) parameter, like cursor?
+  public final TimeLengthParameter length =
+    new TimeLengthParameter("Length", 0)
+      .setDescription("The length of the clip")
+      .setUnits(LXParameter.Units.MILLISECONDS);
 
   public final BooleanParameter loop = new BooleanParameter("Loop")
     .setDescription("Whether to loop the clip");
 
+  public final TimeLengthParameter loopStart =
+    new TimeLengthParameter("Loop Start", 0)
+      .setDescription("Where the clip will loop to when loop is enabled")
+      .setUnits(LXParameter.Units.MILLISECONDS);
+
+  public final TimeLengthParameter loopLength =
+    new TimeLengthParameter("Loop Length", 0)
+      .setDescription("Length of the loop in milliseconds")
+      .setUnits(LXParameter.Units.MILLISECONDS);
+
+  public final TimeLengthParameter playStart =
+    new TimeLengthParameter("Play Start", 0)
+      .setDescription("Where the loop will start playing when it is launched");
+
+  public final TimeLengthParameter playEnd =
+    new TimeLengthParameter("Play End", 0)
+      .setDescription("Where an unlooped clip will stop playing");
+
+  public final TimeLengthParameter launchFrom =
+    new TimeLengthParameter("Launch From", 0)
+      .setDescription("The next launch will start from this position");
+
   public final QuantizedTriggerParameter launch =
     new QuantizedTriggerParameter.Launch(lx, "Launch", this::trigger)
-    .setDescription("Launch this clip");
+      .setDescription("Launch this clip");
 
   public final QuantizedTriggerParameter stop =
     new QuantizedTriggerParameter.Launch(lx, "Stop", this::stop)
-    .setDescription("Stop this clip");
+      .setDescription("Stop this clip");
 
   protected final List<LXClipLane> mutableLanes = new ArrayList<LXClipLane>();
   public final List<LXClipLane> lanes = Collections.unmodifiableList(this.mutableLanes);
 
   public final BooleanParameter snapshotEnabled =
     new BooleanParameter("Snapshot", true)
-    .setDescription("Whether snapshot recall is enabled for this clip");
+      .setDescription("Whether snapshot recall is enabled for this clip");
 
   public final BooleanParameter snapshotTransitionEnabled =
     new BooleanParameter("Transition", true)
-    .setDescription("Whether snapshot transition is enabled for this clip");
+      .setDescription("Whether snapshot transition is enabled for this clip");
 
   public final BooleanParameter automationEnabled =
     new BooleanParameter("Automation", false)
-    .setDescription("Whether automation playback is enabled for this clip");
+      .setDescription("Whether automation playback is enabled for this clip");
 
   public final BooleanParameter customSnapshotTransition =
     new BooleanParameter("Custom Snapshot Transition")
-    .setDescription("Whether to use custom snapshot transition settings for this clip");
+      .setDescription("Whether to use custom snapshot transition settings for this clip");
 
   public final LXBus bus;
   public final LXClipSnapshot snapshot;
+  private boolean isFirstRun = true;
 
   private int index;
   private final boolean busListener;
@@ -124,6 +228,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("stop", this.stop);
     addParameter("length", this.length);
     addParameter("loop", this.loop);
+    addParameter("loopStart", this.loopStart);
+    addParameter("loopLength", this.loopLength);
+    addParameter("playStart", this.playStart);
+    addParameter("playEnd", this.playEnd);
     addParameter("snapshotEnabled", this.snapshotEnabled);
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("automationEnabled", this.automationEnabled);
@@ -141,6 +249,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (registerListener) {
       bus.addListener(this);
     }
+    bus.arm.addListener(this);
   }
 
   /**
@@ -149,7 +258,75 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return this
    */
   public LXClip launch() {
+    return launchFrom(this.playStart.getValue());
+  }
+
+  /**
+   * Launches the clip from a specified start position,
+   * subject to global launch quantization.
+   *
+   * @param cursor Position to launch from
+   * @return this
+   */
+  public LXClip launchFrom(double cursor) {
+    this.launchFrom.setValue(LXUtils.constrain(cursor, 0, this.length.getValue()));
     this.launch.trigger();
+    return this;
+  }
+
+  /**
+   * Launches the clip from the current cursor position
+   *
+   * @return this
+   */
+  public LXClip launchFromCursor() {
+    return launchFrom(this.cursor);
+  }
+
+  /**
+   * Play clip from cursor position without quantization delay.
+   * Does nothing unless clip is not running.
+   *
+   * @param cursor
+   * @return this
+   */
+  public LXClip playFrom(double cursor) {
+    if (!isRunning() && !isFirstRun) {
+      this.launchFrom.setValue(LXUtils.constrain(cursor, 0, this.length.getValue()));
+      trigger();
+    }
+    return this;
+  }
+
+  /**
+   * Play clip from cursor position without quantization delay.
+   * Does nothing unless clip is not running.
+   *
+   * @return this
+   */
+  public LXClip playFromCursor() {
+    return playFrom(this.cursor);
+  }
+
+  /**
+   * If stopped, play from Play Start marker.
+   * If playing or recording, stop.
+   */
+  public LXClip toggleAction(boolean quantize) {
+    if (isRunning()) {
+      if (quantize) {
+        this.stop.trigger();
+      } else {
+        stop();
+      }
+    } else {
+      if (quantize) {
+        launch();
+      } else {
+        this.launchFrom.setValue(LXUtils.constrain(this.playStart.getValue(), 0, this.length.getValue()));
+        trigger();
+      }
+    }
     return this;
   }
 
@@ -161,12 +338,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   public void onTrigger() {
     super.onTrigger();
-    this.cursor = 0;
-    if (this.snapshotEnabled.isOn()) {
-      this.snapshot.recall();
-    }
-    if (this.bus.arm.isOn()) {
-      this.automationEnabled.setValue(true);
+    if (isRunning()) {
+      _onRestart();
     }
   }
 
@@ -184,6 +357,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (this.busListener) {
       this.bus.removeListener(this);
     }
+    this.bus.arm.removeListener(this);
     this.mutableLanes.clear();
     LX.dispose(this.snapshot);
     this.listeners.clear();
@@ -239,6 +413,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this;
   }
 
+  /**
+   * Move the cursor and notify listeners
+   */
+  protected void setCursor(double cursor) {
+    if (this.cursor != cursor) {
+      double from = this.cursor;
+      this.cursor = cursor;
+      for (Listener listener : this.listeners) {
+        listener.cursorChanged(this, from, cursor);
+      }
+    }
+  }
+
   public double getCursor() {
     return this.cursor;
   }
@@ -251,35 +438,367 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return 0;
   }
 
-  @Override
-  public void onParameterChanged(LXParameter p) {
-    super.onParameterChanged(p);
-    if (p == this.running) {
-      if (this.running.isOn()) {
-        for (LXClip clip : this.bus.clips) {
-          if (clip != null && clip != this) {
-            clip.stop();
-          }
-        }
-        if (this.bus.arm.isOn()) {
-          // Start recording a new clip.
-          // TODO(mcslee): toggle an overdub / replace recording mode
-          this.cursor = 0;
-          this.length.setValue(0);
-          clearLanes();
-          onStartRecording();
-        }
-      } else {
-        // Finished recording
-        if (this.bus.arm.isOn()) {
-          this.length.setValue(this.cursor);
-          this.bus.arm.setValue(false);
+  /**
+   * Whether the clip is armed for recording
+   */
+  public boolean isArmed() {
+    return this.bus.arm.isOn();
+  }
+
+  /**
+   * Whether the clip is actively recording.
+   */
+  public boolean isRecording() {
+    return isRunning() && this.bus.arm.isOn();
+  }
+
+  public boolean isOverdub() {
+    return isRecording() && !this.isFirstRun;
+  }
+
+  // Limiters
+
+  private double getBraceLengthMinimum() {
+    // If time units was bars rather than milliseconds, this would be different
+    return LOOP_LENGTH_MINIMUM;
+  }
+
+  // Markers, including virtual (loop brace)
+
+  public double getLoopStart() {
+    return this.loopStart.getValue();
+  }
+
+  /**
+   * Get the effective position of the brace (in time units).
+   * For example callers may follow with a call to setLoopBrace() to apply a location change.
+   *
+   * @return position of the loop brace
+   */
+  public double getLoopBrace() {
+    return this.loopStart.getValue();
+  }
+
+  public double getLoopEnd() {
+    return LXUtils.min(this.loopStart.getValue() + this.loopLength.getValue(), this.length.getValue());
+  }
+
+  public double getPlayStart() {
+    return this.playStart.getValue();
+  }
+
+  public double getPlayEnd() {
+    return this.playEnd.getValue();
+  }
+
+  /**
+   * Move the loop start position by a given amount of time.
+   * Maintains the illusion of the end marker staying in place.
+   * If end marker is overrun it will be moved with the start.
+   *
+   * @param relativeMs Amount of time to move, in milliseconds. Can be negative.
+   */
+  public void moveLoopStart(double relativeMs) {
+    setLoopStart(this.loopStart.getValue() + relativeMs);
+  }
+
+  /**
+   * Move the brace by a given amount of time.
+   *
+   * @param relativeMs Amount of time to move, in milliseconds. Can be negative.
+   */
+  public void moveLoopBrace(double relativeMs) {
+    setLoopBrace(getLoopBrace() + relativeMs);
+  }
+
+  /**
+   * Move the loop end position by a given amount of time.
+   *
+   * @param relativeMs Amount of time to move, in milliseconds.  Can be negative.
+   */
+  public void moveLoopEnd(double relativeMs) {
+    setLoopEnd(getLoopEnd() + relativeMs);
+  }
+
+  /**
+   * Move the play start position by a given amount of time.  Can be negative.
+   * Can not be moved to a position later than the play end marker.
+   *
+   * @param relativeMs Amount of time to move, in milliseconds
+   */
+  public void movePlayStart(double relativeMs) {
+    setPlayStart(this.playStart.getValue() + relativeMs);
+  }
+
+  /**
+   * Move the play end marker by a given amount of time.  Can be negative.
+   * Can not be moved to a position earlier than the play start marker.
+   *
+   * @param relativeMs Amount of time to move, in milliseconds
+   */
+  public void movePlayEnd(double relativeMs) {
+    setPlayEnd(this.playEnd.getValue() + relativeMs);
+  }
+
+  /**
+   * Safely set the loop start marker to a specific value (in time units)
+   *
+   * @param absoluteMs position on the timeline, in time units
+   */
+  public void setLoopStart(double absoluteMs) {
+    double loopEnd = this.loopStart.getValue() + this.loopLength.getValue();
+    double value = LXUtils.constrain(absoluteMs, 0, this.length.getValue() - getBraceLengthMinimum());
+    value = LXUtils.constrain(value, 0, loopEnd - getBraceLengthMinimum());
+    double delta = value - this.loopStart.getValue();
+    if (delta < 0) {
+      // Move left
+      this.loopStart.setValue(value);
+      this.loopLength.setValue(this.loopLength.getValue() - delta);
+    } else {
+      // Move right
+      this.loopLength.setValue(this.loopLength.getValue() - delta);
+      this.loopStart.setValue(value);
+    }
+  }
+
+  /**
+   * Safely set the loop brace to a position on the timeline (in time units)
+   *
+   * @param absoluteMs position on the timeline, in time units
+   */
+  public void setLoopBrace(double absoluteMs) {
+    double oldEnd = this.loopStart.getValue() + this.loopLength.getValue();
+    // Loop end is defined by Length, so moving the start has the appearance of moving the brace
+    // Restrict right-direction move to remaining space after the brace
+    double value = LXUtils.min(absoluteMs, this.length.getValue() - this.loopLength.getValue());
+    // Restrict left side to zero, may have been a left move or loop length may have been smaller than gridSnapUnits
+    value = LXUtils.max(0, value);
+    this.loopStart.setValue(value);
+    // Check for cursor capture while playing
+    captureCursorWithLoopMove(oldEnd);
+  }
+
+  /**
+   * Safely set the loop end marker to a specific value (in time units)
+   *
+   * @param absoluteMs position on the timeline, in time units
+   */
+  public void setLoopEnd(double absoluteMs) {
+    double oldEnd = getLoopEnd();
+    double value = LXUtils.max(getBraceLengthMinimum(), absoluteMs - this.loopStart.getValue());
+    value = LXUtils.constrain(value, 0, this.length.getValue() - this.loopStart.getValue());
+    this.loopLength.setValue(value);
+    // Check for cursor capture while playing
+    captureCursorWithLoopMove(oldEnd);
+  }
+
+  /**
+   * Safely set the play start marker to a specific value (in time units)
+   *
+   * @param absoluteMs position on the timeline, in time units
+   */
+  public void setPlayStart(double absoluteMs) {
+    double value = LXUtils.min(absoluteMs, this.playEnd.getValue() - getBraceLengthMinimum());
+    value = LXUtils.max(0, value);
+    this.playStart.setValue(value);
+  }
+
+  /**
+   * Safely set the play end marker to a specific value (in time units)
+   *
+   * @param absoluteMs position on the timeline, in time units
+   */
+  public void setPlayEnd(double absoluteMs) {
+    double oldEnd = this.playEnd.getValue();
+    double value = LXUtils.max(absoluteMs, this.playStart.getValue() + getBraceLengthMinimum());
+    value = LXUtils.min(value, this.length.getValue());
+    this.playEnd.setValue(value);
+
+    // If we cross the cursor going left, while we are the relevant marker, stop playback
+    if (!this.loop.isOn() && isRunning() && !this.bus.arm.isOn()) {
+      double newEnd = this.playEnd.getValue();
+      if (this.cursor < oldEnd && this.cursor > newEnd) {
+        stop();
+      }
+    }
+  }
+
+  /**
+   * Performs a safety check when moving loop end or loop brace:
+   * If playing, and cursor was before the end marker, don't let it escape.
+   *
+   * @param oldEnd value of the loop end marker before the move
+   */
+  private void captureCursorWithLoopMove(double oldEnd) {
+    if (this.loop.isOn() && isRunning() && !this.bus.arm.isOn()) {
+      double newEnd = this.loopStart.getValue() + this.loopLength.getValue();
+      if (this.cursor < oldEnd && this.cursor > newEnd) {
+        // Advance cursor to prior end of loop
+        advanceCursor(this.cursor, oldEnd);
+        // Wrap cursor to start of loop
+        setCursor(this.loopStart.getValue());
+        // If loop start is very beginning, run snapshot
+        if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
+          this.snapshot.recall();
         }
       }
     }
   }
 
+  // State management layer 1
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (p == this.running) {
+      if (this.running.isOn()) {
+        _onStart();
+      } else {
+        _onStop();
+      }
+    } else if (p == this.bus.arm) {
+      if (isRunning()) {
+        if (this.bus.arm.isOn()) {
+          _onStartHotOverdub();
+        } else {
+          if (!isFirstRun) {
+            _onStopHotOverdub();
+          }
+        }
+      }
+    }
+  }
+
+  // If recording was stopped by turning off the bus arm, we can no longer use bus.arm.isOn()
+  // to know if we were running.  And so... tracking it here.
+  private boolean isRecording;
+
+  /**
+   * Start from a stopped state
+   */
+  private void _onStart() {
+    // Stop other clips on the bus
+    for (LXClip clip : this.bus.clips) {
+      if (clip != null && clip != this) {
+        clip.stop();
+      }
+    }
+    // Retrieve and apply the launchFrom position
+    setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
+    if (this.bus.arm.isOn()) {
+      this.isRecording = true;
+      if (this.isFirstRun) {
+        _onStartFirstRecording();
+      } else {
+        _onStartOverdub();
+      }
+    } else {
+      this.isRecording = false;
+      _onStartPlayback();
+    }
+  }
+
+  /**
+   * Restart play from an already-playing state
+   */
+  private void _onRestart() {
+    // Retrieve and apply the launchFrom position
+    setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
+    // If restarting from zero, run the snapshot.
+    if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
+      this.snapshot.recall();
+    }
+  }
+
+  /**
+   * Start overdubbing from an already-playing state
+   */
+  public void _onStartHotOverdub() {
+    // TODO: mcslee to review
+    _onStopPlayback();
+    this.isRecording = true;
+    _onStartOverdub();
+  }
+
+  /**
+   * Stop overdubbing from a hot-overdub state
+   */
+  public void _onStopHotOverdub() {
+    _onStopOverdub();
+    this.isRecording = false;
+    // cursor advancement will continue...
+  }
+
+  /**
+   * Stop from a rec/play state
+   */
+  private void _onStop() {
+    if (this.isRecording) {
+      this.isRecording = false;
+      bus.arm.setValue(false);
+      if (this.isFirstRun) {
+        this.isFirstRun = false;
+        _onStopFirstRecording();
+      } else {
+        _onStopOverdub();
+      }
+    } else {
+      _onStopPlayback();
+    }
+  }
+
+  // State management layer 2
+
+  private void _onStartFirstRecording() {
+    this.cursor = 0;
+    this.length.setValue(0);
+    this.loopLength.setValue(0);
+    this.loopStart.setValue(0);
+    this.playStart.setValue(0);
+    this.playEnd.setValue(0);
+    this.snapshot.update();
+    // Begin recording automation
+    this.automationEnabled.setValue(true);
+    onStartRecording();
+  }
+
+  private void _onStartOverdub() {
+    // TODO(mcslee): toggle an overdub / replace recording mode
+    onStartRecording();
+  }
+
+  private void _onStartPlayback() {
+    setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
+    // Run snapshot only if starting from beginning (mcslee to confirm)
+    if (this.cursor == 0 && this.snapshotEnabled.isOn()) {
+      this.snapshot.recall();
+    }
+  }
+
+  private void _onStopFirstRecording() {
+    this.length.setValue(this.cursor);
+    this.loopStart.setValue(0);
+    this.loopLength.setValue(this.cursor);
+    this.playStart.setValue(0);
+    this.playEnd.setValue(this.cursor);
+    onStopRecording();
+  }
+
+  private void _onStopOverdub() {
+    onStopRecording();
+  }
+
+  private void _onStopPlayback() {
+
+  }
+
+  // State change notifications to subclasses
+
   protected void onStartRecording() {
+    // Subclasses may override
+  }
+
+  protected void onStopRecording() {
     // Subclasses may override
   }
 
@@ -351,28 +870,88 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   protected void run(double deltaMs) {
     double nextCursor = this.cursor + deltaMs;
     if (this.bus.arm.isOn()) {
-      // Recording mode... lane and event listeners will pick up and record
-      // all the events. All we need to do here is update the clip length
-      this.length.setValue(nextCursor);
-      this.cursor = nextCursor;
+      if (this.isFirstRun) {
+        // Recording mode... lane and event listeners will pick up and record
+        // all the events. All we need to do here is update the clip length
+        this.length.setValue(nextCursor);
+      } else {
+        // Overdubbing!
+        // TODO: Figure out how overdub works
+        // TODO: Stop recording if we cross the play end marker?
+
+        // Extend length once the end of clip is reached
+        if (this.length.getValue() < nextCursor) {
+          this.length.setValue(nextCursor);
+        }
+        // TODO: play existing automations during overdub
+        // Should user be able to arm Clip Lanes individually for overdub?
+      }
+      setCursor(nextCursor);
     } else {
+      // Not record
       boolean automationFinished = true;
       if (this.automationEnabled.isOn()) {
+        // Play Automation
+        boolean isLoop = this.loop.isOn();
+        double loopStart = this.loopStart.getValue();
+        double loopLength = this.loopLength.getValue();
+        double loopEnd = loopStart + loopLength;
         double lengthValue = this.length.getValue();
+        double playEnd = this.playEnd.getValue();
+        double endValue = isLoop ? loopEnd : playEnd;
+        // End markers only apply when the cursor passes over them. If playback was started
+        // past them, the effective end point will be the clip length.
+        if (this.cursor > endValue) {
+          endValue = this.length.getValue();
+        }
+
         automationFinished = false;
         // TODO(mcslee): make this more efficient, keep track of our indices?
-        advanceCursor(this.cursor, nextCursor);
-        while (nextCursor > lengthValue) {
-          if (!this.loop.isOn() || (lengthValue == 0)) {
-            this.cursor = nextCursor = lengthValue;
-            automationFinished = true;
-            break;
+
+        if (nextCursor < endValue) {
+          // Normal play frame
+          advanceCursor(this.cursor, nextCursor);
+          setCursor(nextCursor);
+        } else {
+          // Reached the end
+          // Play automation events right up to the end but not past
+          advanceCursor(this.cursor, endValue);
+
+          if (isLoop && lengthValue > 0) {
+            // Loop
+            if (loopLength > 0) {
+              // Wrap into new loop, play automations up to next position
+              while (nextCursor >= endValue) {
+                nextCursor -= loopLength;
+                // If loop was to very beginning, run snapshot
+                if (loopStart == 0 && this.snapshotEnabled.isOn()) {
+                  this.snapshot.recall();
+                }
+                if (endValue < nextCursor) {
+                  // Loop is smaller than frame, run automations for each time we would have passed them
+                  advanceCursor(loopStart, endValue);
+                } else {
+                  // Normal expected behavior, we're now within the loop.
+                  // Run animations between start of loop and new position
+                  advanceCursor(loopStart, nextCursor);
+                }
+              }
+              setCursor(nextCursor);
+            } else {
+              // Clip is non-zero length but loop is zero length. Boring!
+              setCursor(loopStart);
+              // If we want it to keep playing with loop length zero,
+              // we would need to add a flag to prevent the cursor from advancing
+              // once the loop has been engaged.
+              // Note(jkb): this was fully tested before limits were established for loop length
+              automationFinished = true;
+            }
           } else {
-            nextCursor -= lengthValue;
-            advanceCursor(0, nextCursor);
+            // Reached the end, either no loop or no clip length. Stop.
+            setCursor(endValue);
+            automationFinished = true;
           }
         }
-        this.cursor = nextCursor;
       }
       if (this.snapshotEnabled.isOn()) {
         this.snapshot.loop(deltaMs);
@@ -396,14 +975,18 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   @Override
-  public void effectMoved(LXBus channel, LXEffect effect) {}
+  public void effectMoved(LXBus channel, LXEffect effect) {
+  }
 
   private static final String KEY_LANES = "parameterLanes";
   public static final String KEY_INDEX = "index";
+  public static final String KEY_LOOP_LENGTH = "loopLength";
+  public static final String KEY_PLAY_END = "playEnd";
 
   @Override
   public void load(LX lx, JsonObject obj) {
     clearLanes();
+    this.isFirstRun = false;
     if (obj.has(KEY_LANES)) {
       JsonArray lanesArr = obj.get(KEY_LANES).getAsJsonArray();
       for (JsonElement laneElement : lanesArr) {
@@ -413,6 +996,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
     }
     super.load(lx, obj);
+    // For legacy clips, set loop and play markers
+    if (obj.has(KEY_PARAMETERS)) {
+      final JsonObject parametersObj = obj.getAsJsonObject(KEY_PARAMETERS);
+      if (!LXSerializable.Utils.hasParameter(parametersObj, KEY_LOOP_LENGTH)) {
+        setLoopEnd(this.length.getValue());
+      }
+      if (!LXSerializable.Utils.hasParameter(parametersObj, KEY_PLAY_END)) {
+        setPlayEnd(this.length.getValue());
+      }
+    }
   }
 
   protected void loadLane(LX lx, String laneType, JsonObject laneObj) {

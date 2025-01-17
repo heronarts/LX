@@ -20,6 +20,7 @@ package heronarts.lx.clip;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.google.gson.JsonArray;
@@ -80,6 +81,16 @@ public abstract class LXClipLane implements LXSerializable {
       this.onChange.bang();
     }
     return this;
+  }
+
+  public void setEventsCursors(Map<? extends LXClipEvent, Double> cursors) {
+    double clipLength = this.clip.length.getValue();
+    for (Map.Entry<? extends LXClipEvent, Double> entry : cursors.entrySet()) {
+      LXClipEvent event = entry.getKey();
+      if (this.events.contains(event)) {
+        event.setCursor(LXUtils.constrain(entry.getValue(), 0, clipLength));
+      }
+    }
   }
 
   public abstract String getLabel();
