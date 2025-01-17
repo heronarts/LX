@@ -459,8 +459,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param relativeMs Amount of time to move, in milliseconds. Can be negative.
    */
-  public void moveLoopStart(double relativeMs) {
-    setLoopStart(this.loopStart.getValue() + relativeMs);
+  public LXClip moveLoopStart(double relativeMs) {
+    return setLoopStart(this.loopStart.getValue() + relativeMs);
   }
 
   /**
@@ -468,8 +468,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param relativeMs Amount of time to move, in milliseconds. Can be negative.
    */
-  public void moveLoopBrace(double relativeMs) {
-    setLoopBrace(getLoopBrace() + relativeMs);
+  public LXClip moveLoopBrace(double relativeMs) {
+    retur setLoopBrace(getLoopBrace() + relativeMs);
   }
 
   /**
@@ -477,8 +477,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param relativeMs Amount of time to move, in milliseconds.  Can be negative.
    */
-  public void moveLoopEnd(double relativeMs) {
-    setLoopEnd(getLoopEnd() + relativeMs);
+  public LXClip moveLoopEnd(double relativeMs) {
+    return setLoopEnd(getLoopEnd() + relativeMs);
   }
 
   /**
@@ -487,8 +487,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param relativeMs Amount of time to move, in milliseconds
    */
-  public void movePlayStart(double relativeMs) {
-    setPlayStart(this.playStart.getValue() + relativeMs);
+  public LXClip movePlayStart(double relativeMs) {
+    return setPlayStart(this.playStart.getValue() + relativeMs);
   }
 
   /**
@@ -497,8 +497,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param relativeMs Amount of time to move, in milliseconds
    */
-  public void movePlayEnd(double relativeMs) {
-    setPlayEnd(this.playEnd.getValue() + relativeMs);
+  public LXClip movePlayEnd(double relativeMs) {
+    return setPlayEnd(this.playEnd.getValue() + relativeMs);
   }
 
   /**
@@ -506,7 +506,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
-  public void setLoopStart(double absoluteMs) {
+  public LXClip setLoopStart(double absoluteMs) {
     double loopEnd = this.loopStart.getValue() + this.loopLength.getValue();
     double value = LXUtils.constrain(absoluteMs, 0, this.length.getValue() - getBraceLengthMinimum());
     value = LXUtils.constrain(value, 0, loopEnd - getBraceLengthMinimum());
@@ -520,6 +520,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       this.loopLength.setValue(this.loopLength.getValue() - delta);
       this.loopStart.setValue(value);
     }
+    return this;
   }
 
   /**
@@ -527,7 +528,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
-  public void setLoopBrace(double absoluteMs) {
+  public LXClip setLoopBrace(double absoluteMs) {
     double oldEnd = this.loopStart.getValue() + this.loopLength.getValue();
     // Loop end is defined by Length, so moving the start has the appearance of moving the brace
     // Restrict right-direction move to remaining space after the brace
@@ -537,6 +538,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.loopStart.setValue(value);
     // Check for cursor capture while playing
     captureCursorWithLoopMove(oldEnd);
+    return this;
   }
 
   /**
@@ -544,13 +546,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
-  public void setLoopEnd(double absoluteMs) {
+  public LXClip setLoopEnd(double absoluteMs) {
     double oldEnd = getLoopEnd();
     double value = LXUtils.max(getBraceLengthMinimum(), absoluteMs - this.loopStart.getValue());
     value = LXUtils.constrain(value, 0, this.length.getValue() - this.loopStart.getValue());
     this.loopLength.setValue(value);
     // Check for cursor capture while playing
     captureCursorWithLoopMove(oldEnd);
+    return this;
   }
 
   /**
@@ -558,10 +561,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
-  public void setPlayStart(double absoluteMs) {
+  public LXClip setPlayStart(double absoluteMs) {
     double value = LXUtils.min(absoluteMs, this.playEnd.getValue() - getBraceLengthMinimum());
     value = LXUtils.max(0, value);
     this.playStart.setValue(value);
+    return this;
   }
 
   /**
@@ -569,7 +573,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
-  public void setPlayEnd(double absoluteMs) {
+  public LXClip setPlayEnd(double absoluteMs) {
     double oldEnd = this.playEnd.getValue();
     double value = LXUtils.max(absoluteMs, this.playStart.getValue() + getBraceLengthMinimum());
     value = LXUtils.min(value, this.length.getValue());
@@ -582,6 +586,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         stop();
       }
     }
+    return this;
   }
 
   /**
@@ -634,7 +639,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   // If recording was stopped by turning off the bus arm, we can no longer use bus.arm.isOn()
   // to know if we were running.  And so... tracking it here.
-  private boolean isRecording;
+  private boolean isRecording = false;
 
   /**
    * Start from a stopped state
@@ -941,8 +946,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private static final String KEY_LANES = "parameterLanes";
   public static final String KEY_INDEX = "index";
-  public static final String KEY_LOOP_LENGTH = "loopLength";
-  public static final String KEY_PLAY_END = "playEnd";
 
   @Override
   public void load(LX lx, JsonObject obj) {
@@ -959,10 +962,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // For legacy clips, set loop and play markers
     if (obj.has(KEY_PARAMETERS)) {
       final JsonObject parametersObj = obj.getAsJsonObject(KEY_PARAMETERS);
-      if (!LXSerializable.Utils.hasParameter(parametersObj, KEY_LOOP_LENGTH)) {
+      if (!LXSerializable.Utils.hasParameter(parametersObj, this.loopLength.getPath())) {
         setLoopEnd(this.length.getValue());
       }
-      if (!LXSerializable.Utils.hasParameter(parametersObj, KEY_PLAY_END)) {
+      if (!LXSerializable.Utils.hasParameter(parametersObj, this.playEnd.getPath())) {
         setPlayEnd(this.length.getValue());
       }
     }
