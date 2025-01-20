@@ -126,6 +126,8 @@ public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXW
     }
   }
 
+  // NOTE(mcslee): do we need CopyOnWriteArrayList here? the UI thread loops on drawing this... possible
+  // surface area for ConcurrentModificationException
   private final List<Stage> mutableStages = new ArrayList<Stage>();
 
   public final List<Stage> stages = Collections.unmodifiableList(mutableStages);
