@@ -55,6 +55,7 @@ public abstract class LXClipLane implements LXSerializable {
   }
 
   private void _insertEvent(LXClipEvent event) {
+    // TODO(mcslee): make this more efficient using a binary search...
     int index = 0;
     while (index < this.events.size()) {
       if (event.cursor < this.events.get(index).cursor) {
@@ -88,6 +89,18 @@ public abstract class LXClipLane implements LXSerializable {
       this.onChange.bang();
     }
     return this;
+  }
+
+  protected LXClipEvent getPreviousEvent() {
+    // TODO(mcslee): make this more efficient using a binary search...
+    LXClipEvent previous = null;
+    for (LXClipEvent event : this.events) {
+      if (this.clip.cursor < event.cursor) {
+        break;
+      }
+      previous = event;
+    }
+    return previous;
   }
 
   public void setEventsCursors(Map<? extends LXClipEvent, Double> cursors) {
