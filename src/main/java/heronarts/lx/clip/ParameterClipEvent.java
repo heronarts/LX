@@ -18,11 +18,20 @@ public class ParameterClipEvent extends LXClipEvent {
   ParameterClipEvent(LXClipLane lane, LXNormalizedParameter parameter, double normalized) {
     super(lane, parameter.getParent());
     this.parameter = parameter;
-    this.normalized = normalized;
+    this.normalized = normalizeEventValue(normalized);
+  }
+
+  private double normalizeEventValue(double normalized) {
+    if (this.lane instanceof ParameterClipLane.Boolean) {
+      normalized = (normalized > .5f) ? 1 : 0;
+    } else {
+      normalized = LXUtils.constrain(normalized, 0, 1);
+    }
+    return normalized;
   }
 
   boolean _setNormalized(double normalized) {
-    normalized = LXUtils.constrain(normalized, 0, 1);
+    normalized = normalizeEventValue(normalized);
     if (this.normalized != normalized) {
       this.normalized = normalized;
       return true;

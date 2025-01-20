@@ -20,8 +20,10 @@ package heronarts.lx.clip;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import com.google.gson.JsonArray;
@@ -148,15 +150,18 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private int index;
   private final boolean busListener;
 
-  protected final LXParameterListener parameterRecorder = new LXParameterListener() {
-    public void onParameterChanged(LXParameter p) {
-      if (isRunning() && bus.arm.isOn()) {
-        LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
-        ParameterClipLane lane = getParameterLane(parameter, true);
-        lane.appendEvent(new ParameterClipEvent(lane, parameter));
-      }
+  private final LXParameterListener parameterRecorder = this::recordParameterChange;
+
+  private void recordParameterChange(LXParameter p) {
+    if (isRunning() && this.bus.arm.isOn()) {
+      LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
+      ParameterClipLane lane = getParameterLane(parameter, true);
+
+      // NOTE(mcslee): need to sanitize this for overdub mode, not necessarily an append
+      // depending upon the cursor position!
+      lane.appendEvent(new ParameterClipEvent(lane, parameter));
     }
-  };
+  }
 
   public LXClip(LX lx, LXBus bus, int index) {
     this(lx, bus, index, true);
@@ -339,7 +344,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
     }
     if (create) {
-      ParameterClipLane lane = new ParameterClipLane(this, parameter);
+      ParameterClipLane lane = ParameterClipLane.create(this, parameter, this.parameterDefaults.get(parameter));
       this.mutableLanes.add(lane);
       for (Listener listener : this.listeners) {
         listener.parameterLaneAdded(this, lane);
@@ -714,11 +719,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.snapshot.update();
     // Begin recording automation
     this.automationEnabled.setValue(true);
+    updateParameterDefaults();
     onStartRecording();
   }
 
   private void startOverdub() {
     // TODO(mcslee): toggle an overdub / replace recording mode
+    updateParameterDefaults();
     onStartRecording();
   }
 
@@ -769,10 +776,28 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
+  private final Map<LXNormalizedParameter, Double> parameterDefaults = new HashMap<>();
+
+  private void updateParameterDefaults() {
+    for (LXNormalizedParameter p : this.parameterDefaults.keySet()) {
+      this.parameterDefaults.put(p, p.getBaseNormalized());
+    }
+  }
+
+  protected void registerParameter(LXListenableNormalizedParameter p) {
+    this.parameterDefaults.put(p, p.getBaseNormalized());
+    p.addListener(this.parameterRecorder);
+  }
+
+  protected void unregisterParameter(LXListenableNormalizedParameter p) {
+    this.parameterDefaults.remove(p);
+    p.removeListener(this.parameterRecorder);
+  }
+
   protected void registerComponent(LXComponent component) {
     for (LXParameter p : component.getParameters()) {
       if (p instanceof LXListenableNormalizedParameter) {
-        ((LXListenableNormalizedParameter) p).addListener(this.parameterRecorder);
+        registerParameter((LXListenableNormalizedParameter) p);
       }
     }
     if (component instanceof LXLayeredComponent) {
@@ -785,7 +810,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   protected void unregisterComponent(LXComponent component) {
     for (LXParameter p : component.getParameters()) {
       if (p instanceof LXListenableNormalizedParameter) {
-        ((LXListenableNormalizedParameter) p).removeListener(this.parameterRecorder);
+        unregisterParameter((LXListenableNormalizedParameter) p);
         ParameterClipLane lane = getParameterLane((LXNormalizedParameter) p, false);
         if (lane != null) {
           this.mutableLanes.remove(lane);

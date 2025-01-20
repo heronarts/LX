@@ -22,18 +22,50 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
 
 import java.util.Map;
 
-public class ParameterClipLane extends LXClipLane {
+public abstract class ParameterClipLane extends LXClipLane {
+
+  public static class Boolean extends ParameterClipLane {
+    private Boolean(LXClip clip, BooleanParameter parameter, double initialNormalized) {
+      super(clip, parameter, initialNormalized);
+    }
+  }
+
+  public static class Discrete extends ParameterClipLane {
+    private Discrete(LXClip clip, DiscreteParameter parameter, double initialNormalized) {
+      super(clip, parameter, initialNormalized);
+    }
+  }
+
+  public static class Normalized extends ParameterClipLane {
+    private Normalized(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
+      super(clip, parameter, initialNormalized);
+    }
+  }
+
+  static ParameterClipLane create(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
+    if (parameter instanceof BooleanParameter) {
+      return new Boolean(clip, (BooleanParameter) parameter, initialNormalized);
+    } else if (parameter instanceof DiscreteParameter) {
+      return new Discrete(clip, (DiscreteParameter) parameter, initialNormalized);
+    } else {
+      return new Normalized(clip, parameter, initialNormalized);
+    }
+  }
 
   public final LXNormalizedParameter parameter;
+  private double initialNormalized;
 
-  ParameterClipLane(LXClip clip, LXNormalizedParameter parameter) {
+  private ParameterClipLane(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
     super(clip);
     this.parameter = parameter;
+    this.initialNormalized = initialNormalized;
   }
 
   @Override
@@ -46,6 +78,9 @@ public class ParameterClipLane extends LXClipLane {
   }
 
   public ParameterClipLane appendEvent(ParameterClipEvent event) {
+    if (this.events.isEmpty()) {
+      super.appendEvent(new ParameterClipEvent(this, this.parameter, this.initialNormalized));
+    }
     super.appendEvent(event);
     return this;
   }
@@ -80,13 +115,16 @@ public class ParameterClipLane extends LXClipLane {
     } else if (to > next.cursor) {
       // We're past the last event, just set its value
       this.parameter.setNormalized(((ParameterClipEvent) next).getNormalized());
-    } else {
-      // Interpolate value between the two events surrounding usgs
+    } else if (this instanceof Normalized) {
+      // Interpolate value between the two events surrounding us
       this.parameter.setNormalized(LXUtils.lerp(
         ((ParameterClipEvent) prior).getNormalized(),
         ((ParameterClipEvent) next).getNormalized(),
         (to - prior.cursor) / (next.cursor - prior.cursor)
       ));
+    } else {
+      // Stick with the prior value until next is actually reached
+      this.parameter.setNormalized(((ParameterClipEvent) prior).getNormalized());
     }
   }
 

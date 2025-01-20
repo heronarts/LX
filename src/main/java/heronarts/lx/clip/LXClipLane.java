@@ -38,6 +38,9 @@ public abstract class LXClipLane implements LXSerializable {
 
   public final LXClip clip;
 
+  // NOTE(mcslee): think about whether CopyOnWrite is the best solution here for UI drawing
+  // or whether synchronized or locking around multi-edits is preferable, as those are currently
+  // going to be super costly
   protected final List<LXClipEvent> mutableEvents = new CopyOnWriteArrayList<LXClipEvent>();
   public final List<LXClipEvent> events = Collections.unmodifiableList(this.mutableEvents);
 
@@ -95,6 +98,12 @@ public abstract class LXClipLane implements LXSerializable {
     // assumptions about the values coming in, whether re-ordering may have occurred
     // or not... but in the meantime we do an insertion-sort per-element to avoid
     // mucking up the state
+    //
+    // Almost surely want to improve this because it's currently an underlying
+    // CopyOnWriteArrayList which will make *many* copies if we edit loads of
+    // items at once here. Make our own copy and clear()/addAll() or we should use
+    // the stable .sort() method, or possibly Arrays.sort() methods that can sort
+    // a sub-range of the array if we know there's no overlapping!
     for (Map.Entry<? extends LXClipEvent, Double> entry : cursors.entrySet()) {
       final LXClipEvent event = entry.getKey();
       if (this.events.contains(event)) {
