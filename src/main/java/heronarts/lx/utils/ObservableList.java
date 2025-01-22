@@ -89,27 +89,27 @@ public class ObservableList<T> implements List<T> {
     return this;
   }
 
-  private void notifyAdded(T element) {
+  private void notifyAdded(T item) {
     for (Listener<T> listener : this.listeners) {
-      listener.itemAdded(element);
+      listener.itemAdded(item);
     }
   }
 
-  private void notifyAdded(Collection<? extends T> elements) {
-    for (T element : elements) {
-      notifyAdded(element);
+  private void notifyAdded(Collection<? extends T> items) {
+    for (T item : items) {
+      notifyAdded(item);
     }
   }
 
-  private void notifyRemoved(T element) {
+  private void notifyRemoved(T item) {
     for (Listener<T> listener : this.listeners) {
-      listener.itemRemoved(element);
+      listener.itemRemoved(item);
     }
   }
 
-  private void notifyRemoved(Collection<? extends T> elements) {
-    for (T element : elements) {
-      notifyRemoved(element);
+  private void notifyRemoved(Collection<? extends T> items) {
+    for (T item : items) {
+      notifyRemoved(item);
     }
   }
 
@@ -165,9 +165,9 @@ public class ObservableList<T> implements List<T> {
   }
 
   @Override
-  public boolean add(T t) {
-    if (this.list.add(t)) {
-      notifyAdded(t);
+  public boolean add(T item) {
+    if (this.list.add(item)) {
+      notifyAdded(item);
       return true;
     }
     return false;
@@ -229,8 +229,8 @@ public class ObservableList<T> implements List<T> {
   public void clear() {
     List<T> removed = new ArrayList<>(this.list);
     this.list.clear();
-    for (T t : removed) {
-      notifyRemoved(t);
+    for (T item : removed) {
+      notifyRemoved(item);
     }
   }
 
@@ -240,20 +240,20 @@ public class ObservableList<T> implements List<T> {
   }
 
   @Override
-  public T set(int index, T element) {
+  public T set(int index, T item) {
     T existing = this.list.get(index);
-    if (existing != element) {
-      this.list.set(index, element);
+    if (existing != item) {
+      this.list.set(index, item);
       notifyRemoved(existing);
-      notifyAdded(element);
+      notifyAdded(item);
     }
     return existing;
   }
 
   @Override
-  public void add(int index, T element) {
-    this.list.add(index, element);
-    notifyAdded(element);
+  public void add(int index, T item) {
+    this.list.add(index, item);
+    notifyAdded(item);
   }
 
   @Override
