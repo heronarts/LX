@@ -190,23 +190,24 @@ public class ObservableList<T> implements List<T> {
 
   @Override
   public boolean addAll(Collection<? extends T> c) {
-    boolean added = this.list.addAll(c);
-    if (added) {
+    if (this.list.addAll(c)) {
       notifyAdded(c);
+      return true;
     }
-    return added;
+    return false;
   }
 
   @Override
   public boolean addAll(int index, Collection<? extends T> c) {
-    boolean added = this.list.addAll(c);
-    if (added) {
+    if (this.list.addAll(index, c)) {
       notifyAdded(c);
+      return true;
     }
-    return added;
+    return false;
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public boolean removeAll(Collection<?> c) {
     boolean removed = false;
     for (Object o : c) {
