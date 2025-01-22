@@ -1,3 +1,22 @@
+/**
+ * Copyright 2025- Justin K. Belcher, Mark C. Slee, Heron Arts LLC
+ *
+ * This file is part of the LX Studio software library. By using
+ * LX, you agree to the terms of the LX Studio Software License
+ * and Distribution Agreement, available at: http://lx.studio/license
+ *
+ * Please note that the LX license is not open-source. The license
+ * allows for free, non-commercial use.
+ *
+ * HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR
+ * OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF
+ * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
+ * PURPOSE, WITH RESPECT TO THE SOFTWARE.
+ *
+ * @author Justin K. Belcher <justin@jkb.studio>
+ * @author Mark C. Slee <mark@heronarts.com>
+ */
+
 package heronarts.lx.utils;
 
 import java.util.ArrayList;
@@ -8,42 +27,65 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 
-public class ObservableList<T> implements LXObservableList<T> {
+public class ObservableList<T> implements List<T> {
 
   private final List<T> list;
 
-  private final List<Listener<T>> mutableListeners = new ArrayList<>();
-  protected final List<Listener<T>> listeners = Collections.unmodifiableList(this.mutableListeners);
+  public interface Listener<T> {
+    public default void itemAdded(T item) {}
+    public default void itemRemoved(T item) {}
+  }
+
+  private final List<Listener<T>> listeners;
 
   /**
    * Create a new observable list which has an ArrayList<T> as its inner list
    */
   public ObservableList() {
-    this.list = new ArrayList<T>();
+    this(new ArrayList<T>());
   }
 
   /**
    * Create a new observable list using a given List<T> for its inner list.
+   * Allows custom inner list types.
+   *
    * @param list List<T> to use as the inner list
    */
   public ObservableList(List<T> list) {
     this.list = list;
+    this.listeners = new ArrayList<>();
+  }
+
+  /**
+   * Private constructor that makes an unmodifiable view of
+   * the given ObservableList, with the same listeners etc.
+   */
+  private ObservableList(ObservableList<T> list) {
+    this.list = Collections.unmodifiableList(list.list);
+    this.listeners = list.listeners;
+  }
+
+  /**
+   * Get an unmodifiable version of this list
+   */
+  public ObservableList<T> asUnmodifiableList() {
+    return new ObservableList<T>(this);
   }
 
   public ObservableList<T> addListener(Listener<T> listener) {
     Objects.requireNonNull(listener, "May not add null Listener");
-    if (this.mutableListeners.contains(listener)) {
+    if (this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannot add duplicate Listener: " + listener);
     }
-    this.mutableListeners.add(listener);
+    this.listeners.add(listener);
     return this;
   }
 
   public ObservableList<T> removeListener(Listener<T> listener) {
-    if (!this.mutableListeners.contains(listener)) {
+    if (!this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannot remove non-existent Listener: " + listener);
     }
-    this.mutableListeners.remove(listener);
+    this.listeners.remove(listener);
     return this;
   }
 
@@ -124,17 +166,17 @@ public class ObservableList<T> implements LXObservableList<T> {
 
   @Override
   public boolean add(T t) {
-    boolean added = this.list.add(t);
-    if (added) {
+    if (this.list.add(t)) {
       notifyAdded(t);
+      return true;
     }
-    return added;
+    return false;
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public boolean remove(Object o) {
-    boolean removed = this.list.remove(o);
-    if (removed) {
+    if (this.list.remove(o)) {
       notifyRemoved((T) o);
       return true;
     }
@@ -236,14 +278,12 @@ public class ObservableList<T> implements LXObservableList<T> {
 
   @Override
   public ListIterator<T> listIterator() {
-    // TODO: handle add/removed from iterator
-    return this.list.listIterator();
+    throw new UnsupportedOperationException("ListIterator not supported in ObservableList");
   }
 
   @Override
   public ListIterator<T> listIterator(int index) {
-    // TODO: handle add/removed from iterator
-    return this.list.listIterator(index);
+    throw new UnsupportedOperationException("ListIterator not supported in ObservableList");
   }
 
   @Override
