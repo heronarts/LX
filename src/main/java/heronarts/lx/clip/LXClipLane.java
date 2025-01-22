@@ -48,6 +48,10 @@ public abstract class LXClipLane implements LXSerializable {
     this.clip = clip;
   }
 
+  public int getIndex() {
+    return this.clip.lanes.indexOf(this);
+  }
+
   protected LXClipLane appendEvent(LXClipEvent event) {
     this.mutableEvents.add(event);
     this.onChange.bang();

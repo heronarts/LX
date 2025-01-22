@@ -3036,6 +3036,38 @@ public abstract class LXCommand {
       }
     }
 
+    public static class MoveLane extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      private final LXClipLane lane;
+      private final int fromIndex, toIndex;
+
+      public MoveLane(LXClipLane lane, int index) {
+        this.clip = new ComponentReference<>(lane.clip);
+
+        // TODO(mcslee): LXClipLane needs to become a referenced LXComponent
+        this.lane = lane;
+        this.fromIndex = lane.getIndex();
+        this.toIndex = index;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Clip Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.clip.get().moveClipLane(this.lane, this.toIndex);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.clip.get().moveClipLane(this.lane, this.fromIndex);
+
+      }
+    }
+
     public static class Event {
 
       public static class SetCursors extends LXCommand {

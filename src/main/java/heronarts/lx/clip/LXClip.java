@@ -55,9 +55,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private static final double LOOP_LENGTH_MINIMUM = 125;
 
   public interface Listener {
-    public void cursorChanged(LXClip clip, double from, double to);
-    public void parameterLaneAdded(LXClip clip, ParameterClipLane lane);
-    public void parameterLaneRemoved(LXClip clip, ParameterClipLane lane);
+    public default void cursorChanged(LXClip clip, double from, double to) {};
+    public default void clipLaneMoved(LXClip clip, LXClipLane lane, int index) {};
+    public default void parameterLaneAdded(LXClip clip, ParameterClipLane lane) {};
+    public default void parameterLaneRemoved(LXClip clip, ParameterClipLane lane) {};
   }
 
   private final List<Listener> listeners = new ArrayList<Listener>();
@@ -358,6 +359,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.mutableLanes.remove(lane);
     for (Listener listener : this.listeners) {
       listener.parameterLaneRemoved(this, lane);
+    }
+    return this;
+  }
+
+  public LXClip moveClipLane(LXClipLane lane, int index) {
+    this.mutableLanes.remove(lane);
+    this.mutableLanes.add(index, lane);
+    for (Listener listener : this.listeners) {
+      listener.clipLaneMoved(this, lane, index);
     }
     return this;
   }
