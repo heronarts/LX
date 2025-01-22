@@ -258,12 +258,8 @@ public class ObservableList<T> implements List<T> {
 
   @Override
   public T remove(int index) {
-    int sizePrior = this.list.size();
     T removed = this.list.remove(index);
-    // Accommodates removal of null items:
-    if (this.list.size() != sizePrior) {
-      notifyRemoved(removed);
-    }
+    notifyRemoved(removed);
     return removed;
   }
 
