@@ -35,6 +35,8 @@ import heronarts.lx.utils.LXUtils;
 
 public abstract class LXClipLane extends LXComponent {
 
+  public final MutableParameter uiHeight = new MutableParameter("UI Height");
+
   public final MutableParameter onChange = new MutableParameter();
 
   public final LXClip clip;
@@ -48,6 +50,7 @@ public abstract class LXClipLane extends LXComponent {
   protected LXClipLane(LXClip clip) {
     setParent(clip);
     this.clip = clip;
+    addInternalParameter("uiHeight", this.uiHeight);
   }
 
   public int getIndex() {
