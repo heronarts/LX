@@ -166,11 +166,9 @@ public class ObservableList<T> implements List<T> {
 
   @Override
   public boolean add(T item) {
-    if (this.list.add(item)) {
-      notifyAdded(item);
-      return true;
-    }
-    return false;
+    this.list.add(item);
+    notifyAdded(item);
+    return true;
   }
 
   @Override
