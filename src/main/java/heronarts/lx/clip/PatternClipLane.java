@@ -30,6 +30,11 @@ public class PatternClipLane extends LXClipLane {
   }
 
   @Override
+  public String getPath() {
+    return "Pattern";
+  }
+
+  @Override
   public String getLabel() {
     return "Pattern";
   }

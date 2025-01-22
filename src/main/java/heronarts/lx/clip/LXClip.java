@@ -189,6 +189,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("customSnapshotTransition", this.customSnapshotTransition);
 
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this));
+    addArray("lane", this.lanes);
 
     for (LXEffect effect : bus.effects) {
       registerComponent(effect);
@@ -325,7 +326,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       this.bus.removeListener(this);
     }
     this.bus.arm.removeListener(this);
-    this.mutableLanes.clear();
+    for (int i = this.lanes.size() - 1; i >= 0; --i) {
+      _removeLane(this.lanes.get(i));
+    }
     LX.dispose(this.snapshot);
     this.listeners.clear();
     super.dispose();
@@ -355,12 +358,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return null;
   }
 
-  public LXClip removeParameterLane(ParameterClipLane lane) {
+  private LXClip _removeLane(LXClipLane lane) {
     this.mutableLanes.remove(lane);
-    for (Listener listener : this.listeners) {
-      listener.parameterLaneRemoved(this, lane);
+    if (lane instanceof ParameterClipLane) {
+      for (Listener listener : this.listeners) {
+        listener.parameterLaneRemoved(this, (ParameterClipLane) lane);
+      }
     }
+    LX.dispose(lane);
     return this;
+  }
+
+  public LXClip removeParameterLane(ParameterClipLane lane) {
+    return _removeLane(lane);
   }
 
   public LXClip moveClipLane(LXClipLane lane, int index) {

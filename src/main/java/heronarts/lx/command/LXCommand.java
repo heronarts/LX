@@ -3038,15 +3038,11 @@ public abstract class LXCommand {
 
     public static class MoveLane extends LXCommand {
 
-      private final ComponentReference<LXClip> clip;
-      private final LXClipLane lane;
+      private final ComponentReference<LXClipLane> lane;
       private final int fromIndex, toIndex;
 
       public MoveLane(LXClipLane lane, int index) {
-        this.clip = new ComponentReference<>(lane.clip);
-
-        // TODO(mcslee): LXClipLane needs to become a referenced LXComponent
-        this.lane = lane;
+        this.lane = new ComponentReference<>(lane);
         this.fromIndex = lane.getIndex();
         this.toIndex = index;
       }
@@ -3058,13 +3054,14 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        this.clip.get().moveClipLane(this.lane, this.toIndex);
+        LXClipLane lane = this.lane.get();
+        lane.clip.moveClipLane(lane, this.toIndex);
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        this.clip.get().moveClipLane(this.lane, this.fromIndex);
-
+        LXClipLane lane = this.lane.get();
+        lane.clip.moveClipLane(lane, this.fromIndex);
       }
     }
 
@@ -3072,10 +3069,11 @@ public abstract class LXCommand {
 
       public static class SetCursors extends LXCommand {
 
-        // TODO(mcslee): we'll have to find a reliable way to refer to the clip lane and the
-        // events... this won't survive a deep undo/redo cycle where the clip is deleted and
-        // restored
-        private final LXClipLane clipLane;
+        private final ComponentReference<LXClipLane> clipLane;
+
+        // TODO(mcslee): these event references won't survive a deep
+        // undo/redo cycle where the clip lane is deleted and restored, we need to instead
+        // just serialize and restore the state before and after the operation
         private final Map<LXClipEvent, Double> fromCursors;
         private final Map<LXClipEvent, Double> toCursors;
 
@@ -3088,13 +3086,13 @@ public abstract class LXCommand {
         }
 
         public SetCursors(LXClipLane clipLane, Map<? extends LXClipEvent, Double> toCursors) {
-          this.clipLane = clipLane;
+          this.clipLane = new ComponentReference<>(clipLane);
           this.fromCursors = getFrom(toCursors);
           this.toCursors = new HashMap<>(toCursors);
         }
 
         public SetCursors(LXClipLane clipLane, Map<? extends LXClipEvent, Double> toCursors, Map<? extends LXClipEvent, Double> fromValues) {
-          this.clipLane = clipLane;
+          this.clipLane = new ComponentReference<>(clipLane);
           this.fromCursors = new HashMap<>(fromValues);
           this.toCursors = new HashMap<>(toCursors);
         }
@@ -3106,12 +3104,12 @@ public abstract class LXCommand {
 
         @Override
         public void perform(LX lx) throws InvalidCommandException {
-          this.clipLane.setEventsCursors(this.toCursors);
+          this.clipLane.get().setEventsCursors(this.toCursors);
         }
 
         @Override
         public void undo(LX lx) throws InvalidCommandException {
-          this.clipLane.setEventsCursors(this.fromCursors);
+          this.clipLane.get().setEventsCursors(this.fromCursors);
         }
       }
 
@@ -3119,10 +3117,11 @@ public abstract class LXCommand {
 
         public static class SetValues extends LXCommand {
 
+          private final ComponentReference<ParameterClipLane> parameterClipLane;
+
           // TODO(mcslee): we'll have to find a reliable way to refer to the clip lane and the
           // events... this won't survive a deep undo/redo cycle where the clip is deleted and
           // restored
-          private final ParameterClipLane parameterClipLane;
           private final Map<ParameterClipEvent, Double> fromValues;
           private final Map<ParameterClipEvent, Double> toValues;
 
@@ -3135,13 +3134,13 @@ public abstract class LXCommand {
           }
 
           public SetValues(ParameterClipLane parameterClipLane, Map<ParameterClipEvent, Double> toValues) {
-            this.parameterClipLane = parameterClipLane;
+            this.parameterClipLane = new ComponentReference<>(parameterClipLane);
             this.fromValues = getFrom(toValues);
             this.toValues = new HashMap<>(toValues);
           }
 
           public SetValues(ParameterClipLane parameterClipLane, Map<ParameterClipEvent, Double> toValues, Map<ParameterClipEvent, Double> fromValues) {
-            this.parameterClipLane = parameterClipLane;
+            this.parameterClipLane = new ComponentReference<>(parameterClipLane);
             this.fromValues = new HashMap<>(fromValues);
             this.toValues = new HashMap<>(toValues);
           }
@@ -3153,12 +3152,12 @@ public abstract class LXCommand {
 
           @Override
           public void perform(LX lx) throws InvalidCommandException {
-            this.parameterClipLane.setEventsNormalized(this.toValues);
+            this.parameterClipLane.get().setEventsNormalized(this.toValues);
           }
 
           @Override
           public void undo(LX lx) throws InvalidCommandException {
-            this.parameterClipLane.setEventsNormalized(this.fromValues);
+            this.parameterClipLane.get().setEventsNormalized(this.fromValues);
           }
         }
       }

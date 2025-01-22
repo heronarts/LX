@@ -28,11 +28,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
-public abstract class LXClipLane implements LXSerializable {
+public abstract class LXClipLane extends LXComponent {
 
   public final MutableParameter onChange = new MutableParameter();
 
@@ -45,6 +46,7 @@ public abstract class LXClipLane implements LXSerializable {
   public final List<LXClipEvent> events = Collections.unmodifiableList(this.mutableEvents);
 
   protected LXClipLane(LXClip clip) {
+    setParent(clip);
     this.clip = clip;
   }
 
@@ -137,6 +139,7 @@ public abstract class LXClipLane implements LXSerializable {
     }
   }
 
+  @Override
   public abstract String getLabel();
 
   void advanceCursor(double from, double to) {
@@ -187,6 +190,7 @@ public abstract class LXClipLane implements LXSerializable {
   protected static final String VALUE_LANE_TYPE_PATTERN = "pattern";
   protected static final String VALUE_LANE_TYPE_MIDI_NOTE = "midiNote";
 
+  @Override
   public void load(LX lx, JsonObject obj) {
     this.mutableEvents.clear();
     if (obj.has(KEY_EVENTS)) {
@@ -205,7 +209,9 @@ public abstract class LXClipLane implements LXSerializable {
 
   protected abstract LXClipEvent loadEvent(LX lx, JsonObject eventObj);
 
+  @Override
   public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
     if (this instanceof ParameterClipLane) {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_PARAMETER);
     } else if (this instanceof PatternClipLane) {

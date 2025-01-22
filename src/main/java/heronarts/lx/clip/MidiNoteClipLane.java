@@ -16,6 +16,11 @@ public class MidiNoteClipLane extends LXClipLane {
   }
 
   @Override
+  public String getPath() {
+    return "MIDI";
+  }
+
+  @Override
   public String getLabel() {
     return "MIDI Note";
   }
