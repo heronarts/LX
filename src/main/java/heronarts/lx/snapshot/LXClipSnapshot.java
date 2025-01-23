@@ -87,9 +87,26 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
       lx.engine.clips.snapshotTransitionTimeSecs;
   }
 
+  public void recallImmediate() {
+    recallImmediate(null);
+  }
+
+  public void recallImmediate(List<LXCommand> commands) {
+    if (isInTransition()) {
+      stopTransition();
+    }
+    _recall(false, commands);
+  }
+
   public void recall() {
-    boolean transitionEnabled = getSnapshotTransitionEnabledParameter().isOn();
+    _recall(getSnapshotTransitionEnabledParameter().isOn(), null);
+  }
+
+  private void _recall(boolean transitionEnabled, List<LXCommand> commands) {
     for (View view : this.views) {
+      if (commands != null) {
+        commands.add(view.getCommand());
+      }
       if (transitionEnabled) {
         view.startTransition();
       } else {

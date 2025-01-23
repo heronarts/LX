@@ -65,6 +65,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXSnapshot;
+import heronarts.lx.snapshot.LXClipSnapshot;
 import heronarts.lx.snapshot.LXGlobalSnapshot;
 import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.JsonFixture;
@@ -2333,6 +2334,33 @@ public abstract class LXCommand {
       @Override
       public String getDescription() {
         return "Recall Snapshot";
+      }
+    }
+
+    public static class RecallImmediate extends LXCommand {
+      private final ComponentReference<LXClipSnapshot> snapshot;
+      private final List<LXCommand> commands = new ArrayList<LXCommand>();
+
+      public RecallImmediate(LXClipSnapshot snapshot) {
+        this.snapshot = new ComponentReference<LXClipSnapshot>(snapshot);
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.commands.clear();
+        this.snapshot.get().recallImmediate(this.commands);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (LXCommand command : this.commands) {
+          command.undo(lx);
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "Recall Clip Snapshot";
       }
     }
 

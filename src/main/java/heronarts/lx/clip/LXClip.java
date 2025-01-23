@@ -736,7 +736,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.loopStart.setValue(0);
     this.playStart.setValue(0);
     this.playEnd.setValue(0);
+
+    // TODO(mcslee): I don't think so? Snapshot was created
+    // at clip creation time and can be manually updated via UI
+    // if desired...
     this.snapshot.update();
+
     // Begin recording automation
     this.automationEnabled.setValue(true);
     updateParameterDefaults();
@@ -960,19 +965,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         }
       }
 
-      // NOTE(mcslee): the snapshot might not finish interpolation if
+      // NOTE(mcslee): the snapshot does not finish its interpolation if
       // someone manually stops the clip before it's finished. I *think* we can treat
       // that as expected semantics? Stopping via grid UI will kill the interpolation
       // as far as it got, which may be useful/desirable. Just keep this in mind.
       if (this.snapshotEnabled.isOn()) {
         this.snapshot.loop(deltaMs);
       }
+
       // Did we finish automation and snapshot playback, stop!
       if (automationFinished && !this.snapshot.isInTransition()) {
         stop();
       }
     }
-
   }
 
   @Override
