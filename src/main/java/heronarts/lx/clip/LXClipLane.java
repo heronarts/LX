@@ -100,16 +100,35 @@ public abstract class LXClipLane extends LXComponent {
     return this;
   }
 
-  protected LXClipEvent getPreviousEvent() {
+  /**
+   * Gets the last event occurring before this cursor value, if any. Events
+   * already in the array with a cursor exactly equal to this cursor are
+   * continued to all be previous.
+   *
+   * @param cursor Cursor position
+   * @return Last event with time equal to or less than this cursor
+   */
+  protected LXClipEvent getPreviousEvent(double cursor) {
     // TODO(mcslee): make this more efficient using a binary search...
     LXClipEvent previous = null;
     for (LXClipEvent event : this.events) {
-      if (this.clip.cursor < event.cursor) {
+      if (cursor < event.cursor) {
         break;
       }
       previous = event;
     }
     return previous;
+
+  }
+
+  /**
+   * Gets the last event in the lane occuring at or before the time value
+   * of the current cursor position.
+   *
+   * @return Last event equal to or before this cursor position
+   */
+  protected LXClipEvent getPreviousEvent() {
+    return getPreviousEvent(this.clip.cursor);
   }
 
   public void setEventsCursors(Map<? extends LXClipEvent, Double> cursors) {
@@ -144,6 +163,12 @@ public abstract class LXClipLane extends LXComponent {
 
   @Override
   public abstract String getLabel();
+
+  /**
+   * Subclasses may override this method if they need to take an action when
+   * looping is performed and the cursor returns to a prior position.
+   */
+  void loopCursor(double to) {}
 
   void advanceCursor(double from, double to) {
     for (LXClipEvent event : this.mutableEvents) {

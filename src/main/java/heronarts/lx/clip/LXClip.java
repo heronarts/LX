@@ -856,6 +856,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this;
   }
 
+  private void loopCursor(double to) {
+    for (LXClipLane lane : this.lanes) {
+      lane.loopCursor(to);
+    }
+  }
 
   private void advanceCursor(double from, double to) {
     for (LXClipLane lane : this.lanes) {
@@ -928,11 +933,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
               // Wrap into new loop, play automations up to next position
               while (nextCursor >= endValue) {
                 nextCursor -= loopLength;
-                // If loop was to very beginning, run snapshot
-                // NOTE(mcslee): I don't think so, snapshot should be on an explicit UX trigger command
-                // if (loopStart == 0 && this.snapshotEnabled.isOn()) {
-                //   this.snapshot.recall();
-                // }
+                loopCursor(loopStart);
                 if (endValue < nextCursor) {
                   // Loop is smaller than frame, run automations for each time we would have passed them
                   advanceCursor(loopStart, endValue);
