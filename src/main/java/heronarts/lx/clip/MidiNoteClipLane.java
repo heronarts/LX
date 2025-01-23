@@ -41,8 +41,8 @@ public class MidiNoteClipLane extends LXClipLane {
     return null;
   }
 
-  protected void appendNote(MidiNote note) {
-    super.appendEvent(new MidiNoteClipEvent(this, note));
+  protected void recordNote(MidiNote note) {
+    super.recordEvent(new MidiNoteClipEvent(this, note));
   }
 
 }

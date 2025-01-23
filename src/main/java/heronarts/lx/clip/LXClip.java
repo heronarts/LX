@@ -160,7 +160,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
       // NOTE(mcslee): need to sanitize this for overdub mode, not necessarily an append
       // depending upon the cursor position!
-      lane.appendEvent(new ParameterClipEvent(lane, parameter));
+      lane.recordParameterEvent(new ParameterClipEvent(lane, parameter));
     }
   }
 

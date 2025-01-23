@@ -57,25 +57,53 @@ public abstract class LXClipLane extends LXComponent {
     return this.clip.lanes.indexOf(this);
   }
 
-  protected LXClipLane appendEvent(LXClipEvent event) {
-    this.mutableEvents.add(event);
+  private double lastEventCursor() {
+    if (!this.events.isEmpty()) {
+      return this.events.get(this.events.size() - 1).cursor;
+    }
+    return 0;
+  }
+
+  protected LXClipLane recordEvent(LXClipEvent event) {
+    _insertEvent(event);
     this.onChange.bang();
     return this;
   }
 
-  private void _insertEvent(LXClipEvent event) {
-    // TODO(mcslee): make this more efficient using a binary search...
-    int index = 0;
-    while (index < this.events.size()) {
-      if (event.cursor < this.events.get(index).cursor) {
-        break;
+  private int _insertIndex(double cursor) {
+    int left = 0;
+    int right = this.events.size() - 1;
+
+    // Starting assumption is everything is <= cursor until
+    // we find something > cursor
+    int result = right + 1;
+
+    while (left <= right) {
+      int mid = left + (right - left) / 2;
+      if (this.events.get(mid).cursor > cursor) {
+        // If the current element is greater, it could be a potential result,
+        // but something to the left could still be lower
+        result = mid;
+        right = mid - 1;
+      } else {
+        // Nope, look on the right side
+        left = mid + 1;
       }
-      ++index;
     }
-    this.mutableEvents.add(index, event);
+    return result;
   }
 
-  protected LXClipLane insertEvent(LXClipEvent event) {
+  private void _insertEvent(LXClipEvent event) {
+    if (event.cursor >= lastEventCursor()) {
+      // Quick check... shortcut in normal recording mode when we're not
+      // overdubbing and the cursor is past all the prior events anyways
+      this.mutableEvents.add(event);
+    } else {
+      this.mutableEvents.add(_insertIndex(event.cursor), event);
+    }
+  }
+
+  public LXClipLane insertEvent(LXClipEvent event) {
     _insertEvent(event);
     this.onChange.bang();
     return this;
@@ -109,16 +137,11 @@ public abstract class LXClipLane extends LXComponent {
    * @return Last event with time equal to or less than this cursor
    */
   protected LXClipEvent getPreviousEvent(double cursor) {
-    // TODO(mcslee): make this more efficient using a binary search...
-    LXClipEvent previous = null;
-    for (LXClipEvent event : this.events) {
-      if (cursor < event.cursor) {
-        break;
-      }
-      previous = event;
+    int previousIndex = _insertIndex(cursor) - 1;
+    if (previousIndex >= 0) {
+      return this.events.get(previousIndex);
     }
-    return previous;
-
+    return null;
   }
 
   /**

@@ -90,7 +90,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
         // state is *different* from what was already in the pattern clip lane
         PatternClipEvent previousPattern = this.patternLane.getPreviousPattern(this.cursor);
         if (!isOverdub || ((previousPattern != null) && (previousPattern.pattern != activePattern))) {
-          this.patternLane.appendEvent(new PatternClipEvent(this.patternLane, this.channel, activePattern));
+          this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, this.channel, activePattern));
         }
       }
     }
@@ -119,7 +119,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   @Override
   public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
     if (isRunning() && this.bus.arm.isOn()) {
-      this.patternLane.appendEvent(new PatternClipEvent(this.patternLane, channel, nextPattern));
+      this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, channel, nextPattern));
     }
   }
 

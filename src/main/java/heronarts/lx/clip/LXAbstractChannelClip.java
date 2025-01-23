@@ -40,7 +40,7 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
   @Override
   public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
     if (message instanceof MidiNote) {
-      this.midiNoteLane.appendEvent(new MidiNoteClipEvent(this.midiNoteLane, (MidiNote) message));
+      this.midiNoteLane.recordNote((MidiNote) message);
     }
   }
 

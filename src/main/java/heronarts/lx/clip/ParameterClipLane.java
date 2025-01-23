@@ -79,7 +79,7 @@ public abstract class ParameterClipLane extends LXClipLane {
 
   private static final double SMOOTHING_THRESHOLD_MS = 250;
 
-  public ParameterClipLane appendEvent(ParameterClipEvent event) {
+  public ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
     final ParameterClipEvent previousEvent = (ParameterClipEvent) getPreviousEvent();
     if (previousEvent == null) {
       // On the first parameter automation, we need to drop a dot with the initial value
@@ -87,18 +87,15 @@ public abstract class ParameterClipLane extends LXClipLane {
       // event comes in with value 50 many seconds later, the automation clip should not *only*
       // contain this value of 50, it should have 0 up to the point that the 50 is received and
       // then a jump (e.g. we also don't want a smooth interpolation from 0 to 50)
-      super.insertEvent(new ParameterClipEvent(this, this.parameter, this.initialNormalized));
+      recordEvent(new ParameterClipEvent(this, this.parameter, this.initialNormalized));
     } else if (this.clip.cursor - previousEvent.cursor > SMOOTHING_THRESHOLD_MS) {
       // For normalized parameters, check if there was a jump in value... for smoothly
       // received knob turns or MIDI that happen close in time we just record the event itself,
       // but if significant time has elapsed, then for the same reason as above, we need to
       // hold the previous value up to this point and then jump
-      super.insertEvent(new ParameterClipEvent(this, this.parameter, previousEvent.getNormalized()));
+      recordEvent(new ParameterClipEvent(this, this.parameter, previousEvent.getNormalized()));
     }
-
-    // TODO(mcslee): this whole method should be recordEvent due to overdubbing, and the below cannot
-    // just assume it's an append...
-    super.appendEvent(event);
+    recordEvent(event);
     return this;
   }
 
