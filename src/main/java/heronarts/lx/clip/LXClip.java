@@ -737,11 +737,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.playStart.setValue(0);
     this.playEnd.setValue(0);
 
-    // TODO(mcslee): I don't think so? Snapshot was created
-    // at clip creation time and can be manually updated via UI
-    // if desired...
-    this.snapshot.update();
-
     // Begin recording automation
     this.automationEnabled.setValue(true);
     updateParameterDefaults();
