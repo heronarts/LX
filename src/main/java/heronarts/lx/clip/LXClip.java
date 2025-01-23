@@ -740,13 +740,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Begin recording automation
     this.automationEnabled.setValue(true);
     updateParameterDefaults();
-    onStartRecording();
+    onStartRecording(false);
   }
 
   private void startOverdub() {
     // TODO(mcslee): toggle an overdub / replace recording mode
     updateParameterDefaults();
-    onStartRecording();
+    onStartRecording(true);
   }
 
   private void startPlayback() {
@@ -773,7 +773,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   // State change notifications to subclasses
 
-  protected void onStartRecording() {
+  protected void onStartRecording(boolean isOverdub) {
     // Subclasses may override
   }
 

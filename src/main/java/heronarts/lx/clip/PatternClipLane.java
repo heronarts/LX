@@ -39,6 +39,14 @@ public class PatternClipLane extends LXClipLane {
     return "Pattern";
   }
 
+  protected PatternClipEvent getPreviousPattern(double cursor) {
+    LXClipEvent previous = getPreviousEvent(cursor);
+    if (previous instanceof PatternClipEvent) {
+      return (PatternClipEvent) previous;
+    }
+    return null;
+  }
+
   @Override
   void loopCursor(double to) {
     LXClipEvent previous = getPreviousEvent(to);
