@@ -1047,6 +1047,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
     }
     this.parameters.clear();
 
+    // Dispose internal parameters
+    for (LXParameter parameter : this.internalParameters.values()) {
+      parameter.dispose();
+    }
+    this.internalParameters.clear();
+
     // Unset our parent reference and dispose via registry
     this.parent = null;
     this.lx.componentRegistry.dispose(this);
