@@ -113,10 +113,22 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new TimestampParameter("Launch From")
     .setDescription("The next launch will start from this position");
 
+  /**
+   * Launches the clip, including both snapshot recall and automation playback
+   */
   public final QuantizedTriggerParameter launch =
-    new QuantizedTriggerParameter.Launch(lx, "Launch", this::trigger)
+    new QuantizedTriggerParameter.Launch(lx, "Launch", this::_launch)
     .setDescription("Launch this clip");
 
+  /**
+   * Launches the clip's automation playback, if there is any
+   */
+  public final QuantizedTriggerParameter launchAutomation =
+    new QuantizedTriggerParameter.Launch(lx, "Launch", this::_launchAutomation);
+
+  /**
+   * Stop playback of the clip
+   */
   public final QuantizedTriggerParameter stop =
     new QuantizedTriggerParameter.Launch(lx, "Stop", this::stop)
     .setDescription("Stop this clip");
@@ -188,6 +200,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("automationEnabled", this.automationEnabled);
     addParameter("customSnapshotTransition", this.customSnapshotTransition);
 
+    addInternalParameter("launchAutomation", this.launchAutomation);
+
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this));
     addArray("lane", this.lanes);
 
@@ -204,13 +218,28 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     bus.arm.addListener(this);
   }
 
+  public boolean isPending() {
+    return this.launch.pending.isOn() || this.launchAutomation.pending.isOn();
+  }
+
   /**
-   * Launches the clip, subject to global launch quantization
+   * Launches the clip, subject to global launch quantization, which will also
+   * trigger recall of a snapshot if enabled
    *
    * @return this
    */
   public LXClip launch() {
-    return launchFrom(this.playStart.getValue());
+    this.launch.trigger();
+    return this;
+  }
+
+  /**
+   * Launches clip automation playback, subject to global launch quantization
+   *
+   * @return this
+   */
+  public LXClip launchAutomation() {
+    return launchAutomationFrom(this.playStart.getValue());
   }
 
   /**
@@ -220,9 +249,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @param cursor Position to launch from
    * @return this
    */
-  public LXClip launchFrom(double cursor) {
+  public LXClip launchAutomationFrom(double cursor) {
     this.launchFrom.setValue(LXUtils.constrain(cursor, 0, this.length.getValue()));
-    this.launch.trigger();
+    this.launchAutomation.trigger();
     return this;
   }
 
@@ -231,8 +260,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @return this
    */
-  public LXClip launchFromCursor() {
-    return launchFrom(this.cursor);
+  public LXClip launchAutomationFromCursor() {
+    return launchAutomationFrom(this.cursor);
   }
 
   /**
@@ -245,10 +274,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   public LXClip playFrom(double cursor) {
     if (!isRunning() && this.hasTimeline) {
-      this.launchFrom.setValue(LXUtils.constrain(cursor, 0, this.length.getValue()));
-      trigger();
+      _playFrom(cursor);
     }
     return this;
+  }
+
+  private void _playFrom(double cursor) {
+    this.launchFrom.setValue(LXUtils.constrain(cursor, 0, this.length.getValue()));
+    trigger();
   }
 
   /**
@@ -274,10 +307,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
     } else {
       if (quantize) {
-        launch();
+        launchAutomationFrom(this.playStart.getValue());
       } else {
-        this.launchFrom.setValue(LXUtils.constrain(this.playStart.getValue(), 0, this.length.getValue()));
-        trigger();
+        _playFrom(this.playStart.getValue());
       }
     }
     return this;
@@ -288,6 +320,27 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return "clip/" + (index + 1);
   }
 
+  /**
+   * Invoked when we launch from the main launch() function or grid trigger. In this case
+   * we also recall snapshots.
+   */
+  private void _launch() {
+    // Grid/master launch is always from the play start position
+    this.launchFrom.setValue(LXUtils.constrain(this.playStart.getValue(), 0, this.length.getValue()));
+    _launchAutomation();
+    if (!isArmed() && this.snapshotEnabled.isOn()) {
+      this.snapshot.recall();
+    }
+  }
+
+  /**
+   * Invoked when we launch from the main launch() function or grid trigger. In this case
+   * we also recall snapshots
+   */
+  private void _launchAutomation() {
+    this.trigger.trigger();
+  }
+
   @Override
   protected void onTrigger() {
     super.onTrigger();
@@ -295,19 +348,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       // This is a "restart" operation, we were already running but we've been re-triggered
       // Retrieve and apply the launchFrom position
       setCursor(LXUtils.constrain(this.launchFrom.getValue(), 0, this.length.getValue()));
-    } else {
-      // TODO(mcslee): need to figure this out, we don't want to recall the snapshot when the trigger
-      // event came from internal APIs, not from the UX. For now we've got a messy assumption here that
-      // if we weren't already playing, this was a grid trigger event that started us off. That may
-      // *not* be the case.
-      //
-      // Quantized launch events via the timeline UI or internal UIs need to use a different codepath,
-      // we should reserve LXClip.launch/trigger for the UX operations
-      //
-      // This cursor == 0 check should probably go away once that is sorted out
-      if (!isArmed() && this.cursor == 0 && this.snapshotEnabled.isOn()) {
-        this.snapshot.recall();
-      }
     }
   }
 
