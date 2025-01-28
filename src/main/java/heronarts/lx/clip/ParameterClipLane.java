@@ -80,7 +80,8 @@ public abstract class ParameterClipLane extends LXClipLane {
   private static final double SMOOTHING_THRESHOLD_MS = 250;
 
   public ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
-    final ParameterClipEvent previousEvent = (ParameterClipEvent) getPreviousEvent();
+    final int insertIndex = cursorInsertIndex(this.clip.cursor);
+    final ParameterClipEvent previousEvent = (insertIndex > 0) ? (ParameterClipEvent) this.events.get(insertIndex - 1) : null;
     if (previousEvent == null) {
       // On the first parameter automation, we need to drop a dot with the initial value
       // before this modified value, say a knob was at 0 when recording started, and a first
@@ -92,10 +93,24 @@ public abstract class ParameterClipLane extends LXClipLane {
       // For normalized parameters, check if there was a jump in value... for smoothly
       // received knob turns or MIDI that happen close in time we just record the event itself,
       // but if significant time has elapsed, then for the same reason as above, we need to
-      // hold the previous value up to this point and then jump
-      recordEvent(new ParameterClipEvent(this, this.parameter, previousEvent.getNormalized()));
+      // record whatever value the envelope would have held at this point
+      double normalized = 0;
+      if (insertIndex < this.events.size()) {
+        // If there's an event ahead of the previous event, preserve the interpolation between
+        // the two
+        final ParameterClipEvent nextEvent = (ParameterClipEvent) this.events.get(insertIndex);
+        normalized = LXUtils.lerp(
+          previousEvent.getNormalized(),
+          nextEvent.getNormalized(),
+          (this.clip.cursor - previousEvent.cursor) / (nextEvent.cursor - previousEvent.cursor)
+        );
+      } else {
+        normalized = previousEvent.getNormalized();
+      }
+      recordEvent(new ParameterClipEvent(this, this.parameter, normalized));
     }
     recordEvent(event);
+    this.overdubActive = true;
     return this;
   }
 
@@ -108,19 +123,60 @@ public abstract class ParameterClipLane extends LXClipLane {
   }
 
   @Override
-  void advanceCursor(double from, double to) {
-    if (this.events.size() == 0) {
-      return;
-    }
-    LXClipEvent prior = null;
-    LXClipEvent next = null;
-    for (LXClipEvent event : this.events) {
-      prior = next;
-      next = event;
-      if (to < next.cursor) {
-        break;
+  void postOverdubCursor(double from, double to) {
+    if (this.overdubActive) {
+      // Okay, here we will have nuked everything original in [from, to) and
+      // possibly inserted new events at from. If there are events ahead of us,
+      // we need to preserve new overdubbed value until "to" and then jump
+      // to whatever *would* have been at "to" prior to the overdub
+
+      int index = cursorPlayIndex(to);
+      if (index < this.events.size()) {
+        // If there are still pre-overdub events ahead, we need to connect the new overdub recording
+        // to the old stuff that existed prior
+
+        // There must be something behind us if overdub was active... extend that value
+        if (index > 1) {
+          ParameterClipEvent previous = (ParameterClipEvent) this.events.get(index - 1);
+          this.mutableEvents.add(index++, new ParameterClipEvent(this, this.parameter, previous.getNormalized()).setCursor(to));
+        }
+
+        // Interpolate what the deleted stuff would have looked like
+        ParameterClipEvent next = (ParameterClipEvent) this.events.get(index);
+        if (next.cursor > to) {
+          double normalizedValue = 0;
+          if (this.overdubLastOriginalEvent == null) {
+            // There was no original stuff before this, just jump to the new value
+            normalizedValue = next.getNormalized();
+          } else {
+            // There was original stuff before this! Figure out what the interpolation would have been
+            ParameterClipEvent prior = (ParameterClipEvent) this.overdubLastOriginalEvent;
+            normalizedValue = LXUtils.lerp(
+              prior.getNormalized(),
+              next.getNormalized(),
+              (to - prior.cursor) / (next.cursor - prior.cursor)
+            );
+          }
+
+          // Add the new event at "to"
+          this.mutableEvents.add(index, new ParameterClipEvent(this, this.parameter, normalizedValue).setCursor(to));
+        }
+
       }
     }
+
+  }
+
+  @Override
+  void advanceCursor(double from, double to) {
+    int size = this.events.size();
+    if (size == 0) {
+      return;
+    }
+    int nextIndex = LXUtils.min(cursorInsertIndex(to), size-1);
+    LXClipEvent next = this.events.get(nextIndex);
+    LXClipEvent prior = (nextIndex > 0) ? this.events.get(nextIndex - 1) : null;
+
     if (from > next.cursor) {
       // Do nothing, we've already passed it all
     } else if (prior == null) {

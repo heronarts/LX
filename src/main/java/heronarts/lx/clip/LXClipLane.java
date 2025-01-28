@@ -18,6 +18,7 @@
 
 package heronarts.lx.clip;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,9 @@ public abstract class LXClipLane extends LXComponent {
 
   public final LXClip clip;
 
+  protected boolean overdubActive = false;
+  protected LXClipEvent overdubLastOriginalEvent = null;
+
   // NOTE(mcslee): think about whether CopyOnWrite is the best solution here for UI drawing
   // or whether synchronized or locking around multi-edits is preferable, as those are currently
   // going to be super costly
@@ -51,6 +55,11 @@ public abstract class LXClipLane extends LXComponent {
     setParent(clip);
     this.clip = clip;
     addInternalParameter("uiHeight", this.uiHeight);
+  }
+
+  void resetOverdub() {
+    this.overdubActive = false;
+    this.overdubLastOriginalEvent = null;
   }
 
   public int getIndex() {
@@ -64,13 +73,47 @@ public abstract class LXClipLane extends LXComponent {
     return 0;
   }
 
+  final List<LXClipEvent> recordQueue = new ArrayList<>();
+
   protected LXClipLane recordEvent(LXClipEvent event) {
-    _insertEvent(event);
+    this.recordQueue.add(event);
+    return this;
+  }
+
+  LXClipLane commitRecordEvents() {
+    for (LXClipEvent event : this.recordQueue) {
+      _insertEvent(event);
+    }
+    this.recordQueue.clear();
     this.onChange.bang();
     return this;
   }
 
-  private int _insertIndex(double cursor) {
+  protected int cursorPlayIndex(double cursor) {
+    int left = 0;
+    int right = this.events.size() - 1;
+
+    // Starting assumption is everything is < cursor until
+    // we find something >= cursor
+    int result = right + 1;
+
+    while (left <= right) {
+      int mid = left + (right - left) / 2;
+      if (this.events.get(mid).cursor >= cursor) {
+        // If the current element is greater or equal, it is a potential result,
+        // but something to the left could still also be >=, and we want the lowest
+        // one that is equal
+        result = mid;
+        right = mid - 1;
+      } else {
+        // Nope, look on the right side
+        left = mid + 1;
+      }
+    }
+    return result;
+  }
+
+  protected int cursorInsertIndex(double cursor) {
     int left = 0;
     int right = this.events.size() - 1;
 
@@ -82,7 +125,7 @@ public abstract class LXClipLane extends LXComponent {
       int mid = left + (right - left) / 2;
       if (this.events.get(mid).cursor > cursor) {
         // If the current element is greater, it could be a potential result,
-        // but something to the left could still be lower
+        // but something to the left could still be greater than us
         result = mid;
         right = mid - 1;
       } else {
@@ -99,7 +142,7 @@ public abstract class LXClipLane extends LXComponent {
       // overdubbing and the cursor is past all the prior events anyways
       this.mutableEvents.add(event);
     } else {
-      this.mutableEvents.add(_insertIndex(event.cursor), event);
+      this.mutableEvents.add(cursorInsertIndex(event.cursor), event);
     }
   }
 
@@ -137,7 +180,7 @@ public abstract class LXClipLane extends LXComponent {
    * @return Last event with time equal to or less than this cursor
    */
   protected LXClipEvent getPreviousEvent(double cursor) {
-    int previousIndex = _insertIndex(cursor) - 1;
+    int previousIndex = cursorInsertIndex(cursor) - 1;
     if (previousIndex >= 0) {
       return this.events.get(previousIndex);
     }
@@ -193,11 +236,33 @@ public abstract class LXClipLane extends LXComponent {
    */
   void loopCursor(double to) {}
 
-  void advanceCursor(double from, double to) {
-    for (LXClipEvent event : this.mutableEvents) {
-      if (from <= event.cursor && event.cursor < to) {
-        event.execute();
+  void overdubCursor(double from, double to) {
+    int overdubIndex = cursorPlayIndex(from);
+    while (overdubIndex < this.events.size()) {
+      LXClipEvent event = this.events.get(overdubIndex);
+      if (event.cursor >= to) {
+        break;
       }
+      this.overdubLastOriginalEvent = event;
+      if (this.overdubActive) {
+        removeEvent(event);
+      } else {
+        ++overdubIndex;
+      }
+    }
+  }
+
+  void postOverdubCursor(double from, double to) {}
+
+  void advanceCursor(double from, double to) {
+    int playIndex = cursorPlayIndex(from);
+    while (playIndex < this.events.size()) {
+      LXClipEvent event = this.events.get(playIndex);
+      if (event.cursor >= to) {
+        break;
+      }
+      event.execute();
+      ++playIndex;
     }
   }
 

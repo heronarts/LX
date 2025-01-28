@@ -780,13 +780,22 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Begin recording automation
     this.automationEnabled.setValue(true);
     updateParameterDefaults();
+    resetRecordingState();
     onStartRecording(false);
   }
 
   private void startOverdub() {
     // TODO(mcslee): toggle an overdub / replace recording mode
     updateParameterDefaults();
+    resetRecordingState();
     onStartRecording(true);
+  }
+
+  private void resetRecordingState() {
+    for (LXClipLane lane : this.lanes) {
+      lane.recordQueue.clear();
+      lane.resetOverdub();
+    }
   }
 
   private void startPlayback() {
@@ -908,16 +917,49 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
+  private void overdubCursor(double from, double to) {
+    for (LXClipLane lane : this.lanes) {
+      lane.overdubCursor(from, to);
+    }
+  }
+
+  private void commitRecordCursor() {
+    for (LXClipLane lane : this.lanes) {
+      lane.commitRecordEvents();
+    }
+  }
+
+  private void postOverdubCursor(double from, double to) {
+    for (LXClipLane lane : this.lanes) {
+      lane.postOverdubCursor(from, to);
+    }
+  }
+
   @Override
   protected void run(double deltaMs) {
     double nextCursor = this.cursor + deltaMs;
     if (this.bus.arm.isOn()) {
       if (!this.hasTimeline) {
+        // Write any queued events
+        for (LXClipLane lane : this.lanes) {
+          lane.commitRecordEvents();
+        }
+
         // Recording mode... lane and event listeners will pick up and record
         // all the events. All we need to do here is update the clip length
         this.length.setValue(nextCursor);
+
       } else {
-        // Overdubbing!
+
+        // Overdubbing! FIRST we erase anything the cursor is going over
+        // in the case that overdub is active, nuking [this.cursor->nextCursor)
+        overdubCursor(this.cursor, nextCursor);
+
+        // Then we write queued recording events, at this.cursor
+        commitRecordCursor();
+
+        postOverdubCursor(this.cursor, nextCursor);
+
         // TODO: Figure out how overdub works
         // TODO: Stop recording if we cross the play end marker?
 
@@ -925,6 +967,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         if (this.length.getValue() < nextCursor) {
           this.length.setValue(nextCursor);
         }
+
         // TODO: play existing automations during overdub
         // Should user be able to arm Clip Lanes individually for overdub?
       }
