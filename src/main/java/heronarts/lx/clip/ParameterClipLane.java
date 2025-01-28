@@ -79,7 +79,7 @@ public abstract class ParameterClipLane extends LXClipLane {
 
   private static final double SMOOTHING_THRESHOLD_MS = 250;
 
-  public ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
+  protected ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
     final int insertIndex = cursorInsertIndex(this.clip.cursor);
     final ParameterClipEvent previousEvent = (insertIndex > 0) ? (ParameterClipEvent) this.events.get(insertIndex - 1) : null;
     if (previousEvent == null) {
@@ -122,6 +122,12 @@ public abstract class ParameterClipLane extends LXClipLane {
     return this;
   }
 
+  private boolean inOverdubPlayback = false;
+
+  public boolean isInOverdubPlayback() {
+    return this.inOverdubPlayback;
+  }
+
   @Override
   void postOverdubCursor(double from, double to) {
     if (this.overdubActive) {
@@ -161,10 +167,14 @@ public abstract class ParameterClipLane extends LXClipLane {
           // Add the new event at "to"
           this.mutableEvents.add(index, new ParameterClipEvent(this, this.parameter, normalizedValue).setCursor(to));
         }
-
       }
+    } else {
+      // No overdubs happening? Play back the automation! Set a flag so we suppress
+      // recording changes due to the parameter listeners that will file...
+      this.inOverdubPlayback = true;
+      advanceCursor(from, to);
+      this.inOverdubPlayback = false;
     }
-
   }
 
   @Override

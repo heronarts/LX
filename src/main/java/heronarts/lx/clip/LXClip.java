@@ -169,10 +169,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (isRunning() && this.bus.arm.isOn()) {
       LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
       ParameterClipLane lane = getParameterLane(parameter, true);
-
-      // NOTE(mcslee): need to sanitize this for overdub mode, not necessarily an append
-      // depending upon the cursor position!
-      lane.recordParameterEvent(new ParameterClipEvent(lane, parameter));
+      if (!lane.isInOverdubPlayback()) {
+        lane.recordParameterEvent(new ParameterClipEvent(lane, parameter));
+      }
     }
   }
 
@@ -958,6 +957,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         // Then we write queued recording events, at this.cursor
         commitRecordCursor();
 
+        // Parameter lanes need some special logic to merge old and new
         postOverdubCursor(this.cursor, nextCursor);
 
         // TODO: Figure out how overdub works
