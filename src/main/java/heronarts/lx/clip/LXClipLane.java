@@ -211,6 +211,9 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     // items at once here. Make our own copy and clear()/addAll() or we should use
     // the stable .sort() method, or possibly Arrays.sort() methods that can sort
     // a sub-range of the array if we know there's no overlapping!
+    //
+    // Also a problem right now that the ordering of the Map matters... it needs to be
+    // a linked hashmap, or we need to do a stable sort
     for (Map.Entry<T, Double> entry : cursors.entrySet()) {
       final T event = entry.getKey();
       if (this.events.contains(event)) {
@@ -310,14 +313,22 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public void load(LX lx, JsonObject obj) {
     this.mutableEvents.clear();
     if (obj.has(KEY_EVENTS)) {
+      List<T> loadEvents = new ArrayList<>();
+
       JsonArray eventsArr = obj.get(KEY_EVENTS).getAsJsonArray();
       for (JsonElement eventElem : eventsArr) {
         JsonObject eventObj = eventElem.getAsJsonObject();
         T event = loadEvent(lx, eventObj);
         if (event != null) {
           event.load(lx, eventObj);
-          this.mutableEvents.add(event);
+          loadEvents.add(event);
         }
+      }
+
+      // Because we're using an underlying CopyOnWriteArrayList, do this
+      // in a single addAll() operation
+      if (!loadEvents.isEmpty()) {
+        this.mutableEvents.addAll(loadEvents);
       }
     }
     this.onChange.bang();

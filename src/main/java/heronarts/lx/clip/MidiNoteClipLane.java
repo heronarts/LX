@@ -25,6 +25,10 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     return "MIDI Note";
   }
 
+  protected void recordNote(MidiNote note) {
+    recordEvent(new MidiNoteClipEvent(this, note));
+  }
+
   @Override
   protected MidiNoteClipEvent loadEvent(LX lx, JsonObject eventObj) {
     int channel = eventObj.get(MidiNoteClipEvent.KEY_CHANNEL).getAsInt();
@@ -39,10 +43,6 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       LX.error(imdx, "Invalid MIDI in clip event: " + channel + " " + command + " " + data1 + " " + data2);
     }
     return null;
-  }
-
-  protected void recordNote(MidiNote note) {
-    super.recordEvent(new MidiNoteClipEvent(this, note));
   }
 
 }
