@@ -24,7 +24,7 @@ import heronarts.lx.LX;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.pattern.LXPattern;
 
-public class PatternClipLane extends LXClipLane {
+public class PatternClipLane extends LXClipLane<PatternClipEvent> {
   PatternClipLane(LXClip clip) {
     super(clip);
   }
@@ -40,23 +40,19 @@ public class PatternClipLane extends LXClipLane {
   }
 
   protected PatternClipEvent getPreviousPattern(double cursor) {
-    LXClipEvent previous = getPreviousEvent(cursor);
-    if (previous instanceof PatternClipEvent) {
-      return (PatternClipEvent) previous;
-    }
-    return null;
+    return getPreviousEvent(cursor);
   }
 
   @Override
   void loopCursor(double to) {
-    LXClipEvent previous = getPreviousEvent(to);
+    PatternClipEvent previous = getPreviousEvent(to);
     if (previous != null) {
       previous.execute();
     }
   }
 
   @Override
-  protected LXClipEvent loadEvent(LX lx, JsonObject eventObj) {
+  protected PatternClipEvent loadEvent(LX lx, JsonObject eventObj) {
     LXChannel channel = (LXChannel) this.clip.bus;
     LXPattern pattern = channel.patterns.get(eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt());
     return new PatternClipEvent(this, channel, pattern);

@@ -6,16 +6,16 @@ import heronarts.lx.LX;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
 
-public class ParameterClipEvent extends LXClipEvent {
+public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
 
   public final LXNormalizedParameter parameter;
   private double normalized;
 
-  ParameterClipEvent(LXClipLane lane, LXNormalizedParameter parameter) {
+  ParameterClipEvent(ParameterClipLane lane, LXNormalizedParameter parameter) {
     this(lane, parameter, parameter.getBaseNormalized());
   }
 
-  ParameterClipEvent(LXClipLane lane, LXNormalizedParameter parameter, double normalized) {
+  ParameterClipEvent(ParameterClipLane lane, LXNormalizedParameter parameter, double normalized) {
     super(lane, parameter.getParent());
     this.parameter = parameter;
     this.normalized = normalizeEventValue(normalized);

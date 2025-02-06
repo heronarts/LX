@@ -6,11 +6,11 @@ import heronarts.lx.LX;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.mixer.LXAbstractChannel;
 
-public class MidiNoteClipEvent extends LXClipEvent {
+public class MidiNoteClipEvent extends LXClipEvent<MidiNoteClipEvent> {
 
   public final MidiNote midiNote;
 
-  MidiNoteClipEvent(LXClipLane lane, MidiNote midiNote) {
+  MidiNoteClipEvent(MidiNoteClipLane lane, MidiNote midiNote) {
     super(lane);
     this.midiNote = midiNote;
   }

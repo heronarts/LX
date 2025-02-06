@@ -9,7 +9,7 @@ import heronarts.lx.LX;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiNote;
 
-public class MidiNoteClipLane extends LXClipLane {
+public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
 
   protected MidiNoteClipLane(LXClip clip) {
     super(clip);
@@ -26,7 +26,7 @@ public class MidiNoteClipLane extends LXClipLane {
   }
 
   @Override
-  protected LXClipEvent loadEvent(LX lx, JsonObject eventObj) {
+  protected MidiNoteClipEvent loadEvent(LX lx, JsonObject eventObj) {
     int channel = eventObj.get(MidiNoteClipEvent.KEY_CHANNEL).getAsInt();
     int command = eventObj.get(MidiNoteClipEvent.KEY_COMMAND).getAsInt();
     int data1 = eventObj.get(MidiNoteClipEvent.KEY_DATA_1).getAsInt();

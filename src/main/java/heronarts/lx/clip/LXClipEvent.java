@@ -26,25 +26,25 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 
-public abstract class LXClipEvent implements Comparator<LXClipEvent>, LXSerializable {
+public abstract class LXClipEvent<T extends LXClipEvent<?>> implements Comparator<T>, LXSerializable {
 
-  protected final LXClipLane lane;
+  protected final LXClipLane<T> lane;
   protected final LXComponent component;
   protected double cursor;
 
-  LXClipEvent(LXClipLane lane) {
+  LXClipEvent(LXClipLane<T> lane) {
     this(lane, lane.clip.cursor, null);
   }
 
-  LXClipEvent(LXClipLane lane, LXComponent component) {
+  LXClipEvent(LXClipLane<T> lane, LXComponent component) {
     this(lane, lane.clip.cursor, component);
   }
 
-  LXClipEvent(LXClipLane lane, double cursor) {
+  LXClipEvent(LXClipLane<T> lane, double cursor) {
     this(lane, cursor, null);
   }
 
-  LXClipEvent(LXClipLane lane, double cursor, LXComponent component) {
+  LXClipEvent(LXClipLane<T> lane, double cursor, LXComponent component) {
     this.lane = lane;
     this.cursor = cursor;
     this.component = component;
@@ -54,7 +54,7 @@ public abstract class LXClipEvent implements Comparator<LXClipEvent>, LXSerializ
     return this.cursor;
   }
 
-  LXClipEvent setCursor(double cursor) {
+  LXClipEvent<T> setCursor(double cursor) {
     this.cursor = cursor;
     return this;
   }
@@ -64,7 +64,7 @@ public abstract class LXClipEvent implements Comparator<LXClipEvent>, LXSerializ
   }
 
   @Override
-  public int compare(LXClipEvent arg0, LXClipEvent arg1) {
+  public int compare(T arg0, T arg1) {
     if (arg0.cursor < arg1.cursor) {
       return -1;
     } else if (arg0.cursor > arg1.cursor) {

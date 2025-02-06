@@ -3066,10 +3066,10 @@ public abstract class LXCommand {
 
     public static class MoveLane extends LXCommand {
 
-      private final ComponentReference<LXClipLane> lane;
+      private final ComponentReference<LXClipLane<?>> lane;
       private final int fromIndex, toIndex;
 
-      public MoveLane(LXClipLane lane, int index) {
+      public MoveLane(LXClipLane<?> lane, int index) {
         this.lane = new ComponentReference<>(lane);
         this.fromIndex = lane.getIndex();
         this.toIndex = index;
@@ -3082,44 +3082,44 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        LXClipLane lane = this.lane.get();
+        LXClipLane<?> lane = this.lane.get();
         lane.clip.moveClipLane(lane, this.toIndex);
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        LXClipLane lane = this.lane.get();
+        LXClipLane<?> lane = this.lane.get();
         lane.clip.moveClipLane(lane, this.fromIndex);
       }
     }
 
     public static class Event {
 
-      public static class SetCursors extends LXCommand {
+      public static class SetCursors<T extends LXClipEvent<?>> extends LXCommand {
 
-        private final ComponentReference<LXClipLane> clipLane;
+        private final ComponentReference<LXClipLane<T>> clipLane;
 
         // TODO(mcslee): these event references won't survive a deep
         // undo/redo cycle where the clip lane is deleted and restored, we need to instead
         // just serialize and restore the state before and after the operation
-        private final Map<LXClipEvent, Double> fromCursors;
-        private final Map<LXClipEvent, Double> toCursors;
+        private final Map<T, Double> fromCursors;
+        private final Map<T, Double> toCursors;
 
-        private static Map<LXClipEvent, Double> getFrom(Map<? extends LXClipEvent, Double> toValues) {
-          Map<LXClipEvent, Double> fromValues = new HashMap<>(toValues);
-          for (LXClipEvent event : fromValues.keySet()) {
+        private static <T extends LXClipEvent<?>> Map<T, Double> getFrom(Map<T, Double> toValues) {
+          Map<T, Double> fromValues = new HashMap<>(toValues);
+          for (T event : fromValues.keySet()) {
             fromValues.put(event, event.getCursor());
           }
           return fromValues;
         }
 
-        public SetCursors(LXClipLane clipLane, Map<? extends LXClipEvent, Double> toCursors) {
+        public SetCursors(LXClipLane<T> clipLane, Map<T, Double> toCursors) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.fromCursors = getFrom(toCursors);
           this.toCursors = new HashMap<>(toCursors);
         }
 
-        public SetCursors(LXClipLane clipLane, Map<? extends LXClipEvent, Double> toCursors, Map<? extends LXClipEvent, Double> fromValues) {
+        public SetCursors(LXClipLane<T> clipLane, Map<T, Double> toCursors, Map<T, Double> fromValues) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.fromCursors = new HashMap<>(fromValues);
           this.toCursors = new HashMap<>(toCursors);

@@ -34,7 +34,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
-public abstract class LXClipLane extends LXComponent {
+public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   public final MutableParameter uiHeight = new MutableParameter("UI Height");
 
@@ -43,13 +43,13 @@ public abstract class LXClipLane extends LXComponent {
   public final LXClip clip;
 
   protected boolean overdubActive = false;
-  protected LXClipEvent overdubLastOriginalEvent = null;
+  protected T overdubLastOriginalEvent = null;
 
   // NOTE(mcslee): think about whether CopyOnWrite is the best solution here for UI drawing
   // or whether synchronized or locking around multi-edits is preferable, as those are currently
   // going to be super costly
-  protected final List<LXClipEvent> mutableEvents = new CopyOnWriteArrayList<LXClipEvent>();
-  public final List<LXClipEvent> events = Collections.unmodifiableList(this.mutableEvents);
+  protected final List<T> mutableEvents = new CopyOnWriteArrayList<>();
+  public final List<T> events = Collections.unmodifiableList(this.mutableEvents);
 
   protected LXClipLane(LXClip clip) {
     setParent(clip);
@@ -73,15 +73,15 @@ public abstract class LXClipLane extends LXComponent {
     return 0;
   }
 
-  final List<LXClipEvent> recordQueue = new ArrayList<>();
+  final List<T> recordQueue = new ArrayList<>();
 
-  protected LXClipLane recordEvent(LXClipEvent event) {
+  protected LXClipLane<T> recordEvent(T event) {
     this.recordQueue.add(event);
     return this;
   }
 
-  LXClipLane commitRecordEvents() {
-    for (LXClipEvent event : this.recordQueue) {
+  LXClipLane<T> commitRecordEvents() {
+    for (T event : this.recordQueue) {
       _insertEvent(event);
     }
     this.recordQueue.clear();
@@ -136,7 +136,7 @@ public abstract class LXClipLane extends LXComponent {
     return result;
   }
 
-  private void _insertEvent(LXClipEvent event) {
+  private void _insertEvent(T event) {
     if (event.cursor >= lastEventCursor()) {
       // Quick check... shortcut in normal recording mode when we're not
       // overdubbing and the cursor is past all the prior events anyways
@@ -146,13 +146,13 @@ public abstract class LXClipLane extends LXComponent {
     }
   }
 
-  public LXClipLane insertEvent(LXClipEvent event) {
+  public LXClipLane<T> insertEvent(T event) {
     _insertEvent(event);
     this.onChange.bang();
     return this;
   }
 
-  public LXClipLane moveEvent(LXClipEvent event, double basis) {
+  public LXClipLane<T> moveEvent(T event, double basis) {
     double clipLength = this.clip.getLength();
     double min = 0;
     double max = clipLength;
@@ -179,7 +179,7 @@ public abstract class LXClipLane extends LXComponent {
    * @param cursor Cursor position
    * @return Last event with time equal to or less than this cursor
    */
-  protected LXClipEvent getPreviousEvent(double cursor) {
+  protected T getPreviousEvent(double cursor) {
     int previousIndex = cursorInsertIndex(cursor) - 1;
     if (previousIndex >= 0) {
       return this.events.get(previousIndex);
@@ -193,11 +193,11 @@ public abstract class LXClipLane extends LXComponent {
    *
    * @return Last event equal to or before this cursor position
    */
-  protected LXClipEvent getPreviousEvent() {
+  protected T getPreviousEvent() {
     return getPreviousEvent(this.clip.cursor);
   }
 
-  public void setEventsCursors(Map<? extends LXClipEvent, Double> cursors) {
+  public void setEventsCursors(Map<T, Double> cursors) {
     boolean changed = false;
     final double clipLength = this.clip.length.getValue();
 
@@ -211,8 +211,8 @@ public abstract class LXClipLane extends LXComponent {
     // items at once here. Make our own copy and clear()/addAll() or we should use
     // the stable .sort() method, or possibly Arrays.sort() methods that can sort
     // a sub-range of the array if we know there's no overlapping!
-    for (Map.Entry<? extends LXClipEvent, Double> entry : cursors.entrySet()) {
-      final LXClipEvent event = entry.getKey();
+    for (Map.Entry<T, Double> entry : cursors.entrySet()) {
+      final T event = entry.getKey();
       if (this.events.contains(event)) {
         this.mutableEvents.remove(event);
         event.setCursor(LXUtils.constrain(entry.getValue(), 0, clipLength));
@@ -239,7 +239,7 @@ public abstract class LXClipLane extends LXComponent {
   void overdubCursor(double from, double to) {
     int overdubIndex = cursorPlayIndex(from);
     while (overdubIndex < this.events.size()) {
-      LXClipEvent event = this.events.get(overdubIndex);
+      T event = this.events.get(overdubIndex);
       if (event.cursor >= to) {
         break;
       }
@@ -257,7 +257,7 @@ public abstract class LXClipLane extends LXComponent {
   void advanceCursor(double from, double to) {
     int playIndex = cursorPlayIndex(from);
     while (playIndex < this.events.size()) {
-      LXClipEvent event = this.events.get(playIndex);
+      T event = this.events.get(playIndex);
       if (event.cursor >= to) {
         break;
       }
@@ -266,13 +266,13 @@ public abstract class LXClipLane extends LXComponent {
     }
   }
 
-  public LXClipLane clearSelection(double fromBasis, double toBasis) {
+  public LXClipLane<T> clearSelection(double fromBasis, double toBasis) {
     double from = fromBasis * this.clip.length.getValue();
     double to = toBasis * this.clip.length.getValue();
     int i = 0;
     boolean removed = false;
     while (i < this.mutableEvents.size()) {
-      LXClipEvent event = this.mutableEvents.get(i);
+      T event = this.mutableEvents.get(i);
       if (from <= event.cursor) {
         if (event.cursor > to) {
           break;
@@ -289,7 +289,7 @@ public abstract class LXClipLane extends LXComponent {
     return this;
   }
 
-  public LXClipLane removeEvent(LXClipEvent event) {
+  public LXClipLane<T> removeEvent(T event) {
     this.mutableEvents.remove(event);
     this.onChange.bang();
     return this;
@@ -313,7 +313,7 @@ public abstract class LXClipLane extends LXComponent {
       JsonArray eventsArr = obj.get(KEY_EVENTS).getAsJsonArray();
       for (JsonElement eventElem : eventsArr) {
         JsonObject eventObj = eventElem.getAsJsonObject();
-        LXClipEvent event = loadEvent(lx, eventObj);
+        T event = loadEvent(lx, eventObj);
         if (event != null) {
           event.load(lx, eventObj);
           this.mutableEvents.add(event);
@@ -323,7 +323,7 @@ public abstract class LXClipLane extends LXComponent {
     this.onChange.bang();
   }
 
-  protected abstract LXClipEvent loadEvent(LX lx, JsonObject eventObj);
+  protected abstract T loadEvent(LX lx, JsonObject eventObj);
 
   @Override
   public void save(LX lx, JsonObject obj) {

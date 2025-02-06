@@ -56,7 +56,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   public interface Listener {
     public default void cursorChanged(LXClip clip, double from, double to) {};
-    public default void clipLaneMoved(LXClip clip, LXClipLane lane, int index) {};
+    public default void clipLaneMoved(LXClip clip, LXClipLane<?> lane, int index) {};
     public default void parameterLaneAdded(LXClip clip, ParameterClipLane lane) {};
     public default void parameterLaneRemoved(LXClip clip, ParameterClipLane lane) {};
   }
@@ -133,8 +133,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new QuantizedTriggerParameter.Launch(lx, "Stop", this::stop)
     .setDescription("Stop this clip");
 
-  protected final List<LXClipLane> mutableLanes = new ArrayList<LXClipLane>();
-  public final List<LXClipLane> lanes = Collections.unmodifiableList(this.mutableLanes);
+  protected final List<LXClipLane<?>> mutableLanes = new ArrayList<>();
+  public final List<LXClipLane<?>> lanes = Collections.unmodifiableList(this.mutableLanes);
 
   public final BooleanParameter snapshotEnabled =
     new BooleanParameter("Snapshot", true)
@@ -379,7 +379,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private ParameterClipLane getParameterLane(LXNormalizedParameter parameter, boolean create) {
-    for (LXClipLane lane : this.lanes) {
+    for (LXClipLane<?> lane : this.lanes) {
       if (lane instanceof ParameterClipLane) {
         if (((ParameterClipLane) lane).parameter == parameter) {
           return (ParameterClipLane) lane;
@@ -397,7 +397,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return null;
   }
 
-  private LXClip _removeLane(LXClipLane lane) {
+  private LXClip _removeLane(LXClipLane<?> lane) {
     this.mutableLanes.remove(lane);
     if (lane instanceof ParameterClipLane) {
       for (Listener listener : this.listeners) {
@@ -412,7 +412,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return _removeLane(lane);
   }
 
-  public LXClip moveClipLane(LXClipLane lane, int index) {
+  public LXClip moveClipLane(LXClipLane<? >lane, int index) {
     this.mutableLanes.remove(lane);
     this.mutableLanes.add(index, lane);
     for (Listener listener : this.listeners) {
@@ -791,7 +791,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void resetRecordingState() {
-    for (LXClipLane lane : this.lanes) {
+    for (LXClipLane<?> lane : this.lanes) {
       lane.recordQueue.clear();
       lane.resetOverdub();
     }
@@ -830,9 +830,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void clearLanes() {
-    Iterator<LXClipLane> iter = this.mutableLanes.iterator();
+    Iterator<LXClipLane<?>> iter = this.mutableLanes.iterator();
     while (iter.hasNext()) {
-      LXClipLane lane = iter.next();
+      LXClipLane<?> lane = iter.next();
       if (lane instanceof ParameterClipLane) {
         iter.remove();
         for (Listener listener : this.listeners) {
@@ -905,31 +905,31 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void loopCursor(double to) {
-    for (LXClipLane lane : this.lanes) {
+    for (LXClipLane<?> lane : this.lanes) {
       lane.loopCursor(to);
     }
   }
 
   private void advanceCursor(double from, double to) {
-    for (LXClipLane lane : this.lanes) {
+    for (LXClipLane<?> lane : this.lanes) {
       lane.advanceCursor(from, to);
     }
   }
 
   private void overdubCursor(double from, double to) {
-    for (LXClipLane lane : this.lanes) {
+    for (LXClipLane<?> lane : this.lanes) {
       lane.overdubCursor(from, to);
     }
   }
 
   private void commitRecordCursor() {
-    for (LXClipLane lane : this.lanes) {
+    for (LXClipLane<?> lane : this.lanes) {
       lane.commitRecordEvents();
     }
   }
 
   private void postOverdubCursor(double from, double to) {
-    for (LXClipLane lane : this.lanes) {
+    for (LXClipLane<?> lane : this.lanes) {
       lane.postOverdubCursor(from, to);
     }
   }
@@ -940,7 +940,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (this.bus.arm.isOn()) {
       if (!this.hasTimeline) {
         // Write any queued events
-        for (LXClipLane lane : this.lanes) {
+        for (LXClipLane<?> lane : this.lanes) {
           lane.commitRecordEvents();
         }
 
@@ -1126,7 +1126,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
           return;
         }
       }
-      LXClipLane lane = getParameterLane((LXNormalizedParameter) parameter, true);
+      ParameterClipLane lane = getParameterLane((LXNormalizedParameter) parameter, true);
       lane.load(lx, laneObj);
     }
   }

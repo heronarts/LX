@@ -6,12 +6,12 @@ import heronarts.lx.LX;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.pattern.LXPattern;
 
-public class PatternClipEvent extends LXClipEvent {
+public class PatternClipEvent extends LXClipEvent<PatternClipEvent> {
 
   public final LXPattern pattern;
   public final LXChannel channel;
 
-  PatternClipEvent(LXClipLane lane, LXChannel channel, LXPattern pattern) {
+  PatternClipEvent(PatternClipLane lane, LXChannel channel, LXPattern pattern) {
     super(lane, pattern);
     this.pattern = pattern;
     this.channel = channel;
