@@ -32,14 +32,19 @@ import java.util.Map;
 public abstract class ParameterClipLane extends LXClipLane {
 
   public static class Boolean extends ParameterClipLane {
+
     private Boolean(LXClip clip, BooleanParameter parameter, double initialNormalized) {
       super(clip, parameter, initialNormalized);
     }
   }
 
   public static class Discrete extends ParameterClipLane {
+
+    public final DiscreteParameter discreteParameter;
+
     private Discrete(LXClip clip, DiscreteParameter parameter, double initialNormalized) {
       super(clip, parameter, initialNormalized);
+      this.discreteParameter = parameter;
     }
   }
 
@@ -89,13 +94,13 @@ public abstract class ParameterClipLane extends LXClipLane {
       // contain this value of 50, it should have 0 up to the point that the 50 is received and
       // then a jump (e.g. we also don't want a smooth interpolation from 0 to 50)
       recordEvent(new ParameterClipEvent(this, this.parameter, this.initialNormalized));
-    } else if (this.clip.cursor - previousEvent.cursor > SMOOTHING_THRESHOLD_MS) {
+    } else if ((this instanceof Normalized) && (this.clip.cursor - previousEvent.cursor > SMOOTHING_THRESHOLD_MS)) {
       // For normalized parameters, check if there was a jump in value... for smoothly
       // received knob turns or MIDI that happen close in time we just record the event itself,
       // but if significant time has elapsed, then for the same reason as above, we need to
       // record whatever value the envelope would have held at this point
       double normalized = 0;
-      if ((this instanceof Normalized) && (insertIndex < this.events.size())) {
+      if (insertIndex < this.events.size()) {
         // If there's an event ahead of the previous event, preserve the interpolation between
         // the two
         final ParameterClipEvent nextEvent = (ParameterClipEvent) this.events.get(insertIndex);
