@@ -269,7 +269,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     }
   }
 
-  public boolean deleteRange(double fromBasis, double toBasis) {
+  public boolean removeRange(double fromBasis, double toBasis) {
     double length = this.clip.length.getValue();
     double fromCursor = fromBasis * length;
     double toCursor = toBasis * length;

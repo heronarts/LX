@@ -3095,14 +3095,48 @@ public abstract class LXCommand {
 
     public static class Event {
 
-      public static class DeleteRange extends LXCommand {
+      public static class Remove<T extends LXClipEvent<T>> extends LXCommand {
+
+        private final ComponentReference<LXClipLane<T>> clipLane;
+        private final int eventIndex;
+        private JsonObject preState = null;
+
+        public Remove(LXClipLane<T> clipLane, LXClipEvent<T> clipEvent) {
+          this.clipLane = new ComponentReference<>(clipLane);
+          this.eventIndex = clipLane.events.indexOf(clipEvent);
+        }
+
+        @Override
+        public String getDescription() {
+          return "Delete Event";
+        }
+
+        @Override
+        public void perform(LX lx) throws InvalidCommandException {
+          LXClipLane<T> clipLane = this.clipLane.get();
+          this.preState = LXSerializable.Utils.toObject(clipLane, true);
+          try {
+            clipLane.removeEvent(clipLane.events.get(this.eventIndex));
+          } catch (Exception x) {
+            throw new InvalidCommandException(x);
+          }
+        }
+
+        @Override
+        public void undo(LX lx) throws InvalidCommandException {
+          this.clipLane.get().load(lx, this.preState);
+        }
+
+      }
+
+      public static class RemoveRange extends LXCommand {
 
         private final ComponentReference<LXClipLane<?>> clipLane;
         private final double fromBasis, toBasis;
         private boolean didRemove = false;
         private JsonObject preState = null;
 
-        public DeleteRange(LXClipLane<?> clipLane, double fromBasis, double toBasis) {
+        public RemoveRange(LXClipLane<?> clipLane, double fromBasis, double toBasis) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.fromBasis = fromBasis;
           this.toBasis = toBasis;
@@ -3122,7 +3156,7 @@ public abstract class LXCommand {
         public void perform(LX lx) throws InvalidCommandException {
           LXClipLane<?> clipLane = this.clipLane.get();
           this.preState = LXSerializable.Utils.toObject(clipLane, true);
-          this.didRemove = clipLane.deleteRange(this.fromBasis, this.toBasis);
+          this.didRemove = clipLane.removeRange(this.fromBasis, this.toBasis);
         }
 
         @Override
@@ -3181,7 +3215,7 @@ public abstract class LXCommand {
 
           private final ComponentReference<ParameterClipLane> clipLane;
           private final double basis, normalized;
-          private ParameterClipEvent undoEvent;
+          private int undoIndex;
 
           public InsertEvent(ParameterClipLane lane, double basis, double normalized) {
             this.clipLane = new ComponentReference<>(lane);
@@ -3196,13 +3230,20 @@ public abstract class LXCommand {
 
           @Override
           public void perform(LX lx) throws InvalidCommandException {
-            this.undoEvent = this.clipLane.get().insertEvent(this.basis, this.normalized);
+            ParameterClipLane clipLane = this.clipLane.get();
+            ParameterClipEvent insertEvent = clipLane.insertEvent(this.basis, this.normalized);
+            this.undoIndex = clipLane.events.indexOf(insertEvent);
 
           }
 
           @Override
           public void undo(LX lx) throws InvalidCommandException {
-            this.clipLane.get().removeEvent(this.undoEvent);
+            ParameterClipLane clipLane = this.clipLane.get();
+            try {
+              clipLane.removeEvent(clipLane.events.get(this.undoIndex));
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
           }
 
         }
