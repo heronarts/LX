@@ -119,11 +119,11 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     return this;
   }
 
-  public ParameterClipLane insertEvent(double basis, double normalized) {
+  public ParameterClipEvent insertEvent(double basis, double normalized) {
     ParameterClipEvent event = new ParameterClipEvent(this, this.parameter, normalized);
     event.setCursor(basis * this.clip.length.getValue());
     super.insertEvent(event);
-    return this;
+    return event;
   }
 
   private boolean inOverdubPlayback = false;

@@ -3140,6 +3140,85 @@ public abstract class LXCommand {
 
       public static class Parameter {
 
+        public static class InsertEvent extends LXCommand {
+
+          private final ComponentReference<ParameterClipLane> clipLane;
+          private final double basis, normalized;
+          private ParameterClipEvent undoEvent;
+
+          public InsertEvent(ParameterClipLane lane, double basis, double normalized) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.basis = basis;
+            this.normalized = normalized;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Insert Clip Event";
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            this.undoEvent = this.clipLane.get().insertEvent(this.basis, this.normalized);
+
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            this.clipLane.get().removeEvent(this.undoEvent);
+          }
+
+        }
+
+        public static class MoveEvent extends LXCommand {
+
+          private final ComponentReference<ParameterClipLane> clipLane;
+          private final int eventIndex;
+          private final double originalBasis, originalNormalized;
+          private double basis, normalized;
+
+          public MoveEvent(ParameterClipLane lane, ParameterClipEvent clipEvent) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.basis = this.originalBasis = clipEvent.getBasis();
+            this.normalized = this.originalNormalized = clipEvent.getNormalized();
+            this.eventIndex = lane.events.indexOf(clipEvent);
+          }
+
+          public MoveEvent update(double basis, double normalized) {
+            this.basis = basis;
+            this.normalized = normalized;
+            return this;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Move Clip Event";
+          }
+
+          private void moveTo(double basis, double normalized) throws InvalidCommandException {
+            ParameterClipLane clipLane = this.clipLane.get();
+            try {
+              ParameterClipEvent clipEvent = clipLane.events.get(this.eventIndex);
+              clipEvent.setNormalized(normalized);
+              clipLane.moveEvent(clipEvent, basis);
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            moveTo(this.basis, this.normalized);
+
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            moveTo(this.originalBasis, this.originalNormalized);
+          }
+
+        }
+
         public static class SetValues extends LXCommand {
 
           private final ComponentReference<ParameterClipLane> clipLane;
