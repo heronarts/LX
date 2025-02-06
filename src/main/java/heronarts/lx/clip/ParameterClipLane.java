@@ -95,7 +95,7 @@ public abstract class ParameterClipLane extends LXClipLane {
       // but if significant time has elapsed, then for the same reason as above, we need to
       // record whatever value the envelope would have held at this point
       double normalized = 0;
-      if (insertIndex < this.events.size()) {
+      if ((this instanceof Normalized) && (insertIndex < this.events.size())) {
         // If there's an event ahead of the previous event, preserve the interpolation between
         // the two
         final ParameterClipEvent nextEvent = (ParameterClipEvent) this.events.get(insertIndex);
