@@ -48,7 +48,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   // NOTE(mcslee): think about whether CopyOnWrite is the best solution here for UI drawing
   // or whether synchronized or locking around multi-edits is preferable, as those are currently
   // going to be super costly
-  protected final List<T> mutableEvents = new CopyOnWriteArrayList<>();
+  protected final CopyOnWriteArrayList<T> mutableEvents = new CopyOnWriteArrayList<>();
   public final List<T> events = Collections.unmodifiableList(this.mutableEvents);
 
   protected LXClipLane(LXClip clip) {
@@ -269,27 +269,29 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     }
   }
 
-  public LXClipLane<T> clearSelection(double fromBasis, double toBasis) {
-    double from = fromBasis * this.clip.length.getValue();
-    double to = toBasis * this.clip.length.getValue();
-    int i = 0;
-    boolean removed = false;
-    while (i < this.mutableEvents.size()) {
-      T event = this.mutableEvents.get(i);
-      if (from <= event.cursor) {
-        if (event.cursor > to) {
+  public boolean deleteRange(double fromBasis, double toBasis) {
+    double length = this.clip.length.getValue();
+    double fromCursor = fromBasis * length;
+    double toCursor = toBasis * length;
+
+    List<LXClipEvent<?>> toRemove = new ArrayList<>();
+    for (T event : this.mutableEvents) {
+      if (fromCursor <= event.cursor) {
+        if (event.cursor > toCursor) {
           break;
         }
-        removed = true;
-        this.mutableEvents.remove(i);
-      } else {
-        ++i;
+        toRemove.add(event);
       }
     }
-    if (removed) {
+    // Do the removal in a single operation, since we are using
+    // a CopyOnWriteArrayList
+    if (!toRemove.isEmpty()) {
+      this.mutableEvents.removeAll(toRemove);
       this.onChange.bang();
+      return true;
+
     }
-    return this;
+    return false;
   }
 
   public LXClipLane<T> removeEvent(T event) {

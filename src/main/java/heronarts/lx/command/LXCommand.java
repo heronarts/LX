@@ -3095,6 +3095,43 @@ public abstract class LXCommand {
 
     public static class Event {
 
+      public static class DeleteRange extends LXCommand {
+
+        private final ComponentReference<LXClipLane<?>> clipLane;
+        private final double fromBasis, toBasis;
+        private boolean didRemove = false;
+        private JsonObject preState = null;
+
+        public DeleteRange(LXClipLane<?> clipLane, double fromBasis, double toBasis) {
+          this.clipLane = new ComponentReference<>(clipLane);
+          this.fromBasis = fromBasis;
+          this.toBasis = toBasis;
+        }
+
+        @Override
+        public String getDescription() {
+          return "Delete Range";
+        }
+
+        @Override
+        public boolean isIgnored() {
+          return !this.didRemove;
+        }
+
+        @Override
+        public void perform(LX lx) throws InvalidCommandException {
+          LXClipLane<?> clipLane = this.clipLane.get();
+          this.preState = LXSerializable.Utils.toObject(clipLane, true);
+          this.didRemove = clipLane.deleteRange(this.fromBasis, this.toBasis);
+        }
+
+        @Override
+        public void undo(LX lx) throws InvalidCommandException {
+          this.clipLane.get().load(lx, this.preState);
+        }
+
+      }
+
       public static class SetCursors<T extends LXClipEvent<?>> extends LXCommand {
 
         private final ComponentReference<LXClipLane<T>> clipLane;
