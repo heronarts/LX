@@ -3013,8 +3013,8 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXClip> clip;
       public final Marker marker;
-      private double fromValue;
-      private final double toValue;
+      private final double fromValue;
+      private double toValue;
       private boolean ignore = false;
 
       /**
@@ -3023,6 +3023,7 @@ public abstract class LXCommand {
       public SetMarker(LXClip clip, Marker marker, double toValue) {
         this.clip = new ComponentReference<LXClip>(clip);
         this.marker = marker;
+        this.fromValue = this.marker.getValue(clip);
         this.toValue = toValue;
       }
 
@@ -3036,6 +3037,11 @@ public abstract class LXCommand {
         return this.ignore;
       }
 
+      public SetMarker update(double toValue) {
+        this.toValue = toValue;
+        return this;
+      }
+
       @Override
       public void perform(LX lx) {
         LXClip clip = this.clip.get();
@@ -3043,7 +3049,6 @@ public abstract class LXCommand {
         if (this.ignore) {
           return;
         }
-        this.fromValue = this.marker.getValue(clip);
         this.marker.setValue(clip, this.toValue);
       }
 
@@ -3055,7 +3060,6 @@ public abstract class LXCommand {
     }
 
     public static class MoveMarker extends SetMarker {
-
       /**
        * Move clip marker by a given value (in time units)
        */
