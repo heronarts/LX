@@ -2966,38 +2966,37 @@ public abstract class LXCommand {
       PLAY_START("Start"),
       PLAY_END("End");
 
-      public double getValue(LXClip clip) {
+      public LXClip.Cursor getCursor(LXClip clip) {
         switch (this) {
         case LOOP_BRACE:
-          return clip.getLoopBrace();
-        case LOOP_END:
-          return clip.getLoopEnd();
         case LOOP_START:
-          return clip.getLoopStart();
+          return clip.loopStart.cursor;
+        case LOOP_END:
+          return clip.loopEnd.cursor;
         case PLAY_END:
-          return clip.getPlayEnd();
+          return clip.playEnd.cursor;
         case PLAY_START:
-          return clip.getPlayStart();
+          return clip.playStart.cursor;
         }
-        return 0;
+        return null;
       }
 
-      public void setValue(LXClip clip, double value) {
+      public void setCursor(LXClip clip, LXClip.Cursor cursor) {
         switch (this) {
         case LOOP_BRACE:
-          clip.setLoopBrace(value);
+          clip.setLoopBrace(cursor);
           break;
         case LOOP_END:
-          clip.setLoopEnd(value);
+          clip.setLoopEnd(cursor);
           break;
         case LOOP_START:
-          clip.setLoopStart(value);
+          clip.setLoopStart(cursor);
           break;
         case PLAY_END:
-          clip.setPlayEnd(value);
+          clip.setPlayEnd(cursor);
           break;
         case PLAY_START:
-          clip.setPlayStart(value);
+          clip.setPlayStart(cursor);
           break;
         }
       }
@@ -3013,18 +3012,18 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXClip> clip;
       public final Marker marker;
-      private final double fromValue;
-      private double toValue;
+      private final LXClip.Cursor fromCursor;
+      private LXClip.Cursor toCursor;
       private boolean ignore = false;
 
       /**
        * Move clip marker to a new value (in time units)
        */
-      public SetMarker(LXClip clip, Marker marker, double toValue) {
+      public SetMarker(LXClip clip, Marker marker, LXClip.Cursor toCursor) {
         this.clip = new ComponentReference<LXClip>(clip);
         this.marker = marker;
-        this.fromValue = this.marker.getValue(clip);
-        this.toValue = toValue;
+        this.fromCursor = this.marker.getCursor(clip).clone();
+        this.toCursor = toCursor.clone();
       }
 
       @Override
@@ -3037,8 +3036,8 @@ public abstract class LXCommand {
         return this.ignore;
       }
 
-      public SetMarker update(double toValue) {
-        this.toValue = toValue;
+      public SetMarker update(LXClip.Cursor toCursor) {
+        this.toCursor.set(toCursor);
         return this;
       }
 
@@ -3049,22 +3048,39 @@ public abstract class LXCommand {
         if (this.ignore) {
           return;
         }
-        this.marker.setValue(clip, this.toValue);
+        this.marker.setCursor(clip, this.toCursor);
       }
 
       @Override
       public void undo(LX lx) {
         LXClip clip = this.clip.get();
-        this.marker.setValue(clip, this.fromValue);
+        this.marker.setCursor(clip, this.fromCursor);
       }
     }
 
     public static class MoveMarker extends SetMarker {
+
+      public enum Operation {
+        ADD,
+        SUBTRACT;
+
+        private LXClip.Cursor perform(LXClip.Cursor cursor, LXClip.Cursor increment) {
+          switch (this) {
+          case SUBTRACT: return cursor.subtract(increment);
+          default: case ADD: return cursor.add(increment);
+          }
+        }
+      }
+
       /**
-       * Move clip marker by a given value (in time units)
+       * Move clip marker by a given amount
        */
-      public MoveMarker(LXClip clip, Marker marker, double incrementValue) {
-        super(clip, marker, marker.getValue(clip) + incrementValue);
+      public MoveMarker(LXClip clip, Marker marker, LXClip.Cursor increment) {
+        this(clip, marker, increment, Operation.ADD);
+      }
+
+      public MoveMarker(LXClip clip, Marker marker, LXClip.Cursor increment, Operation op) {
+        super(clip, marker, op.perform(marker.getCursor(clip).clone(), increment));
       }
     }
 
