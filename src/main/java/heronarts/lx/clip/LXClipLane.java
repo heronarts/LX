@@ -34,6 +34,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClip.Cursor;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.utils.LXUtils;
 
 public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
@@ -88,6 +89,32 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     this.recordQueue.clear();
     this.onChange.bang();
     return this;
+  }
+
+  /**
+   * Gets an iterator over this clip lane's events, starting from the position specified
+   * by the cursor. The iterator will start at the first event with time equal to or after
+   * that cursor.
+   *
+   * @param fromCursor Cursor to begin iteration from (inclusive)
+   * @return Iterator over events equal to or after the cursor
+   */
+  public ListIterator<T> eventIterator(Cursor fromCursor) {
+    return eventIterator(fromCursor, 0);
+  }
+
+  /**
+   * Gets an iterator over this clip lane's events, starting from the position specified
+   * by the cursor. The iterator will start at the first event with time equal to or after
+   * that cursor, with an offset specified in # of events
+   *
+   * @param fromCursor Cursor to begin iteration from (inclusive)
+   * @param offset Offset the iterator by a number of events from the cursor
+   * @return Iterator over events equal to or after the cursor, plus offset
+   */
+  public ListIterator<T> eventIterator(Cursor fromCursor, int offset) {
+    int index = LXUtils.constrain(cursorPlayIndex(fromCursor) + offset, 0, this.events.size());
+    return this.events.listIterator(index);
   }
 
   protected int cursorPlayIndex(Cursor cursor) {
@@ -217,7 +244,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       final T event = entry.getKey();
       if (this.events.contains(event)) {
         this.mutableEvents.remove(event);
-        event.setCursor(entry.getValue().constrain(this.clip.length.cursor));
+        event.setCursor(entry.getValue().constrain(this.clip));
         _insertEvent(event);
         changed = true;
       } else {
@@ -240,7 +267,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   void overdubCursor(Cursor from, Cursor to) {
     final List<T> toRemove = new ArrayList<>();
-    final ListIterator<T> iter = this.events.listIterator(cursorPlayIndex(from));
+    final ListIterator<T> iter = eventIterator(from);
     while (iter.hasNext()) {
       T event = iter.next();
       if (event.cursor.isAfterOrEqual(to)) {
@@ -260,7 +287,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   void postOverdubCursor(Cursor from, Cursor to) {}
 
   void advanceCursor(Cursor from, Cursor to) {
-    final ListIterator<T> iter = this.events.listIterator(cursorPlayIndex(from));
+    final ListIterator<T> iter = eventIterator(from);
     while (iter.hasNext()) {
       T event = iter.next();
       if (event.cursor.isAfterOrEqual(to)) {
@@ -272,7 +299,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   public boolean removeRange(Cursor from, Cursor to) {
     final List<LXClipEvent<?>> toRemove = new ArrayList<>();
-    final ListIterator<T> iter = this.events.listIterator(cursorPlayIndex(from));
+    final ListIterator<T> iter = eventIterator(from);
     while (iter.hasNext()) {
       T event = iter.next();
       if (event.cursor.isAfter(to)) {

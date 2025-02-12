@@ -30,7 +30,6 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
-import heronarts.lx.clip.LXClip.Cursor;
 import heronarts.lx.midi.surface.MixerSurface;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXChannel;
@@ -186,6 +185,8 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       .setDescription("Grid line spacing in Fixed mode when time scale is tempo")
       .setWrappable(false);
 
+    public LXClip.Cursor spacing = new LXClip.Cursor();
+
     private Grid(LX lx) {
       super(lx);
       addParameter("snap", this.snap);
@@ -218,10 +219,6 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
         throw new IllegalStateException("May not remove non-registered LXClipEngine.Grid.Listener: " + listener);
       }
       this.listeners.remove(listener);
-    }
-
-    public void snap(Cursor cursor) {
-
     }
   }
 

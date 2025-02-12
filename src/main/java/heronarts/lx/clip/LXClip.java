@@ -108,6 +108,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return new Cursor(this);
     }
 
+    public boolean isNegative() {
+      return this.millis < 0;
+    }
+
     public double getMillis() {
       return this.millis;
     }
@@ -162,10 +166,58 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return this;
     }
 
+    public Cursor add(Cursor that) {
+      this.millis += that.millis;
+      this.beatCount += that.beatCount;
+      this.beatBasis += that.beatBasis;
+      if (this.beatBasis > 1) {
+        ++this.beatCount;
+        this.beatBasis = this.beatBasis % 1.;
+      }
+      return this;
+    }
+
+    public Cursor snap(Cursor snapSize) {
+      // TODO(clips): implement in timing-context aware way
+      this.millis = Math.round(this.millis / snapSize.millis) * snapSize.millis;
+      return this;
+    }
+
+    public static Cursor min(Cursor c1, Cursor c2) {
+      return c1.isBeforeOrEqual(c2) ? c1 : c2;
+    }
+
+    public static Cursor max(Cursor c1, Cursor c2) {
+      return c1.isAfter(c2) ? c1 : c2;
+    }
+
+    /**
+     * Constrain the cursor's value to the bounds of this clip
+     *
+     * @param clip Clip to constrain cursor bounds to
+     * @return Cursor
+     */
+    public Cursor constrain(LXClip clip) {
+      return constrain(clip.length.cursor);
+    }
+
+    /**
+     * Constrain the cursor to the range from ZERO to the target cursor
+     *
+     * @param max Maximum acceptable cursor value
+     * @return
+     */
     public Cursor constrain(Cursor max) {
       return constrain(ZERO, max);
     }
 
+    /**
+     * Constrain the cursor to the range
+     *
+     * @param min Minimum acceptable cursor value
+     * @param max Maximum acceptable cursor value
+     * @return
+     */
     public Cursor constrain(Cursor min, Cursor max) {
       if (isBefore(min)) {
         set(min);
@@ -188,12 +240,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
 
     @Deprecated
-    Cursor setMillis(double millis) {
+    public Cursor setMillis(double millis) {
       // TODO(clips): infer the correct beatCount and beatBasis
       this.millis = millis;
       return this;
     }
-
 
     @Override
     public boolean equals(Object o) {
@@ -257,24 +308,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
     }
 
-    static class Unmodifiable extends Cursor {
-
-      Unmodifiable(double millis) {
-        this.millis = millis;
-      }
+    public static final Cursor ZERO = new Cursor(0) {
+      @Override
+      public Cursor set(Cursor that) { throw new UnsupportedOperationException(); }
 
       @Override
-      public Cursor set(Cursor that) {
-        throw new UnsupportedOperationException("Cannot modify UnmodifiableCursor");
-      }
+      public Cursor add(Cursor that) { throw new UnsupportedOperationException(); }
 
       @Override
-      public Cursor setMillis(double millis) {
-        throw new UnsupportedOperationException("Cannot modify UnmodifiableCursor");
-      }
-    }
-
-    public static final Cursor ZERO = new Unmodifiable(0);
+      public Cursor snap(Cursor snapSize) { throw new UnsupportedOperationException(); }
+    };
 
   }
 
@@ -496,7 +539,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return this
    */
   public LXClip launchAutomationFrom(Cursor cursor) {
-    this.launchFromCursor.set(cursor).constrain(this.length.cursor);
+    this.launchFromCursor.set(cursor).constrain(this);
     this.launchAutomation.trigger();
     return this;
   }
@@ -526,7 +569,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void _playFrom(Cursor cursor) {
-    this.launchFromCursor.set(cursor).constrain(this.length.cursor);
+    this.launchFromCursor.set(cursor).constrain(this);
     trigger();
   }
 
@@ -572,7 +615,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   private void _launch() {
     // Grid/master launch is always from the play start position
-    this.launchFromCursor.set(this.playStart.cursor).constrain(this.length.cursor);
+    this.launchFromCursor.set(this.playStart.cursor).constrain(this);
     _launchAutomation();
     if (!isArmed() && this.snapshotEnabled.isOn()) {
       this.snapshot.recall();
@@ -593,7 +636,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (isRunning()) {
       // This is a "restart" operation, we were already running but we've been re-triggered
       // Retrieve and apply the launchFrom position
-      setCursor(this.launchFromCursor.constrain(this.length.cursor));
+      setCursor(this.launchFromCursor.constrain(this));
     }
   }
 
@@ -759,59 +802,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
-   * Move the loop start position by a given amount of time.
-   * Maintains the illusion of the end marker staying in place.
-   * If end marker is overrun it will be moved with the start.
-   *
-   * @param relativeMs Amount of time to move, in milliseconds. Can be negative.
-   */
-  public LXClip moveLoopStart(double relativeMs) {
-    return setLoopStart(this.loopStart.getValue() + relativeMs);
-  }
-
-  /**
-   * Move the brace by a given amount of time.
-   *
-   * @param relativeMs Amount of time to move, in milliseconds. Can be negative.
-   */
-  public LXClip moveLoopBrace(double relativeMs) {
-    return setLoopBrace(getLoopBrace() + relativeMs);
-  }
-
-  /**
-   * Move the loop end position by a given amount of time.
-   *
-   * @param relativeMs Amount of time to move, in milliseconds.  Can be negative.
-   */
-  public LXClip moveLoopEnd(double relativeMs) {
-    return setLoopEnd(getLoopEnd() + relativeMs);
-  }
-
-  /**
-   * Move the play start position by a given amount of time.  Can be negative.
-   * Can not be moved to a position later than the play end marker.
-   *
-   * @param relativeMs Amount of time to move, in milliseconds
-   */
-  public LXClip movePlayStart(double relativeMs) {
-    return setPlayStart(this.playStart.getValue() + relativeMs);
-  }
-
-  /**
-   * Move the play end marker by a given amount of time.  Can be negative.
-   * Can not be moved to a position earlier than the play start marker.
-   *
-   * @param relativeMs Amount of time to move, in milliseconds
-   */
-  public LXClip movePlayEnd(double relativeMs) {
-    return setPlayEnd(this.playEnd.getValue() + relativeMs);
-  }
-
-  /**
    * Safely set the loop start marker to a specific value (in time units)
    *
    * @param absoluteMs position on the timeline, in time units
    */
+  // TODO(clips): port to use Cursor arg and un-deprecate
+  @Deprecated
   public LXClip setLoopStart(double absoluteMs) {
     double loopEnd = this.loopStart.getValue() + this.loopLength.getValue();
     double value = LXUtils.constrain(absoluteMs, 0, this.length.getValue() - getBraceLengthMinimum());
@@ -834,8 +830,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
+  // TODO(clips): port to use Cursor arg and un-deprecate
+  @Deprecated
   public LXClip setLoopBrace(double absoluteMs) {
-    final Cursor oldEnd = new Cursor(this.loopEndCursor);
+    final Cursor oldEnd = this.loopEndCursor.clone();
     // Loop end is defined by Length, so moving the start has the appearance of moving the brace
     // Restrict right-direction move to remaining space after the brace
     double value = LXUtils.min(absoluteMs, this.length.getValue() - this.loopLength.getValue());
@@ -852,6 +850,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
+  // TODO(clips): port to use Cursor arg and un-deprecate
+  @Deprecated
   public LXClip setLoopEnd(double absoluteMs) {
     final Cursor oldEnd = new Cursor(this.loopEndCursor);
     double value = LXUtils.max(getBraceLengthMinimum(), absoluteMs - this.loopStart.getValue());
@@ -867,6 +867,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
+  // TODO(clips): port to use Cursor arg and un-deprecate
+  @Deprecated
   public LXClip setPlayStart(double absoluteMs) {
     double value = LXUtils.min(absoluteMs, this.playEnd.getValue() - getBraceLengthMinimum());
     value = LXUtils.max(0, value);
@@ -879,6 +881,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    *
    * @param absoluteMs position on the timeline, in time units
    */
+  // TODO(clips): port to use Cursor arg and un-deprecate
+  @Deprecated
   public LXClip setPlayEnd(double absoluteMs) {
     Cursor oldEnd = this.playEnd.cursor.clone();
     double value = LXUtils.max(absoluteMs, this.playStart.getValue() + getBraceLengthMinimum());
@@ -952,7 +956,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
     }
     // Retrieve and apply the launchFrom position
-    setCursor(this.launchFromCursor.constrain(this.length.cursor));
+    setCursor(this.launchFromCursor.constrain(this));
     if (this.bus.arm.isOn()) {
       this.isRecording = true;
       if (this.hasTimeline) {
@@ -1034,7 +1038,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void startPlayback() {
-    setCursor(this.launchFromCursor.constrain(this.length.cursor));
+    setCursor(this.launchFromCursor.constrain(this));
   }
 
   private void stopFirstRecording() {
