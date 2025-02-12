@@ -21,6 +21,7 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.clip.LXClip.Cursor;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.pattern.LXPattern;
 
@@ -39,12 +40,12 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> {
     return "Pattern";
   }
 
-  protected PatternClipEvent getPreviousPattern(double cursor) {
+  protected PatternClipEvent getPreviousPattern(Cursor cursor) {
     return getPreviousEvent(cursor);
   }
 
   @Override
-  void loopCursor(double to) {
+  void loopCursor(Cursor to) {
     PatternClipEvent previous = getPreviousEvent(to);
     if (previous != null) {
       previous.execute();

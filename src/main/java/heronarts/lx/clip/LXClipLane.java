@@ -21,6 +21,7 @@ package heronarts.lx.clip;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -31,8 +32,8 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.LXClip.Cursor;
 import heronarts.lx.parameter.MutableParameter;
-import heronarts.lx.utils.LXUtils;
 
 public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
@@ -66,11 +67,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this.clip.lanes.indexOf(this);
   }
 
-  private double lastEventCursor() {
+  private Cursor lastEventCursor() {
     if (!this.events.isEmpty()) {
       return this.events.get(this.events.size() - 1).cursor;
     }
-    return 0;
+    return Cursor.ZERO;
   }
 
   final List<T> recordQueue = new ArrayList<>();
@@ -89,7 +90,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this;
   }
 
-  protected int cursorPlayIndex(double cursor) {
+  protected int cursorPlayIndex(Cursor cursor) {
     int left = 0;
     int right = this.events.size() - 1;
 
@@ -99,7 +100,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      if (this.events.get(mid).cursor >= cursor) {
+      if (this.events.get(mid).cursor.isAfterOrEqual(cursor)) {
         // If the current element is greater or equal, it is a potential result,
         // but something to the left could still also be >=, and we want the lowest
         // one that is equal
@@ -113,7 +114,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return result;
   }
 
-  protected int cursorInsertIndex(double cursor) {
+  protected int cursorInsertIndex(Cursor cursor) {
     int left = 0;
     int right = this.events.size() - 1;
 
@@ -123,7 +124,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      if (this.events.get(mid).cursor > cursor) {
+      if (this.events.get(mid).cursor.isAfter(cursor)) {
         // If the current element is greater, it could be a potential result,
         // but something to the left could still be greater than us
         result = mid;
@@ -137,7 +138,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   private void _insertEvent(T event) {
-    if (event.cursor >= lastEventCursor()) {
+    if (event.cursor.isAfterOrEqual(lastEventCursor())) {
       // Quick check... shortcut in normal recording mode when we're not
       // overdubbing and the cursor is past all the prior events anyways
       this.mutableEvents.add(event);
@@ -152,20 +153,19 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this;
   }
 
-  public LXClipLane<T> moveEvent(T event, double basis) {
-    double clipLength = this.clip.getLength();
-    double min = 0;
-    double max = clipLength;
-    int index = this.events.indexOf(event);
+  public LXClipLane<T> moveEvent(T event, LXClip.Cursor cursor) {
+    Cursor min = Cursor.ZERO;
+    Cursor max = this.clip.length.cursor;
+    final int index = this.events.indexOf(event);
     if (index > 0) {
       min = this.events.get(index-1).cursor;
     }
     if (index < this.events.size() - 1) {
       max = this.events.get(index+1).cursor;
     }
-    double newCursor = LXUtils.constrain(basis * clipLength, min, max);
-    if (event.cursor != newCursor) {
-      event.cursor = newCursor;
+    cursor.constrain(min, max);
+    if (!event.cursor.equals(cursor)) {
+      event.cursor.set(cursor);
       this.onChange.bang();
     }
     return this;
@@ -179,7 +179,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * @param cursor Cursor position
    * @return Last event with time equal to or less than this cursor
    */
-  protected T getPreviousEvent(double cursor) {
+  protected T getPreviousEvent(Cursor cursor) {
     int previousIndex = cursorInsertIndex(cursor) - 1;
     if (previousIndex >= 0) {
       return this.events.get(previousIndex);
@@ -197,11 +197,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return getPreviousEvent(this.clip.cursor);
   }
 
-  public void setEventsCursors(Map<T, Double> cursors) {
+  public void setEventsCursors(Map<T, Cursor> cursors) {
     boolean changed = false;
-    final double clipLength = this.clip.length.getValue();
 
-    // TODO(mcslee): we could probably make this a lot more efficient with stricter
+    // TODO(clips): we could probably make this a lot more efficient with stricter
     // assumptions about the values coming in, whether re-ordering may have occurred
     // or not... but in the meantime we do an insertion-sort per-element to avoid
     // mucking up the state
@@ -214,11 +213,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     //
     // Also a problem right now that the ordering of the Map matters... it needs to be
     // a linked hashmap, or we need to do a stable sort
-    for (Map.Entry<T, Double> entry : cursors.entrySet()) {
+    for (Map.Entry<T, Cursor> entry : cursors.entrySet()) {
       final T event = entry.getKey();
       if (this.events.contains(event)) {
         this.mutableEvents.remove(event);
-        event.setCursor(LXUtils.constrain(entry.getValue(), 0, clipLength));
+        event.setCursor(entry.getValue().constrain(this.clip.length.cursor));
         _insertEvent(event);
         changed = true;
       } else {
@@ -237,52 +236,51 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * Subclasses may override this method if they need to take an action when
    * looping is performed and the cursor returns to a prior position.
    */
-  void loopCursor(double to) {}
+  void loopCursor(Cursor to) {}
 
-  void overdubCursor(double from, double to) {
-    int overdubIndex = cursorPlayIndex(from);
-    while (overdubIndex < this.events.size()) {
-      T event = this.events.get(overdubIndex);
-      if (event.cursor >= to) {
+  void overdubCursor(Cursor from, Cursor to) {
+    final List<T> toRemove = new ArrayList<>();
+    final ListIterator<T> iter = this.events.listIterator(cursorPlayIndex(from));
+    while (iter.hasNext()) {
+      T event = iter.next();
+      if (event.cursor.isAfterOrEqual(to)) {
         break;
       }
       this.overdubLastOriginalEvent = event;
       if (this.overdubActive) {
-        removeEvent(event);
-      } else {
-        ++overdubIndex;
-      }
-    }
-  }
-
-  void postOverdubCursor(double from, double to) {}
-
-  void advanceCursor(double from, double to) {
-    int playIndex = cursorPlayIndex(from);
-    while (playIndex < this.events.size()) {
-      T event = this.events.get(playIndex);
-      if (event.cursor >= to) {
-        break;
-      }
-      event.execute();
-      ++playIndex;
-    }
-  }
-
-  public boolean removeRange(double fromBasis, double toBasis) {
-    double length = this.clip.length.getValue();
-    double fromCursor = fromBasis * length;
-    double toCursor = toBasis * length;
-
-    List<LXClipEvent<?>> toRemove = new ArrayList<>();
-    for (T event : this.mutableEvents) {
-      if (fromCursor <= event.cursor) {
-        if (event.cursor > toCursor) {
-          break;
-        }
         toRemove.add(event);
       }
     }
+    if (!toRemove.isEmpty()) {
+      this.mutableEvents.removeAll(toRemove);
+      this.onChange.bang();
+    }
+  }
+
+  void postOverdubCursor(Cursor from, Cursor to) {}
+
+  void advanceCursor(Cursor from, Cursor to) {
+    final ListIterator<T> iter = this.events.listIterator(cursorPlayIndex(from));
+    while (iter.hasNext()) {
+      T event = iter.next();
+      if (event.cursor.isAfterOrEqual(to)) {
+        break;
+      }
+      event.execute();
+    }
+  }
+
+  public boolean removeRange(Cursor from, Cursor to) {
+    final List<LXClipEvent<?>> toRemove = new ArrayList<>();
+    final ListIterator<T> iter = this.events.listIterator(cursorPlayIndex(from));
+    while (iter.hasNext()) {
+      T event = iter.next();
+      if (event.cursor.isAfter(to)) {
+        break;
+      }
+      toRemove.add(event);
+    }
+
     // Do the removal in a single operation, since we are using
     // a CopyOnWriteArrayList
     if (!toRemove.isEmpty()) {

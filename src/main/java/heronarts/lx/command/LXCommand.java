@@ -3136,14 +3136,14 @@ public abstract class LXCommand {
       public static class RemoveRange extends LXCommand {
 
         private final ComponentReference<LXClipLane<?>> clipLane;
-        private final double fromBasis, toBasis;
+        private final LXClip.Cursor from, to;
         private boolean didRemove = false;
         private JsonObject preState = null;
 
-        public RemoveRange(LXClipLane<?> clipLane, double fromBasis, double toBasis) {
+        public RemoveRange(LXClipLane<?> clipLane, LXClip.Cursor from, LXClip.Cursor to) {
           this.clipLane = new ComponentReference<>(clipLane);
-          this.fromBasis = fromBasis;
-          this.toBasis = toBasis;
+          this.from = from.clone();
+          this.to = to.clone();
         }
 
         @Override
@@ -3160,7 +3160,7 @@ public abstract class LXCommand {
         public void perform(LX lx) throws InvalidCommandException {
           LXClipLane<?> clipLane = this.clipLane.get();
           this.preState = LXSerializable.Utils.toObject(clipLane, true);
-          this.didRemove = clipLane.removeRange(this.fromBasis, this.toBasis);
+          this.didRemove = clipLane.removeRange(this.from, this.to);
         }
 
         @Override
@@ -3176,9 +3176,9 @@ public abstract class LXCommand {
 
         private JsonObject preState = null;
         private JsonObject postState = null;
-        private final Map<T, Double> toCursors;
+        private final Map<T, LXClip.Cursor> toCursors;
 
-        public SetCursors(LXClipLane<T> clipLane, Map<T, Double> toCursors) {
+        public SetCursors(LXClipLane<T> clipLane, Map<T, LXClip.Cursor> toCursors) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.toCursors = toCursors;
         }
@@ -3218,12 +3218,13 @@ public abstract class LXCommand {
         public static class InsertEvent extends LXCommand {
 
           private final ComponentReference<ParameterClipLane> clipLane;
-          private final double basis, normalized;
+          private final LXClip.Cursor cursor;
+          private final double normalized;
           private int undoIndex;
 
-          public InsertEvent(ParameterClipLane lane, double basis, double normalized) {
+          public InsertEvent(ParameterClipLane lane, LXClip.Cursor cursor, double normalized) {
             this.clipLane = new ComponentReference<>(lane);
-            this.basis = basis;
+            this.cursor = cursor.clone();
             this.normalized = normalized;
           }
 
@@ -3235,7 +3236,7 @@ public abstract class LXCommand {
           @Override
           public void perform(LX lx) throws InvalidCommandException {
             ParameterClipLane clipLane = this.clipLane.get();
-            ParameterClipEvent insertEvent = clipLane.insertEvent(this.basis, this.normalized);
+            ParameterClipEvent insertEvent = clipLane.insertEvent(this.cursor, this.normalized);
             this.undoIndex = clipLane.events.indexOf(insertEvent);
 
           }
@@ -3256,19 +3257,22 @@ public abstract class LXCommand {
 
           private final ComponentReference<ParameterClipLane> clipLane;
           private final int eventIndex;
-          private final double originalBasis, originalNormalized;
-          private double basis, normalized;
+          private final LXClip.Cursor fromCursor;
+          private LXClip.Cursor toCursor;
+          private final double fromNormalized;
+          private double toNormalized;
 
           public MoveEvent(ParameterClipLane lane, ParameterClipEvent clipEvent) {
             this.clipLane = new ComponentReference<>(lane);
-            this.basis = this.originalBasis = clipEvent.getBasis();
-            this.normalized = this.originalNormalized = clipEvent.getNormalized();
+            this.fromCursor = clipEvent.cursor.clone();
+            this.toCursor = clipEvent.cursor.clone();
+            this.toNormalized = this.fromNormalized = clipEvent.getNormalized();
             this.eventIndex = lane.events.indexOf(clipEvent);
           }
 
-          public MoveEvent update(double basis, double normalized) {
-            this.basis = basis;
-            this.normalized = normalized;
+          public MoveEvent update(LXClip.Cursor cursor, double normalized) {
+            this.toCursor.set(cursor);
+            this.toNormalized = normalized;
             return this;
           }
 
@@ -3277,12 +3281,12 @@ public abstract class LXCommand {
             return "Move Clip Event";
           }
 
-          private void moveTo(double basis, double normalized) throws InvalidCommandException {
+          private void moveTo(LXClip.Cursor cursor, double normalized) throws InvalidCommandException {
             ParameterClipLane clipLane = this.clipLane.get();
             try {
               ParameterClipEvent clipEvent = clipLane.events.get(this.eventIndex);
               clipEvent.setNormalized(normalized);
-              clipLane.moveEvent(clipEvent, basis);
+              clipLane.moveEvent(clipEvent, cursor);
             } catch (Exception x) {
               throw new InvalidCommandException(x);
             }
@@ -3290,13 +3294,13 @@ public abstract class LXCommand {
 
           @Override
           public void perform(LX lx) throws InvalidCommandException {
-            moveTo(this.basis, this.normalized);
+            moveTo(this.toCursor, this.toNormalized);
 
           }
 
           @Override
           public void undo(LX lx) throws InvalidCommandException {
-            moveTo(this.originalBasis, this.originalNormalized);
+            moveTo(this.fromCursor, this.fromNormalized);
           }
 
         }
