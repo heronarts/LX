@@ -13,9 +13,9 @@ import heronarts.lx.LXSerializable;
  */
 public class Cursor implements Comparable<Cursor>, LXSerializable {
 
-  public static final Cursor ZERO = new Cursor.Immutable(0);
+  public static final Cursor ZERO = new Cursor.Immutable("ZERO", 0);
 
-  public static final Cursor MIN_LOOP = new Cursor.Immutable(
+  public static final Cursor MIN_LOOP = new Cursor.Immutable("MIN_LOOP",
     125,
     0,
     1 / 8. // or 1/32nd note (eighth of a single beat, 125ms at 60bpm)
@@ -45,7 +45,8 @@ public class Cursor implements Comparable<Cursor>, LXSerializable {
 
   private void assertMutable() {
     if (this instanceof Immutable) {
-      throw new UnsupportedOperationException();
+      Immutable immutable = (Immutable) this;
+      throw new UnsupportedOperationException("Cannot modify the immutable cursor: " + immutable.name);
     }
   }
 
@@ -424,12 +425,15 @@ public class Cursor implements Comparable<Cursor>, LXSerializable {
   }
 
   private static class Immutable extends Cursor {
-    private Immutable(double millis) {
-      super(millis);
+    private final String name;
+
+    private Immutable(String name, double millis) {
+      this(name, millis, 0, 0);
     }
 
-    private Immutable(double millis, int beatCount, double beatBasis) {
+    private Immutable(String name, double millis, int beatCount, double beatBasis) {
       super(millis, beatCount, beatBasis);
+      this.name = name;
     }
   }
 
