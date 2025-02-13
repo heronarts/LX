@@ -32,7 +32,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.clip.LXClip.Cursor;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -114,7 +113,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    */
   public ListIterator<T> eventIterator(Cursor fromCursor, int offset) {
     int index = LXUtils.constrain(cursorPlayIndex(fromCursor) + offset, 0, this.events.size());
-    return this.events.listIterator(index);
+    return this.mutableEvents.listIterator(index);
   }
 
   protected int cursorPlayIndex(Cursor cursor) {
@@ -180,7 +179,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this;
   }
 
-  public LXClipLane<T> moveEvent(T event, LXClip.Cursor cursor) {
+  public LXClipLane<T> moveEvent(T event, Cursor cursor) {
     Cursor min = Cursor.ZERO;
     Cursor max = this.clip.length.cursor;
     final int index = this.events.indexOf(event);
@@ -244,7 +243,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       final T event = entry.getKey();
       if (this.events.contains(event)) {
         this.mutableEvents.remove(event);
-        event.setCursor(entry.getValue().constrain(this.clip));
+        event.setCursor(entry.getValue().bound(this.clip));
         _insertEvent(event);
         changed = true;
       } else {

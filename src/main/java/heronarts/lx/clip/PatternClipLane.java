@@ -21,7 +21,6 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.clip.LXClip.Cursor;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.pattern.LXPattern;
 

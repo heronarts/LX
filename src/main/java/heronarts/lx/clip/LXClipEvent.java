@@ -31,7 +31,7 @@ public abstract class LXClipEvent<T extends LXClipEvent<?>> implements Comparato
 
   protected final LXClipLane<T> lane;
   protected final LXComponent component;
-  public final LXClip.Cursor cursor;
+  public final Cursor cursor;
 
   LXClipEvent(LXClipLane<T> lane) {
     this(lane, lane.clip.cursor, null);
@@ -41,28 +41,28 @@ public abstract class LXClipEvent<T extends LXClipEvent<?>> implements Comparato
     this(lane, lane.clip.cursor, component);
   }
 
-  LXClipEvent(LXClipLane<T> lane, LXClip.Cursor cursor) {
+  LXClipEvent(LXClipLane<T> lane, Cursor cursor) {
     this(lane, cursor, null);
   }
 
-  LXClipEvent(LXClipLane<T> lane, LXClip.Cursor cursor, LXComponent component) {
+  LXClipEvent(LXClipLane<T> lane, Cursor cursor, LXComponent component) {
     this.lane = lane;
     this.cursor = cursor.clone();
     this.component = component;
   }
 
-  public LXClip.Cursor getCursor() {
+  public Cursor getCursor() {
     return this.cursor;
   }
 
-  LXClipEvent<T> setCursor(LXClip.Cursor cursor) {
+  LXClipEvent<T> setCursor(Cursor cursor) {
     this.cursor.set(cursor);
     return this;
   }
 
   @Override
   public int compare(T arg0, T arg1) {
-    return LXClip.Cursor.COMPARATOR.compare(arg0.cursor, arg1.cursor);
+    return Cursor.COMPARATOR.compare(arg0.cursor, arg1.cursor);
   }
 
   public abstract void execute();

@@ -185,7 +185,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       .setDescription("Grid line spacing in Fixed mode when time scale is tempo")
       .setWrappable(false);
 
-    public LXClip.Cursor spacing = new LXClip.Cursor();
+    public Cursor spacing = new Cursor();
 
     private Grid(LX lx) {
       super(lx);

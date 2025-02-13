@@ -20,7 +20,6 @@ package heronarts.lx.clip;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -54,364 +53,12 @@ import heronarts.lx.utils.LXUtils;
 
 public abstract class LXClip extends LXRunnableComponent implements LXOscComponent, LXComponent.Renamable, LXBus.Listener {
 
-  private static final double LOOP_LENGTH_MINIMUM = 125;
-
   public interface Listener {
     public default void cursorChanged(LXClip clip, Cursor cursor) {}
     public default void clipLaneMoved(LXClip clip, LXClipLane<?> lane, int index) {}
     public default void parameterLaneAdded(LXClip clip, ParameterClipLane lane) {}
     public default void parameterLaneRemoved(LXClip clip, ParameterClipLane lane) {}
   }
-
-  /**
-   * A cursor can keep track of time in two ways - either raw wall-clock milliseconds or
-   * a tempo-based beat count plus position within the beat.
-   */
-  public static class Cursor implements Comparable<Cursor>, LXSerializable {
-
-    public final static Comparator<Cursor> COMPARATOR = new Comparator<Cursor>() {
-      @Override
-      public int compare(Cursor o1, Cursor o2) {
-        if (o1.millis < o2.millis) {
-          return -1;
-        } else if (o1.millis > o2.millis) {
-          return 1;
-        }
-        return 0;
-      }
-
-    };
-
-    public enum Mode {
-      ABSOLUTE,
-      TEMPO
-    };
-
-    double millis = 0;
-
-    int beatCount = 0;
-    double beatBasis = 0;
-
-    public Cursor() {}
-
-    public Cursor(double millis) {
-      this.millis = millis;
-      // TODO(clips): prime the beat fields
-    }
-
-    public Cursor(double millis, int beatCount, double beatBasis) {
-      this.millis = millis;
-      this.beatCount = beatCount;
-      this.beatBasis = beatBasis;
-    }
-
-    private Cursor(Cursor that) {
-      set(that);
-    }
-
-    @Override
-    public Cursor clone() {
-      return new Cursor(this);
-    }
-
-    public boolean isNegative() {
-      return this.millis < 0;
-    }
-
-    public double getMillis() {
-      return this.millis;
-    }
-
-    public int getBeatCount() {
-      return this.beatCount;
-    }
-
-    public double getBeatBasis() {
-      return this.beatBasis;
-    }
-
-    public boolean isZero() {
-      return this.millis == 0;
-    }
-
-    public boolean isBefore(Cursor that) {
-      return this.millis < that.millis;
-    }
-
-    public boolean isBeforeOrEqual(Cursor that) {
-      return this.millis <= that.millis;
-    }
-
-    public boolean isAfter(Cursor that) {
-      return this.millis > that.millis;
-    }
-
-    public boolean isAfterOrEqual(Cursor that) {
-      return this.millis >= that.millis;
-    }
-
-    public boolean isInRange(Cursor before, Cursor after) {
-      return this.millis >= before.millis && this.millis <= after.millis;
-    }
-
-    public void reset() {
-      this.millis = 0;
-      this.beatCount = 0;
-      this.beatBasis = 0;
-    }
-
-    public Cursor setScaledDifference(Cursor from, Cursor to, double scale) {
-      setMillis(from.millis + (to.millis - from.millis) * scale);
-      return this;
-    }
-
-    public Cursor set(Cursor that) {
-      this.millis = that.millis;
-      this.beatCount = that.beatCount;
-      this.beatBasis = that.beatBasis;
-      return this;
-    }
-
-    public Cursor add(Cursor that) {
-      this.millis += that.millis;
-      this.beatCount += that.beatCount;
-      this.beatBasis += that.beatBasis;
-      if (this.beatBasis > 1) {
-        ++this.beatCount;
-        this.beatBasis = this.beatBasis % 1.;
-      }
-      return this;
-    }
-
-    public Cursor inc(Cursor that, boolean add) {
-      return add ? add(that) : subtract(that);
-    }
-
-    public Cursor subtract(Cursor that) {
-      this.millis -= that.millis;
-      this.beatCount -= that.beatCount;
-      this.beatBasis -= that.beatBasis;
-      if (this.beatBasis < 0) {
-        --this.beatCount;
-        this.beatBasis = this.beatBasis + 1;
-      }
-      return this;
-    }
-
-    public Cursor snap(Cursor snapSize) {
-      // TODO(clips): implement in timing-context aware way
-      this.millis = Math.round(this.millis / snapSize.millis) * snapSize.millis;
-      return this;
-    }
-
-    // NOTE: this applies to the scenario where a previously non-grid-snapped Cursor move
-    // left something *extremely* close to a grid marker, such that the user wouldn't really
-    // notice the non-equality.
-    private static final double SNAP_THRESHOLD = .01;
-
-    public Cursor snapUp(Cursor snapSize) {
-      // TODO(clips): implement in timing-context aware way
-      double snapUnits = this.millis / snapSize.millis;
-      double decimal = snapUnits - ((long) snapUnits);
-      if ((decimal < SNAP_THRESHOLD) || ((1 - decimal) < SNAP_THRESHOLD)) {
-        // It's at the top
-        this.millis = (1 + Math.ceil(snapUnits)) * snapSize.millis;
-      } else {
-        this.millis = Math.ceil(snapUnits) * snapSize.millis;
-      }
-      return this;
-    }
-
-    public Cursor snapDown(Cursor snapSize) {
-      double snapUnits = this.millis / snapSize.millis;
-      double decimal = snapUnits - ((long) snapUnits);
-      if (decimal < SNAP_THRESHOLD) {
-        // It's at the bottom
-        this.millis = (Math.floor(snapUnits) - 1) * snapSize.millis;
-      } else {
-        this.millis = Math.floor(snapUnits) * snapSize.millis;
-      }
-      return this;
-    }
-
-    public static Cursor min(Cursor c1, Cursor c2) {
-      return c1.isBeforeOrEqual(c2) ? c1 : c2;
-    }
-
-    public static Cursor max(Cursor c1, Cursor c2) {
-      return c1.isAfter(c2) ? c1 : c2;
-    }
-
-    /**
-     * Constrain the cursor's value to the bounds of this clip
-     *
-     * @param clip Clip to constrain cursor bounds to
-     * @return Cursor
-     */
-    public Cursor constrain(LXClip clip) {
-      return constrain(clip.length.cursor);
-    }
-
-    /**
-     * Constrain the cursor to the range from ZERO to the target cursor
-     *
-     * @param max Maximum acceptable cursor value
-     * @return Cursor with modification applied
-     */
-    public Cursor constrain(Cursor max) {
-      return constrain(ZERO, max);
-    }
-
-    /**
-     * Constrain the cursor to the range
-     *
-     * @param min Minimum acceptable cursor value
-     * @param max Maximum acceptable cursor value
-     * @return
-     */
-    public Cursor constrain(Cursor min, Cursor max) {
-      if (isBefore(min)) {
-        set(min);
-      }
-      if (isAfter(max)) {
-        set(max);
-      }
-      return this;
-    }
-
-    public double getDeltaMillis(Cursor that) {
-      return this.millis - that.millis;
-    }
-
-    /**
-     * Gets the lerp factor of this cursor, as a normalized
-     * value with 0-1 representing the range between pre and post
-     *
-     * @param pre Reference start cursor
-     * @param post Reference end cursor
-     * @return Normalized value from 0-1 assuming this Cursor is between pre and post
-     */
-    public double getLerpFactor(Cursor pre, Cursor post) {
-      // TODO(clips): implement tempo-version
-      if (pre.millis == post.millis) {
-        return 0;
-      }
-      return (this.millis - pre.millis) / (post.millis - pre.millis);
-    }
-
-    /**
-     * Gets the ratio of the current cursor value to the difference
-     * between pre and post. Note that the cursor doesn't have to be
-     * contained by pre and post, it's treated as a magnitude
-     *
-     * @param pre Reference starting point
-     * @param post Reference ending point
-     * @return Ratio of the magnitude of this cursor to the difference between pre and post
-     */
-    public double getLerpRatio(Cursor pre, Cursor post) {
-      // TODO(clips): implement tempo-version
-      if (pre.millis == post.millis) {
-        return 1;
-      }
-      return this.millis / (post.millis - pre.millis);
-    }
-
-    /**
-     * Gets the ratio of the length of this cursor to the given argument.
-     *
-     * @param that Other cursor
-     * @return Ratio of this cursor's length to the other
-     */
-    public double getRatio(Cursor that) {
-      // TODO(clips): implement tempo-version
-      return this.millis / that.millis;
-    }
-
-    @Deprecated
-    public Cursor setMillis(double millis) {
-      // TODO(clips): infer the correct beatCount and beatBasis
-      this.millis = millis;
-      return this;
-    }
-
-    @Override
-    public String toString() {
-      return String.format("%.2f/%d:%.2f", this.millis, this.beatCount, this.beatBasis);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o instanceof Cursor) {
-        Cursor that = (Cursor) o;
-        return
-          this.millis == that.millis &&
-          this.beatCount == that.beatCount &&
-          this.beatBasis == that.beatBasis;
-      }
-      return false;
-    }
-
-    @Override
-    public int compareTo(Cursor that) {
-      return COMPARATOR.compare(this, that);
-    }
-
-    private void _next(Cursor cursor, double deltaMs) {
-      set(cursor);
-      this.millis += deltaMs;
-      // TODO(clips): next cursor should set beatCount and beatBasis
-      // from global Tempo relative to start time of the clip
-    }
-
-    private static final String KEY_MILLIS = "millis";
-    private static final String KEY_BEAT_COUNT = "beatCount";
-    private static final String KEY_BEAT_BASIS = "beatBasis";
-
-    @Override
-    public void save(LX lx, JsonObject obj) {
-      obj.addProperty(KEY_MILLIS, this.millis);
-      obj.addProperty(KEY_BEAT_COUNT, this.beatCount);
-      obj.addProperty(KEY_BEAT_BASIS, this.beatBasis);
-
-    }
-
-    @Override
-    public void load(LX lx, JsonObject obj) {
-      if (obj.has(KEY_MILLIS)) {
-        this.millis = obj.get(KEY_MILLIS).getAsDouble();
-      }
-      if (obj.has(KEY_BEAT_COUNT)) {
-        this.beatCount = obj.get(KEY_BEAT_COUNT).getAsInt();
-      }
-      if (obj.has(KEY_BEAT_BASIS)) {
-        this.beatBasis = obj.get(KEY_BEAT_BASIS).getAsDouble();
-      }
-    }
-
-    private static class Immutable extends Cursor {
-
-      private Immutable(double millis) {
-        super(millis);
-      }
-
-      @Override
-      public Cursor set(Cursor that) { throw new UnsupportedOperationException(); }
-
-      @Override
-      public Cursor add(Cursor that) { throw new UnsupportedOperationException(); }
-
-      @Override
-      public Cursor snap(Cursor snapSize) { throw new UnsupportedOperationException(); }
-    }
-
-    public static final Cursor ZERO = new Cursor.Immutable(0);
-    public static final Cursor MIN_LOOP = new Cursor.Immutable(LOOP_LENGTH_MINIMUM);
-
-  }
-
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
@@ -445,7 +92,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     // TODO(clips): update when tempo-mode is in
     public TimestampParameter setValue(Cursor cursor) {
-      setValue(cursor.millis);
+      setValue(cursor.getMillis());
       return this;
     }
 
@@ -633,7 +280,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return this
    */
   public LXClip launchAutomationFrom(Cursor cursor) {
-    this.launchFromCursor.set(cursor).constrain(this);
+    this.launchFromCursor.set(cursor.bound(this));
     this.launchAutomation.trigger();
     return this;
   }
@@ -663,7 +310,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void _playFrom(Cursor cursor) {
-    this.launchFromCursor.set(cursor).constrain(this);
+    this.launchFromCursor.set(cursor.bound(this));
     trigger();
   }
 
@@ -709,7 +356,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   private void _launch() {
     // Grid/master launch is always from the play start position
-    this.launchFromCursor.set(this.playStart.cursor).constrain(this);
+    this.launchFromCursor.set(this.playStart.cursor.bound(this));
     _launchAutomation();
     if (!isArmed() && this.snapshotEnabled.isOn()) {
       this.snapshot.recall();
@@ -896,8 +543,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   public LXClip setLoopStart(Cursor loopStart) {
 
     // Loop start cannot go past loop end, subject to min loop length
-    Cursor max = this.loopEnd.cursor.clone().subtract(Cursor.MIN_LOOP);
-    loopStart = loopStart.clone().constrain(max);
+    Cursor max = this.loopEnd.cursor.subtract(Cursor.MIN_LOOP);
+    loopStart = loopStart.bound(max);
 
     Cursor originalLoopEnd = this.loopEnd.cursor.clone();
 
@@ -918,10 +565,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Loop end is defined by Length, so moving the start has the appearance of moving the brace
     // Restrict right-direction move to remaining space after the brace
     Cursor max = this.loopLength.cursor.isBefore(this.length.cursor) ?
-      this.length.cursor.clone().subtract(this.loopLength.cursor) :
+      this.length.cursor.subtract(this.loopLength.cursor) :
       this.length.cursor;
 
-    loopBrace = loopBrace.clone().constrain(max);
+    loopBrace = loopBrace.bound(max);
 
     // Restrict left side to zero, may have been a left move or loop length may have been smaller than gridSnapUnits
     this.loopStart.setValue(loopBrace);
@@ -940,11 +587,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     // Calculate new length as given loopEnd - this.loopStart, constrain it to
     // the shortest loop allowed, or the maximum space available
-    final Cursor loopLength = loopEnd.clone().subtract(this.loopStart.cursor).constrain(
+    final Cursor loopLength = loopEnd.subtract(this.loopStart.cursor).bound(
       Cursor.MIN_LOOP,
-      this.length.cursor.clone().subtract(this.loopStart.cursor)
+      this.length.cursor.subtract(this.loopStart.cursor)
     );
-
     this.loopLength.setValue(loopLength);
 
     // Check for cursor capture while playing
@@ -959,9 +605,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   public LXClip setPlayStart(Cursor playStart) {
     if (this.playEnd.cursor.isAfter(Cursor.MIN_LOOP)) {
-      playStart = playStart.clone().constrain(
+      playStart = playStart.bound(
         Cursor.ZERO,
-        this.playEnd.cursor.clone().subtract(Cursor.MIN_LOOP)
+        this.playEnd.cursor.subtract(Cursor.MIN_LOOP)
       );
     } else {
       playStart = Cursor.ZERO;
@@ -977,9 +623,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   public LXClip setPlayEnd(Cursor playEnd) {
     final Cursor oldEnd = this.playEnd.cursor.clone();
-
-    playEnd = playEnd.clone().constrain(
-      this.playStart.cursor.clone().add(Cursor.MIN_LOOP),
+    playEnd = playEnd.bound(
+      this.playStart.cursor.add(Cursor.MIN_LOOP),
       this.length.cursor
     );
     this.playEnd.setValue(playEnd);
@@ -1351,7 +996,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
             if (!this.loopLength.cursor.isZero()) {
               // Wrap into new loop, play automations up to next position
               while (this.nextCursor.isAfterOrEqual(endCursor)) {
-                this.nextCursor.subtract(this.loopLength.cursor);
+                this.nextCursor._subtract(this.loopLength.cursor);
                 loopCursor(this.loopStart.cursor);
                 if (endCursor.isBefore(this.nextCursor)) {
                   // Loop is smaller than frame, run automations for each time we would have passed them

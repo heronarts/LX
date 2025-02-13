@@ -32,6 +32,7 @@ import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.Cursor;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEvent;
 import heronarts.lx.clip.LXClipLane;
@@ -2966,7 +2967,7 @@ public abstract class LXCommand {
       PLAY_START("Start"),
       PLAY_END("End");
 
-      public LXClip.Cursor getCursor(LXClip clip) {
+      public Cursor getCursor(LXClip clip) {
         switch (this) {
         case LOOP_BRACE:
         case LOOP_START:
@@ -2981,7 +2982,7 @@ public abstract class LXCommand {
         return null;
       }
 
-      public void setCursor(LXClip clip, LXClip.Cursor cursor) {
+      public void setCursor(LXClip clip, Cursor cursor) {
         switch (this) {
         case LOOP_BRACE:
           clip.setLoopBrace(cursor);
@@ -3012,14 +3013,14 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXClip> clip;
       public final Marker marker;
-      private final LXClip.Cursor fromCursor;
-      private LXClip.Cursor toCursor;
+      private final Cursor fromCursor;
+      private Cursor toCursor;
       private boolean ignore = false;
 
       /**
        * Move clip marker to a new value (in time units)
        */
-      public SetMarker(LXClip clip, Marker marker, LXClip.Cursor toCursor) {
+      public SetMarker(LXClip clip, Marker marker, Cursor toCursor) {
         this.clip = new ComponentReference<LXClip>(clip);
         this.marker = marker;
         this.fromCursor = this.marker.getCursor(clip).clone();
@@ -3036,7 +3037,7 @@ public abstract class LXCommand {
         return this.ignore;
       }
 
-      public SetMarker update(LXClip.Cursor toCursor) {
+      public SetMarker update(Cursor toCursor) {
         this.toCursor.set(toCursor);
         return this;
       }
@@ -3064,7 +3065,7 @@ public abstract class LXCommand {
         ADD,
         SUBTRACT;
 
-        private LXClip.Cursor perform(LXClip.Cursor cursor, LXClip.Cursor increment) {
+        private Cursor perform(Cursor cursor, Cursor increment) {
           switch (this) {
           case SUBTRACT: return cursor.subtract(increment);
           default: case ADD: return cursor.add(increment);
@@ -3075,12 +3076,12 @@ public abstract class LXCommand {
       /**
        * Move clip marker by a given amount
        */
-      public MoveMarker(LXClip clip, Marker marker, LXClip.Cursor increment) {
+      public MoveMarker(LXClip clip, Marker marker, Cursor increment) {
         this(clip, marker, increment, Operation.ADD);
       }
 
-      public MoveMarker(LXClip clip, Marker marker, LXClip.Cursor increment, Operation op) {
-        super(clip, marker, op.perform(marker.getCursor(clip).clone(), increment));
+      public MoveMarker(LXClip clip, Marker marker, Cursor increment, Operation op) {
+        super(clip, marker, op.perform(marker.getCursor(clip), increment));
       }
     }
 
@@ -3152,11 +3153,11 @@ public abstract class LXCommand {
       public static class RemoveRange extends LXCommand {
 
         private final ComponentReference<LXClipLane<?>> clipLane;
-        private final LXClip.Cursor from, to;
+        private final Cursor from, to;
         private boolean didRemove = false;
         private JsonObject preState = null;
 
-        public RemoveRange(LXClipLane<?> clipLane, LXClip.Cursor from, LXClip.Cursor to) {
+        public RemoveRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.from = from.clone();
           this.to = to.clone();
@@ -3192,9 +3193,9 @@ public abstract class LXCommand {
 
         private JsonObject preState = null;
         private JsonObject postState = null;
-        private final Map<T, LXClip.Cursor> toCursors;
+        private final Map<T, Cursor> toCursors;
 
-        public SetCursors(LXClipLane<T> clipLane, Map<T, LXClip.Cursor> toCursors) {
+        public SetCursors(LXClipLane<T> clipLane, Map<T, Cursor> toCursors) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.toCursors = toCursors;
         }
@@ -3234,11 +3235,11 @@ public abstract class LXCommand {
         public static class InsertEvent extends LXCommand {
 
           private final ComponentReference<ParameterClipLane> clipLane;
-          private final LXClip.Cursor cursor;
+          private final Cursor cursor;
           private final double normalized;
           private int undoIndex;
 
-          public InsertEvent(ParameterClipLane lane, LXClip.Cursor cursor, double normalized) {
+          public InsertEvent(ParameterClipLane lane, Cursor cursor, double normalized) {
             this.clipLane = new ComponentReference<>(lane);
             this.cursor = cursor.clone();
             this.normalized = normalized;
@@ -3273,8 +3274,8 @@ public abstract class LXCommand {
 
           private final ComponentReference<ParameterClipLane> clipLane;
           private final int eventIndex;
-          private final LXClip.Cursor fromCursor;
-          private LXClip.Cursor toCursor;
+          private final Cursor fromCursor;
+          private Cursor toCursor;
           private final double fromNormalized;
           private double toNormalized;
 
@@ -3286,7 +3287,7 @@ public abstract class LXCommand {
             this.eventIndex = lane.events.indexOf(clipEvent);
           }
 
-          public MoveEvent update(LXClip.Cursor cursor, double normalized) {
+          public MoveEvent update(Cursor cursor, double normalized) {
             this.toCursor.set(cursor);
             this.toNormalized = normalized;
             return this;
@@ -3297,7 +3298,7 @@ public abstract class LXCommand {
             return "Move Clip Event";
           }
 
-          private void moveTo(LXClip.Cursor cursor, double normalized) throws InvalidCommandException {
+          private void moveTo(Cursor cursor, double normalized) throws InvalidCommandException {
             ParameterClipLane clipLane = this.clipLane.get();
             try {
               ParameterClipEvent clipEvent = clipLane.events.get(this.eventIndex);
