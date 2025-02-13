@@ -182,6 +182,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new BooleanParameter("Custom Snapshot Transition")
     .setDescription("Whether to use custom snapshot transition settings for this clip");
 
+  public final MutableParameter zoom = new MutableParameter("Zoom", 1);
+
   public final LXBus bus;
   public final LXClipSnapshot snapshot;
 
@@ -229,8 +231,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("automationEnabled", this.automationEnabled);
     addParameter("customSnapshotTransition", this.customSnapshotTransition);
-
     addInternalParameter("launchAutomation", this.launchAutomation);
+    addInternalParameter("zoom", this.zoom);
 
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this));
     addArray("lane", this.lanes);
