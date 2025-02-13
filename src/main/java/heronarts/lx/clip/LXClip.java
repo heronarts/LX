@@ -316,6 +316,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return this.millis / (post.millis - pre.millis);
     }
 
+    /**
+     * Gets the ratio of the length of this cursor to the given argument.
+     *
+     * @param that Other cursor
+     * @return Ratio of this cursor's length to the other
+     */
+    public double getRatio(Cursor that) {
+      // TODO(clips): implement tempo-version
+      return this.millis / that.millis;
+    }
+
     @Deprecated
     public Cursor setMillis(double millis) {
       // TODO(clips): infer the correct beatCount and beatBasis
