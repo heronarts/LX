@@ -273,6 +273,10 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
 
   private final LinearEnvelope nudge = new LinearEnvelope(1, 1, 5000);
 
+  public final BooleanParameter follow =
+    new BooleanParameter("Follow", false)
+    .setDescription("When enabled, the clip UI follows the cursor");
+
   public final MutableParameter period =
     new MutableParameter(MS_PER_MINUTE / DEFAULT_BPM)
     .setUnits(MutableParameter.Units.MILLISECONDS)
@@ -393,6 +397,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
     addParameter("launchQuantization", this.launchQuantization);
+    addParameter("follow", this.follow);
     addModulator("nudge", this.nudge);
 
     addLegacyParameter("beatsPerMeasure", this.beatsPerBar);
