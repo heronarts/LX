@@ -412,6 +412,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private ParameterClipLane getParameterLane(LXNormalizedParameter parameter, boolean create) {
+    return getParameterLane(parameter, create, -1);
+  }
+
+  private ParameterClipLane getParameterLane(LXNormalizedParameter parameter, boolean create, int index) {
     for (LXClipLane<?> lane : this.lanes) {
       if (lane instanceof ParameterClipLane) {
         if (((ParameterClipLane) lane).parameter == parameter) {
@@ -421,7 +425,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
     if (create) {
       ParameterClipLane lane = ParameterClipLane.create(this, parameter, this.parameterDefaults.get(parameter));
-      this.mutableLanes.add(lane);
+      if (index < 0) {
+        this.mutableLanes.add(lane);
+      } else {
+        this.mutableLanes.add(index, lane);
+      }
       for (Listener listener : this.listeners) {
         listener.parameterLaneAdded(this, lane);
       }
@@ -1085,32 +1093,37 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.hasTimeline = this.length.getValue() > 0;
   }
 
+  public ParameterClipLane addParameterLane(LX lx, JsonObject laneObj, int index) {
+    LXParameter parameter;
+    if (laneObj.has(LXComponent.KEY_PATH)) {
+      String parameterPath = laneObj.get(KEY_PATH).getAsString();
+      parameter = LXPath.getParameter(this.bus, parameterPath);
+      if (parameter == null) {
+        LX.error("No parameter found for saved parameter clip lane on bus " + this.bus + " at path: " + parameterPath);
+        return null;
+      }
+    } else {
+      int componentId = laneObj.get(KEY_COMPONENT_ID).getAsInt();
+      LXComponent component = lx.getProjectComponent(componentId);
+      if (component == null) {
+        LX.error("No component found for saved parameter clip lane on bus " + this.bus + " with id: " + componentId);
+        return null;
+      }
+      String parameterPath = laneObj.get(KEY_PARAMETER_PATH).getAsString();
+      parameter = component.getParameter(parameterPath);
+      if (parameter == null) {
+        LX.error("No parameter found for saved parameter clip lane on component " + component + " at path: " + parameterPath);
+        return null;
+      }
+    }
+    ParameterClipLane lane = getParameterLane((LXNormalizedParameter) parameter, true, index);
+    lane.load(lx, laneObj);
+    return lane;
+  }
+
   protected void loadLane(LX lx, String laneType, JsonObject laneObj) {
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
-      LXParameter parameter;
-      if (laneObj.has(LXComponent.KEY_PATH)) {
-        String parameterPath = laneObj.get(KEY_PATH).getAsString();
-        parameter = LXPath.getParameter(this.bus, parameterPath);
-        if (parameter == null) {
-          LX.error("No parameter found for saved parameter clip lane on bus " + this.bus + " at path: " + parameterPath);
-          return;
-        }
-      } else {
-        int componentId = laneObj.get(KEY_COMPONENT_ID).getAsInt();
-        LXComponent component = lx.getProjectComponent(componentId);
-        if (component == null) {
-          LX.error("No component found for saved parameter clip lane on bus " + this.bus + " with id: " + componentId);
-          return;
-        }
-        String parameterPath = laneObj.get(KEY_PARAMETER_PATH).getAsString();
-        parameter = component.getParameter(parameterPath);
-        if (parameter == null) {
-          LX.error("No parameter found for saved parameter clip lane on component " + component + " at path: " + parameterPath);
-          return;
-        }
-      }
-      ParameterClipLane lane = getParameterLane((LXNormalizedParameter) parameter, true);
-      lane.load(lx, laneObj);
+      addParameterLane(lx, laneObj, -1);
     }
   }
 

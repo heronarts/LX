@@ -3114,6 +3114,42 @@ public abstract class LXCommand {
       }
     }
 
+    public static class RemoveParameterLane extends RemoveComponent {
+
+      private final ComponentReference<LXClip> clip;
+      private final ComponentReference<ParameterClipLane> parameterLane;
+      private JsonObject laneObj;
+      private int laneIndex;
+
+      public RemoveParameterLane(ParameterClipLane parameterLane) {
+        super(parameterLane);
+        this.clip = new ComponentReference<>(parameterLane.clip);
+        this.parameterLane = new ComponentReference<>(parameterLane);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Clip Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        final ParameterClipLane clipLane = this.parameterLane.get();
+        this.laneIndex = clipLane.getIndex();
+        this.laneObj = LXSerializable.Utils.toObject(lx, clipLane);
+        clipLane.clip.removeParameterLane(clipLane);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        ParameterClipLane lane = this.clip.get().addParameterLane(lx, this.laneObj, this.laneIndex);
+        if (lane != null) {
+          super.undo(lx);
+        }
+      }
+
+    }
+
     public static class Event {
 
       public static class Remove<T extends LXClipEvent<T>> extends LXCommand {
