@@ -1316,7 +1316,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             if (surface != null) {
               surface.load(lx, surfaceObj);
               surface.enabled.setValue(true);
-            } else {
+            } else if (surfaceObj.has(KEY_CLASS)) {
               // We have a MIDI surface remembered from a previous load, but it was not auto-instantiated
               // meaning most likely that the hardware is not connected anymore. Or that the device uses
               // a non-standard name. Do a custom instantiation in this case.
