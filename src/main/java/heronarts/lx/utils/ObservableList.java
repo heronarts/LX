@@ -39,17 +39,17 @@ public class ObservableList<T> implements List<T> {
   private final List<Listener<T>> listeners;
 
   /**
-   * Create a new observable list which has an ArrayList<T> as its inner list
+   * Create a new observable list which has an ArrayList as its inner list
    */
   public ObservableList() {
     this(new ArrayList<T>());
   }
 
   /**
-   * Create a new observable list using a given List<T> for its inner list.
+   * Create a new observable list using a given List for its inner list.
    * Allows custom inner list types.
    *
-   * @param list List<T> to use as the inner list
+   * @param list List to use as the inner list
    */
   public ObservableList(List<T> list) {
     this.list = list;
