@@ -107,7 +107,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         normalized = LXUtils.lerp(
           previousEvent.getNormalized(),
           nextEvent.getNormalized(),
-          this.clip.cursor.getLerpFactor(previousEvent.cursor, nextEvent.cursor)
+          CursorOp().getLerpFactor(this.clip.cursor, previousEvent.cursor, nextEvent.cursor)
         );
       } else {
         normalized = previousEvent.getNormalized();
@@ -155,7 +155,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
         // Interpolate what the deleted stuff would have looked like
         ParameterClipEvent next = this.events.get(index);
-        if (next.cursor.isAfter(to)) {
+        if (CursorOp().isAfter(next.cursor, to)) {
           double normalizedValue = 0;
           if (this.overdubLastOriginalEvent == null) {
             // There was no original stuff before this, just jump to the new value
@@ -166,7 +166,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
             normalizedValue = LXUtils.lerp(
               prior.getNormalized(),
               next.getNormalized(),
-              to.getLerpFactor(prior.cursor, next.cursor)
+              CursorOp().getLerpFactor(to, prior.cursor, next.cursor)
             );
           }
 
@@ -195,12 +195,12 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     ParameterClipEvent next = this.events.get(nextIndex);
     ParameterClipEvent prior = (nextIndex > 0) ? this.events.get(nextIndex - 1) : null;
 
-    if (from.isAfter(next.cursor)) {
+    if (CursorOp().isAfter(from, next.cursor)) {
       // Do nothing, we've already passed it all
     } else if (prior == null) {
       // Nothing before us, set the first value
       this.parameter.setNormalized(next.getNormalized());
-    } else if (to.isAfter(next.cursor)) {
+    } else if (CursorOp().isAfter(to, next.cursor)) {
       // We're past the last event, just set its value
       this.parameter.setNormalized(next.getNormalized());
     } else if (this instanceof Normalized) {
@@ -208,7 +208,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       this.parameter.setNormalized(LXUtils.lerp(
         prior.getNormalized(),
         next.getNormalized(),
-        to.getLerpFactor(prior.cursor, next.cursor)
+        CursorOp().getLerpFactor(to, prior.cursor, next.cursor)
       ));
     } else {
       // Stick with the prior value until next is actually reached

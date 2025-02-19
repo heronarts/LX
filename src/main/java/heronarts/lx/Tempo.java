@@ -56,13 +56,14 @@ import heronarts.lx.utils.LXUtils;
  */
 public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTriggerSource {
 
-  public final static double DEFAULT_MIN_BPM = 20;
-  public final static double DEFAULT_MAX_BPM = 240;
+  public final static double DEFAULT_BPM = 120;
+  public final static double MIN_BPM = 20;
+  public final static double MAX_BPM = 240;
 
   private static final double MAX_SLEW_CORRECTION = 3.9;
 
-  private double minOscBpm = DEFAULT_MIN_BPM;
-  private double maxOscBpm = DEFAULT_MAX_BPM;
+  private double minOscBpm = MIN_BPM;
+  private double maxOscBpm = MAX_BPM;
 
   public interface Quantization {
     public default boolean hasDivision() {
@@ -210,7 +211,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   private final static double MS_PER_MINUTE = 60000;
-  private final static double DEFAULT_BPM = 120;
   private final static int MAX_BEATS_PER_BAR = 16;
 
   public final EnumParameter<ClockSource> clockSource =
@@ -223,7 +223,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     .setDescription("Beats per bar");
 
   public final BoundedParameter bpm =
-    new BoundedParameter("BPM", DEFAULT_BPM, this.minOscBpm, this.maxOscBpm)
+    new BoundedParameter("BPM", DEFAULT_BPM, MIN_BPM, MAX_BPM)
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Beats per minute of the master tempo");
 
@@ -435,7 +435,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   public boolean isValidOscBpm(double bpm) {
-    return bpm >= this.minOscBpm && bpm <= this.maxOscBpm;
+    return LXUtils.inRange(bpm, this.minOscBpm, this.maxOscBpm);
   }
 
   @Override

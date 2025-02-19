@@ -62,7 +62,7 @@ public abstract class LXClipEvent<T extends LXClipEvent<?>> implements Comparato
 
   @Override
   public int compare(T arg0, T arg1) {
-    return Cursor.COMPARATOR.compare(arg0.cursor, arg1.cursor);
+    return this.lane.clip.timeBase.getEnum().operator.compare(arg0.cursor, arg1.cursor);
   }
 
   public abstract void execute();

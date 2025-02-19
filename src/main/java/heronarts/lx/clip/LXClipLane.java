@@ -52,6 +52,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected final CopyOnWriteArrayList<T> mutableEvents = new CopyOnWriteArrayList<>();
   public final List<T> events = Collections.unmodifiableList(this.mutableEvents);
 
+  protected Cursor.Operator CursorOp() {
+    return this.clip.CursorOp();
+  }
+
   protected LXClipLane(LXClip clip) {
     setParent(clip);
     this.clip = clip;
@@ -124,9 +128,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     // we find something >= cursor
     int result = right + 1;
 
+    final Cursor.Operator CursorOp = CursorOp();
+
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      if (this.events.get(mid).cursor.isAfterOrEqual(cursor)) {
+      if (CursorOp.isAfterOrEqual(this.events.get(mid).cursor, cursor)) {
         // If the current element is greater or equal, it is a potential result,
         // but something to the left could still also be >=, and we want the lowest
         // one that is equal
@@ -148,9 +154,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     // we find something > cursor
     int result = right + 1;
 
+    final Cursor.Operator CursorOp = CursorOp();
+
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      if (this.events.get(mid).cursor.isAfter(cursor)) {
+      if (CursorOp.isAfter(this.events.get(mid).cursor, cursor)) {
         // If the current element is greater, it could be a potential result,
         // but something to the left could still be greater than us
         result = mid;
@@ -164,7 +172,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   private void _insertEvent(T event) {
-    if (event.cursor.isAfterOrEqual(lastEventCursor())) {
+    if (CursorOp().isAfterOrEqual(event.cursor, lastEventCursor())) {
       // Quick check... shortcut in normal recording mode when we're not
       // overdubbing and the cursor is past all the prior events anyways
       this.mutableEvents.add(event);
@@ -189,7 +197,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     if (index < this.events.size() - 1) {
       max = this.events.get(index+1).cursor;
     }
-    cursor.constrain(min, max);
+    CursorOp().constrain(cursor, min, max);
     if (!event.cursor.equals(cursor)) {
       event.cursor.set(cursor);
       this.onChange.bang();
@@ -267,9 +275,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   void overdubCursor(Cursor from, Cursor to) {
     final List<T> toRemove = new ArrayList<>();
     final ListIterator<T> iter = eventIterator(from);
+    final Cursor.Operator CursorOp = CursorOp();
     while (iter.hasNext()) {
       T event = iter.next();
-      if (event.cursor.isAfterOrEqual(to)) {
+      if (CursorOp.isAfterOrEqual(event.cursor, to)) {
         break;
       }
       this.overdubLastOriginalEvent = event;
@@ -287,9 +296,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   void advanceCursor(Cursor from, Cursor to) {
     final ListIterator<T> iter = eventIterator(from);
+    final Cursor.Operator CursorOp = CursorOp();
     while (iter.hasNext()) {
       T event = iter.next();
-      if (event.cursor.isAfterOrEqual(to)) {
+      if (CursorOp.isAfterOrEqual(event.cursor, to)) {
         break;
       }
       event.execute();
@@ -299,9 +309,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public boolean removeRange(Cursor from, Cursor to) {
     final List<LXClipEvent<?>> toRemove = new ArrayList<>();
     final ListIterator<T> iter = eventIterator(from);
+    final Cursor.Operator CursorOp = CursorOp();
     while (iter.hasNext()) {
       T event = iter.next();
-      if (event.cursor.isAfter(to)) {
+      if (CursorOp.isAfter(event.cursor, to)) {
         break;
       }
       toRemove.add(event);
