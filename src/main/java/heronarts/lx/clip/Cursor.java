@@ -14,6 +14,11 @@ import heronarts.lx.utils.LXUtils;
  */
 public class Cursor implements LXSerializable {
 
+  // NOTE: this applies to the scenario where a previously non-grid-snapped Cursor move
+  // left something *extremely* close to a grid marker, such that the user wouldn't really
+  // notice the non-equality.
+  private static final double SNAP_THRESHOLD = .01;
+
   public static final Cursor ZERO = new Cursor.Immutable("ZERO", 0);
 
   public static final Cursor MIN_LOOP = new Cursor.Immutable("MIN_LOOP",
@@ -227,6 +232,33 @@ public class Cursor implements LXSerializable {
       }
       return cursor;
     }
+
+    /**
+     * Snap this cursor's value to the nearest interval
+     *
+     * @param clip Clip context
+     * @param snapSize Snap interval
+     * @return Cursor, updated
+     */
+    public Cursor snap(Cursor cursor, LXClip clip, Cursor snapSize);
+
+    /**
+     * Snap this cursor's value up to the next interval
+     *
+     * @param clip Clip context
+     * @param snapSize Snap interval
+     * @return Cursor, updated
+     */
+    public Cursor snapUp(Cursor cursor, LXClip clip, Cursor snapSize);
+
+    /**
+     * Snap this cursor's value down to the previous interval
+     *
+     * @param clip Clip context
+     * @param snapSize Snap interval
+     * @return Cursor, updated
+     */
+    public Cursor snapDown(Cursor cursor, LXClip clip, Cursor snapSize);
   }
 
   private static final Operator ABSOLUTE_OPERATOR = new Operator() {
@@ -291,6 +323,46 @@ public class Cursor implements LXSerializable {
         return 0;
       }
       return (o1.millis < o2.millis) ? -1 : 1;
+    }
+
+    private void _setBeatCountBasis(Cursor cursor, LXClip clip) {
+      cursor._setBeatCountBasis(cursor.millis * clip.referenceBpm.getValue() / 60000);
+    }
+
+    @Override
+    public Cursor snap(Cursor cursor, LXClip clip, Cursor snapSize) {
+      double multiple = Math.round(cursor.millis / snapSize.millis);
+      cursor.millis = multiple * snapSize.millis;
+      _setBeatCountBasis(cursor, clip);
+      return cursor;
+    }
+
+    @Override
+    public Cursor snapUp(Cursor cursor, LXClip clip, Cursor snapSize) {
+      double snapUnits = cursor.millis / snapSize.millis;
+      double decimal = snapUnits - (long) snapUnits;
+      if ((decimal < SNAP_THRESHOLD) || ((1 - decimal) < SNAP_THRESHOLD)) {
+        // It's at the top
+        cursor.millis = (Math.ceil(snapUnits) + 1) * snapSize.millis;
+      } else {
+        cursor.millis = Math.ceil(snapUnits) * snapSize.millis;
+      }
+      _setBeatCountBasis(cursor, clip);
+      return cursor;
+    }
+
+    @Override
+    public Cursor snapDown(Cursor cursor, LXClip clip, Cursor snapSize) {
+      double snapUnits = cursor.millis / snapSize.millis;
+      double decimal = snapUnits - (long) snapUnits;
+      if (decimal < SNAP_THRESHOLD) {
+        // It's at the bottom
+        cursor.millis = (Math.floor(snapUnits) - 1) * snapSize.millis;
+      } else {
+        cursor.millis = Math.floor(snapUnits) * snapSize.millis;
+      }
+      _setBeatCountBasis(cursor, clip);
+      return cursor;
     }
 
   };
@@ -365,6 +437,50 @@ public class Cursor implements LXSerializable {
       return (basis1 < basis2) ? -1 : 1;
     }
 
+    private void _setMillis(Cursor cursor, LXClip clip) {
+      double millisPerBeat = 60000 / clip.referenceBpm.getValue();
+      cursor.millis = (cursor.beatCount + cursor.beatBasis) * millisPerBeat;
+    }
+
+    @Override
+    public Cursor snap(Cursor cursor, LXClip clip, Cursor snapSize) {
+      final double snapBeatBasis = (snapSize.beatCount + snapSize.beatBasis);
+      final double multiple = Math.round((cursor.beatCount + cursor.beatBasis) / snapBeatBasis);
+      cursor._setBeatCountBasis(multiple * snapBeatBasis);
+      _setMillis(cursor, clip);
+      return cursor;
+    }
+
+    @Override
+    public Cursor snapUp(Cursor cursor, LXClip clip, Cursor snapSize) {
+      final double snapBeatBasis = (snapSize.beatCount + snapSize.beatBasis);
+      final double snapUnits = (cursor.beatCount + cursor.beatBasis) / snapBeatBasis;
+      final double decimal = snapUnits - (long) snapUnits;
+      double multiple = Math.ceil(snapUnits);
+      if ((decimal < SNAP_THRESHOLD) || ((1 - decimal) < SNAP_THRESHOLD)) {
+        // It's at the top
+        multiple += 1;
+      }
+      cursor._setBeatCountBasis(multiple * snapBeatBasis);
+      _setMillis(cursor, clip);
+      return cursor;
+    }
+
+    @Override
+    public Cursor snapDown(Cursor cursor, LXClip clip, Cursor snapSize) {
+      final double snapBeatBasis = (snapSize.beatCount + snapSize.beatBasis);
+      final double snapUnits = (cursor.beatCount + cursor.beatBasis) / snapBeatBasis;
+      final double decimal = snapUnits - (long) snapUnits;
+      double multiple = Math.floor(snapUnits);
+      if (decimal < SNAP_THRESHOLD) {
+        // It's at the bottom
+        multiple = LXUtils.max(0, multiple - 1);
+      }
+      cursor._setBeatCountBasis(multiple * snapBeatBasis);
+      _setMillis(cursor, clip);
+      return cursor;
+    }
+
   };
 
   /**
@@ -400,22 +516,8 @@ public class Cursor implements LXSerializable {
 
   public Cursor() {}
 
-  @Deprecated
-  public Cursor(double millis) {
-    if (millis < 0) {
-      throw new IllegalArgumentException("May not create Cursor with negative value");
-    }
-    this.millis = millis;
-    // TODO(clips): prime the beat fields
-  }
-
   public Cursor(double millis, int beatCount, double beatBasis) {
-    if (millis < 0 || beatCount < 0 || beatBasis < 0) {
-      throw new IllegalArgumentException("May not create Cursor with negative value");
-    }
-    this.millis = millis;
-    this.beatCount = beatCount;
-    this.beatBasis = beatBasis;
+    _set(millis, beatCount, beatBasis);
   }
 
   private Cursor(Cursor that) {
@@ -490,6 +592,16 @@ public class Cursor implements LXSerializable {
   private void _setBeatCountBasis(double beatCountBasis) {
     this.beatCount = (int) beatCountBasis;
     this.beatBasis = beatCountBasis % 1.;
+  }
+
+  private void _set(double millis, int beatCount, double beatBasis) {
+    assertMutable();
+    if (millis < 0 || beatCount < 0 || beatBasis < 0) {
+      throw new IllegalArgumentException("May not set Cursor with negative value: " + millis + "/" + beatCount + "/" + beatBasis);
+    }
+    this.millis = millis;
+    this.beatCount = beatCount;
+    this.beatBasis = beatBasis;
   }
 
   /**
@@ -591,48 +703,6 @@ public class Cursor implements LXSerializable {
       LX.error(new Exception("Bogus Cursor subtraction producing a negative: " + this + " - " + that));
       this.beatCount = 0;
       this.beatBasis = 0;
-    }
-    return this;
-  }
-
-  public Cursor snap(Cursor snapSize) {
-    assertMutable();
-    // TODO(clips): implement in timing-context aware way
-    this.millis = Math.round(this.millis / snapSize.millis) * snapSize.millis;
-    return this;
-  }
-
-  // NOTE: this applies to the scenario where a previously non-grid-snapped Cursor move
-  // left something *extremely* close to a grid marker, such that the user wouldn't really
-  // notice the non-equality.
-  private static final double SNAP_THRESHOLD = .01;
-
-  @Deprecated
-  public Cursor snapUp(Cursor snapSize) {
-    assertMutable();
-    // TODO(clips): implement in timing-context aware way
-    double snapUnits = this.millis / snapSize.millis;
-    double decimal = snapUnits - ((long) snapUnits);
-    if ((decimal < SNAP_THRESHOLD) || ((1 - decimal) < SNAP_THRESHOLD)) {
-      // It's at the top
-      this.millis = (1 + Math.ceil(snapUnits)) * snapSize.millis;
-    } else {
-      this.millis = Math.ceil(snapUnits) * snapSize.millis;
-    }
-    return this;
-  }
-
-  @Deprecated
-  public Cursor snapDown(Cursor snapSize) {
-    assertMutable();
-    // TODO(clips): implement in timing-context aware way
-    double snapUnits = this.millis / snapSize.millis;
-    double decimal = snapUnits - ((long) snapUnits);
-    if (decimal < SNAP_THRESHOLD) {
-      // It's at the bottom
-      this.millis = (Math.floor(snapUnits) - 1) * snapSize.millis;
-    } else {
-      this.millis = Math.floor(snapUnits) * snapSize.millis;
     }
     return this;
   }
