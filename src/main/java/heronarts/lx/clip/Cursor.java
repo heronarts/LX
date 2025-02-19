@@ -396,12 +396,7 @@ public class Cursor implements LXSerializable {
   private int beatCount = 0;
   private double beatBasis = 0;
 
-  private void assertMutable() {
-    if (this instanceof Immutable) {
-      Immutable immutable = (Immutable) this;
-      throw new UnsupportedOperationException("Cannot modify the immutable cursor: " + immutable.name);
-    }
-  }
+  protected void assertMutable() {}
 
   public Cursor() {}
 
@@ -492,10 +487,9 @@ public class Cursor implements LXSerializable {
     this.beatBasis = 0;
   }
 
-  @Deprecated
-  public Cursor setScaledDifference(Cursor from, Cursor to, double scale) {
-    setMillis(from.millis + (to.millis - from.millis) * scale);
-    return this;
+  private void _setBeatCountBasis(double beatCountBasis) {
+    this.beatCount = (int) beatCountBasis;
+    this.beatBasis = beatCountBasis % 1.;
   }
 
   /**
@@ -513,6 +507,21 @@ public class Cursor implements LXSerializable {
   }
 
   /**
+   * Set the value of this cursor to the interpolation of two cursors
+   *
+   * @param from Source cursor
+   * @param to Target cursor
+   * @param scale Interpolation factor
+   * @return This cursor, modified, for method chaining
+   */
+  public Cursor setLerp(Cursor from, Cursor to, double scale) {
+    assertMutable();
+    this.millis = LXUtils.lerp(from.millis, to.millis, scale);
+    _setBeatCountBasis(LXUtils.lerp(from.beatCount + from.beatBasis, to.beatCount + to.beatBasis, scale));
+    return this;
+  }
+
+  /**
    * Creates a new cursor that's a copy of this cursor scaled by the given factor
    *
    * @param factor Time scaling factor
@@ -524,9 +533,7 @@ public class Cursor implements LXSerializable {
     }
     Cursor that = clone();
     that.millis = this.millis * factor;
-    double beatCountBasis = (this.beatCount + this.beatBasis) * factor;
-    that.beatCount = (int) beatCountBasis;
-    that.beatBasis = beatCountBasis % 1.;
+    that._setBeatCountBasis((this.beatCount + this.beatBasis) * factor);
     return that;
   }
 
@@ -545,7 +552,7 @@ public class Cursor implements LXSerializable {
     this.millis += that.millis;
     this.beatCount += that.beatCount;
     this.beatBasis += that.beatBasis;
-    if (this.beatBasis > 1) {
+    if (this.beatBasis >= 1) {
       ++this.beatCount;
       this.beatBasis = this.beatBasis % 1.;
     }
@@ -704,6 +711,11 @@ public class Cursor implements LXSerializable {
     private Immutable(String name, double millis, int beatCount, double beatBasis) {
       super(millis, beatCount, beatBasis);
       this.name = name;
+    }
+
+    @Override
+    protected void assertMutable() {
+      throw new UnsupportedOperationException("Cannot modify Immutable cursor: " + this.name);
     }
   }
 

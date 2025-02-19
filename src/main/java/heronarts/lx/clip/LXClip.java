@@ -183,10 +183,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new BooleanParameter("Custom Snapshot Transition")
     .setDescription("Whether to use custom snapshot transition settings for this clip");
 
-  public final BoundedParameter originalBpm =
-    new BoundedParameter("Original BPM", Tempo.DEFAULT_BPM, Tempo.MIN_BPM, Tempo.MAX_BPM)
+  public final BoundedParameter referenceBpm =
+    new BoundedParameter("Reference BPM", Tempo.DEFAULT_BPM, Tempo.MIN_BPM, Tempo.MAX_BPM)
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
-    .setDescription("Original BPM of the clip");
+    .setDescription("Reference BPM of the clip");
 
   public final MutableParameter zoom = new MutableParameter("Zoom", 1);
 
@@ -241,7 +241,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("automationEnabled", this.automationEnabled);
     addParameter("customSnapshotTransition", this.customSnapshotTransition);
-    addParameter("originalBpm", this.originalBpm);
+    addParameter("referenceBpm", this.referenceBpm);
     addInternalParameter("launchAutomation", this.launchAutomation);
     addInternalParameter("zoom", this.zoom);
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this));
@@ -260,7 +260,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     bus.arm.addListener(this);
 
     // Store original BPM value at time of clip creation
-    this.originalBpm.setValue(lx.engine.tempo.bpm.getValue());
+    this.referenceBpm.setValue(lx.engine.tempo.bpm.getValue());
   }
 
   public Cursor.TimeBase getTimeBase() {
