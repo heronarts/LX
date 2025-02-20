@@ -646,11 +646,6 @@ public class Cursor implements LXSerializable {
     this.beatBasis = beatCountBasis % 1.;
   }
 
-  public void set(double millis, int beatCount, double beatBasis) {
-    assertMutable();
-    _set(millis, beatCount, beatBasis);
-  }
-
   private void _set(double millis, int beatCount, double beatBasis) {
     if (millis < 0 || beatCount < 0 || beatBasis < 0) {
       throw new IllegalArgumentException("May not set Cursor with negative value: " + millis + "/" + beatCount + "/" + beatBasis);
@@ -803,7 +798,7 @@ public class Cursor implements LXSerializable {
   }
 
   @Deprecated
-  public Cursor setMillis(double millis) {
+  Cursor setMillis(double millis) {
     // TODO(clips): infer the correct beatCount and beatBasis
     this.millis = millis;
     return this;
@@ -827,13 +822,6 @@ public class Cursor implements LXSerializable {
         this.beatBasis == that.beatBasis;
     }
     return false;
-  }
-
-  void _next(Cursor cursor, double deltaMs) {
-    set(cursor);
-    this.millis += deltaMs;
-    // TODO(clips): next cursor should set beatCount and beatBasis
-    // from global Tempo relative to start time of the clip
   }
 
   private static final String KEY_MILLIS = "millis";

@@ -195,7 +195,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   public final LXBus bus;
+
   public final LXClipSnapshot snapshot;
+
+  private final Cursor startTempoReference = new Cursor();
+  private final Cursor startCursorReference = new Cursor();
 
   // Whether a timeline has been created. If a clip has never been run in recording mode,
   // that won't exist yet. The flag is set the first time a clip is recorded to, or if
@@ -259,7 +263,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
     bus.arm.addListener(this);
 
-    // Store original BPM value at time of clip creation
+    // Use reference BPM value at time of clip creation, this is used to preserve accurate
+    // conversions between the two different TimeBase options (e.g. Cursor objects in this clip's
+    // lanes hold millis values, based upon this reference tempo. The global tempo may be changed
+    // later, storing this value will allow us to correctly interpret the millis values.
     this.referenceBpm.setValue(lx.engine.tempo.bpm.getValue());
   }
 
@@ -390,6 +397,26 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.trigger.trigger();
   }
 
+  private void setTempoReference() {
+    // Set a reference to the global tempo-position when the clip started, as
+    // well as the cursor position we started from. When using TimeBase.TEMPO,
+    // the cursor position will be computed via difference from the global
+    // tempo clock. When we are in TEMPO mode and there is global launch quantization
+    // then we also snap the launch reference to the quantization point. This is crucial
+    // because the global Tempo object will almost never land on exactly beatBasis == 0.
+    //
+    // The QuantizedTriggerParameter.Launch will fire some number of milliseconds after that
+    // when the boundary has been passed. But we don't want to treat the clip as starting
+    // 10 milliseconds after the start of the bar. The clip should have started in-between
+    // rendering frames at exactly 1bar.0.0beats.
+    //
+    // The first frame of playback/recording will then naturally take care of processing
+    // any events between the startTempoReference and the actual tempo
+
+    this.startTempoReference.set(snapGlobalQuantize(constructTempoCursor(this.lx.engine.tempo)));
+    this.startCursorReference.set(this.cursor);
+  }
+
   @Override
   protected void onTrigger() {
     super.onTrigger();
@@ -397,13 +424,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       // This is a "restart" operation, we were already running but we've been re-triggered
       // Retrieve and apply the launchFrom position
       setCursor(this.launchFromCursor.constrain(this));
+      setTempoReference();
     }
-  }
-
-  @Override
-  public void onStop() {
-    super.onStop();
-    this.snapshot.stopTransition();
   }
 
   @Override
@@ -679,18 +701,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
-  // State management layer 1
-
   @Override
   public void onParameterChanged(LXParameter p) {
+    // The super call will invoke onStart() + onStop()
     super.onParameterChanged(p);
-    if (p == this.running) {
-      if (this.running.isOn()) {
-        startRunning();
-      } else {
-        stopRunning();
-      }
-    } else if (p == this.bus.arm) {
+
+    // Now check our own stuff
+    if (p == this.bus.arm) {
       if (isRunning()) {
         if (this.bus.arm.isOn()) {
           startHotOverdub();
@@ -711,9 +728,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private boolean isRecording = false;
 
   /**
-   * Start from a stopped state
+   * Start from a stopped state, e.g. this.running has transitioned false -> true
    */
-  private void startRunning() {
+  @Override
+  protected void onStart() {
     // Stop other clips on the bus
     for (LXClip clip : this.bus.clips) {
       if (clip != null && clip != this) {
@@ -722,6 +740,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
     // Retrieve and apply the launchFrom position
     setCursor(this.launchFromCursor.constrain(this));
+
+    setTempoReference();
+
+    // Check for recording state
     if (this.bus.arm.isOn()) {
       this.isRecording = true;
       if (this.hasTimeline) {
@@ -755,9 +777,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
-   * Stop from a rec/play state
+   * Stop from a rec/play state, fires when this.running has transitioned true -> false
    */
-  private void stopRunning() {
+  @Override
+  protected void onStop() {
+    super.onStop();
+
+    // Wrap up any recording/playback state
     if (this.isRecording) {
       this.isRecording = false;
       this.bus.arm.setValue(false);
@@ -769,9 +795,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     } else {
       stopPlayback();
     }
-  }
 
-  // State management layer 2
+    // Finish snapshot transition
+    this.snapshot.stopTransition();
+  }
 
   private void startFirstRecording() {
     this.cursor.reset();
@@ -802,9 +829,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
-  private void startPlayback() {
-    setCursor(this.launchFromCursor.constrain(this));
-  }
+  private void startPlayback() {}
 
   private void stopFirstRecording() {
     this.length.setValue(this.cursor);
@@ -820,9 +845,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     onStopRecording();
   }
 
-  private void stopPlayback() {
-
-  }
+  private void stopPlayback() {}
 
   // State change notifications to subclasses
 
@@ -939,9 +962,41 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
+  private void runCursor(double deltaMs) {
+    switch (this.timeBase.getEnum()) {
+    case TEMPO:
+      Cursor now = constructTempoCursor(lx.engine.tempo);
+      if (CursorOp().isBefore(now, this.startTempoReference)) {
+        // TODO(clips): need a real solution for this situation!!
+        // Test this for instance with sync from Ableton Live but Ableton running
+        // in a loop that periodically resets the bar position.
+        // This frame is fucked, just reset the tempo references to wherever we're
+        // at now and carry on...
+        LX.warning("LXClip detected global tempo rewind, resetting reference");
+        setTempoReference();
+      } else {
+        // Compute the elapsed cursor-time since the reference tempo position, this will
+        // ensure that we smoothly process any global tempo-changes or slewing to external
+        // clock sources, etc.
+        final Cursor elapsed = now.subtract(this.startTempoReference);
+
+        // Then add that delta to the reference start cursor position
+        setCursor(this.startCursorReference.add(elapsed));
+      }
+      break;
+
+    default:
+    case ABSOLUTE:
+      // Advance the cursor from prior position by the given number of milliseconds
+      this.nextCursor.set(constructAbsoluteCursor(this.cursor.getMillis() + deltaMs));
+      break;
+    }
+  }
+
   @Override
   protected void run(double deltaMs) {
-    this.nextCursor._next(this.cursor, deltaMs);
+    // Compute the cursor position
+    runCursor(deltaMs);
 
     if (this.bus.arm.isOn()) {
       if (!this.hasTimeline) {
@@ -1079,6 +1134,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
+   * Constructs a cursor from the global tempo playback position,
+   * with millis computed using this clip's reference BPM
+   *
+   * @param tempo Global tempo object
+   * @return Cursor for given time division using clip's reference BPM
+   */
+  public Cursor constructTempoCursor(Tempo tempo) {
+    return constructTempoCursor(tempo.beatCount(), tempo.basis());
+  }
+
+  /**
    * Constructs a cursor using a tempo-division reference, with millisecond
    * value computed using this clip's reference BPM
    *
@@ -1121,6 +1187,33 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       (int) beatCountBasis,
       beatCountBasis % 1.
     );
+  }
+
+  /**
+   * Snap a value to the global quantization setting
+   *
+   * @param cursor Cursor to snap
+   * @return Cursor with snapping applied
+   */
+  public Cursor snapGlobalQuantize(Cursor cursor) {
+    if (this.timeBase.getEnum() == Cursor.TimeBase.TEMPO) {
+      Tempo.Quantization globalQ = this.lx.engine.tempo.launchQuantization.getObject();
+      if (globalQ.hasDivision()) {
+        return snapTempo(cursor, globalQ.getDivision());
+      }
+    }
+    return cursor;
+  }
+
+  /**
+   * Snap a value to a tempo division
+   *
+   * @param cursor Value to snap
+   * @param division Value will be rounded to the nearest multiple of this tempo division
+   * @return Cursor with snapping applied
+   */
+  public Cursor snapTempo(Cursor cursor, Tempo.Division division) {
+    return CursorOp().snap(cursor, this, constructTempoCursor(division));
   }
 
   private static final String KEY_LANES = "parameterLanes";
