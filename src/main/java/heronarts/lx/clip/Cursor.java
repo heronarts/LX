@@ -343,7 +343,7 @@ public class Cursor implements LXSerializable {
       return (o1.millis < o2.millis) ? -1 : 1;
     }
 
-    private void _setBeatCountBasis(Cursor cursor, LXClip clip) {
+    private void _setBeatCountBasisFromMillis(Cursor cursor, LXClip clip) {
       cursor._setBeatCountBasis(cursor.millis * clip.referenceBpm.getValue() / 60000);
     }
 
@@ -351,7 +351,7 @@ public class Cursor implements LXSerializable {
     public Cursor snap(Cursor cursor, LXClip clip, Cursor snapSize) {
       double multiple = Math.round(cursor.millis / snapSize.millis);
       cursor.millis = multiple * snapSize.millis;
-      _setBeatCountBasis(cursor, clip);
+      _setBeatCountBasisFromMillis(cursor, clip);
       return cursor;
     }
 
@@ -365,7 +365,7 @@ public class Cursor implements LXSerializable {
       } else {
         cursor.millis = Math.ceil(snapUnits) * snapSize.millis;
       }
-      _setBeatCountBasis(cursor, clip);
+      _setBeatCountBasisFromMillis(cursor, clip);
       return cursor;
     }
 
@@ -379,7 +379,7 @@ public class Cursor implements LXSerializable {
       } else {
         cursor.millis = Math.floor(snapUnits) * snapSize.millis;
       }
-      _setBeatCountBasis(cursor, clip);
+      _setBeatCountBasisFromMillis(cursor, clip);
       return cursor;
     }
 
@@ -467,7 +467,7 @@ public class Cursor implements LXSerializable {
       return (basis1 < basis2) ? -1 : 1;
     }
 
-    private void _setMillis(Cursor cursor, LXClip clip) {
+    private void _setMillisFromTempo(Cursor cursor, LXClip clip) {
       double millisPerBeat = 60000 / clip.referenceBpm.getValue();
       cursor.millis = (cursor.beatCount + cursor.beatBasis) * millisPerBeat;
     }
@@ -477,7 +477,7 @@ public class Cursor implements LXSerializable {
       final double snapBeatBasis = (snapSize.beatCount + snapSize.beatBasis);
       final double multiple = Math.round((cursor.beatCount + cursor.beatBasis) / snapBeatBasis);
       cursor._setBeatCountBasis(multiple * snapBeatBasis);
-      _setMillis(cursor, clip);
+      _setMillisFromTempo(cursor, clip);
       return cursor;
     }
 
@@ -492,7 +492,7 @@ public class Cursor implements LXSerializable {
         multiple += 1;
       }
       cursor._setBeatCountBasis(multiple * snapBeatBasis);
-      _setMillis(cursor, clip);
+      _setMillisFromTempo(cursor, clip);
       return cursor;
     }
 
@@ -507,7 +507,7 @@ public class Cursor implements LXSerializable {
         multiple = LXUtils.max(0, multiple - 1);
       }
       cursor._setBeatCountBasis(multiple * snapBeatBasis);
-      _setMillis(cursor, clip);
+      _setMillisFromTempo(cursor, clip);
       return cursor;
     }
 
@@ -806,7 +806,7 @@ public class Cursor implements LXSerializable {
 
   @Override
   public String toString() {
-    return String.format("%.2f/%d:%.2f", this.millis, this.beatCount, this.beatBasis);
+    return String.format("%.2f/%d/%.2f", this.millis, this.beatCount, this.beatBasis);
   }
 
   @Override
