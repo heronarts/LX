@@ -19,9 +19,9 @@ public class Cursor implements LXSerializable {
   // notice the non-equality.
   private static final double SNAP_THRESHOLD = .01;
 
-  public static final Cursor ZERO = new Cursor.Immutable("ZERO", 0);
+  public static final Cursor.Immutable ZERO = new Cursor.Immutable("ZERO", 0);
 
-  public static final Cursor MIN_LOOP = new Cursor.Immutable("MIN_LOOP",
+  public static final Cursor.Immutable MIN_LOOP = new Cursor.Immutable("MIN_LOOP",
     125,
     0,
     1 / 8. // or 1/32nd note (eighth of a single beat, 125ms at 60bpm)
@@ -259,6 +259,15 @@ public class Cursor implements LXSerializable {
      * @return Cursor, updated
      */
     public Cursor snapDown(Cursor cursor, LXClip clip, Cursor snapSize);
+
+    /**
+     * Format a cursor to a user-displayable string
+     *
+     * @param clip Clip
+     * @param cursor Cursor
+     * @return User-displayable string
+     */
+    public String format(LXClip clip, Cursor cursor);
   }
 
   private static final Operator ABSOLUTE_OPERATOR = new Operator() {
@@ -363,6 +372,18 @@ public class Cursor implements LXSerializable {
       }
       _setBeatCountBasis(cursor, clip);
       return cursor;
+    }
+
+    @Override
+    public String format(LXClip clip, Cursor cursor) {
+      int seconds = (int) (cursor.millis / 1000.);
+      int minutes = seconds / 60;
+      seconds -= 60*minutes;
+      int millis = (int) (cursor.millis % 1000);
+      if (minutes > 0) {
+        return String.format("%d:%2d:%3d", minutes, seconds, millis);
+      }
+      return String.format("%d:%03d", seconds, millis);
     }
 
   };
@@ -481,6 +502,18 @@ public class Cursor implements LXSerializable {
       return cursor;
     }
 
+    public String format(LXClip clip, Cursor cursor) {
+      final int beatsPerBar = clip.getLX().engine.tempo.beatsPerBar.getValuei();
+      int bars = 1 + (cursor.beatCount / beatsPerBar);
+      int beats = 1 + (cursor.beatCount % beatsPerBar);
+      int sixteenths = (int) (cursor.beatBasis / .25);
+      if (sixteenths > 1) {
+        return String.format("%d.%d.%d", bars, beats, sixteenths);
+      } else {
+        return String.format("%d.%d", bars, beats);
+      }
+    }
+
   };
 
   /**
@@ -527,6 +560,15 @@ public class Cursor implements LXSerializable {
   @Override
   public Cursor clone() {
     return new Cursor(this);
+  }
+
+  /**
+   * Return an immutable copy of this cursor
+   *
+   * @return Immutable copy of this cursor
+   */
+  public Cursor.Immutable immutable() {
+    return new Immutable(this);
   }
 
   /**
@@ -594,8 +636,12 @@ public class Cursor implements LXSerializable {
     this.beatBasis = beatCountBasis % 1.;
   }
 
-  private void _set(double millis, int beatCount, double beatBasis) {
+  public void set(double millis, int beatCount, double beatBasis) {
     assertMutable();
+    _set(millis, beatCount, beatBasis);
+  }
+
+  private void _set(double millis, int beatCount, double beatBasis) {
     if (millis < 0 || beatCount < 0 || beatBasis < 0) {
       throw new IllegalArgumentException("May not set Cursor with negative value: " + millis + "/" + beatCount + "/" + beatBasis);
     }
@@ -647,6 +693,35 @@ public class Cursor implements LXSerializable {
     that.millis = this.millis * factor;
     that._setBeatCountBasis((this.beatCount + this.beatBasis) * factor);
     return that;
+  }
+
+  /**
+   * Creates a cursor that is an integer set of multiples of this cursor
+   *
+   * @param factor Multiples of this cursor
+   * @return New cursor scaled by the number of multiples
+   */
+  public Cursor scaleInt(int factor) {
+    if (factor < 0) {
+      throw new IllegalArgumentException("May not scale Cursor by negative factor");
+    }
+    Cursor that = clone();
+    that.millis = this.millis * factor;
+    that.beatCount = this.beatCount * factor;
+    double beatBasis = this.beatBasis * factor;
+    that.beatCount += (int) beatBasis;
+    that.beatBasis = beatBasis % 1.;
+    return that;
+  }
+
+  /**
+   * Destructively modifies this cursor, advancing it by the amount specified
+   *
+   * @param that Cursor specifying amount to advance
+   * @return This cursor, modified
+   */
+  public Cursor advance(Cursor that) {
+    return _add(that);
   }
 
   /**
@@ -771,14 +846,18 @@ public class Cursor implements LXSerializable {
     }
   }
 
-  private static class Immutable extends Cursor {
+  public static class Immutable extends Cursor {
     private final String name;
+
+    private Immutable(Cursor that) {
+      this("", that.millis, that.beatCount, that.beatBasis);
+    }
 
     private Immutable(String name, double millis) {
       this(name, millis, 0, 0);
     }
 
-    private Immutable(String name, double millis, int beatCount, double beatBasis) {
+    public Immutable(String name, double millis, int beatCount, double beatBasis) {
       super(millis, beatCount, beatBasis);
       this.name = name;
     }
