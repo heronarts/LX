@@ -136,15 +136,11 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
       FOUR_SECONDS("4 seconds", 4000);
 
       public final String label;
-      public final float ms;
+      public final float millis;
 
-      private TimeDivision(String label, float ms) {
+      private TimeDivision(String label, float millis) {
         this.label = label;
-        this.ms = ms;
-      }
-
-      public float getMs() {
-        return this.ms;
+        this.millis = millis;
       }
 
       @Override
