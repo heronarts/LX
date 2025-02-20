@@ -270,6 +270,21 @@ public class Cursor implements LXSerializable {
     public Cursor snapDown(Cursor cursor, LXClip clip, Cursor snapSize);
 
     /**
+     * Apply a delta to the given cursor, limiting the result to not go below 0
+     *
+     * @param cursor Input cursor
+     * @param delta Delta to apply
+     * @param add True to add, false to subtract
+     * @return New cursor with operation applied, non-negative
+     */
+    public default Cursor applyDelta(Cursor cursor, Cursor delta, boolean add) {
+      if (!add) {
+        delta = bound(delta, cursor);
+      }
+      return cursor.inc(delta, add);
+    }
+
+    /**
      * Format a cursor to a user-displayable string
      *
      * @param clip Clip
@@ -752,7 +767,7 @@ public class Cursor implements LXSerializable {
   }
 
   /**
-   * Increments a new cursor that adds or bustract the two
+   * Increments a new cursor that adds or subtracts the two, bounded to zero minimum
    *
    * @param that Cursor to add or subtract
    * @param add True to add, if false then subtraction

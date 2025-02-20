@@ -621,11 +621,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Loop start cannot go past loop end, subject to min loop length
     loopStart = CursorOp().bound(loopStart, this.loopEnd.cursor.subtract(Cursor.MIN_LOOP));
 
-    Cursor originalLoopEnd = this.loopEnd.cursor.clone();
-
-    // Shift the start and set the length appropriately
-    this.loopStart.set(loopStart);
-    this.loopLength.set(originalLoopEnd.subtract(loopStart));
+    if (CursorOp().isAfter(loopStart, this.loopStart.cursor)) {
+      // Shortening the loop, shorten length first, then update start
+      this.loopLength.set(this.loopEnd.cursor.subtract(loopStart));
+      this.loopStart.set(loopStart);
+    } else {
+      // Lengthening the loop, move start back first then update length
+      Cursor newLength = this.loopEnd.cursor.subtract(loopStart);
+      this.loopStart.set(loopStart);
+      this.loopLength.set(newLength);
+    }
 
     return this;
   }
@@ -659,6 +664,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   public LXClip setLoopEnd(Cursor loopEnd) {
     final Cursor oldEnd = this.loopEnd.cursor.clone();
+
+    // Bound loop end to [start,length]
+    loopEnd = CursorOp().bound(loopEnd, this.loopStart.cursor, this.length.cursor);
 
     // Calculate new length as given loopEnd - this.loopStart, constrain it to
     // the shortest loop allowed, or the maximum space available
