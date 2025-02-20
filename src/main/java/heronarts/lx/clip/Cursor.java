@@ -27,6 +27,15 @@ public class Cursor implements LXSerializable {
     1 / 8. // or 1/32nd note (eighth of a single beat, 125ms at 60bpm)
   );
 
+  public static final Cursor.Immutable MIN_VIEW = MIN_LOOP;
+
+  public static final Cursor.Immutable MIN_GRID_SPACING = new Cursor.Immutable(
+    "MIN_GRID_SPACING",
+    1000 / 64., // ~1 frame at 64fps ~16ms
+    0,
+    1 / 8.
+  );
+
   /**
    * The Cursor.Operator interface specifies all the operations that can be
    * performed on Cursors which depend upon the TimeBase setting. Clients
@@ -563,12 +572,13 @@ public class Cursor implements LXSerializable {
   }
 
   /**
-   * Return an immutable copy of this cursor
+   * Return an immutable version of this cursor, typically a copy unless the
+   * cursor is already itself immutable.
    *
-   * @return Immutable copy of this cursor
+   * @return Immutable version of this cursor
    */
   public Cursor.Immutable immutable() {
-    return new Immutable(this);
+    return (this instanceof Immutable) ? (Immutable) this : new Immutable(null, this.millis, this.beatCount, this.beatBasis);
   }
 
   /**
@@ -847,17 +857,14 @@ public class Cursor implements LXSerializable {
   }
 
   public static class Immutable extends Cursor {
-    private final String name;
 
-    private Immutable(Cursor that) {
-      this("", that.millis, that.beatCount, that.beatBasis);
-    }
+    private final String name;
 
     private Immutable(String name, double millis) {
       this(name, millis, 0, 0);
     }
 
-    public Immutable(String name, double millis, int beatCount, double beatBasis) {
+    private Immutable(String name, double millis, int beatCount, double beatBasis) {
       super(millis, beatCount, beatBasis);
       this.name = name;
     }
