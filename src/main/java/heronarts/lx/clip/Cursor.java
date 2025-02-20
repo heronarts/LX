@@ -558,7 +558,7 @@ public class Cursor implements LXSerializable {
 
   public Cursor() {}
 
-  public Cursor(double millis, int beatCount, double beatBasis) {
+  protected Cursor(double millis, int beatCount, double beatBasis) {
     _set(millis, beatCount, beatBasis);
   }
 
@@ -792,7 +792,12 @@ public class Cursor implements LXSerializable {
     return this;
   }
 
-  @Deprecated
+  /**
+   * Returns the absolute time difference between these cursors
+   *
+   * @param that Other cursor
+   * @return Millisecond difference between these two cursors
+   */
   public double getDeltaMillis(Cursor that) {
     return this.millis - that.millis;
   }

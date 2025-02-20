@@ -76,10 +76,9 @@ public abstract class LXClipEvent<T extends LXClipEvent<?>> implements Comparato
       if (cursorElem.isJsonObject()) {
         this.cursor.load(lx, cursorElem.getAsJsonObject());
       } else {
-        // TODO(mcslee): use a special helper for legacy-load, need to confirm
-        // that project file tempo/bpm is loaded BEFORE this point and then we can
-        // safely fill in the beat fields based upon that
-        this.cursor.setMillis(cursorElem.getAsDouble());
+        // Legacy-load... these were from old projects when cursors were only in raw double,
+        // we'll need to infer the tempo-values from the clip's reference BPM
+        this.cursor.set(this.lane.clip.constructAbsoluteCursor(cursorElem.getAsDouble()));
       }
     }
   }

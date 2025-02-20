@@ -1078,12 +1078,61 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   public void effectMoved(LXBus channel, LXEffect effect) {
   }
 
+  /**
+   * Constructs a cursor using a tempo-division reference, with millisecond
+   * value computed using this clip's reference BPM
+   *
+   * @param division Tempo division
+   * @return Cursor for given time division using clip's reference BPM
+   */
+  public Cursor constructTempoCursor(Tempo.Division division) {
+    int beatCount = (int) (1. / division.multiplier);
+    double beatBasis = (1. / division.multiplier) % 1.;
+    return constructTempoCursor(beatCount, beatBasis);
+  }
+
+  /**
+   * Constructs a cursor using tempo-based timing with the millisecond
+   * value computed using the clip's reference BPM
+   *
+   * @param beatCount Beat count
+   * @param beatBasis Beat basis
+   * @return Cursor for given time using clip's reference BPM
+   */
+  public Cursor constructTempoCursor(int beatCount, double beatBasis) {
+    return new Cursor(
+      (beatCount + beatBasis) * 60000 / this.referenceBpm.getValue(),
+      beatCount,
+      beatBasis
+    );
+  }
+
+  /**
+   * Constructs a cursor using absolute-timing, with the beat fields
+   * computed using the clip's reference BPM
+   *
+   * @param millis Absolute cursor time
+   * @return Cursor for given time using clip's reference BPM
+   */
+  public Cursor constructAbsoluteCursor(double millis) {
+    final double beatCountBasis = millis * this.referenceBpm.getValue() / 60000;
+    return new Cursor(
+      millis,
+      (int) beatCountBasis,
+      beatCountBasis % 1.
+    );
+  }
+
   private static final String KEY_LANES = "parameterLanes";
   public static final String KEY_INDEX = "index";
 
   @Override
   public void load(LX lx, JsonObject obj) {
     clearLanes();
+
+    // Load parameters before lanes, which need to know clip timing mode
+    super.load(lx, obj);
+
     if (obj.has(KEY_LANES)) {
       JsonArray lanesArr = obj.get(KEY_LANES).getAsJsonArray();
       for (JsonElement laneElement : lanesArr) {
@@ -1092,7 +1141,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         loadLane(lx, laneType, laneObj);
       }
     }
-    super.load(lx, obj);
     // For legacy clips, set loop and play markers
     if (obj.has(KEY_PARAMETERS)) {
       final JsonObject parametersObj = obj.getAsJsonObject(KEY_PARAMETERS);
