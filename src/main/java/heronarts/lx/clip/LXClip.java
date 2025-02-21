@@ -244,7 +244,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   public final LXClipSnapshot snapshot;
 
-  private final Cursor startTempoReference = new Cursor();
+  private final Cursor startTransportReference = new Cursor();
   private final Cursor startCursorReference = new Cursor();
 
   // Whether a timeline has been created. If a clip has never been run in recording mode,
@@ -452,8 +452,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.trigger.trigger();
   }
 
-  private void setTempoReference() {
-    // Set a reference to the global tempo-position when the clip started, as
+  private void setTransportReference(boolean quantize) {
+    setTransportReference(constructTransportCursor(), quantize);
+  }
+
+  private void setTransportReference(Cursor transportCursor, boolean quantize) {
+    // Set a reference to the global transport position when the clip started, as
     // well as the cursor position we started from. When using TimeBase.TEMPO,
     // the cursor position will be computed via difference from the global
     // tempo clock. When we are in TEMPO mode and there is global launch quantization
@@ -466,9 +470,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // rendering frames at exactly 1bar.0.0beats.
     //
     // The first frame of playback/recording will then naturally take care of processing
-    // any events between the startTempoReference and the actual tempo
-
-    this.startTempoReference.set(snapGlobalQuantize(constructTempoCursor(this.lx.engine.tempo)));
+    // any events between the startTransportReference and the actual transport position
+    if (quantize) {
+      snapGlobalQuantize(transportCursor);
+    }
+    this.startTransportReference.set(transportCursor);
     this.startCursorReference.set(this.cursor);
   }
 
@@ -479,7 +485,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       // This is a "restart" operation, we were already running but we've been re-triggered
       // Retrieve and apply the launchFrom position
       setCursor(this.launchFromCursor.constrain(this));
-      setTempoReference();
+      setTransportReference(true);
     }
   }
 
@@ -731,7 +737,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         advanceCursor(this.cursor, oldEnd, true);
         // Wrap cursor back to start of loop
         setCursor(this.loopStart);
-        // TODO(clips): update the tempo references
+
+        // NOTE(mcslee): DORF! We may fall out of hard tempo-sync here, but for
+        // now this is treated as acceptable cost of doing business for manually
+        // moving your loop cursors over the playhead in real-time. Future improvement
+        // here might try to retain some kind of relative tempo-sync if there is
+        // global launch quantization by examining how many "beats ahead" the
+        // play cursor was in the old loop scheme and maintaining a comparable
+        // offset
+        setTransportReference(false);
       }
     }
   }
@@ -776,7 +790,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Retrieve and apply the launchFrom position
     setCursor(this.launchFromCursor.constrain(this));
 
-    setTempoReference();
+    setTransportReference(true);
 
     // Check for recording state
     if (this.bus.arm.isOn()) {
@@ -1000,21 +1014,21 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private void computeNextCursor(double deltaMs) {
     switch (this.timeBase.getEnum()) {
     case TEMPO:
-      Cursor now = constructTempoCursor(lx.engine.tempo);
-      if (CursorOp().isBefore(now, this.startTempoReference)) {
+      final Cursor transportCursor = constructTransportCursor();
+      if (CursorOp().isBefore(transportCursor, this.startTransportReference)) {
         // TODO(clips): need a real solution for this situation!!
         // Test this for instance with sync from Ableton Live but Ableton running
         // in a loop that periodically resets the bar position.
         // This frame is fucked, just reset the tempo references to wherever we're
         // at now and carry on...
-        LX.warning("LXClip detected global tempo rewind, resetting reference");
-        setTempoReference();
+        LX.warning("LXClip detected global transport rewind: " + transportCursor + " < " + this.startTransportReference);
+        setTransportReference(transportCursor, false);
         this.nextCursor.set(this.cursor);
       } else {
         // Compute the elapsed cursor-time since the reference tempo position, this will
         // ensure that we smoothly process any global tempo-changes or slewing to external
         // clock sources, etc.
-        final Cursor elapsed = now.subtract(this.startTempoReference);
+        final Cursor elapsed = transportCursor.subtract(this.startTransportReference);
 
         // Then add that delta to the reference start cursor position
         this.nextCursor.set(this.startCursorReference.add(elapsed));
@@ -1042,6 +1056,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
 
       // TODO(clips): refactor into above methods, over-dubbing should also respect looping
+      // whereas first recording always extends
       setCursor(this.nextCursor);
 
     } else {
@@ -1130,14 +1145,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // We have reached the end, play everything up to the end *inclusive*
     advanceCursor(this.cursor, endCursor, true);
 
-    // If the clip has no length, or is not in a loop, then we're done at the end
-    if (CursorOp.isZero(this.length.cursor) || !isLoop) {
-      setCursor(endCursor);
-      return false;
-    }
-
-    // We are in a  loop!
-
     // TODO(clips): definitely need some special MIDI lane processing here
     // and in various other stop points, to ensure that we send a MIDI note off
     // for any MIDI events that have had a Note On, but for which the Note Off
@@ -1145,6 +1152,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // could also happen in any case of stopping recording or stopping playback
     // where notes are hanging. Need to identify and handle those as well.
 
+    // If the clip has no length, or is not in a loop, then we're done at the end
+    if (CursorOp.isZero(this.length.cursor) || !isLoop) {
+      setCursor(endCursor);
+      return false;
+    }
+
+    // We are in a  loop!
     if (CursorOp().isZero(this.loopLength.cursor)) {
       // Clip is non-zero length but loop is zero length, wtf? Should have been prevented
       // by loop length limits... bail out
@@ -1153,6 +1167,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return false;
     }
 
+    runAutomationLoop();
+    return true;
+  }
+
+  private void runAutomationLoop() {
     // Wrap into new loop, play automations up to next position
     while (true) {
 
@@ -1160,9 +1179,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       this.nextCursor._subtract(this.loopLength.cursor);
       loopCursor(this.loopStart.cursor);
 
-      // TODO(clips): update tempo-references here
-
-      if (CursorOp.isBefore(this.nextCursor, endCursor)) {
+      if (CursorOp().isBefore(this.nextCursor, this.loopEnd.cursor)) {
         // Normal expected behavior, we're back within the loop but
         // have not reached its end. Run animations from start of loop
         // up to the new position
@@ -1173,12 +1190,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       // Loop is smaller than frame, wtf?! Should be exceedingly rare
       // unless framerate is super low, but run through the *entire* loop,
       // inclusive and then we'll take another pass
-      advanceCursor(this.loopStart.cursor, endCursor, true);
+      advanceCursor(this.loopStart.cursor, this.loopEnd.cursor, true);
     }
 
-    // Update the cursor and keep running
+    // Leave the cursor at its final position in the loop
     setCursor(this.nextCursor);
-    return true;
+
+    // Update the transport references to keep looping properly from here
+    setTransportReference(false);
   }
 
   @Override
@@ -1196,14 +1215,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
-   * Constructs a cursor from the global tempo playback position,
+   * Constructs a cursor from the global transport playback position,
    * with millis computed using this clip's reference BPM
    *
-   * @param tempo Global tempo object
    * @return Cursor for given time division using clip's reference BPM
    */
-  public Cursor constructTempoCursor(Tempo tempo) {
-    return constructTempoCursor(tempo.beatCount(), tempo.basis());
+  public Cursor constructTransportCursor() {
+    return constructTempoCursor(this.lx.engine.tempo.beatCount(), this.lx.engine.tempo.basis());
   }
 
   /**
