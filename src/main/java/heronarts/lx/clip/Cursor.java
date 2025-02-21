@@ -305,9 +305,10 @@ public class Cursor implements LXSerializable {
      *
      * @param clip Clip
      * @param cursor Cursor
+     * @param labelSpacing Label spacing
      * @return User-displayable string
      */
-    public String format(LXClip clip, Cursor cursor);
+    public String formatLabel(LXClip clip, Cursor cursor, Cursor labelSpacing);
   }
 
   private static final Operator ABSOLUTE_OPERATOR = new Operator() {
@@ -423,15 +424,15 @@ public class Cursor implements LXSerializable {
     }
 
     @Override
-    public String format(LXClip clip, Cursor cursor) {
+    public String formatLabel(LXClip clip, Cursor cursor, Cursor labelSpacing) {
       int seconds = (int) (cursor.millis / 1000.);
       int minutes = seconds / 60;
       seconds -= 60*minutes;
-      int millis = (int) (cursor.millis % 1000);
-      if (minutes > 0) {
-        return String.format("%d:%2d:%3d", minutes, seconds, millis);
+      if (labelSpacing.getMillis() < 1000) {
+        return String.format("%d:%02d:%03d", minutes, seconds, (int) (cursor.millis % 1000));
+      } else {
+        return String.format("%d:%02d", minutes, seconds);
       }
-      return String.format("%d:%03d", seconds, millis);
     }
 
   };
@@ -559,15 +560,20 @@ public class Cursor implements LXSerializable {
       return cursor;
     }
 
-    public String format(LXClip clip, Cursor cursor) {
+    @Override
+    public String formatLabel(LXClip clip, Cursor cursor, Cursor labelSpacing) {
       final int beatsPerBar = clip.getLX().engine.tempo.beatsPerBar.getValuei();
-      int bars = 1 + (cursor.beatCount / beatsPerBar);
-      int beats = 1 + (cursor.beatCount % beatsPerBar);
-      int sixteenths = 1 + (int) (cursor.beatBasis / .25);
-      if (sixteenths > 1) {
-        return String.format("%d.%d.%d", bars, beats, sixteenths);
+      final int bars = 1 + (cursor.beatCount / beatsPerBar);
+      if (labelSpacing.getBeatCount() < beatsPerBar) {
+        final int beats = 1 + (cursor.beatCount % beatsPerBar);
+        final int sixteenths = 1 + (int) (cursor.beatBasis / .25);
+        if (sixteenths > 1) {
+          return String.format("%d.%d.%d", bars, beats, sixteenths);
+        } else {
+          return String.format("%d.%d", bars, beats);
+        }
       } else {
-        return String.format("%d.%d", bars, beats);
+        return String.format("%d", bars);
       }
     }
 
