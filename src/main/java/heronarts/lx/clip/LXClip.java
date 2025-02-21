@@ -472,7 +472,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // The first frame of playback/recording will then naturally take care of processing
     // any events between the startTransportReference and the actual transport position
     if (quantize) {
-      snapGlobalQuantize(transportCursor);
+      snapLaunchQuantization(transportCursor, true);
     }
     this.startTransportReference.set(transportCursor);
     this.startCursorReference.set(this.cursor);
@@ -1018,7 +1018,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       if (CursorOp().isBefore(transportCursor, this.startTransportReference)) {
         // TODO(clips): need a real solution for this situation!!
         // Test this for instance with sync from Ableton Live but Ableton running
-        // in a loop that periodically resets the bar position.
+        // in a loop that periodically resets the bar position. Perhaps the Tempo
+        // class needs to announce to listeners when there's an external clock
+        // rewind so that we can sync back to it properly?
         // This frame is fucked, just reset the tempo references to wherever we're
         // at now and carry on...
         LX.warning("LXClip detected global transport rewind: " + transportCursor + " < " + this.startTransportReference);
@@ -1027,7 +1029,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       } else {
         // Compute the elapsed cursor-time since the reference tempo position, this will
         // ensure that we smoothly process any global tempo-changes or slewing to external
-        // clock sources, etc.
+        // clock sources that the Tempo class deals with. We must explicitly *not* compute
+        // things based upon deltaMs and BPM-math here, the Tempo class is smarter than
+        // that and may be incorporating skew-correction, nudging, etc.
         final Cursor elapsed = transportCursor.subtract(this.startTransportReference);
 
         // Then add that delta to the reference start cursor position
@@ -1172,7 +1176,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void runAutomationLoop() {
-    // Wrap into new loop, play automations up to next position
+
+    // Wrap into new loop, play automation up to next position
     while (true) {
 
       // Rewind by loop length
@@ -1187,17 +1192,30 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         break;
       }
 
-      // Loop is smaller than frame, wtf?! Should be exceedingly rare
-      // unless framerate is super low, but run through the *entire* loop,
+      // Loop length is equal or smaller than frame, wtf?! Should be exceedingly
+      // rare unless framerate is super low, but run through the *entire* loop,
       // inclusive and then we'll take another pass
       advanceCursor(this.loopStart.cursor, this.loopEnd.cursor, true);
     }
 
-    // Leave the cursor at its final position in the loop
+    // Leave the cursor as far into the loop as it got
     setCursor(this.nextCursor);
 
-    // Update the transport references to keep looping properly from here
-    setTransportReference(false);
+    // NOTE(mcslee): we could proably just as well setTransportReference(false) in all
+    // cases here, but when in launch quantization mode it feels preferable to maintain
+    // the reference start tempo playback point at the strict loop start, similar to how
+    // quantized launches use launchFromCursor as the reference
+    Cursor loopDelta = this.nextCursor.subtract(this.loopStart.cursor);
+    Cursor transport = constructTransportCursor();
+    if (CursorOp().isAfter(loopDelta, transport)) {
+      // WTF?!?! The transport is so tiny it can't handle subtracting a small portion of loop?? Fall
+      // back to just hard-syncing transport references to the current position
+      LX.warning("Transport somehow smaller than loop delta - transport:" + transport + " < loopDelta:" + loopDelta);
+      setTransportReference(false);
+    } else {
+      this.startCursorReference.set(this.loopStart.cursor);
+      this.startTransportReference.set(transport.subtract(loopDelta));
+    }
   }
 
   @Override
@@ -1275,11 +1293,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @param cursor Cursor to snap
    * @return Cursor with snapping applied
    */
-  public Cursor snapGlobalQuantize(Cursor cursor) {
+  public Cursor snapLaunchQuantization(Cursor cursor) {
+    return snapLaunchQuantization(cursor, false);
+  }
+
+  private Cursor snapLaunchQuantization(Cursor cursor, boolean snapToFloor) {
     if (this.timeBase.getEnum() == Cursor.TimeBase.TEMPO) {
       Tempo.Quantization globalQ = this.lx.engine.tempo.launchQuantization.getObject();
       if (globalQ.hasDivision()) {
-        return snapTempo(cursor, globalQ.getDivision());
+        return snapTempo(cursor, globalQ.getDivision(), snapToFloor);
       }
     }
     return cursor;
@@ -1293,7 +1315,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return Cursor with snapping applied
    */
   public Cursor snapTempo(Cursor cursor, Tempo.Division division) {
-    return CursorOp().snap(cursor, this, constructTempoCursor(division));
+    return snapTempo(cursor, division, false);
+  }
+
+  private Cursor snapTempo(Cursor cursor, Tempo.Division division, boolean snapToFloor) {
+    Cursor snapSize = constructTempoCursor(division);
+    return snapToFloor ?
+      CursorOp().snapFloor(cursor, this, snapSize) :
+      CursorOp().snap(cursor, this, snapSize);
   }
 
   private static final String KEY_LANES = "parameterLanes";
