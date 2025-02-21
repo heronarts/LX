@@ -3230,10 +3230,16 @@ public abstract class LXCommand {
         private JsonObject preState = null;
         private JsonObject postState = null;
         private final Map<T, Cursor> toCursors;
+        private final Runnable undoHook;
 
         public SetCursors(LXClipLane<T> clipLane, Map<T, Cursor> toCursors) {
+          this(clipLane, toCursors, null);
+        }
+
+        public SetCursors(LXClipLane<T> clipLane, Map<T, Cursor> toCursors, Runnable undoHook) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.toCursors = toCursors;
+          this.undoHook = undoHook;
         }
 
         @Override
@@ -3263,6 +3269,9 @@ public abstract class LXCommand {
         @Override
         public void undo(LX lx) throws InvalidCommandException {
           this.clipLane.get().load(lx, this.preState);
+          if (this.undoHook != null) {
+            this.undoHook.run();
+          }
         }
       }
 
