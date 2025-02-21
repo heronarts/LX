@@ -88,7 +88,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
       if (activePattern != null) {
         // If we're overdubbing - only record a pattern event at the start of recording if the present
         // state is *different* from what was already in the pattern clip lane
-        PatternClipEvent previousPattern = this.patternLane.getPreviousPattern(this.cursor);
+        PatternClipEvent previousPattern = this.patternLane.getPreviousEvent(this.cursor);
         if (!isOverdub || ((previousPattern != null) && (previousPattern.pattern != activePattern))) {
           this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, this.channel, activePattern));
         }

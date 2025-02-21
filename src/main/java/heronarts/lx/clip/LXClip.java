@@ -646,12 +646,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Restrict right-direction move to remaining space after the brace
     Cursor max = CursorOp().isBefore(this.loopLength.cursor, this.length.cursor) ?
       this.length.cursor.subtract(this.loopLength.cursor) :
-      this.length.cursor;
+      Cursor.ZERO; // wtf- loop length longer than clip length? can't put the loop anywhere
 
     loopBrace = CursorOp().bound(loopBrace, max);
-
-    // Restrict left side to zero, may have been a left move or loop length may have been smaller than gridSnapUnits
     this.loopStart.set(loopBrace);
+
     // Check for cursor capture while playing
     captureCursorWithLoopMove(oldEnd);
     return this;
@@ -728,10 +727,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private void captureCursorWithLoopMove(Cursor oldEnd) {
     if (this.loop.isOn() && isRunning() && !this.bus.arm.isOn()) {
       if (CursorOp().isBefore(this.cursor, oldEnd) && CursorOp().isAfter(this.cursor, this.loopEnd.cursor)) {
-        // Advance cursor to prior end of loop
-        advanceCursor(this.cursor, oldEnd);
-        // Wrap cursor to start of loop
+        // Advance cursor to previous loop end, playing everything
+        advanceCursor(this.cursor, oldEnd, true);
+        // Wrap cursor back to start of loop
         setCursor(this.loopStart);
+        // TODO(clips): update the tempo references
       }
     }
   }
@@ -973,9 +973,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
-  private void advanceCursor(Cursor from, Cursor to) {
+  private void advanceCursor(Cursor from, Cursor to, boolean inclusive) {
     for (LXClipLane<?> lane : this.lanes) {
-      lane.advanceCursor(from, to);
+      lane.advanceCursor(from, to, inclusive);
     }
   }
 
@@ -1036,108 +1036,21 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     if (this.bus.arm.isOn()) {
       if (!this.hasTimeline) {
-        // Write any queued events
-        for (LXClipLane<?> lane : this.lanes) {
-          lane.commitRecordEvents();
-        }
-
-        // Recording mode... lane and event listeners will pick up and record
-        // all the events. All we need to do here is update the clip length
-        this.length.set(this.nextCursor);
-
+        runFirstRecording();
       } else {
-
-        // Overdubbing! FIRST we erase anything the cursor is going over
-        // in the case that overdub is active, nuking [this.cursor->nextCursor)
-        overdubCursor(this.cursor, this.nextCursor);
-
-        // Then we write queued recording events, at this.cursor
-        commitRecordCursor();
-
-        // Parameter lanes need some special logic to merge old and new
-        postOverdubCursor(this.cursor, this.nextCursor);
-
-        // TODO: Figure out how overdub works
-        // TODO: Stop recording if we cross the play end marker?
-
-        // Extend length once the end of clip is reached
-        if (CursorOp().isBefore(this.length.cursor, this.nextCursor)) {
-          this.length.set(this.nextCursor);
-        }
-
-        // TODO: play existing automations during overdub
-        // Should user be able to arm Clip Lanes individually for overdub?
+        runOverdub();
       }
+
+      // TODO(clips): refactor into above methods, over-dubbing should also respect looping
       setCursor(this.nextCursor);
+
     } else {
-      // Not record
-      boolean automationFinished = true;
+
+      boolean runAutomation = false;
+
+      // Run clip automation if enabled
       if (this.automationEnabled.isOn()) {
-        // Play Automation
-        final boolean isLoop = this.loop.isOn();
-
-        // Determine
-        Cursor endCursor = isLoop ? this.loopEnd.cursor : this.playEnd.cursor;
-
-        // End markers only apply when the cursor passes over them. If playback was started
-        // past them, the effective end point will be the clip length.
-        if (CursorOp().isAfter(this.cursor, endCursor)) {
-          endCursor = this.length.cursor;
-        }
-
-        automationFinished = false;
-
-        if (CursorOp().isBefore(this.nextCursor, endCursor)) {
-
-          // Normal play frame
-          advanceCursor(this.cursor, this.nextCursor);
-          setCursor(this.nextCursor);
-
-        } else {
-
-          // TODO(mcslee): definitely need some special MIDI lane processing here
-          // and in various other stop points, to ensure that we send a MIDI note off
-          // for any MIDI events that have had a Note On, but for which the Note Off
-          // lies outside of the loop region. This happens in the looping case, but
-          // could also happen in any case of stopping recording or stopping playback
-          // where notes are hanging. Need to identify and handle those as well.
-
-          // Reached the end
-          // Play automation events right up to the end but not past
-          advanceCursor(this.cursor, endCursor);
-
-          if (isLoop && !CursorOp().isZero(this.length.cursor)) {
-            // Loop
-            if (!CursorOp().isZero(this.loopLength.cursor)) {
-              // Wrap into new loop, play automations up to next position
-              while (CursorOp().isAfterOrEqual(this.nextCursor, endCursor)) {
-                this.nextCursor._subtract(this.loopLength.cursor);
-                loopCursor(this.loopStart.cursor);
-                if (CursorOp().isBefore(endCursor, this.nextCursor)) {
-                  // Loop is smaller than frame, run automations for each time we would have passed them
-                  advanceCursor(this.loopStart.cursor, endCursor);
-                } else {
-                  // Normal expected behavior, we're now within the loop.
-                  // Run animations between start of loop and new position
-                  advanceCursor(this.loopStart.cursor, this.nextCursor);
-                }
-              }
-              setCursor(this.nextCursor);
-            } else {
-              // Clip is non-zero length but loop is zero length. Boring!
-              setCursor(this.loopStart.cursor);
-              // If we want it to keep playing with loop length zero,
-              // we would need to add a flag to prevent the cursor from advancing
-              // once the loop has been engaged.
-              // Note(jkb): this was fully tested before limits were established for loop length
-              automationFinished = true;
-            }
-          } else {
-            // Reached the end, either no loop or no clip length. Stop.
-            setCursor(endCursor);
-            automationFinished = true;
-          }
-        }
+        runAutomation = runAutomation();
       }
 
       // NOTE(mcslee): the snapshot does not finish its interpolation if
@@ -1148,11 +1061,124 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         this.snapshot.loop(deltaMs);
       }
 
-      // Did we finish automation and snapshot playback, stop!
-      if (automationFinished && !this.snapshot.isInTransition()) {
+      // If automation adn snapshot are both finished, stop
+      if (!runAutomation && !this.snapshot.isInTransition()) {
         stop();
       }
     }
+  }
+
+  private void runFirstRecording() {
+    // Write any queued events
+    for (LXClipLane<?> lane : this.lanes) {
+      lane.commitRecordEvents();
+    }
+
+    // Recording mode... lane and event listeners will pick up and record
+    // all the events. All we need to do here is update the clip length
+    this.length.set(this.nextCursor);
+  }
+
+  private void runOverdub() {
+    // Overdubbing! FIRST we erase anything the cursor is going over
+    // in the case that overdub is active, nuking [this.cursor->nextCursor)
+    overdubCursor(this.cursor, this.nextCursor);
+
+    // Then we write queued recording events, at this.cursor
+    commitRecordCursor();
+
+    // Parameter lanes need some special logic to merge old and new
+    postOverdubCursor(this.cursor, this.nextCursor);
+
+    // TODO: Figure out how overdub works
+    // TODO: Stop recording if we cross the play end marker?
+
+    // Extend length once the end of clip is reached
+    if (CursorOp().isBefore(this.length.cursor, this.nextCursor)) {
+      this.length.set(this.nextCursor);
+    }
+  }
+
+  /**
+   * Runs the clip automation
+   *
+   * @return <code>true</code> if we should keep running, <code>false</code> otherwise
+   */
+  private boolean runAutomation() {
+
+    final Cursor.Operator CursorOp = CursorOp();
+    boolean isLoop = this.loop.isOn();
+
+    // Determine playback finish position
+    Cursor endCursor = isLoop ? this.loopEnd.cursor : this.playEnd.cursor;
+
+    // End markers only apply when the cursor passes over them. If playback was started
+    // past them, the effective end point will be the clip length.
+    if (CursorOp.isAfter(this.cursor, endCursor)) {
+      endCursor = this.length.cursor;
+      isLoop = false;
+    }
+
+    if (CursorOp.isBefore(this.nextCursor, endCursor)) {
+      // Normal play frame, no looping. Execute this content, move
+      // the cursor, and continue
+      advanceCursor(this.cursor, this.nextCursor, false);
+      setCursor(this.nextCursor);
+      return true;
+    }
+
+    // We have reached the end, play everything up to the end *inclusive*
+    advanceCursor(this.cursor, endCursor, true);
+
+    // If the clip has no length, or is not in a loop, then we're done at the end
+    if (CursorOp.isZero(this.length.cursor) || !isLoop) {
+      setCursor(endCursor);
+      return false;
+    }
+
+    // We are in a  loop!
+
+    // TODO(clips): definitely need some special MIDI lane processing here
+    // and in various other stop points, to ensure that we send a MIDI note off
+    // for any MIDI events that have had a Note On, but for which the Note Off
+    // lies outside of the loop region. This happens in the looping case, but
+    // could also happen in any case of stopping recording or stopping playback
+    // where notes are hanging. Need to identify and handle those as well.
+
+    if (CursorOp().isZero(this.loopLength.cursor)) {
+      // Clip is non-zero length but loop is zero length, wtf? Should have been prevented
+      // by loop length limits... bail out
+      LX.warning("LXClip has loop set with zero length, stopping");
+      setCursor(this.loopStart.cursor);
+      return false;
+    }
+
+    // Wrap into new loop, play automations up to next position
+    while (true) {
+
+      // Rewind by loop length
+      this.nextCursor._subtract(this.loopLength.cursor);
+      loopCursor(this.loopStart.cursor);
+
+      // TODO(clips): update tempo-references here
+
+      if (CursorOp.isBefore(this.nextCursor, endCursor)) {
+        // Normal expected behavior, we're back within the loop but
+        // have not reached its end. Run animations from start of loop
+        // up to the new position
+        advanceCursor(this.loopStart.cursor, this.nextCursor, false);
+        break;
+      }
+
+      // Loop is smaller than frame, wtf?! Should be exceedingly rare
+      // unless framerate is super low, but run through the *entire* loop,
+      // inclusive and then we'll take another pass
+      advanceCursor(this.loopStart.cursor, endCursor, true);
+    }
+
+    // Update the cursor and keep running
+    setCursor(this.nextCursor);
+    return true;
   }
 
   @Override

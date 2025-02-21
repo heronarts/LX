@@ -120,7 +120,8 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this.mutableEvents.listIterator(index);
   }
 
-  protected int cursorPlayIndex(Cursor cursor) {
+  private int _cursorIndex(Cursor cursor, boolean inclusive) {
+    final int geq = inclusive ? -1 : 0;
     int left = 0;
     int right = this.events.size() - 1;
 
@@ -132,8 +133,8 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      if (CursorOp.isAfterOrEqual(this.events.get(mid).cursor, cursor)) {
-        // If the current element is greater or equal, it is a potential result,
+      if (CursorOp.compare(this.events.get(mid).cursor, cursor) > geq) {
+        // If the current element is greater (or equal), it is a potential result,
         // but something to the left could still also be >=, and we want the lowest
         // one that is equal
         result = mid;
@@ -146,29 +147,12 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return result;
   }
 
+  protected int cursorPlayIndex(Cursor cursor) {
+    return _cursorIndex(cursor, true);
+  }
+
   protected int cursorInsertIndex(Cursor cursor) {
-    int left = 0;
-    int right = this.events.size() - 1;
-
-    // Starting assumption is everything is <= cursor until
-    // we find something > cursor
-    int result = right + 1;
-
-    final Cursor.Operator CursorOp = CursorOp();
-
-    while (left <= right) {
-      int mid = left + (right - left) / 2;
-      if (CursorOp.isAfter(this.events.get(mid).cursor, cursor)) {
-        // If the current element is greater, it could be a potential result,
-        // but something to the left could still be greater than us
-        result = mid;
-        right = mid - 1;
-      } else {
-        // Nope, look on the right side
-        left = mid + 1;
-      }
-    }
-    return result;
+    return _cursorIndex(cursor, false);
   }
 
   private void _insertEvent(T event) {
@@ -206,9 +190,9 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   /**
-   * Gets the last event occurring before this cursor value, if any. Events
+   * Gets the last event occurring before this cursor insert position, if any. Events
    * already in the array with a cursor exactly equal to this cursor are
-   * continued to all be previous.
+   * considered to all be previous.
    *
    * @param cursor Cursor position
    * @return Last event with time equal to or less than this cursor
@@ -222,7 +206,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   /**
-   * Gets the last event in the lane occuring at or before the time value
+   * Gets the last event in the lane occurring at or before the time value
    * of the current cursor position.
    *
    * @return Last event equal to or before this cursor position
@@ -294,12 +278,13 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   void postOverdubCursor(Cursor from, Cursor to) {}
 
-  void advanceCursor(Cursor from, Cursor to) {
-    final ListIterator<T> iter = eventIterator(from);
+  void advanceCursor(Cursor from, Cursor to, boolean inclusive) {
     final Cursor.Operator CursorOp = CursorOp();
+    final int limit = inclusive ? 0 : -1;
+    final ListIterator<T> iter = eventIterator(from);
     while (iter.hasNext()) {
       T event = iter.next();
-      if (CursorOp.isAfterOrEqual(event.cursor, to)) {
+      if (CursorOp.compare(event.cursor, to) > limit) {
         break;
       }
       event.execute();

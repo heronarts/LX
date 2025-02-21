@@ -180,13 +180,13 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       // No overdubs happening? Play back the automation! Set a flag so we suppress
       // recording changes due to the parameter listeners that will file...
       this.inOverdubPlayback = true;
-      advanceCursor(from, to);
+      advanceCursor(from, to, false);
       this.inOverdubPlayback = false;
     }
   }
 
   @Override
-  void advanceCursor(Cursor from, Cursor to) {
+  void advanceCursor(Cursor from, Cursor to, boolean inclusive) {
     int size = this.events.size();
     if (size == 0) {
       return;
