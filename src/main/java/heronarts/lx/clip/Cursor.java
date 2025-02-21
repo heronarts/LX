@@ -36,6 +36,13 @@ public class Cursor implements LXSerializable {
     1 / 8.
   );
 
+  public static final Cursor.Immutable MIN_LABEL_SPACING = new Cursor.Immutable(
+    "MIN_LABEL_SPACING",
+    1000 / 64., // ~1 frame at 64fps ~16ms
+    0,
+    1 / 4. // 16th notes
+  );
+
   /**
    * The Cursor.Operator interface specifies all the operations that can be
    * performed on Cursors which depend upon the TimeBase setting. Clients
@@ -556,7 +563,7 @@ public class Cursor implements LXSerializable {
       final int beatsPerBar = clip.getLX().engine.tempo.beatsPerBar.getValuei();
       int bars = 1 + (cursor.beatCount / beatsPerBar);
       int beats = 1 + (cursor.beatCount % beatsPerBar);
-      int sixteenths = (int) (cursor.beatBasis / .25);
+      int sixteenths = 1 + (int) (cursor.beatBasis / .25);
       if (sixteenths > 1) {
         return String.format("%d.%d.%d", bars, beats, sixteenths);
       } else {
