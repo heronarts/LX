@@ -3283,6 +3283,7 @@ public abstract class LXCommand {
           private final Cursor cursor;
           private final double normalized;
           private int undoIndex;
+          private ParameterClipEvent insertEvent;
 
           public InsertEvent(ParameterClipLane lane, Cursor cursor, double normalized) {
             this.clipLane = new ComponentReference<>(lane);
@@ -3298,9 +3299,12 @@ public abstract class LXCommand {
           @Override
           public void perform(LX lx) throws InvalidCommandException {
             ParameterClipLane clipLane = this.clipLane.get();
-            ParameterClipEvent insertEvent = clipLane.insertEvent(this.cursor, this.normalized);
-            this.undoIndex = clipLane.events.indexOf(insertEvent);
+            this.insertEvent = clipLane.insertEvent(this.cursor, this.normalized);
+            this.undoIndex = clipLane.events.indexOf(this.insertEvent);
+          }
 
+          public ParameterClipEvent getEvent() {
+            return this.insertEvent;
           }
 
           @Override
