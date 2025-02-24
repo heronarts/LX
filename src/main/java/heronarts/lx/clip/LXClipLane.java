@@ -94,6 +94,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this;
   }
 
+  private ListIterator<T> eventIterator(List<T> events, Cursor fromCursor, boolean inclusive) {
+    int index = LXUtils.constrain(_cursorIndex(events, fromCursor, inclusive), 0, events.size());
+    return events.listIterator(index);
+  }
+
   /**
    * Gets an iterator over this clip lane's events, starting from the position specified
    * by the cursor. The iterator will start at the first event with time equal to or after
@@ -120,10 +125,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this.mutableEvents.listIterator(index);
   }
 
-  private int _cursorIndex(Cursor cursor, boolean inclusive) {
+  private int _cursorIndex(List<T> events, Cursor cursor, boolean inclusive) {
     final int geq = inclusive ? -1 : 0;
     int left = 0;
-    int right = this.events.size() - 1;
+    int right = events.size() - 1;
 
     // Starting assumption is everything is < cursor until
     // we find something >= cursor
@@ -133,7 +138,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     while (left <= right) {
       int mid = left + (right - left) / 2;
-      if (CursorOp.compare(this.events.get(mid).cursor, cursor) > geq) {
+      if (CursorOp.compare(events.get(mid).cursor, cursor) > geq) {
         // If the current element is greater (or equal), it is a potential result,
         // but something to the left could still also be >=, and we want the lowest
         // one that is equal
@@ -148,11 +153,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   protected int cursorPlayIndex(Cursor cursor) {
-    return _cursorIndex(cursor, true);
+    return _cursorIndex(this.events, cursor, true);
   }
 
   protected int cursorInsertIndex(Cursor cursor) {
-    return _cursorIndex(cursor, false);
+    return _cursorIndex(this.events, cursor, false);
   }
 
   private void _insertEvent(T event) {
@@ -215,36 +220,85 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return getPreviousEvent(this.clip.cursor);
   }
 
-  public void setEventsCursors(Map<T, Cursor> cursors) {
-    boolean changed = false;
+  /**
+   * Set the cursors for a set of events in a range. This event will also destructively clobber any events
+   * that the new stretched selection range overlaps with (other than those strictly contained in the set
+   * of modified cursors).
+   *
+   * @param originalEvents The original reference event list to modify
+   * @param fromSelectionMin Original lower bound on selection range
+   * @param fromSelectionMax Original upper bound on selection range
+   * @param toSelectionMin New lower bound on selection range
+   * @param toSelectionMax New upper bound on selection range
+   * @param toCursors Ordered map of original position of events pre-modifidcation
+   * @param toCursors Ordered map of events to re-position from within the original range
+   * @param reverse Whether the events have been reversed (e.g. by dragging start past end or vice-versa)
+   */
+  public void setEventsCursors(List<T> originalEvents, Cursor fromSelectionMin, Cursor fromSelectionMax, Cursor toSelectionMin, Cursor toSelectionMax, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors, boolean reverse) {
+    // Only reverse if there's actually content to reverse!
+    reverse = reverse && !toCursors.isEmpty();
 
-    // TODO(clips): we could probably make this a lot more efficient with stricter
-    // assumptions about the values coming in, whether re-ordering may have occurred
-    // or not... but in the meantime we do an insertion-sort per-element to avoid
-    // mucking up the state
-    //
-    // Almost surely want to improve this because it's currently an underlying
-    // CopyOnWriteArrayList which will make *many* copies if we edit loads of
-    // items at once here. Make our own copy and clear()/addAll() or we should use
-    // the stable .sort() method, or possibly Arrays.sort() methods that can sort
-    // a sub-range of the array if we know there's no overlapping!
-    //
-    // Also a problem right now that the ordering of the Map matters... it needs to be
-    // a linked hashmap, or we need to do a stable sort
-    for (Map.Entry<T, Cursor> entry : cursors.entrySet()) {
+    final Cursor.Operator CursorOp = CursorOp();
+
+    // Put everything back how it was, note that this may be called many times in the course of a
+    // mouse drag operation, we need to operate on the original array with the modified events in their
+    // initial position.
+    for (Map.Entry<T, Cursor> entry : fromCursors.entrySet()) {
       final T event = entry.getKey();
-      if (this.events.contains(event)) {
-        this.mutableEvents.remove(event);
-        event.setCursor(entry.getValue().bound(this.clip));
-        _insertEvent(event);
-        changed = true;
-      } else {
-        LX.error("LXClipLane.setEventsCursors contains an event not in the events array: " + event);
+      event.setCursor(entry.getValue());
+    }
+
+    // Test if the selection bounds have expanded, if so we will nuke any events
+    // that lie outside of the original selection bounds but within the new
+    // selection bounds
+    final List<T> removeEvents = new ArrayList<>();
+    if (CursorOp.isBefore(toSelectionMin, fromSelectionMin)) {
+      ListIterator<T> iter = eventIterator(originalEvents, toSelectionMin, true);
+      while (iter.hasNext()) {
+        T removeEvent = iter.next();
+        if (!CursorOp.isBefore(removeEvent.cursor, fromSelectionMin)) {
+          break;
+        }
+        removeEvents.add(removeEvent);
       }
     }
-    if (changed) {
-      this.onChange.bang();
+    if (CursorOp.isBefore(fromSelectionMax, toSelectionMax)) {
+      ListIterator<T> iter = eventIterator(originalEvents, fromSelectionMax, false);
+      while (iter.hasNext()) {
+        T removeEvent = iter.next();
+        if (CursorOp.isAfter(removeEvent.cursor, toSelectionMax)) {
+          break;
+        }
+        removeEvents.add(removeEvent);
+      }
     }
+
+    // We're gonna need a mutable copy of the original events, either to chop
+    // stuff out of, or to reverse the order of the modified section
+    if (!removeEvents.isEmpty() || reverse) {
+      originalEvents = new ArrayList<T>(originalEvents);
+      originalEvents.removeAll(removeEvents);
+      if (reverse) {
+        // These will be put back in reverse-order in the loop below
+        originalEvents.removeAll(toCursors.keySet());
+      }
+    }
+
+    // There are cursors that need modifying
+    if (!toCursors.isEmpty()) {
+      final int insertIndex = reverse ? _cursorIndex(originalEvents, toSelectionMin, false) : 0;
+      for (Map.Entry<T, Cursor> entry : toCursors.entrySet()) {
+        final T event = entry.getKey();
+        if (reverse) {
+          originalEvents.add(insertIndex, event);
+        }
+        event.setCursor(entry.getValue().bound(this.clip));
+      }
+    }
+
+    this.mutableEvents.clear();
+    this.mutableEvents.addAll(originalEvents);
+    this.onChange.bang();
   }
 
   @Override
