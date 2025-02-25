@@ -230,7 +230,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * @param fromSelectionMax Original upper bound on selection range
    * @param toSelectionMin New lower bound on selection range
    * @param toSelectionMax New upper bound on selection range
-   * @param fromCursors Ordered map of original position of events pre-modifidcation
+   * @param fromCursors Ordered map of original position of events pre-modification
    * @param toCursors Ordered map of events to re-position from within the original range
    * @param reverse Whether the events have been reversed (e.g. by dragging start past end or vice-versa)
    */
