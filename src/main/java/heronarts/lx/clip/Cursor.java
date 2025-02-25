@@ -55,7 +55,7 @@ public class Cursor implements LXSerializable {
     /**
      * Return <code>true</code> if the cursor is at position 0
      *
-     * @param c Cursor
+     * @param cursor Cursor
      * @return <code>true</code> if the cursor is at position 0
      */
     public boolean isZero(Cursor cursor);
