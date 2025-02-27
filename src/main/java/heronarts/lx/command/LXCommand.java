@@ -3274,18 +3274,20 @@ public abstract class LXCommand {
         private final Cursor toSelectionMin;
         private final Cursor toSelectionMax;
 
+        private final Map<T, Double> fromValues;
         private final Map<T, Cursor> fromCursors;
         private final Map<T, Cursor> toCursors;
         private final Runnable undoHook;
         private final ArrayList<T> originalEvents;
         private Operation operation;
 
-        public SetCursors(LXClipLane<T> clipLane, Cursor fromSelectionMin, Cursor fromSelectionMax, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors) {
-          this(clipLane, fromSelectionMin, fromSelectionMax, fromCursors, toCursors, null);
+        public SetCursors(LXClipLane<T> clipLane, Cursor fromSelectionMin, Cursor fromSelectionMax, Map<T, Double> fromValues, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors) {
+          this(clipLane, fromSelectionMin, fromSelectionMax, fromValues, fromCursors, toCursors, null);
         }
 
-        public SetCursors(LXClipLane<T> clipLane, Cursor fromSelectionMin, Cursor fromSelectionMax, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors, Runnable undoHook) {
+        public SetCursors(LXClipLane<T> clipLane, Cursor fromSelectionMin, Cursor fromSelectionMax, Map<T, Double> fromValues, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors, Runnable undoHook) {
           this.clipLane = new ComponentReference<>(clipLane);
+          this.fromValues = fromValues;
           this.fromCursors = fromCursors;
           this.toCursors = toCursors;
           this.undoHook = undoHook;
@@ -3322,7 +3324,7 @@ public abstract class LXCommand {
           if (this.postState != null) {
             clipLane.load(lx, this.postState);
           } else {
-            clipLane.setEventsCursors(this.originalEvents, this.fromSelectionMin, this.fromSelectionMax, this.toSelectionMin, this.toSelectionMax, this.fromCursors, this.toCursors, this.operation);
+            clipLane.setEventsCursors(this.originalEvents, this.fromSelectionMin, this.fromSelectionMax, this.toSelectionMin, this.toSelectionMax, this.fromValues, this.fromCursors, this.toCursors, this.operation);
             this.postState = LXSerializable.Utils.toObject(clipLane, true);
           }
         }

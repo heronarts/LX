@@ -280,27 +280,32 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * @param fromSelectionMax Original upper bound on selection range
    * @param toSelectionMin New lower bound on selection range
    * @param toSelectionMax New upper bound on selection range
+   * @param fromValues Ordered map of original event values, pre-modification
    * @param fromCursors Ordered map of original position of events pre-modification
    * @param toCursors Ordered map of events to re-position from within the original range
    * @param operation What kind of modification operation this is
    */
-  public void setEventsCursors(ArrayList<T> originalEvents, Cursor fromSelectionMin, Cursor fromSelectionMax, Cursor toSelectionMin, Cursor toSelectionMax, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors, Operation operation) {
+  public void setEventsCursors(ArrayList<T> originalEvents, Cursor fromSelectionMin, Cursor fromSelectionMax, Cursor toSelectionMin, Cursor toSelectionMax, Map<T, Double> fromValues, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors, Operation operation) {
 
     // NOTE(mcslee): Let it stand for the record that attempting to generalize the logic in this method
     // was outrageously painful. The number of stitching cases for expansion/contraction/overlapping-moves/reverses
     // is insane, and obsessing over this put me in a foul mood for multiple days. I still kind of believe
     // there must be a more elegant solution than the below, but this was the best I could do without special-casing
     // it all out into a switch statement by Operation type (which was explored and would mean maintaining a *lot* more
-    // code. All that to say, tread carefully if modifying this logic.
+    // code). All that to say, tread carefully if modifying this logic.
 
     final boolean reverse = operation.isReverse();
     final boolean clear = operation.isClear();
 
     // Put everything back how it was, note that this may be called many times in the course of a
     // mouse drag operation, we need to operate on the original array with the modified events in their
-    // initial position.
+    // initial positions (and potentially values).
     for (Map.Entry<T, Cursor> entry : fromCursors.entrySet()) {
       entry.getKey().setCursor(entry.getValue());
+    }
+    // NOTE(mcslee): very tricky case... full explanation in ParameterClipLane.reverseEvents
+    for (Map.Entry<T, Double> entry : fromValues.entrySet()) {
+      setEventNormalized(entry.getKey(), entry.getValue());
     }
 
     // Was this a non-edit? Bail fast after restoring original state
@@ -382,7 +387,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     // Reverse the modified stuff
     if (reverse) {
-      Collections.reverse(modifiedEvents);
+      reverseEvents(modifiedEvents);
     }
 
     // Remove everything pre-existing in the target range
@@ -428,6 +433,12 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     this.mutableEvents.addAll(originalEvents);
     this.onChange.bang();
   }
+
+  protected void reverseEvents(List<T> events) {
+    Collections.reverse(events);
+  }
+
+  protected void setEventNormalized(T event, double value) {}
 
   protected T stitchSelectionMin(List<T> originalEvents, List<T> modifiedEvents, Cursor selectionMin, int stitchIndex, boolean force) {
     return null;

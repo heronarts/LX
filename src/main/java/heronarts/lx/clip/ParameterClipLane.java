@@ -27,6 +27,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -88,6 +89,35 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   public boolean hasInterpolation() {
     return (this instanceof Normalized);
+  }
+
+  @Override
+  protected void setEventNormalized(ParameterClipEvent event, double normalized) {
+    event.setNormalized(normalized);
+  }
+
+  @Override
+  protected void reverseEvents(List<ParameterClipEvent> events) {
+    Collections.reverse(events);
+    if (!hasInterpolation()) {
+      // If we *reverse* discrete/boolean events, the values are NOT just a simple  mirror image!
+      // This is because when a discrete automation event is encountered, the value abruptly changes
+      // from prior->current.
+      //
+      // Say you have: A[0] -> B[1] -> C[2]
+      // Timeline will be: [0-1):A, [1-2):B, [2]:C
+      //
+      // Reverse the points, you get: C[0] -> B[1] -> A[2]
+      // Timeline will be [0-1):C, [1-2):B, [2]:A
+      //
+      // Note the problem - we've got a full time unit of C now and only an instant of A at the end
+      // when what we were expecting was an instant of C and a full unit of A. What's happened here
+      // is prior->current->next became next->current->prior. We need to actually shift the reversed
+      // values over by one so that the prior->current relationship holds properly
+      for (int i = 0; i < events.size() - 1; ++i) {
+        events.get(i).setNormalized(events.get(i+1).getNormalized());
+      }
+    }
   }
 
   protected ParameterClipEvent stitchEvent(ParameterClipEvent prior, ParameterClipEvent next, Cursor cursor) {
