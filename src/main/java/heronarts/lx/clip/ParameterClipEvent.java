@@ -7,7 +7,7 @@ import heronarts.lx.utils.LXUtils;
 
 public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
 
-  private final ParameterClipLane lane;
+  public final ParameterClipLane lane;
   private double normalized;
 
   ParameterClipEvent(ParameterClipLane lane) {

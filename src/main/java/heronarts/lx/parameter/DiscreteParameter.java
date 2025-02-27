@@ -180,6 +180,10 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     return (this.options != null) ? this.options[getIndex()] : getFormatter().format(getValuei());
   }
 
+  public String getOption(double value) {
+    return (this.options != null) ? this.options[(int) value - this.minValue] : getFormatter().format(value);
+  }
+
   /**
    * Set the range and option strings for the parameter
    *
