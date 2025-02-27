@@ -358,8 +358,6 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       modifiedEvents.add(0, stitchInnerMin);
     }
     if (stitchInnerMax != null) {
-      // TODO(clips): if clear and selectionMin == selectionMax, we don't need to add
-      // this one, just collapse the range to a single point
       modifiedEvents.add(stitchInnerMax);
     }
 
@@ -422,7 +420,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     // Remove the inner stitches if they're pointless
     if (stitchRemoveIfRedundant(originalEvents, stitchInnerMin, reverse ? stitchIndex + numModified - 1 : stitchIndex)) {
-      --stitchIndex;
+      --numModified;
     }
     stitchRemoveIfRedundant(originalEvents, stitchInnerMax, reverse ? stitchIndex : stitchIndex + numModified - 1);
 
