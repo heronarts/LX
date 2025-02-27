@@ -262,7 +262,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
       ParameterClipLane lane = getParameterLane(parameter, true);
       if (!lane.isInOverdubPlayback()) {
-        lane.recordParameterEvent(new ParameterClipEvent(lane, parameter));
+        lane.recordParameterEvent(new ParameterClipEvent(lane));
       }
     }
   }

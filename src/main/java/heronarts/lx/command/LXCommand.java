@@ -20,7 +20,6 @@ package heronarts.lx.command;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -3226,6 +3225,46 @@ public abstract class LXCommand {
 
       public static class SetCursors<T extends LXClipEvent<?>> extends LXCommand {
 
+        public enum Operation {
+          NONE,
+
+          // Performed with the left handle
+          STRETCH_TO_LEFT,
+          SHORTEN_FROM_LEFT,
+          CLEAR_FROM_LEFT,
+          REVERSE_LEFT_TO_RIGHT,
+
+          // Performed with the right handle
+          STRETCH_TO_RIGHT,
+          SHORTEN_FROM_RIGHT,
+          CLEAR_FROM_RIGHT,
+          REVERSE_RIGHT_TO_LEFT,
+
+          // Performed by move-dragging
+          MOVE_LEFT,
+          MOVE_RIGHT;
+
+          public boolean isClear() {
+            switch (this) {
+            case CLEAR_FROM_LEFT:
+            case CLEAR_FROM_RIGHT:
+              return true;
+            default:
+              return false;
+            }
+          }
+
+          public boolean isReverse() {
+            switch (this) {
+            case REVERSE_LEFT_TO_RIGHT:
+            case REVERSE_RIGHT_TO_LEFT:
+              return true;
+            default:
+              return false;
+            }
+          }
+        }
+
         private final ComponentReference<LXClipLane<T>> clipLane;
 
         private JsonObject preState = null;
@@ -3238,8 +3277,8 @@ public abstract class LXCommand {
         private final Map<T, Cursor> fromCursors;
         private final Map<T, Cursor> toCursors;
         private final Runnable undoHook;
-        private final List<T> originalEvents;
-        private boolean reverse = false;
+        private final ArrayList<T> originalEvents;
+        private Operation operation;
 
         public SetCursors(LXClipLane<T> clipLane, Cursor fromSelectionMin, Cursor fromSelectionMax, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors) {
           this(clipLane, fromSelectionMin, fromSelectionMax, fromCursors, toCursors, null);
@@ -3258,7 +3297,7 @@ public abstract class LXCommand {
           // Take a snapshot of the state of clip events at the beginning of this operation, which
           // may have update() called a bunch of times, and we always want to apply changes relative
           // to the state of the list at the beginning of a click-drag operation, for example
-          this.originalEvents = Collections.unmodifiableList(new ArrayList<>(clipLane.events));
+          this.originalEvents = new ArrayList<>(clipLane.events);
         }
 
         @Override
@@ -3266,9 +3305,9 @@ public abstract class LXCommand {
           return "Set Event Cursors";
         }
 
-        public SetCursors<T> update(Cursor selectionMin, Cursor selectionMax, boolean reverse) {
-          this.reverse = reverse;
+        public SetCursors<T> update(Cursor selectionMin, Cursor selectionMax, Operation operation) {
           this.postState = null;
+          this.operation = operation;
           this.toSelectionMin.set(selectionMin);
           this.toSelectionMax.set(selectionMax);
           return this;
@@ -3283,7 +3322,7 @@ public abstract class LXCommand {
           if (this.postState != null) {
             clipLane.load(lx, this.postState);
           } else {
-            clipLane.setEventsCursors(this.originalEvents, this.fromSelectionMin, this.fromSelectionMax, this.toSelectionMin, this.toSelectionMax, this.fromCursors, this.toCursors, this.reverse);
+            clipLane.setEventsCursors(this.originalEvents, this.fromSelectionMin, this.fromSelectionMax, this.toSelectionMin, this.toSelectionMax, this.fromCursors, this.toCursors, this.operation);
             this.postState = LXSerializable.Utils.toObject(clipLane, true);
           }
         }

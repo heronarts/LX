@@ -3,22 +3,26 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
 
 public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
 
-  public final LXNormalizedParameter parameter;
+  private final ParameterClipLane lane;
   private double normalized;
 
-  ParameterClipEvent(ParameterClipLane lane, LXNormalizedParameter parameter) {
-    this(lane, parameter, parameter.getBaseNormalized());
+  ParameterClipEvent(ParameterClipLane lane) {
+    this(lane, lane.parameter.getBaseNormalized());
   }
 
-  ParameterClipEvent(ParameterClipLane lane, LXNormalizedParameter parameter, double normalized) {
-    super(lane, parameter.getParent());
-    this.parameter = parameter;
+  ParameterClipEvent(ParameterClipLane lane, double normalized) {
+    super(lane, lane.parameter.getParent());
+    this.lane = lane;
     this.normalized = normalizeEventValue(normalized);
+  }
+
+  ParameterClipEvent(ParameterClipLane lane, Cursor cursor, double normalized) {
+    this(lane, normalized);
+    setCursor(cursor);
   }
 
   private double normalizeEventValue(double normalized) {
@@ -56,7 +60,12 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
 
   @Override
   public void execute() {
-    this.parameter.setNormalized(this.normalized);
+    this.lane.parameter.setNormalized(this.normalized);
+  }
+
+  @Override
+  public String toString() {
+    return this.cursor.toString() + " -> " + getNormalized();
   }
 
   protected static final String KEY_NORMALIZED = "normalized";

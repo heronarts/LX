@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
-
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -32,6 +31,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.command.LXCommand.Clip.Event.SetCursors.Operation;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -46,10 +46,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected boolean overdubActive = false;
   protected T overdubLastOriginalEvent = null;
 
-  // NOTE(mcslee): think about whether CopyOnWrite is the best solution here for UI drawing
-  // or whether synchronized or locking around multi-edits is preferable, as those are currently
-  // going to be super costly
+  // TODO(clips): port this off CopyOnWriteArrayList to LXEngineArrayList, so that we
+  // can have a UI view that's binary-searchable, and we only make new UI copies when
+  // needed (e.g. not on every individual add() call)
   protected final CopyOnWriteArrayList<T> mutableEvents = new CopyOnWriteArrayList<>();
+
   public final List<T> events = Collections.unmodifiableList(this.mutableEvents);
 
   protected Cursor.Operator CursorOp() {
@@ -94,11 +95,6 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this;
   }
 
-  private ListIterator<T> eventIterator(List<T> events, Cursor fromCursor, boolean inclusive) {
-    int index = LXUtils.constrain(_cursorIndex(events, fromCursor, inclusive), 0, events.size());
-    return events.listIterator(index);
-  }
-
   /**
    * Gets an iterator over this clip lane's events, starting from the position specified
    * by the cursor. The iterator will start at the first event with time equal to or after
@@ -122,8 +118,22 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    */
   public ListIterator<T> eventIterator(Cursor fromCursor, int offset) {
     int index = LXUtils.constrain(cursorPlayIndex(fromCursor) + offset, 0, this.events.size());
-    return this.mutableEvents.listIterator(index);
+    return this.events.listIterator(index);
   }
+
+  /**
+   * Gets an iterator over the the events beginning at a given cursor position
+   *
+   * @param events Events to get an iterator for
+   * @param fromCursor Cursor to iterate from
+   * @param inclusive Whether to include events strictly at fromCursor
+   * @return Iterator beginning at fromCursor
+   */
+  public ListIterator<T> eventIterator(List<T> events, Cursor fromCursor, boolean inclusive) {
+    int index = LXUtils.constrain(_cursorIndex(events, fromCursor, inclusive), 0, events.size());
+    return events.listIterator(index);
+  }
+
 
   private int _cursorIndex(List<T> events, Cursor cursor, boolean inclusive) {
     final int geq = inclusive ? -1 : 0;
@@ -160,6 +170,14 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return _cursorIndex(this.events, cursor, false);
   }
 
+  protected int cursorPlayIndex(List<T> events, Cursor cursor) {
+    return _cursorIndex(events, cursor, true);
+  }
+
+  protected int cursorInsertIndex(List<T> events, Cursor cursor) {
+    return _cursorIndex(events, cursor, false);
+  }
+
   private void _insertEvent(T event) {
     if (CursorOp().isAfterOrEqual(event.cursor, lastEventCursor())) {
       // Quick check... shortcut in normal recording mode when we're not
@@ -192,6 +210,38 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       this.onChange.bang();
     }
     return this;
+  }
+
+  /**
+   * Clears events from the array in given range, inclusive
+   *
+   * @param events Events array
+   * @param from Start cursor position, inclusive
+   * @param to End cursor position, inclusive
+   */
+  protected void clearEvents(List<T> events, Cursor from, Cursor to) {
+    int clearFrom = cursorPlayIndex(events, from);
+    int clearTo = cursorInsertIndex(events, to);
+    if (clearTo > clearFrom) {
+      events.subList(clearFrom, clearTo).clear();
+    }
+  }
+
+  /**
+   * Gets the last event occurring before this cursor insert position, if any. Events
+   * already in the array with a cursor exactly equal to this cursor are
+   * considered to all be previous.
+   *
+   * @param events List of events
+   * @param cursor Cursor position
+   * @return Last event with time equal to or less than this cursor
+   */
+  protected T getPreviousEvent(List<T> events, Cursor cursor) {
+    int previousIndex = cursorInsertIndex(events, cursor) - 1;
+    if (previousIndex >= 0) {
+      return events.get(previousIndex);
+    }
+    return null;
   }
 
   /**
@@ -232,73 +282,190 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * @param toSelectionMax New upper bound on selection range
    * @param fromCursors Ordered map of original position of events pre-modification
    * @param toCursors Ordered map of events to re-position from within the original range
-   * @param reverse Whether the events have been reversed (e.g. by dragging start past end or vice-versa)
+   * @param operation What kind of modification operation this is
    */
-  public void setEventsCursors(List<T> originalEvents, Cursor fromSelectionMin, Cursor fromSelectionMax, Cursor toSelectionMin, Cursor toSelectionMax, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors, boolean reverse) {
-    // Only reverse if there's actually content to reverse!
-    reverse = reverse && !toCursors.isEmpty();
+  public void setEventsCursors(ArrayList<T> originalEvents, Cursor fromSelectionMin, Cursor fromSelectionMax, Cursor toSelectionMin, Cursor toSelectionMax, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors, Operation operation) {
 
-    final Cursor.Operator CursorOp = CursorOp();
+    // NOTE(mcslee): Let it stand for the record that attempting to generalize the logic in this method
+    // was outrageously painful. The number of stitching cases for expansion/contraction/overlapping-moves/reverses
+    // is insane, and obsessing over this put me in a foul mood for multiple days. I still kind of believe
+    // there must be a more elegant solution than the below, but this was the best I could do without special-casing
+    // it all out into a switch statement by Operation type (which was explored and would mean maintaining a *lot* more
+    // code. All that to say, tread carefully if modifying this logic.
+
+    final boolean reverse = operation.isReverse();
+    final boolean clear = operation.isClear();
 
     // Put everything back how it was, note that this may be called many times in the course of a
     // mouse drag operation, we need to operate on the original array with the modified events in their
     // initial position.
     for (Map.Entry<T, Cursor> entry : fromCursors.entrySet()) {
-      final T event = entry.getKey();
-      event.setCursor(entry.getValue());
+      entry.getKey().setCursor(entry.getValue());
     }
 
-    // Test if the selection bounds have expanded, if so we will nuke any events
-    // that lie outside of the original selection bounds but within the new
-    // selection bounds
-    final List<T> removeEvents = new ArrayList<>();
+    // Was this a non-edit? Bail fast after restoring original state
+    if (operation == Operation.NONE) {
+      this.mutableEvents.clear();
+      this.mutableEvents.addAll(originalEvents);
+      this.onChange.bang();
+      return;
+    }
+
+    final Cursor.Operator CursorOp = CursorOp();
+
+    // Make our own mutable copy of the original events
+    originalEvents = new ArrayList<T>(originalEvents);
+
+    // Dummy variables for additional points added to stitch together the edit
+    // with existing data
+    T stitchInnerMin = null, stitchInnerMax = null, stitchOuterMin = null, stitchOuterMax = null;
+
+    // If the destination selection bounds are outside of the source bounds,
+    // compute the outer stitch values from the original data, falling totally
+    // outside of modifiedEvents
     if (CursorOp.isBefore(toSelectionMin, fromSelectionMin)) {
-      ListIterator<T> iter = eventIterator(originalEvents, toSelectionMin, true);
-      while (iter.hasNext()) {
-        T removeEvent = iter.next();
-        if (!CursorOp.isBefore(removeEvent.cursor, fromSelectionMin)) {
-          break;
-        }
-        removeEvents.add(removeEvent);
+      // STRETCH_TO_LEFT, MOVE_LEFT, REVERSE_RIGHT_TO_LEFT
+      stitchOuterMin = stitchOuterMin(originalEvents, toSelectionMin);
+    }
+    if (CursorOp.isAfter(toSelectionMax, fromSelectionMax)) {
+      // STRETCH_TO_RIGHT, MOVE_RIGHT, REVERSE_LEFT_TO_RIGHT
+      stitchOuterMax = stitchOuterMax(originalEvents, toSelectionMax);
+    }
+
+    // Determine all the stuff that's being modified, we may need apply stitching
+    // to it.
+    int stitchFrom = cursorPlayIndex(originalEvents, fromSelectionMin);
+    int stitchTo = cursorInsertIndex(originalEvents, fromSelectionMax);
+    // NOTE(mcslee): subList.clear() is the most efficient way to remove a range from an ArrayList
+    List<T> subList = originalEvents.subList(stitchFrom, stitchTo);
+    ArrayList<T> modifiedEvents = new ArrayList<T>(stitchTo - stitchFrom);
+    for (T copy : subList) {
+      modifiedEvents.add(copy); // avoids spurious toArray() copies from using Collections.
+    }
+    subList.clear();
+
+    // Add stitches on the inner ends of the modified range, if needed
+    stitchInnerMin = stitchSelectionMin(originalEvents, modifiedEvents, fromSelectionMin, stitchFrom, clear);
+    stitchInnerMax = stitchSelectionMax(originalEvents, modifiedEvents, fromSelectionMax, stitchFrom, clear);
+
+    // Clear operation? e.g. drag-resized to 0, nuke everything
+    if (clear) {
+      modifiedEvents.clear();
+    }
+    // Add the inner stitches (note that these are POST-clear - for a clear operation we replace the whole
+    // range by its start/end boundary values at this single point in time
+    if (stitchInnerMin != null) {
+      modifiedEvents.add(0, stitchInnerMin);
+    }
+    if (stitchInnerMax != null) {
+      // TODO(clips): if clear and selectionMin == selectionMax, we don't need to add
+      // this one, just collapse the range to a single point
+      modifiedEvents.add(stitchInnerMax);
+    }
+
+    // If the destination selection bounds are within or cross over the source bounds (in the case of MOVE)
+    // compute the outer stitch values now, they'll be the edges of the selection range
+    if (CursorOp.isAfter(toSelectionMin, fromSelectionMin)) {
+      // SHORTEN_FROM_LEFT, CLEAR_FROM_LEFT, REVERSE_LEFT_TO_RIGHT, MOVE_RIGHT
+      if (operation == Operation.MOVE_RIGHT) {
+        stitchOuterMin = stitchOuterMin(originalEvents, toSelectionMin);
+      } else {
+        stitchOuterMin = stitchSelectionMin(originalEvents, modifiedEvents, fromSelectionMin, stitchFrom, true);
       }
     }
-    if (CursorOp.isBefore(fromSelectionMax, toSelectionMax)) {
-      ListIterator<T> iter = eventIterator(originalEvents, fromSelectionMax, false);
-      while (iter.hasNext()) {
-        T removeEvent = iter.next();
-        if (CursorOp.isAfter(removeEvent.cursor, toSelectionMax)) {
-          break;
-        }
-        removeEvents.add(removeEvent);
+    if (CursorOp.isBefore(toSelectionMax, fromSelectionMax)) {
+      // SHORTEN_FROM_RIGHT, CLEAR_FROM_RIGHT, REVERSE_RIGHT_TO_LEFT, MOVE_LEFT
+      if (operation == Operation.MOVE_LEFT) {
+        stitchOuterMax = stitchOuterMax(originalEvents, toSelectionMax);
+      } else {
+        stitchOuterMax = stitchSelectionMax(originalEvents, modifiedEvents, fromSelectionMax, stitchFrom, true);
       }
     }
 
-    // We're gonna need a mutable copy of the original events, either to chop
-    // stuff out of, or to reverse the order of the modified section
-    if (!removeEvents.isEmpty() || reverse) {
-      originalEvents = new ArrayList<T>(originalEvents);
-      originalEvents.removeAll(removeEvents);
-      if (reverse) {
-        // These will be put back in reverse-order in the loop below
-        originalEvents.removeAll(toCursors.keySet());
-      }
+    // Reverse the modified stuff
+    if (reverse) {
+      Collections.reverse(modifiedEvents);
     }
 
-    // There are cursors that need modifying
-    if (!toCursors.isEmpty()) {
-      final int insertIndex = reverse ? _cursorIndex(originalEvents, toSelectionMin, false) : 0;
+    // Remove everything pre-existing in the target range
+    clearEvents(originalEvents, toSelectionMin, toSelectionMax);
+
+    // Update the cursor positions (unless we cleared them off)
+    if (!clear) {
       for (Map.Entry<T, Cursor> entry : toCursors.entrySet()) {
-        final T event = entry.getKey();
-        if (reverse) {
-          originalEvents.add(insertIndex, event);
-        }
-        event.setCursor(entry.getValue().bound(this.clip));
+        entry.getKey().setCursor(entry.getValue().bound(this.clip));
       }
     }
+
+    // Move the internal stitches to their now positions
+    if (stitchInnerMin != null) {
+      stitchInnerMin.setCursor(reverse ? toSelectionMax : toSelectionMin);
+    }
+    if (stitchInnerMax != null) {
+      stitchInnerMax.setCursor(reverse ? toSelectionMin : toSelectionMax);
+    }
+
+    // Put all the modified stuff back
+    int stitchIndex = cursorInsertIndex(originalEvents, toSelectionMin);
+    originalEvents.addAll(stitchIndex, modifiedEvents);
+    int numModified = modifiedEvents.size();
+
+    // Add outer stitches if needed
+    if (stitchOuterMin != null) {
+      if (stitchInsertIfNeeded(originalEvents, stitchOuterMin, stitchIndex)) {
+        ++stitchIndex;
+      }
+    }
+    if (stitchOuterMax != null) {
+      stitchInsertIfNeeded(originalEvents, stitchOuterMax, stitchIndex + numModified);
+    }
+
+    // Remove the inner stitches if they're pointless
+    if (stitchRemoveIfRedundant(originalEvents, stitchInnerMin, reverse ? stitchIndex + numModified - 1 : stitchIndex)) {
+      --stitchIndex;
+    }
+    stitchRemoveIfRedundant(originalEvents, stitchInnerMax, reverse ? stitchIndex : stitchIndex + numModified - 1);
 
     this.mutableEvents.clear();
     this.mutableEvents.addAll(originalEvents);
     this.onChange.bang();
+  }
+
+  protected T stitchSelectionMin(List<T> originalEvents, List<T> modifiedEvents, Cursor selectionMin, int stitchIndex, boolean force) {
+    return null;
+  }
+
+  protected T stitchSelectionMax(List<T> originalEvents, List<T> modifiedEvents, Cursor selectionMax, int stitchIndex, boolean force) {
+    return null;
+  }
+
+  protected T stitchOuterMin(List<T> events, Cursor selectionMin) {
+    return null;
+  }
+
+  protected T stitchOuterMax(List<T> events, Cursor selectionMax) {
+    return null;
+  }
+
+  protected boolean stitchInsertIfNeeded(List<T> events, T stitch, int index) {
+    events.add(index, stitch);
+    return true;
+  }
+
+  protected boolean stitchRemoveIfRedundant(List<T> events, T stitch, int index) {
+    return false;
+  }
+
+  /**
+   * Subclasses override to create dummy event for range manipulations
+   *
+   * @param events Events
+   * @param cursor Cursor position for insert
+   * @param index Index in events-list
+   * @return Dummy event for editing
+   */
+  protected T createEditEvent(List<T> events, Cursor cursor, int index) {
+    return null;
   }
 
   @Override

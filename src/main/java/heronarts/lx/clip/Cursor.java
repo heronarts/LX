@@ -97,6 +97,15 @@ public class Cursor implements LXSerializable {
     public boolean isAfterOrEqual(Cursor c1, Cursor c2);
 
     /**
+     * Returns <code>true</code> if c1 is at the same time as c2
+     *
+     * @param c1 First cursor
+     * @param c2 Second cursor
+     * @return <code>true</code> if c1 is at the same time as c2
+     */
+    public boolean isEqual(Cursor c1, Cursor c2);
+
+    /**
      * Returns <code>true</code> if the cursor falls in the given range, inclusive
      *
      * @param cursor Cursor to check
@@ -339,6 +348,11 @@ public class Cursor implements LXSerializable {
     }
 
     @Override
+    public boolean isEqual(Cursor c1, Cursor c2) {
+      return c1.millis == c2.millis;
+    }
+
+    @Override
     public boolean isInRange(Cursor c, Cursor before, Cursor after) {
       return LXUtils.inRange(c.millis, before.millis, after.millis);
     }
@@ -462,6 +476,11 @@ public class Cursor implements LXSerializable {
     @Override
     public boolean isAfterOrEqual(Cursor c1, Cursor c2) {
       return (c1.beatCount + c1.beatBasis) >= (c2.beatCount + c2.beatBasis);
+    }
+
+    @Override
+    public boolean isEqual(Cursor c1, Cursor c2) {
+      return (c1.beatCount + c1.beatBasis) == (c2.beatCount + c2.beatBasis);
     }
 
     @Override
