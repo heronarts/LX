@@ -56,143 +56,6 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     private Normalized(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
       super(clip, parameter, initialNormalized);
     }
-
-    private ParameterClipEvent stitchEvent(ParameterClipEvent prior, ParameterClipEvent next, Cursor cursor) {
-      if (prior == null || next == null) {
-        return null;
-      }
-      return new ParameterClipEvent(this, cursor, LXUtils.lerp(
-        prior.getNormalized(),
-        next.getNormalized(),
-        CursorOp().getLerpFactor(cursor, prior.cursor, next.cursor)
-      ));
-    }
-
-    @Override
-    protected ParameterClipEvent stitchSelectionMin(List<ParameterClipEvent> originalEvents, List<ParameterClipEvent> modifiedEvents, Cursor selectionMin, int stitchIndex, boolean force) {
-      ParameterClipEvent prior = null;
-      ParameterClipEvent next = null;
-      if (stitchIndex > 0) {
-        prior = originalEvents.get(stitchIndex - 1);
-      }
-      if (!modifiedEvents.isEmpty()) {
-        next = modifiedEvents.get(0);
-        if (!force && CursorOp().isEqual(next.cursor, selectionMin)) {
-          return null;
-        }
-      } else if (stitchIndex < originalEvents.size()) {
-        next = originalEvents.get(stitchIndex);
-      }
-      if (prior == null && (next != null)) {
-        // There was nothing before the selection, stitch to the next event
-        return new ParameterClipEvent(this, selectionMin, next.getNormalized());
-      }
-      return stitchEvent(prior, next, selectionMin);
-    }
-
-    @Override
-    protected ParameterClipEvent stitchSelectionMax(List<ParameterClipEvent> originalEvents, List<ParameterClipEvent> modifiedEvents, Cursor selectionMax, int stitchIndex, boolean force) {
-      ParameterClipEvent prior = null;
-      ParameterClipEvent next = null;
-      if (stitchIndex < originalEvents.size()) {
-        next = originalEvents.get(stitchIndex);
-      }
-      if (!modifiedEvents.isEmpty()) {
-        prior = modifiedEvents.get(modifiedEvents.size() - 1);
-        if (!force && CursorOp().isEqual(prior.cursor, selectionMax)) {
-          return null;
-        }
-      } else if (stitchIndex > 0) {
-        prior = originalEvents.get(stitchIndex - 1);
-      }
-      if (next == null && (prior != null)) {
-        // There was nothing after the selection, stitch to the prior event
-        return new ParameterClipEvent(this, selectionMax, prior.getNormalized());
-      }
-      return stitchEvent(prior, next, selectionMax);
-    }
-
-    private ParameterClipEvent stitchOuter(List<ParameterClipEvent> events, Cursor cursor, int rightIndex) {
-      if (events.isEmpty()) {
-        return null;
-      }
-      if (rightIndex > 0 && rightIndex < events.size()) {
-        return stitchEvent(
-          events.get(rightIndex - 1),
-          events.get(rightIndex),
-          cursor
-        );
-      } else if (rightIndex == 0) {
-        return new ParameterClipEvent(this, cursor, events.get(rightIndex).getNormalized());
-      } else if (rightIndex == events.size()) {
-        return new ParameterClipEvent(this, cursor, events.get(rightIndex - 1).getNormalized());
-      }
-      return null;
-    }
-
-    @Override
-    protected ParameterClipEvent stitchOuterMin(List<ParameterClipEvent> events, Cursor selectionMin) {
-      return stitchOuter(events, selectionMin, cursorPlayIndex(events, selectionMin));
-    }
-
-    @Override
-    protected ParameterClipEvent stitchOuterMax(List<ParameterClipEvent> events, Cursor selectionMax) {
-      return stitchOuter(events, selectionMax, cursorInsertIndex(events, selectionMax));
-    }
-
-    private boolean stitchIsRedundant(List<ParameterClipEvent> events, ParameterClipEvent stitch, int priorIndex, int nextIndex) {
-      if (events.isEmpty()) {
-        return false;
-      }
-      ParameterClipEvent prior = null;
-      ParameterClipEvent next = null;
-      boolean equalsPrior = true;
-      boolean equalsNext = true;
-      double stitchNormalized = stitch.getNormalized();
-
-      if (priorIndex >= 0) {
-        prior = events.get(priorIndex);
-        equalsPrior = (stitchNormalized == prior.getNormalized());
-        if (equalsPrior && CursorOp().isEqual(stitch.cursor, prior.cursor)) {
-          // Redundant point that matches the prior
-          return true;
-        }
-      }
-      if (nextIndex < events.size()) {
-        next = events.get(nextIndex);
-        equalsNext = (stitchNormalized == next.getNormalized());
-        if (equalsNext && CursorOp().isEqual(stitch.cursor, next.cursor)) {
-          // Redundant point that matches the next
-          return true;
-        }
-      }
-      if (equalsPrior && equalsNext) {
-        // Useless point between two others of equal value
-        return true;
-      }
-      return false;
-    }
-
-    @Override
-    protected boolean stitchInsertIfNeeded(List<ParameterClipEvent> events, ParameterClipEvent stitch, int index) {
-      if (stitchIsRedundant(events, stitch, index-1, index)) {
-        return false;
-      }
-      events.add(index, stitch);
-      return true;
-    }
-
-    @Override
-    protected boolean stitchRemoveIfRedundant(List<ParameterClipEvent> events, ParameterClipEvent stitch, int index) {
-      if (stitch != null) {
-        if (stitchIsRedundant(events, stitch, index-1, index+1)) {
-          events.remove(index);
-          return true;
-        }
-      }
-      return false;
-    }
-
   }
 
   static ParameterClipLane create(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
@@ -223,14 +86,147 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     return this.parameter.getLabel();
   }
 
-  protected double getValueBefore(List<ParameterClipEvent> events, Cursor cursor, int index) {
-    ParameterClipEvent prior = events.get(index-1);
-    ParameterClipEvent next = events.get(index);
-    return LXUtils.lerp(
-      prior.getNormalized(),
-      next.getNormalized(),
-      CursorOp().getLerpFactor(cursor, prior.cursor, next.cursor)
-    );
+  public boolean hasInterpolation() {
+    return (this instanceof Normalized);
+  }
+
+  protected ParameterClipEvent stitchEvent(ParameterClipEvent prior, ParameterClipEvent next, Cursor cursor) {
+    if (prior == null || next == null) {
+      return null;
+    }
+    if (hasInterpolation()) {
+      return new ParameterClipEvent(this, cursor, LXUtils.lerp(
+        prior.getNormalized(),
+        next.getNormalized(),
+        CursorOp().getLerpFactor(cursor, prior.cursor, next.cursor)
+      ));
+    }
+    return new ParameterClipEvent(this, cursor, CursorOp().isAfterOrEqual(cursor, next.cursor) ? next.getNormalized() : prior.getNormalized());
+  }
+
+  @Override
+  protected ParameterClipEvent stitchSelectionMin(List<ParameterClipEvent> originalEvents, List<ParameterClipEvent> modifiedEvents, Cursor selectionMin, int stitchIndex, boolean force) {
+    ParameterClipEvent prior = null;
+    ParameterClipEvent next = null;
+    if (stitchIndex > 0) {
+      prior = originalEvents.get(stitchIndex - 1);
+    }
+    if (!modifiedEvents.isEmpty()) {
+      next = modifiedEvents.get(0);
+      if (!force && CursorOp().isEqual(next.cursor, selectionMin)) {
+        return null;
+      }
+    } else if (stitchIndex < originalEvents.size()) {
+      next = originalEvents.get(stitchIndex);
+    }
+    if (prior == null && (next != null)) {
+      // There was nothing before the selection, stitch to the next event
+      return new ParameterClipEvent(this, selectionMin, next.getNormalized());
+    }
+    return stitchEvent(prior, next, selectionMin);
+  }
+
+  @Override
+  protected ParameterClipEvent stitchSelectionMax(List<ParameterClipEvent> originalEvents, List<ParameterClipEvent> modifiedEvents, Cursor selectionMax, int stitchIndex, boolean force) {
+    ParameterClipEvent prior = null;
+    ParameterClipEvent next = null;
+    if (stitchIndex < originalEvents.size()) {
+      next = originalEvents.get(stitchIndex);
+    }
+    if (!modifiedEvents.isEmpty()) {
+      prior = modifiedEvents.get(modifiedEvents.size() - 1);
+      if (!force && CursorOp().isEqual(prior.cursor, selectionMax)) {
+        return null;
+      }
+    } else if (stitchIndex > 0) {
+      prior = originalEvents.get(stitchIndex - 1);
+    }
+    if (next == null && (prior != null)) {
+      // There was nothing after the selection, stitch to the prior event
+      return new ParameterClipEvent(this, selectionMax, prior.getNormalized());
+    }
+    return stitchEvent(prior, next, selectionMax);
+  }
+
+  private ParameterClipEvent stitchOuter(List<ParameterClipEvent> events, Cursor cursor, int rightIndex) {
+    if (events.isEmpty()) {
+      return null;
+    }
+    if (rightIndex > 0 && rightIndex < events.size()) {
+      return stitchEvent(
+        events.get(rightIndex - 1),
+        events.get(rightIndex),
+        cursor
+      );
+    } else if (rightIndex == 0) {
+      return new ParameterClipEvent(this, cursor, events.get(rightIndex).getNormalized());
+    } else if (rightIndex == events.size()) {
+      return new ParameterClipEvent(this, cursor, events.get(rightIndex - 1).getNormalized());
+    }
+    return null;
+  }
+
+  @Override
+  protected ParameterClipEvent stitchOuterMin(List<ParameterClipEvent> events, Cursor selectionMin) {
+    return stitchOuter(events, selectionMin, cursorPlayIndex(events, selectionMin));
+  }
+
+  @Override
+  protected ParameterClipEvent stitchOuterMax(List<ParameterClipEvent> events, Cursor selectionMax) {
+    return stitchOuter(events, selectionMax, cursorInsertIndex(events, selectionMax));
+  }
+
+  private boolean stitchIsRedundant(List<ParameterClipEvent> events, ParameterClipEvent stitch, int priorIndex, int nextIndex) {
+    if (events.isEmpty()) {
+      return false;
+    }
+    ParameterClipEvent prior = null;
+    ParameterClipEvent next = null;
+    boolean equalsPrior = true;
+    boolean equalsNext = true;
+    double stitchNormalized = stitch.getNormalized();
+
+    if (priorIndex >= 0) {
+      prior = events.get(priorIndex);
+      equalsPrior = (stitchNormalized == prior.getNormalized());
+      if (equalsPrior && (!hasInterpolation() || CursorOp().isEqual(stitch.cursor, prior.cursor))) {
+        // Redundant point that matches the prior
+        return true;
+      }
+    }
+    if (nextIndex < events.size()) {
+      next = events.get(nextIndex);
+      equalsNext = (stitchNormalized == next.getNormalized());
+      if (equalsNext && CursorOp().isEqual(stitch.cursor, next.cursor)) {
+        // Redundant point that matches the next
+        return true;
+      }
+    }
+    if (equalsPrior && equalsNext) {
+      // Useless point between two others of equal value
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  protected boolean stitchInsertIfNeeded(List<ParameterClipEvent> events, ParameterClipEvent stitch, int index) {
+    if (stitchIsRedundant(events, stitch, index-1, index)) {
+      return false;
+    }
+    events.add(index, stitch);
+    return true;
+  }
+
+  @Override
+  protected boolean stitchRemoveIfRedundant(List<ParameterClipEvent> events, ParameterClipEvent stitch, int index) {
+    if (stitch != null) {
+      if (stitchIsRedundant(events, stitch, index-1, index+1)) {
+        events.remove(index);
+        return true;
+      }
+    }
+    return false;
   }
 
   private static final double SMOOTHING_THRESHOLD_MS = 250;
@@ -245,7 +241,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       // contain this value of 50, it should have 0 up to the point that the 50 is received and
       // then a jump (e.g. we also don't want a smooth interpolation from 0 to 50)
       recordEvent(new ParameterClipEvent(this, this.initialNormalized));
-    } else if ((this instanceof Normalized) && (this.clip.cursor.getDeltaMillis(previousEvent.cursor) > SMOOTHING_THRESHOLD_MS)) {
+    } else if (hasInterpolation() && (this.clip.cursor.getDeltaMillis(previousEvent.cursor) > SMOOTHING_THRESHOLD_MS)) {
       // For normalized parameters, check if there was a jump in value... for smoothly
       // received knob turns or MIDI that happen close in time we just record the event itself,
       // but if significant time has elapsed, then for the same reason as above, we need to
@@ -268,20 +264,6 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     recordEvent(event);
     this.overdubActive = true;
     return this;
-  }
-
-  @Override
-  protected ParameterClipEvent createEditEvent(List<ParameterClipEvent> events, Cursor cursor, int index) {
-    if ((this instanceof Normalized) && (index > 0) && (index < events.size())) {
-      final ParameterClipEvent from = events.get(index-1);
-      final ParameterClipEvent to = events.get(index);;
-      return new ParameterClipEvent(this, cursor, LXUtils.lerp(
-        from.getNormalized(),
-        to.getNormalized(),
-        CursorOp().getLerpFactor(cursor, from.cursor, to.cursor)
-      ));
-    }
-    return null;
   }
 
   public ParameterClipEvent insertEvent(Cursor cursor, double normalized) {
@@ -368,7 +350,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     } else if (CursorOp().isAfter(to, next.cursor)) {
       // We're past the last event, just set its value
       this.parameter.setNormalized(next.getNormalized());
-    } else if (this instanceof Normalized) {
+    } else if (hasInterpolation()) {
       // Interpolate value between the two events surrounding us
       this.parameter.setNormalized(LXUtils.lerp(
         prior.getNormalized(),

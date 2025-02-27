@@ -454,18 +454,6 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return false;
   }
 
-  /**
-   * Subclasses override to create dummy event for range manipulations
-   *
-   * @param events Events
-   * @param cursor Cursor position for insert
-   * @param index Index in events-list
-   * @return Dummy event for editing
-   */
-  protected T createEditEvent(List<T> events, Cursor cursor, int index) {
-    return null;
-  }
-
   @Override
   public abstract String getLabel();
 
