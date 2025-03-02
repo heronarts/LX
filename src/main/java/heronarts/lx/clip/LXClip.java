@@ -915,6 +915,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         for (Listener listener : this.listeners) {
           listener.parameterLaneRemoved(this, (ParameterClipLane) lane);
         }
+        LX.dispose(lane);
       } else {
         lane.clear();
       }
