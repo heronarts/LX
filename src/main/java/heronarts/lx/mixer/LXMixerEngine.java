@@ -122,6 +122,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Aux-B", false)
     .setDescription("Enables aux preview of crossfade group B");
 
+  public final BooleanParameter autoMuteDefault =
+    new BooleanParameter("Auto-Mute Default", false)
+    .setDescription("Whether new channels have Auto-Mute enabled by default");
+
   final ModelBuffer backgroundBlack;
   final ModelBuffer backgroundTransparent;
   private final ModelBuffer blendBufferLeft;
@@ -210,6 +214,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("cueB", this.cueB);
     addParameter("auxA", this.auxA);
     addParameter("auxB", this.auxB);
+    addParameter("autoMuteDefault", this.autoMuteDefault);
     addParameter("viewCondensed", this.viewCondensed);
     addParameter("viewStacked", this.viewStacked);
     addParameter("viewDeviceBin", this.viewDeviceBin);

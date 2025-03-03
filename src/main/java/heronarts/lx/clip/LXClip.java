@@ -289,6 +289,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // all the CursorParameters, which will need
     addParameter("referenceBpm", this.referenceBpm);
 
+    // Time-base defaults to the project setting
+    this.timeBase.setValue(lx.engine.clips.timeBaseDefault.getEnum());
     addParameter("timeBase", this.timeBase);
     addParameter("launch", this.launch);
     addParameter("stop", this.stop);

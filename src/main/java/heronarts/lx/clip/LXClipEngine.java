@@ -275,6 +275,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Snapshot Transitions", false)
     .setDescription("When enabled, transitions between clip snapshots use interpolation");
 
+  public final EnumParameter<Cursor.TimeBase> timeBaseDefault =
+    new EnumParameter<Cursor.TimeBase>("Time-Base Default", Cursor.TimeBase.TEMPO)
+    .setDescription("Which time-base new clips use by default");
+
   /**
    * A semaphore used to keep count of how many remote control surfaces may be
    * controlling this component. This may be used by UI implementations to indicate
@@ -299,6 +303,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
     addParameter("stopClips", this.stopClips);
     addParameter("triggerPatternCycle", this.launchPatternCycle);
+    addParameter("timeBaseDefault", this.timeBaseDefault);
     addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
     addParameter("gridPatternOffset", this.gridPatternOffset);

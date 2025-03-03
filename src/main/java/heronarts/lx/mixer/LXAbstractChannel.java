@@ -209,6 +209,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     this.blendBuffer = new ModelBuffer(lx);
     this.colors = this.blendBuffer.getArray();
 
+    this.autoMute.setValue(lx.engine.mixer.autoMuteDefault.isOn());
+
     this.blendMode = new ObjectParameter<LXBlend>("Blend", new LXBlend[1])
       .setDescription("Specifies the blending function used for the channel fader");
     updateChannelBlendOptions();

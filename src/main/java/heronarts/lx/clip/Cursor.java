@@ -605,21 +605,29 @@ public class Cursor implements LXSerializable {
     /**
      * Absolute time, measured in wall-clock milliseconds
      */
-    ABSOLUTE(ABSOLUTE_OPERATOR),
+    ABSOLUTE("Absolute", ABSOLUTE_OPERATOR),
 
     /**
      * Tempo-based time, measured in a discrete beat count and
      * a sub-beat division normalized to the range [0,1)
      */
-    TEMPO(TEMPO_OPERATOR);
+    TEMPO("Tempo", TEMPO_OPERATOR);
+
+    public final String label;
 
     /**
      * The Cursor.Operator implementation to be used for this TimeBase
      */
     public final Operator operator;
 
-    private TimeBase(Operator operations) {
+    private TimeBase(String label, Operator operations) {
+      this.label = label;
       this.operator = operations;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
     }
   };
 
