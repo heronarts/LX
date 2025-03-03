@@ -621,7 +621,9 @@ public class LXOscEngine extends LXComponent {
     private final List<OscMessage> engineThreadEventQueue = new ArrayList<OscMessage>();
 
     private final List<LXOscListener> listeners = new ArrayList<LXOscListener>();
-    private final List<LXOscListener> listenerSnapshot = new ArrayList<LXOscListener>();
+    private boolean inListener = false;
+    private final List<LXOscListener> removeListeners = new ArrayList<>();
+    private final List<LXOscListener> addListeners = new ArrayList<>();
 
     private BooleanParameter log;
     private TriggerParameter activity;
@@ -668,6 +670,10 @@ public class LXOscEngine extends LXComponent {
       if (this.listeners.contains(listener)) {
         throw new IllegalStateException("Cannot add duplicate LXOscEngine.Receiver.LXOscListener: " + listener);
       }
+      if (this.inListener) {
+        this.addListeners.add(listener);
+        return this;
+      }
       this.listeners.add(listener);
       return this;
     }
@@ -675,6 +681,10 @@ public class LXOscEngine extends LXComponent {
     public Receiver removeListener(LXOscListener listener) {
       if (!this.listeners.contains(listener)) {
         throw new IllegalStateException("Cannot remove non-existent LXOscEngine.Receiver.LXOscListener: " + listener);
+      }
+      if (this.inListener) {
+        this.removeListeners.add(listener);
+        return this;
       }
       this.listeners.remove(listener);
       return this;
@@ -724,10 +734,9 @@ public class LXOscEngine extends LXComponent {
         }
         // TODO(mcslee): do we want to handle NTP timetags?
 
-        // NOTE(mcslee): we iterate this way so that listeners can modify the
-        // listener list
-        this.listenerSnapshot.clear();
-        this.listenerSnapshot.addAll(this.listeners);
+        // NOTE(mcslee): Set a flag that we're in listener dispatch, modifications
+        // to the listener list will be post-processed to avoid ConcurrentModificationException
+        this.inListener = true;
 
         final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
 
@@ -739,7 +748,7 @@ public class LXOscEngine extends LXComponent {
             if (this.activity != null) {
               this.activity.trigger();
             }
-            for (LXOscListener listener : this.listenerSnapshot) {
+            for (LXOscListener listener : this.listeners) {
               try {
                 listener.oscMessage(message);
               } catch (Exception x) {
@@ -747,6 +756,17 @@ public class LXOscEngine extends LXComponent {
               }
             }
           }
+        }
+
+        // Post-process listener modifications
+        this.inListener = false;
+        if (!this.removeListeners.isEmpty()) {
+          this.removeListeners.forEach(listener -> removeListener(listener));
+          this.removeListeners.clear();
+        }
+        if (!this.addListeners.isEmpty()) {
+          this.addListeners.forEach(listener -> addListener(listener));
+          this.addListeners.clear();
         }
       }
     }
