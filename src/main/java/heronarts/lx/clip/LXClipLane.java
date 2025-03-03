@@ -23,7 +23,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -33,6 +32,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand.Clip.Event.SetCursors.Operation;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.utils.LXEngineThreadArrayList;
 import heronarts.lx.utils.LXUtils;
 
 public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
@@ -46,10 +46,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected boolean overdubActive = false;
   protected T overdubLastOriginalEvent = null;
 
-  // TODO(clips): port this off CopyOnWriteArrayList to LXEngineArrayList, so that we
-  // can have a UI view that's binary-searchable, and we only make new UI copies when
-  // needed (e.g. not on every individual add() call)
-  protected final CopyOnWriteArrayList<T> mutableEvents = new CopyOnWriteArrayList<>();
+  protected final LXEngineThreadArrayList<T> mutableEvents = new LXEngineThreadArrayList<>();
 
   public final List<T> events = Collections.unmodifiableList(this.mutableEvents);
 
@@ -95,6 +92,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this;
   }
 
+  public List<T> getUIThreadEvents() {
+    return this.mutableEvents.getUIThreadList();
+  }
+
   /**
    * Gets an iterator over this clip lane's events, starting from the position specified
    * by the cursor. The iterator will start at the first event with time equal to or after
@@ -119,6 +120,21 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public ListIterator<T> eventIterator(Cursor fromCursor, int offset) {
     int index = LXUtils.constrain(cursorPlayIndex(fromCursor) + offset, 0, this.events.size());
     return this.events.listIterator(index);
+  }
+
+  /**
+   * Gets an iterator over this clip lane's events, starting from the position specified
+   * by the cursor. The iterator will start at the first event with time equal to or after
+   * that cursor, with an offset specified in # of events
+   *
+   * @param events Event list
+   * @param fromCursor Cursor to begin iteration from (inclusive)
+   * @param offset Offset the iterator by a number of events from the cursor
+   * @return Iterator over events equal to or after the cursor, plus offset
+   */
+  public ListIterator<T> eventIterator(List<T> events, Cursor fromCursor, int offset) {
+    int index = LXUtils.constrain(cursorPlayIndex(fromCursor) + offset, 0, events.size());
+    return events.listIterator(index);
   }
 
   /**
@@ -310,8 +326,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     // Was this a non-edit? Bail fast after restoring original state
     if (operation == Operation.NONE) {
-      this.mutableEvents.clear();
-      this.mutableEvents.addAll(originalEvents);
+      this.mutableEvents.set(originalEvents);
       this.onChange.bang();
       return;
     }

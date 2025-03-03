@@ -18,9 +18,9 @@
 
 package heronarts.lx.modulator;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -126,9 +126,7 @@ public class MultiStageEnvelope extends LXVariablePeriodModulator implements LXW
     }
   }
 
-  // NOTE(mcslee): do we need CopyOnWriteArrayList here? the UI thread loops on drawing this... possible
-  // surface area for ConcurrentModificationException
-  private final List<Stage> mutableStages = new ArrayList<Stage>();
+  private final List<Stage> mutableStages = new CopyOnWriteArrayList<Stage>();
 
   public final List<Stage> stages = Collections.unmodifiableList(mutableStages);
 
