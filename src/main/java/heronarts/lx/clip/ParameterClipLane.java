@@ -25,6 +25,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 import java.util.Collections;
@@ -32,6 +33,22 @@ import java.util.List;
 import java.util.Map;
 
 public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
+
+  public static class Trigger extends ParameterClipLane {
+
+    public final TriggerParameter triggerParameter;
+
+    private Trigger(LXClip clip, TriggerParameter parameter) {
+      super(clip, parameter, 0);
+      this.triggerParameter = parameter;
+    }
+
+    @Override
+    public boolean shouldRecordParameterChange(LXNormalizedParameter p) {
+      // Trigger lanes only record positive trigger events!
+      return (p == this.triggerParameter) && this.triggerParameter.isOn();
+    }
+  }
 
   public static class Boolean extends ParameterClipLane {
 
@@ -60,7 +77,9 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   static ParameterClipLane create(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
-    if (parameter instanceof BooleanParameter) {
+    if (parameter instanceof TriggerParameter) {
+      return new Trigger(clip, (TriggerParameter) parameter);
+    } else if (parameter instanceof BooleanParameter) {
       return new Boolean(clip, (BooleanParameter) parameter, initialNormalized);
     } else if (parameter instanceof DiscreteParameter) {
       return new Discrete(clip, (DiscreteParameter) parameter, initialNormalized);
@@ -70,7 +89,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   public final LXNormalizedParameter parameter;
-  private double initialNormalized;
+  private final double initialNormalized;
 
   private ParameterClipLane(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
     super(clip);
@@ -87,8 +106,20 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     return this.parameter.getLabel();
   }
 
+  public boolean shouldRecordParameterChange(LXNormalizedParameter p) {
+    return true;
+  }
+
+  public boolean hasStitching() {
+    return !(this instanceof Trigger);
+  }
+
   public boolean hasInterpolation() {
     return (this instanceof Normalized);
+  }
+
+  public boolean isStepped() {
+    return (this instanceof Boolean) || (this instanceof Discrete);
   }
 
   @Override
@@ -99,7 +130,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   @Override
   protected void reverseEvents(List<ParameterClipEvent> events) {
     Collections.reverse(events);
-    if (!hasInterpolation()) {
+    if (isStepped()) {
       // If we *reverse* discrete/boolean events, the values are NOT just a simple  mirror image!
       // This is because when a discrete automation event is encountered, the value abruptly changes
       // from prior->current.
@@ -121,6 +152,9 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   protected ParameterClipEvent stitchEvent(ParameterClipEvent prior, ParameterClipEvent next, Cursor cursor) {
+    if (!hasStitching()) {
+      return null;
+    }
     if (prior == null || next == null) {
       return null;
     }
@@ -136,6 +170,9 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   protected ParameterClipEvent stitchSelectionMin(List<ParameterClipEvent> originalEvents, List<ParameterClipEvent> modifiedEvents, Cursor selectionMin, int stitchIndex, boolean force) {
+    if (!hasStitching()) {
+      return null;
+    }
     ParameterClipEvent prior = null;
     ParameterClipEvent next = null;
     if (stitchIndex > 0) {
@@ -158,6 +195,9 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   protected ParameterClipEvent stitchSelectionMax(List<ParameterClipEvent> originalEvents, List<ParameterClipEvent> modifiedEvents, Cursor selectionMax, int stitchIndex, boolean force) {
+    if (!hasStitching()) {
+      return null;
+    }
     ParameterClipEvent prior = null;
     ParameterClipEvent next = null;
     if (stitchIndex < originalEvents.size()) {
@@ -179,6 +219,9 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   private ParameterClipEvent stitchOuter(List<ParameterClipEvent> events, Cursor cursor, int rightIndex) {
+    if (!hasStitching()) {
+      return null;
+    }
     if (events.isEmpty()) {
       return null;
     }
@@ -270,7 +313,9 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       // event comes in with value 50 many seconds later, the automation clip should not *only*
       // contain this value of 50, it should have 0 up to the point that the 50 is received and
       // then a jump (e.g. we also don't want a smooth interpolation from 0 to 50)
-      recordEvent(new ParameterClipEvent(this, this.initialNormalized));
+      if (hasStitching()) {
+        recordEvent(new ParameterClipEvent(this, this.initialNormalized));
+      }
     } else if (hasInterpolation() && (this.clip.cursor.getDeltaMillis(previousEvent.cursor) > SMOOTHING_THRESHOLD_MS)) {
       // For normalized parameters, check if there was a jump in value... for smoothly
       // received knob turns or MIDI that happen close in time we just record the event itself,
@@ -311,12 +356,20 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   void postOverdubCursor(Cursor from, Cursor to) {
-    if (this.overdubActive) {
+    if (!this.overdubActive) {
+      // No overdubs happening? Play back the automation! Set a flag so we suppress
+      // recording changes due to the parameter listeners that will file...
+      this.inOverdubPlayback = true;
+      advanceCursor(from, to, false);
+      this.inOverdubPlayback = false;
+      return;
+    }
+
+    if (hasStitching()) {
       // Okay, here we will have nuked everything original in [from, to) and
       // possibly inserted new events at from. If there are events ahead of us,
       // we need to preserve new overdubbed value until "to" and then jump
       // to whatever *would* have been at "to" prior to the overdub
-
       int index = cursorPlayIndex(to);
       if (index < this.events.size()) {
         // If there are still pre-overdub events ahead, we need to connect the new overdub recording
@@ -325,9 +378,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         // There must be something behind us if overdub was active... extend that value
         if (index > 1) {
           ParameterClipEvent previous = this.events.get(index - 1);
-          ParameterClipEvent event = new ParameterClipEvent(this, previous.getNormalized());
-          event.setCursor(to);
-          this.mutableEvents.add(index++, event);
+          this.mutableEvents.add(index++, new ParameterClipEvent(this, to, previous.getNormalized()));
         }
 
         // Interpolate what the deleted stuff would have looked like
@@ -348,22 +399,20 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
           }
 
           // Add the new event at "to"
-          ParameterClipEvent event = new ParameterClipEvent(this, normalizedValue);
-          event.setCursor(to);
-          this.mutableEvents.add(index, event);
+          this.mutableEvents.add(index, new ParameterClipEvent(this, to, normalizedValue));
         }
       }
-    } else {
-      // No overdubs happening? Play back the automation! Set a flag so we suppress
-      // recording changes due to the parameter listeners that will file...
-      this.inOverdubPlayback = true;
-      advanceCursor(from, to, false);
-      this.inOverdubPlayback = false;
     }
   }
 
   @Override
   void advanceCursor(Cursor from, Cursor to, boolean inclusive) {
+    if (this instanceof Trigger) {
+      // Trigger events just fire in a basic way, no interpolated or stepped value stuff
+      super.advanceCursor(from, to, inclusive);
+      return;
+    }
+
     int size = this.events.size();
     if (size == 0) {
       return;
