@@ -169,6 +169,35 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   @Override
+  protected ParameterClipEvent stitchInner(List<ParameterClipEvent> events, Cursor cursor, int stitchIndex, boolean isMin, boolean force) {
+    if (!hasStitching()) {
+      return null;
+    }
+    ParameterClipEvent prior = null;
+    ParameterClipEvent next = null;
+    if (stitchIndex > 0) {
+      prior = events.get(stitchIndex - 1);
+      if (!isMin && !force && CursorOp().isEqual(prior.cursor, cursor)) {
+        return null;
+      }
+    }
+    if (stitchIndex < events.size()) {
+      next = events.get(stitchIndex);
+      if (isMin && !force && CursorOp().isEqual(next.cursor, cursor)) {
+        return null;
+      }
+    }
+    if ((prior != null) && (next != null)) {
+      return stitchEvent(prior, next, cursor);
+    } else if (prior != null) {
+      return new ParameterClipEvent(this, cursor, prior.getNormalized());
+    } else if (next != null) {
+      return new ParameterClipEvent(this, cursor, next.getNormalized());
+    }
+    return null;
+  }
+
+  @Override
   protected ParameterClipEvent stitchSelectionMin(List<ParameterClipEvent> originalEvents, List<ParameterClipEvent> modifiedEvents, Cursor selectionMin, int stitchIndex, boolean force) {
     if (!hasStitching()) {
       return null;
@@ -218,7 +247,8 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     return stitchEvent(prior, next, selectionMax);
   }
 
-  private ParameterClipEvent stitchOuter(List<ParameterClipEvent> events, Cursor cursor, int rightIndex) {
+  @Override
+  protected ParameterClipEvent stitchOuter(List<ParameterClipEvent> events, Cursor cursor, int rightIndex) {
     if (!hasStitching()) {
       return null;
     }
@@ -237,16 +267,6 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       return new ParameterClipEvent(this, cursor, events.get(rightIndex - 1).getNormalized());
     }
     return null;
-  }
-
-  @Override
-  protected ParameterClipEvent stitchOuterMin(List<ParameterClipEvent> events, Cursor selectionMin) {
-    return stitchOuter(events, selectionMin, cursorPlayIndex(events, selectionMin));
-  }
-
-  @Override
-  protected ParameterClipEvent stitchOuterMax(List<ParameterClipEvent> events, Cursor selectionMax) {
-    return stitchOuter(events, selectionMax, cursorInsertIndex(events, selectionMax));
   }
 
   private boolean stitchIsRedundant(List<ParameterClipEvent> events, ParameterClipEvent stitch, int priorIndex, int nextIndex) {
@@ -283,17 +303,21 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   @Override
-  protected boolean stitchInsertIfNeeded(List<ParameterClipEvent> events, ParameterClipEvent stitch, int index) {
+  protected int stitchInsertIfNeeded(List<ParameterClipEvent> events, ParameterClipEvent stitch, boolean after) {
+    int index = after ? cursorInsertIndex(events, stitch.cursor) : cursorPlayIndex(events, stitch.cursor);
     if (stitchIsRedundant(events, stitch, index-1, index)) {
-      return false;
+      return -1;
     }
     events.add(index, stitch);
-    return true;
+    return index;
   }
 
   @Override
   protected boolean stitchRemoveIfRedundant(List<ParameterClipEvent> events, ParameterClipEvent stitch, int index) {
     if (stitch != null) {
+      if (events.get(index) != stitch) {
+        throw new IllegalStateException("stitchRemoveIfRedundant index was wrong");
+      }
       if (stitchIsRedundant(events, stitch, index-1, index+1)) {
         events.remove(index);
         return true;

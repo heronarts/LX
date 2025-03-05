@@ -229,21 +229,6 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   /**
-   * Clears events from the array in given range, inclusive
-   *
-   * @param events Events array
-   * @param from Start cursor position, inclusive
-   * @param to End cursor position, inclusive
-   */
-  protected void clearEvents(List<T> events, Cursor from, Cursor to) {
-    int clearFrom = cursorPlayIndex(events, from);
-    int clearTo = cursorInsertIndex(events, to);
-    if (clearTo > clearFrom) {
-      events.subList(clearFrom, clearTo).clear();
-    }
-  }
-
-  /**
    * Gets the last event occurring before this cursor insert position, if any. Events
    * already in the array with a cursor exactly equal to this cursor are
    * considered to all be previous.
@@ -305,13 +290,9 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     // NOTE(mcslee): Let it stand for the record that attempting to generalize the logic in this method
     // was outrageously painful. The number of stitching cases for expansion/contraction/overlapping-moves/reverses
-    // is insane, and obsessing over this put me in a foul mood for multiple days. I still kind of believe
-    // there must be a more elegant solution than the below, but this was the best I could do without special-casing
-    // it all out into a switch statement by Operation type (which was explored and would mean maintaining a *lot* more
-    // code). All that to say, tread carefully if modifying this logic.
-
-    final boolean reverse = operation.isReverse();
-    final boolean clear = operation.isClear();
+    // is insane, and obsessing over this put me in a foul mood for multiple days. After lots of back and forth,
+    // I ended up going back to an explicit switch expression that spells out the precise behavior of each
+    // particular operation.
 
     // Put everything back how it was, note that this may be called many times in the course of a
     // mouse drag operation, we need to operate on the original array with the modified events in their
@@ -331,90 +312,142 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       return;
     }
 
-    final Cursor.Operator CursorOp = CursorOp();
+    final boolean reverse = operation.isReverse();
+    final boolean clear = operation.isClear();
 
     // Make our own mutable copy of the original events
     originalEvents = new ArrayList<T>(originalEvents);
 
+    // Determine selection bounds
+    int selectFrom = cursorPlayIndex(originalEvents, fromSelectionMin);
+    int selectTo = cursorInsertIndex(originalEvents, fromSelectionMax);
+    int deleteFrom = -1, deleteTo = -1;
+    int moveTo = -1;
+
     // Dummy variables for additional points added to stitch together the edit
     // with existing data
-    T stitchInnerMin = null, stitchInnerMax = null, stitchOuterMin = null, stitchOuterMax = null;
+    T stitchInnerMin = null, stitchInnerMax = null, stitchOuterMin = null, stitchOuterMax = null, stitchMoveMin = null, stitchMoveMax = null;
 
-    // If the destination selection bounds are outside of the source bounds,
-    // compute the outer stitch values from the original data, falling totally
-    // outside of modifiedEvents
-    if (CursorOp.isBefore(toSelectionMin, fromSelectionMin)) {
-      // STRETCH_TO_LEFT, MOVE_LEFT, REVERSE_RIGHT_TO_LEFT
-      stitchOuterMin = stitchOuterMin(originalEvents, toSelectionMin);
-    }
-    if (CursorOp.isAfter(toSelectionMax, fromSelectionMax)) {
-      // STRETCH_TO_RIGHT, MOVE_RIGHT, REVERSE_LEFT_TO_RIGHT
-      stitchOuterMax = stitchOuterMax(originalEvents, toSelectionMax);
+    // Oh, fuck it, nothing beats the clarity of explicitly enumerating the options
+    switch (operation) {
+      // Performed with the left handle
+      case STRETCH_TO_LEFT -> {
+        deleteFrom = cursorPlayIndex(originalEvents, toSelectionMin);
+        deleteTo = selectFrom;
+        stitchOuterMin = stitchOuter(originalEvents, toSelectionMin, deleteFrom);
+      }
+      case SHORTEN_FROM_LEFT -> {
+        stitchOuterMin = stitchOuter(originalEvents, fromSelectionMin, selectFrom);
+      }
+      case CLEAR_FROM_LEFT -> {
+        stitchOuterMin = stitchOuter(originalEvents, fromSelectionMin, selectFrom);
+      }
+      case REVERSE_LEFT_TO_RIGHT -> {
+        stitchOuterMin = stitchOuter(originalEvents, fromSelectionMin, selectFrom);
+        deleteFrom = selectTo;
+        deleteTo = cursorInsertIndex(originalEvents, toSelectionMax);
+        stitchOuterMax = stitchOuter(originalEvents, toSelectionMax, deleteTo);
+      }
+
+      // Performed with the right handle
+      case STRETCH_TO_RIGHT -> {
+        deleteFrom = selectTo;
+        deleteTo = cursorInsertIndex(originalEvents, toSelectionMax);
+        stitchOuterMax = stitchOuter(originalEvents, toSelectionMax, deleteTo);
+      }
+      case SHORTEN_FROM_RIGHT -> {
+        stitchOuterMax = stitchOuter(originalEvents, fromSelectionMax, selectTo);
+      }
+      case CLEAR_FROM_RIGHT -> {
+        stitchOuterMax = stitchOuter(originalEvents, fromSelectionMax, selectTo);
+      }
+      case REVERSE_RIGHT_TO_LEFT -> {
+        stitchOuterMax = stitchOuter(originalEvents, fromSelectionMax, selectTo);
+        deleteFrom = cursorPlayIndex(originalEvents, toSelectionMin);
+        deleteTo = selectFrom;
+        stitchOuterMin = stitchOuter(originalEvents, toSelectionMin, deleteFrom);
+      }
+
+      // Performed by move-dragging
+      case MOVE_LEFT -> {
+        deleteFrom = cursorPlayIndex(originalEvents, toSelectionMin);
+        stitchOuterMin = stitchOuter(originalEvents, toSelectionMin, deleteFrom);
+        stitchOuterMax = stitchOuter(originalEvents, fromSelectionMax, selectTo);
+        if (CursorOp().isAfterOrEqual(toSelectionMax, fromSelectionMin)) {
+          // No re-ordering needed, move overlaps itself, just deleting material
+          // on the left side
+          deleteTo = selectFrom;
+        } else {
+          // Need to re-order, stuff to the left of us may end up to the right of us
+          moveTo = deleteFrom;
+          deleteTo = cursorInsertIndex(originalEvents, toSelectionMax);
+          stitchMoveMax = stitchOuter(originalEvents, toSelectionMax, deleteTo);
+          stitchMoveMin = stitchOuter(originalEvents, fromSelectionMin, selectFrom);
+        }
+      }
+      case MOVE_RIGHT -> {
+        deleteTo = cursorInsertIndex(originalEvents, toSelectionMax);
+        stitchOuterMin = stitchOuter(originalEvents, fromSelectionMin, selectFrom);
+        stitchOuterMax = stitchOuter(originalEvents, toSelectionMax, deleteTo);
+        if (CursorOp().isBeforeOrEqual(toSelectionMin, fromSelectionMax)) {
+          // No re-ordering needed, move overlaps itself, just deleting material
+          // on the right side
+          deleteFrom = selectTo;
+        } else {
+          // Need to re-order, stuff to the right of us may end up to the left of us
+          moveTo = deleteTo;
+          deleteFrom = cursorPlayIndex(originalEvents, toSelectionMin);
+          stitchMoveMax = stitchOuter(originalEvents, fromSelectionMax, selectTo);
+          stitchMoveMin = stitchOuter(originalEvents, toSelectionMin, deleteFrom);
+        }
+      }
+
+      default -> throw new IllegalStateException("Unhandled SetCursors.Operation: " + operation);
     }
 
-    // Determine all the stuff that's being modified, we may need apply stitching
-    // to it.
-    int stitchFrom = cursorPlayIndex(originalEvents, fromSelectionMin);
-    int stitchTo = cursorInsertIndex(originalEvents, fromSelectionMax);
-    // NOTE(mcslee): subList.clear() is the most efficient way to remove a range from an ArrayList
-    List<T> subList = originalEvents.subList(stitchFrom, stitchTo);
-    ArrayList<T> modifiedEvents = new ArrayList<T>(stitchTo - stitchFrom);
-    for (T copy : subList) {
-      modifiedEvents.add(copy); // avoids spurious toArray() copies from using Collections.
-    }
-    subList.clear();
+    // Generate inner stitches
+    stitchInnerMin = stitchInnerMin(originalEvents, fromSelectionMin, selectFrom, clear);
+    stitchInnerMax = stitchInnerMax(originalEvents, fromSelectionMax, selectTo, clear);
 
-    // Add stitches on the inner ends of the modified range, if needed
-    stitchInnerMin = stitchSelectionMin(originalEvents, modifiedEvents, fromSelectionMin, stitchFrom, clear);
-    stitchInnerMax = stitchSelectionMax(originalEvents, modifiedEvents, fromSelectionMax, stitchFrom, clear);
-
-    // Clear operation? e.g. drag-resized to 0, nuke everything
-    if (clear) {
-      modifiedEvents.clear();
+    // Perform deletion for moves/extensions/reverses
+    if (deleteTo > deleteFrom) {
+      int numDelete = deleteTo - deleteFrom;
+      originalEvents.subList(deleteFrom, deleteTo).clear();
+      if (deleteFrom < selectFrom) {
+        selectFrom -= numDelete;
+        selectTo -= numDelete;
+      }
+      if (deleteFrom < moveTo) {
+        moveTo -= numDelete;
+      }
     }
-    // Add the inner stitches (note that these are POST-clear - for a clear operation we replace the whole
-    // range by its start/end boundary values at this single point in time
+
+    // Clear selection for clear operations
+    if (clear && (selectTo > selectFrom)) {
+      originalEvents.subList(selectFrom, selectTo).clear();
+      selectTo = selectFrom;
+    }
+
+    // Insert inner stitches
     if (stitchInnerMin != null) {
-      modifiedEvents.add(0, stitchInnerMin);
+      originalEvents.add(selectFrom, stitchInnerMin);
+      if (moveTo > selectFrom) {
+        ++moveTo;
+      }
+      ++selectTo;
     }
     if (stitchInnerMax != null) {
-      modifiedEvents.add(stitchInnerMax);
-    }
-
-    // If the destination selection bounds are within or cross over the source bounds (in the case of MOVE)
-    // compute the outer stitch values now, they'll be the edges of the selection range
-    if (CursorOp.isAfter(toSelectionMin, fromSelectionMin)) {
-      // SHORTEN_FROM_LEFT, CLEAR_FROM_LEFT, REVERSE_LEFT_TO_RIGHT, MOVE_RIGHT
-      if (operation == Operation.MOVE_RIGHT) {
-        stitchOuterMin = stitchOuterMin(originalEvents, toSelectionMin);
-      } else {
-        stitchOuterMin = stitchSelectionMin(originalEvents, modifiedEvents, fromSelectionMin, stitchFrom, true);
+      originalEvents.add(selectTo, stitchInnerMax);
+      if (moveTo >= selectTo) {
+        ++moveTo;
       }
-    }
-    if (CursorOp.isBefore(toSelectionMax, fromSelectionMax)) {
-      // SHORTEN_FROM_RIGHT, CLEAR_FROM_RIGHT, REVERSE_RIGHT_TO_LEFT, MOVE_LEFT
-      if (operation == Operation.MOVE_LEFT) {
-        stitchOuterMax = stitchOuterMax(originalEvents, toSelectionMax);
-      } else {
-        stitchOuterMax = stitchSelectionMax(originalEvents, modifiedEvents, fromSelectionMax, stitchFrom, true);
-      }
+      ++selectTo;
     }
 
-    // Reverse the modified stuff
-    if (reverse) {
-      reverseEvents(modifiedEvents);
+    // Reverse the selection (if any exists, including added stitches)
+    if (reverse && (selectTo > selectFrom)) {
+      reverseEvents(originalEvents.subList(selectFrom, selectTo));
     }
-
-    // Remove everything pre-existing in the target range
-    clearEvents(originalEvents, toSelectionMin, toSelectionMax);
-
-    // Update the cursor positions (unless we cleared them off)
-    if (!clear) {
-      for (Map.Entry<T, Cursor> entry : toCursors.entrySet()) {
-        entry.getKey().setCursor(entry.getValue().bound(this.clip));
-      }
-    }
-
     // Move the internal stitches to their now positions
     if (stitchInnerMin != null) {
       stitchInnerMin.setCursor(reverse ? toSelectionMax : toSelectionMin);
@@ -422,30 +455,65 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     if (stitchInnerMax != null) {
       stitchInnerMax.setCursor(reverse ? toSelectionMin : toSelectionMax);
     }
+    // Update the cursor positions (unless we cleared them off)
+    if (!clear) {
+      for (Map.Entry<T, Cursor> entry : toCursors.entrySet()) {
+        entry.getKey().setCursor(entry.getValue().bound(this.clip));
+      }
+    }
 
-    // Put all the modified stuff back
-    int stitchIndex = cursorInsertIndex(originalEvents, toSelectionMin);
-    originalEvents.addAll(stitchIndex, modifiedEvents);
-    int numModified = modifiedEvents.size();
+    // Perform a move
+    int numSelected = selectTo - selectFrom;
+    if ((moveTo >= 0) && (numSelected > 0) && (moveTo != selectFrom)) {
+      final List<T> selection = originalEvents.subList(selectFrom, selectTo);
+      final ArrayList<T> copy = new ArrayList<>(selection);
+      selection.clear();
+      if (moveTo > selectFrom) {
+        moveTo -= numSelected;
+      }
+      originalEvents.addAll(moveTo, copy);
+      selectFrom = moveTo;
+      selectTo = selectFrom + numSelected;
+    }
 
     // Add outer stitches if needed
     if (stitchOuterMin != null) {
-      if (stitchInsertIfNeeded(originalEvents, stitchOuterMin, stitchIndex)) {
-        ++stitchIndex;
+      int outerMinIndex = stitchInsertIfNeeded(originalEvents, stitchOuterMin, false);
+      if ((outerMinIndex >= 0) && (outerMinIndex <= selectFrom)) {
+        ++selectFrom;
+        ++selectTo;
+      }
+    }
+    if (stitchMoveMax != null) {
+      int moveMaxIndex = stitchInsertIfNeeded(originalEvents, stitchMoveMax, true);
+      if ((moveMaxIndex >= 0) && (moveMaxIndex <= selectFrom)) {
+        ++selectFrom;
+        ++selectTo;
+      }
+    }
+    if (stitchMoveMin != null) {
+      int moveMinIndex = stitchInsertIfNeeded(originalEvents, stitchMoveMin, false);
+      if ((moveMinIndex >= 0) && (moveMinIndex <= selectFrom)) {
+        ++selectFrom;
+        ++selectTo;
       }
     }
     if (stitchOuterMax != null) {
-      stitchInsertIfNeeded(originalEvents, stitchOuterMax, stitchIndex + numModified);
+      int outerMaxIndex = stitchInsertIfNeeded(originalEvents, stitchOuterMax, true);
+      if ((outerMaxIndex >= 0) && (outerMaxIndex <= selectFrom)) {
+        ++selectFrom;
+        ++selectTo;
+      }
     }
 
-    // Remove the inner stitches if they're pointless
-    if (stitchRemoveIfRedundant(originalEvents, stitchInnerMin, reverse ? stitchIndex + numModified - 1 : stitchIndex)) {
-      --numModified;
+    // Remove the inner stitches if they turned out to be pointless
+    if (stitchRemoveIfRedundant(originalEvents, stitchInnerMin, reverse ? selectTo - 1 : selectFrom)) {
+      --selectTo;
     }
-    stitchRemoveIfRedundant(originalEvents, stitchInnerMax, reverse ? stitchIndex : stitchIndex + numModified - 1);
+    stitchRemoveIfRedundant(originalEvents, stitchInnerMax, reverse ? selectFrom : selectTo - 1);
 
-    this.mutableEvents.clear();
-    this.mutableEvents.addAll(originalEvents);
+    // Set the mutable events array
+    this.mutableEvents.set(originalEvents);
     this.onChange.bang();
   }
 
@@ -463,17 +531,24 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return null;
   }
 
-  protected T stitchOuterMin(List<T> events, Cursor selectionMin) {
+  protected T stitchInner(List<T> events, Cursor cursor, int rightIndex, boolean isMin, boolean force) {
     return null;
   }
 
-  protected T stitchOuterMax(List<T> events, Cursor selectionMax) {
+  private final T stitchInnerMin(List<T> events, Cursor cursor, int rightIndex, boolean force) {
+    return stitchInner(events, cursor, rightIndex, true, force);
+  }
+
+  private final T stitchInnerMax(List<T> events, Cursor cursor, int rightIndex, boolean force) {
+    return stitchInner(events, cursor, rightIndex, false, force);
+  }
+
+  protected T stitchOuter(List<T> events, Cursor cursor, int rightIndex) {
     return null;
   }
 
-  protected boolean stitchInsertIfNeeded(List<T> events, T stitch, int index) {
-    events.add(index, stitch);
-    return true;
+  protected int stitchInsertIfNeeded(List<T> events, T stitch, boolean after) {
+    return -1;
   }
 
   protected boolean stitchRemoveIfRedundant(List<T> events, T stitch, int index) {

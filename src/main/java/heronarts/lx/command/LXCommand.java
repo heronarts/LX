@@ -3245,23 +3245,17 @@ public abstract class LXCommand {
           MOVE_RIGHT;
 
           public boolean isClear() {
-            switch (this) {
-            case CLEAR_FROM_LEFT:
-            case CLEAR_FROM_RIGHT:
-              return true;
-            default:
-              return false;
-            }
+            return switch (this) {
+              case CLEAR_FROM_LEFT, CLEAR_FROM_RIGHT -> true;
+              default -> false;
+            };
           }
 
           public boolean isReverse() {
-            switch (this) {
-            case REVERSE_LEFT_TO_RIGHT:
-            case REVERSE_RIGHT_TO_LEFT:
-              return true;
-            default:
-              return false;
-            }
+            return switch (this) {
+              case REVERSE_LEFT_TO_RIGHT, REVERSE_RIGHT_TO_LEFT -> true;
+              default -> false;
+            };
           }
         }
 

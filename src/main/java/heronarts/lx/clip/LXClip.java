@@ -83,6 +83,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   public class CursorParameter extends AggregateParameter {
 
+    public final LXClip clip;
+
     public final Cursor cursor = new Cursor();
 
     public final MutableParameter millis =
@@ -98,6 +100,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     public CursorParameter(String label) {
       super(label);
+
+      this.clip = LXClip.this;
 
       // NOTE: critical that beatBasis comes last, highest specificity so
       // that on load() operations the update happens when that's set
@@ -668,6 +672,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Safely set the loop end marker to a specific value (in time units)
    *
    * @param loopEnd Cursor position on the timeline
+   * @param return this
    */
   public LXClip setLoopEnd(Cursor loopEnd) {
     final Cursor oldEnd = this.loopEnd.cursor.clone();
@@ -686,6 +691,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Check for cursor capture while playing
     captureCursorWithLoopMove(oldEnd);
     return this;
+  }
+
+  /**
+   * Set the loop length
+   *
+   * @param loopLength Loop length
+   * @return this
+   */
+  public LXClip setLoopLength(Cursor loopLength) {
+    return setLoopEnd(this.loopStart.cursor.add(loopLength));
   }
 
   /**
