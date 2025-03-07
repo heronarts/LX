@@ -559,8 +559,17 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public abstract String getLabel();
 
   /**
+   * Subclasses may override to take action when playback starts from a cursor position
+   *
+   * @param to Cursor position to start playback from
+   */
+  void initializeCursor(Cursor to) {}
+
+  /**
    * Subclasses may override this method if they need to take an action when
    * looping is performed and the cursor returns to a prior position.
+   *
+   * @param to Cursor rewound to loop position
    */
   void loopCursor(Cursor to) {}
 

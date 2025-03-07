@@ -79,12 +79,32 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
     return "Pattern";
   }
 
+  private LXPattern getPatternAtCursor(Cursor to) {
+    if (!this.events.isEmpty()) {
+      int index = cursorPlayIndex(to);
+      return this.events.get(index > 0 ? index - 1 : index).getPattern();
+    }
+    return null;
+  }
+
+  private void setPatternAtCursor(Cursor to) {
+    LXPattern pattern = getPatternAtCursor(to);
+    if (pattern != null) {
+      LXChannel channel = pattern.getChannel();
+      if ((channel.getActivePattern() != pattern) && (channel.getNextPattern() != pattern)) {
+        channel.goPattern(pattern);
+      }
+    }
+  }
+
+  @Override
+  void initializeCursor(Cursor to) {
+    setPatternAtCursor(to);
+  }
+
   @Override
   void loopCursor(Cursor to) {
-    PatternClipEvent previous = getPreviousEvent(to);
-    if (previous != null) {
-      previous.execute();
-    }
+    setPatternAtCursor(to);
   }
 
   @Override

@@ -809,6 +809,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     setTransportReference(true);
 
+    // Perform any cursor initialization at this point
+    initializeCursor(this.cursor);
+
     // Check for recording state
     if (this.bus.arm.isOn()) {
       this.isRecording = true;
@@ -1009,6 +1012,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   public LXClip setIndex(int index) {
     this.index = index;
     return this;
+  }
+
+  private void initializeCursor(Cursor to) {
+    for (LXClipLane<?> lane : this.lanes) {
+      lane.initializeCursor(to);
+    }
   }
 
   private void loopCursor(Cursor to) {
