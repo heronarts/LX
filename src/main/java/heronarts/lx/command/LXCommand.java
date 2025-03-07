@@ -3444,17 +3444,26 @@ public abstract class LXCommand {
           private final ComponentReference<PatternClipLane> clipLane;
           private final int eventIndex;
           private final Cursor fromCursor;
-          private Cursor toCursor;
+          private final int fromPatternIndex;
+          private final Cursor toCursor;
+          private int toPatternIndex;
 
           public MoveEvent(PatternClipLane lane, PatternClipEvent clipEvent) {
             this.clipLane = new ComponentReference<>(lane);
             this.fromCursor = clipEvent.cursor.clone();
             this.toCursor = clipEvent.cursor.clone();
             this.eventIndex = lane.events.indexOf(clipEvent);
+            this.fromPatternIndex = clipEvent.getPattern().getIndex();
           }
 
-          public MoveEvent update(Cursor cursor) {
+          public MoveEvent(PatternClipLane lane, PatternClipEvent clipEvent, Cursor cursor) {
+            this(lane, clipEvent);
             this.toCursor.set(cursor);
+          }
+
+          public MoveEvent update(Cursor cursor, int toPatternIndex) {
+            this.toCursor.set(cursor);
+            this.toPatternIndex = toPatternIndex;
             return this;
           }
 
@@ -3463,11 +3472,12 @@ public abstract class LXCommand {
             return "Move Pattern Event";
           }
 
-          private void moveTo(Cursor cursor) throws InvalidCommandException {
+          private void moveTo(Cursor cursor, int patternIndex) throws InvalidCommandException {
             PatternClipLane clipLane = this.clipLane.get();
             try {
               PatternClipEvent clipEvent = clipLane.events.get(this.eventIndex);
               clipLane.moveEvent(clipEvent, cursor);
+              clipEvent.setPattern(clipEvent.getPattern().getChannel().patterns.get(patternIndex));
             } catch (Exception x) {
               throw new InvalidCommandException(x);
             }
@@ -3475,13 +3485,12 @@ public abstract class LXCommand {
 
           @Override
           public void perform(LX lx) throws InvalidCommandException {
-            moveTo(this.toCursor);
-
+            moveTo(this.toCursor, this.toPatternIndex);
           }
 
           @Override
           public void undo(LX lx) throws InvalidCommandException {
-            moveTo(this.fromCursor);
+            moveTo(this.fromCursor, this.fromPatternIndex);
           }
 
         }

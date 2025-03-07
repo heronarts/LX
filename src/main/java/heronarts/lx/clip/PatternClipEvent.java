@@ -21,8 +21,10 @@ public class PatternClipEvent extends LXClipEvent<PatternClipEvent> {
   }
 
   public PatternClipEvent setPattern(LXPattern pattern) {
-    this.pattern = pattern;
-    this.lane.onChange.bang();
+    if (this.pattern != pattern) {
+      this.pattern = pattern;
+      this.lane.onChange.bang();
+    }
     return this;
   }
 
