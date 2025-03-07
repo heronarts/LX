@@ -18,15 +18,55 @@
 
 package heronarts.lx.clip;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.pattern.LXPattern;
 
-public class PatternClipLane extends LXClipLane<PatternClipEvent> {
+public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXChannel.Listener {
+
+  public final LXChannel channel;
+
   PatternClipLane(LXClip clip) {
     super(clip);
+    this.channel = (LXChannel) clip.bus;
+    this.channel.addListener(this);
+  }
+
+  public void patternRemoved(LXChannel channel, LXPattern pattern) {
+    boolean changed = false;
+    for (int i = 0; i < this.mutableEvents.size(); ++i) {
+      PatternClipEvent event = this.mutableEvents.get(i);
+      if (event.getPattern() == pattern) {
+        if (!changed) {
+          this.mutableEvents.begin();
+          changed = true;
+        }
+        this.mutableEvents.remove(i);
+        --i;
+      }
+    }
+    if (changed) {
+      this.mutableEvents.commit();
+      this.onChange.bang();
+    }
+  }
+
+  public List<PatternClipEvent> findEvents(LXPattern pattern) {
+    List<PatternClipEvent> events = null;
+    for (PatternClipEvent event : this.events) {
+      if (event.getPattern() == pattern) {
+        if (events == null) {
+          events = new ArrayList<>();
+        }
+        events.add(event);
+      }
+    }
+    return events;
   }
 
   @Override
@@ -49,9 +89,14 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> {
 
   @Override
   protected PatternClipEvent loadEvent(LX lx, JsonObject eventObj) {
-    LXChannel channel = (LXChannel) this.clip.bus;
-    LXPattern pattern = channel.patterns.get(eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt());
-    return new PatternClipEvent(this, channel, pattern);
+    LXPattern pattern = this.channel.patterns.get(eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt());
+    return new PatternClipEvent(this, pattern);
+  }
+
+  @Override
+  public void dispose() {
+    this.channel.removeListener(this);
+    super.dispose();
   }
 
 }

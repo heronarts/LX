@@ -34,6 +34,7 @@ import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.QuantizedTriggerParameter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -47,7 +48,7 @@ import com.google.gson.JsonObject;
  * Abstract representation of a channel, which could be a normal channel with patterns
  * or the master channel.
  */
-public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent, LXModulationContainer {
+public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent, LXModulationContainer, LXEffect.Container {
 
   /**
    * Listener interface for objects which want to be notified when the internal
@@ -272,10 +273,12 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     return getGroup() != null;
   }
 
+  @Override
   public final LXBus addEffect(LXEffect effect) {
     return addEffect(effect, -1);
   }
 
+  @Override
   public final LXBus addEffect(LXEffect effect, int index) {
     if (index > this.mutableEffects.size()) {
       throw new IllegalArgumentException("Illegal effect index: " + index);
@@ -292,6 +295,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     return this;
   }
 
+  @Override
   public final LXBus removeEffect(LXEffect effect) {
     int index = this.mutableEffects.indexOf(effect);
     if (index >= 0) {
@@ -309,6 +313,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     return this;
   }
 
+  @Override
   public LXBus reloadEffect(LXEffect effect) {
     if (!this.effects.contains(effect)) {
       throw new IllegalStateException("Cannot reload effect not on a channel");
@@ -329,6 +334,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     }
   }
 
+  @Override
   public LXBus moveEffect(LXEffect effect, int index) {
     if (index < 0 || index >= this.mutableEffects.size()) {
       throw new IllegalArgumentException("Cannot move effect to invalid index: " + index);
@@ -345,21 +351,9 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     return this;
   }
 
+  @Override
   public final List<LXEffect> getEffects() {
     return this.effects;
-  }
-
-  public LXEffect getEffect(int i) {
-    return this.effects.get(i);
-  }
-
-  public LXEffect getEffect(String label) {
-    for (LXEffect effect : this.effects) {
-      if (effect.getLabel().equals(label)) {
-        return effect;
-      }
-    }
-    return null;
   }
 
   public LXClip getClip(int index) {

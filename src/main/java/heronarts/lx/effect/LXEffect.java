@@ -18,6 +18,7 @@
 
 package heronarts.lx.effect;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.gson.JsonElement;
@@ -43,6 +44,34 @@ import heronarts.lx.structure.view.LXViewDefinition;
  * frame. Only the current frame is provided at runtime.
  */
 public abstract class LXEffect extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent {
+
+  public interface Container {
+
+    public List<LXEffect> getEffects();
+
+    public default LXEffect getEffect(int i) {
+      return getEffects().get(i);
+    }
+
+    public default LXEffect getEffect(String label) {
+      for (LXEffect effect : getEffects()) {
+        if (effect.getLabel().equals(label)) {
+          return effect;
+        }
+      }
+      return null;
+    }
+
+    public Container addEffect(LXEffect effect);
+
+    public Container addEffect(LXEffect effect, int index);
+
+    public Container moveEffect(LXEffect effect, int index);
+
+    public Container removeEffect(LXEffect effect);
+
+    public Container reloadEffect(LXEffect effect);
+  }
 
   /**
    * Placeholder pattern for when a class is missing
@@ -246,6 +275,10 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
 
   public boolean isPatternEffect() {
     return getParent() instanceof LXPattern;
+  }
+
+  public Container getContainer() {
+    return (Container) getParent();
   }
 
   public LXBus getBus() {

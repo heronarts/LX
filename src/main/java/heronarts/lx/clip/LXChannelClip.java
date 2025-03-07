@@ -89,8 +89,8 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
         // If we're overdubbing - only record a pattern event at the start of recording if the present
         // state is *different* from what was already in the pattern clip lane
         PatternClipEvent previousPattern = this.patternLane.getPreviousEvent(this.cursor);
-        if (!isOverdub || ((previousPattern != null) && (previousPattern.pattern != activePattern))) {
-          this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, this.channel, activePattern));
+        if (!isOverdub || ((previousPattern != null) && (previousPattern.getPattern() != activePattern))) {
+          this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, activePattern));
         }
       }
     }
@@ -119,7 +119,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   @Override
   public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
     if (isRunning() && this.bus.arm.isOn()) {
-      this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, channel, nextPattern));
+      this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, nextPattern));
     }
   }
 

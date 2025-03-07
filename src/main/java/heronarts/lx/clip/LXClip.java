@@ -970,6 +970,21 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
+  public List<ParameterClipLane> findClipLanes(LXComponent component) {
+    List<ParameterClipLane> removedLanes = null;
+    for (LXClipLane<?> lane : this.mutableLanes) {
+      if (lane instanceof ParameterClipLane parameterLane) {
+        if (parameterLane.parameter.isDescendant(component)) {
+          if (removedLanes == null) {
+            removedLanes = new ArrayList<>();
+          }
+          removedLanes.add(parameterLane);
+        }
+      }
+    }
+    return removedLanes;
+  }
+
   protected void unregisterComponent(LXComponent component) {
     for (LXParameter p : component.getParameters()) {
       if (p instanceof LXListenableNormalizedParameter) {
