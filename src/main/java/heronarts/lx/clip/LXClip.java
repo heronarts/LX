@@ -976,10 +976,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         unregisterParameter((LXListenableNormalizedParameter) p);
         ParameterClipLane lane = getParameterLane((LXNormalizedParameter) p, false);
         if (lane != null) {
-          this.mutableLanes.remove(lane);
-          for (Listener listener : this.listeners) {
-            listener.parameterLaneRemoved(this, lane);
-          }
+          _removeLane(lane);
         }
       }
     }
