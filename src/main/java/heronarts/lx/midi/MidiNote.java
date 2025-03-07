@@ -18,6 +18,8 @@
 
 package heronarts.lx.midi;
 
+import java.util.Arrays;
+
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
@@ -31,7 +33,9 @@ public abstract class MidiNote extends LXShortMessage {
     super(message, command);
   }
 
-  private final static String[] PITCHES = {
+  public static final int NUM_PITCHES = 128;
+
+  private final static String[] PITCH_STRINGS = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
   };
 
@@ -40,7 +44,7 @@ public abstract class MidiNote extends LXShortMessage {
     // no clear standard about what number C MIDI note 60 should be given, but
     // Ableton and "European" manufacturers seem to call it C3. Sticking with
     // that as matching Ableton is probably the most common use case.
-    return PITCHES[pitch % 12] +  Integer.toString(pitch/12 - 2);
+    return PITCH_STRINGS[pitch % 12] +  Integer.toString(pitch/12 - 2);
   }
 
   public String getPitchString() {
@@ -87,12 +91,25 @@ public abstract class MidiNote extends LXShortMessage {
       }
     }
 
+    public void clear() {
+      Arrays.fill(this.notes, 0);
+      this.noteCount = 0;
+    }
+
     public int getNoteCount() {
       return this.noteCount;
     }
 
+    public int getNoteCount(int pitch) {
+      return this.notes[pitch];
+    }
+
     public boolean isNoteHeld() {
       return this.noteCount > 0;
+    }
+
+    public boolean isNoteHeld(int pitch) {
+      return this.notes[pitch] > 0;
     }
 
     public void reset() {

@@ -84,10 +84,12 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   LXClipLane<T> commitRecordEvents() {
+    this.mutableEvents.begin();
     for (T event : this.recordQueue) {
       _insertEvent(event);
     }
     this.recordQueue.clear();
+    this.mutableEvents.commit();
     this.onChange.bang();
     return this;
   }
@@ -650,10 +652,9 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    this.mutableEvents.clear();
+    final List<T> loadEvents = new ArrayList<>();
     if (obj.has(KEY_EVENTS)) {
-      List<T> loadEvents = new ArrayList<>();
-
+      beginLoadEvents();
       JsonArray eventsArr = obj.get(KEY_EVENTS).getAsJsonArray();
       for (JsonElement eventElem : eventsArr) {
         JsonObject eventObj = eventElem.getAsJsonObject();
@@ -663,15 +664,18 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
           loadEvents.add(event);
         }
       }
-
-      // Because we're using an underlying CopyOnWriteArrayList, do this
-      // in a single addAll() operation
-      if (!loadEvents.isEmpty()) {
-        this.mutableEvents.addAll(loadEvents);
-      }
+      endLoadEvents();
     }
+
+    // Update underlying threaded array list in one fell swoop
+    this.mutableEvents.set(loadEvents);
+
     this.onChange.bang();
   }
+
+  protected void beginLoadEvents() {}
+
+  protected void endLoadEvents() {}
 
   protected abstract T loadEvent(LX lx, JsonObject eventObj);
 

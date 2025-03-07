@@ -46,8 +46,8 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
 
   @Override
   public void dispose() {
-    unregisterParameter(channel.fader);
-    unregisterParameter(channel.enabled);
+    unregisterParameter(this.channel.fader);
+    unregisterParameter(this.channel.enabled);
     this.channel.removeMidiListener(this);
     super.dispose();
   }
