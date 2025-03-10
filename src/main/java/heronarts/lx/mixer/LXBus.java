@@ -274,11 +274,6 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   }
 
   @Override
-  public final LXBus addEffect(LXEffect effect) {
-    return addEffect(effect, -1);
-  }
-
-  @Override
   public final LXBus addEffect(LXEffect effect, int index) {
     if (index > this.mutableEffects.size()) {
       throw new IllegalArgumentException("Illegal effect index: " + index);
@@ -310,20 +305,6 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
       }
       LX.dispose(effect);
     }
-    return this;
-  }
-
-  @Override
-  public LXBus reloadEffect(LXEffect effect) {
-    if (!this.effects.contains(effect)) {
-      throw new IllegalStateException("Cannot reload effect not on a channel");
-    }
-    // TODO(mcslee): Collect and restore global modulations to this effect!
-    int index = effect.getIndex();
-    JsonObject effectObj = new JsonObject();
-    effect.save(getLX(), effectObj);
-    removeEffect(effect);
-    loadEffect(effectObj, index);
     return this;
   }
 
@@ -536,10 +517,8 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
 
     // Add the effects
     if (obj.has(KEY_EFFECTS)) {
-      JsonArray effectsArray = obj.getAsJsonArray(KEY_EFFECTS);
-      for (JsonElement effectElement : effectsArray) {
-        JsonObject effectObj = (JsonObject) effectElement;
-        loadEffect(effectObj, -1);
+      for (JsonElement effectElement : obj.getAsJsonArray(KEY_EFFECTS)) {
+        loadEffect(this.lx, (JsonObject) effectElement, -1);
       }
     }
 
@@ -555,21 +534,6 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     }
 
     super.load(lx, obj);
-  }
-
-  private LXEffect loadEffect(JsonObject effectObj, int index) {
-    String effectClass = effectObj.get("class").getAsString();
-    LXEffect effect;
-    try {
-      effect = this.lx.instantiateEffect(effectClass);
-    } catch (LX.InstantiationException x) {
-      LX.error("Using placeholder class for missing effect: " + effectClass);
-      effect = new LXEffect.Placeholder(this.lx, x);
-      this.lx.pushError(x, effectClass + " could not be loaded. " + x.getMessage());
-    }
-    effect.load(this.lx, effectObj);
-    addEffect(effect, index);
-    return effect;
   }
 
 }

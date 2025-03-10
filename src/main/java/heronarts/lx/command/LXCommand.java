@@ -800,6 +800,9 @@ public abstract class LXCommand {
 
       public RemovePattern(LXChannel channel, LXPattern pattern) {
         super(pattern);
+        if (!channel.patterns.contains(pattern)) {
+          throw new IllegalArgumentException("Cannot remove pattern not present on channel: " + pattern + " !! " + channel);
+        }
         this.channel = new ComponentReference<LXChannel>(channel);
         this.pattern = new ComponentReference<LXPattern>(pattern);
         this.patternObj = LXSerializable.Utils.toObject(pattern);
@@ -814,28 +817,53 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void perform(LX lx) {
+      public void perform(LX lx) throws InvalidCommandException {
         this.channel.get().removePattern(this.pattern.get());
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         LXChannel channel = this.channel.get();
-        try {
-          LXPattern pattern = lx.instantiatePattern(this.patternObj.get(LXComponent.KEY_CLASS).getAsString());
-          pattern.load(lx, this.patternObj);
-          channel.addPattern(pattern, this.patternIndex);
-          if (this.isActive) {
-            channel.goPattern(pattern);
-          }
-          if (this.isFocused) {
-            channel.focusedPattern.setValue(pattern.getIndex());
-          }
-          super.undo(lx);
-        } catch (LX.InstantiationException x) {
-          throw new InvalidCommandException(x);
+        LXPattern pattern = channel.loadPattern(this.patternObj, this.patternIndex);
+        if (this.isActive) {
+          channel.goPattern(pattern);
         }
+        if (this.isFocused) {
+          channel.focusedPattern.setValue(pattern.getIndex());
+        }
+        super.undo(lx);
       }
+    }
+
+    public static class ReloadPattern extends RemovePattern {
+      public ReloadPattern(LXChannel channel, LXPattern pattern) {
+        super(channel, pattern);
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return true;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Reload Pattern";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        super.perform(lx);
+
+        // Immediately undo! Creates a new instance of the pattern in the same place and
+        // restores all modulation, automation, whatever else
+        super.undo(lx);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        throw new IllegalStateException("May not explicitly undo ReloadPattern command");
+      }
+
     }
 
     public static class MovePattern extends LXCommand {
@@ -941,16 +969,16 @@ public abstract class LXCommand {
       }
     }
 
-    private static ComponentReference<LXComponent> validateEffectParent(LXComponent parent) {
-      if (!((parent instanceof LXBus) || (parent instanceof LXPattern))) {
-        throw new IllegalArgumentException("Parent of an LXEffect must be an LXBus or LXPattern");
+    private static ComponentReference<LXComponent> validateEffectContainer(LXComponent container) {
+      if (!(container instanceof LXEffect.Container)) {
+        throw new IllegalArgumentException("Parent of an LXEffect must be an LXEffect.Container");
       }
-      return new ComponentReference<LXComponent>(parent);
+      return new ComponentReference<LXComponent>(container);
     }
 
     public static class AddEffect extends LXCommand {
 
-      private final ComponentReference<LXComponent> parent;
+      private final ComponentReference<LXComponent> container;
       private final Class<? extends LXEffect> effectClass;
       private ComponentReference<LXEffect> effect = null;
       private JsonObject effectObj = null;
@@ -960,7 +988,7 @@ public abstract class LXCommand {
       }
 
       public AddEffect(LXComponent parent, Class<? extends LXEffect> effectClass, JsonObject effectObj) {
-        this.parent = validateEffectParent(parent);
+        this.container = validateEffectContainer(parent);
         this.effectClass = effectClass;
         this.effectObj = effectObj;
       }
@@ -978,12 +1006,7 @@ public abstract class LXCommand {
             instance.load(lx, this.effectObj);
           }
           this.effectObj = LXSerializable.Utils.toObject(instance);
-          LXComponent parent = this.parent.get();
-          if (parent instanceof LXBus) {
-            ((LXBus) parent).addEffect(instance);
-          } else if (parent instanceof LXPattern) {
-            ((LXPattern) parent).addEffect(instance);
-          }
+          ((LXEffect.Container) this.container.get()).addEffect(instance);
           this.effect = new ComponentReference<LXEffect>(instance);
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
@@ -995,25 +1018,21 @@ public abstract class LXCommand {
         if (this.effect == null) {
           throw new IllegalStateException("Effect was not successfully added, cannot undo");
         }
-        LXComponent parent = this.parent.get();
-        if (parent instanceof LXBus) {
-          ((LXBus) parent).removeEffect(this.effect.get());
-        } else if (parent instanceof LXPattern) {
-          ((LXPattern) parent).removeEffect(this.effect.get());
-        }
+        LXEffect effect = this.effect.get();
+        effect.getContainer().removeEffect(effect);
       }
     }
 
     public static class RemoveEffect extends RemoveComponent {
 
-      private final ComponentReference<LXComponent> parent;
+      private final ComponentReference<LXComponent> container;
       private final ComponentReference<LXEffect> effect;
       private final JsonObject effectObj;
       private final int effectIndex;
 
-      public RemoveEffect(LXComponent parent, LXEffect effect) {
+      public RemoveEffect(LXComponent container, LXEffect effect) {
         super(effect);
-        this.parent = validateEffectParent(parent);
+        this.container = validateEffectContainer(container);
         this.effect = new ComponentReference<LXEffect>(effect);
         this.effectObj = LXSerializable.Utils.toObject(effect);
         this.effectIndex = effect.getIndex();
@@ -1024,35 +1043,61 @@ public abstract class LXCommand {
         return "Remove Effect";
       }
 
-      @Override
-      public void perform(LX lx) {
+      protected void checkLocked() {
         if (this.effect.get().locked.isOn()) {
           throw new IllegalStateException("Locked effects cannot be removed, UI should disallow this");
-        }
-        LXComponent parent = this.parent.get();
-        if (parent instanceof LXBus) {
-          ((LXBus) parent).removeEffect(this.effect.get());
-        } else if (parent instanceof LXPattern) {
-          ((LXPattern) parent).removeEffect(this.effect.get());
         }
       }
 
       @Override
-      public void undo(LX lx) throws InvalidCommandException {
-        try {
-          LXEffect effect = lx.instantiateEffect(this.effectObj.get(LXComponent.KEY_CLASS).getAsString());
-          effect.load(lx, effectObj);
-          LXComponent parent = this.parent.get();
-          if (parent instanceof LXBus) {
-            ((LXBus) parent).addEffect(effect, this.effectIndex);
-          } else if (parent instanceof LXPattern) {
-            ((LXPattern) parent).addEffect(effect, this.effectIndex);
-          }
-          super.undo(lx);
-        } catch (LX.InstantiationException x) {
-          throw new InvalidCommandException(x);
-        }
+      public void perform(LX lx) throws InvalidCommandException {
+        checkLocked();
+        ((LXEffect.Container) this.container.get()).removeEffect(this.effect.get());
       }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        LXEffect.Container container = (LXEffect.Container) this.container.get();
+        container.loadEffect(lx, this.effectObj, this.effectIndex);
+        super.undo(lx);
+      }
+    }
+
+    public static class ReloadEffect extends RemoveEffect {
+      public ReloadEffect(LXComponent container, LXEffect effect) {
+        super(container, effect);
+      }
+
+      @Override
+      protected void checkLocked() {
+        // It's acceptable to reload a locked effect
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return true;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Reload Effect";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        super.perform(lx);
+
+        // Immediately undo! Creates a new instance of the effect in the same place and
+        // restores all modulation, automation, whatever else
+        super.undo(lx);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        throw new IllegalStateException("May not explicitly undo ReloadEffect command");
+      }
+
+
     }
 
     public static class MoveEffect extends LXCommand {
@@ -1063,7 +1108,7 @@ public abstract class LXCommand {
       private final int toIndex;
 
       public MoveEffect(LXComponent parent, LXEffect effect, int toIndex) {
-        this.parent = validateEffectParent(parent);
+        this.parent = validateEffectContainer(parent);
         this.effect = new ComponentReference<LXEffect>(effect);
         this.fromIndex = effect.getIndex();
         this.toIndex = toIndex;

@@ -62,7 +62,9 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
       return null;
     }
 
-    public Container addEffect(LXEffect effect);
+    public default Container addEffect(LXEffect effect) {
+      return addEffect(effect, -1);
+    }
 
     public Container addEffect(LXEffect effect, int index);
 
@@ -70,7 +72,20 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
 
     public Container removeEffect(LXEffect effect);
 
-    public Container reloadEffect(LXEffect effect);
+    public default LXEffect loadEffect(LX lx, JsonObject effectObj, int index) {
+      String effectClass = effectObj.get(LXComponent.KEY_CLASS).getAsString();
+      LXEffect effect;
+      try {
+        effect = lx.instantiateEffect(effectClass);
+      } catch (LX.InstantiationException x) {
+        LX.error("Using placeholder class for missing effect: " + effectClass);
+        effect = new LXEffect.Placeholder(lx, x);
+        lx.pushError(x, effectClass + " could not be loaded. " + x.getMessage());
+      }
+      effect.load(lx, effectObj);
+      addEffect(effect, index);
+      return effect;
+    }
   }
 
   /**
