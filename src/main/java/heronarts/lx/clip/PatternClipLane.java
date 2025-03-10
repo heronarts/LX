@@ -26,6 +26,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.utils.LXUtils;
 
 public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXChannel.Listener {
 
@@ -117,8 +118,13 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
 
   @Override
   protected PatternClipEvent loadEvent(LX lx, JsonObject eventObj) {
-    LXPattern pattern = this.channel.patterns.get(eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt());
-    return new PatternClipEvent(this, pattern);
+    final int numPatterns = this.channel.patterns.size();
+    final int patternIndex = eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt();
+    if (!LXUtils.inRange(patternIndex, 0, numPatterns - 1)) {
+      LX.error("Invalid pattern index found in PatternClipLane.loadEvent on channel with " + numPatterns + " patterns: " + eventObj);
+      return null;
+    }
+    return new PatternClipEvent(this, this.channel.patterns.get(patternIndex));
   }
 
   @Override
