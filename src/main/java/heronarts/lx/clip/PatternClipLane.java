@@ -56,17 +56,25 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
     }
   }
 
-  public List<PatternClipEvent> findEvents(LXPattern pattern) {
-    List<PatternClipEvent> events = null;
+  /**
+   * Return a list of the indices of events in this clip lane that reference the given pattern
+   *
+   * @param pattern Pattern
+   * @return List of indices that reference this pattern, or null if there are none
+   */
+  public List<Integer> findEventIndices(LXPattern pattern) {
+    List<Integer> indices = null;
+    int i = 0;
     for (PatternClipEvent event : this.events) {
       if (event.getPattern() == pattern) {
-        if (events == null) {
-          events = new ArrayList<>();
+        if (indices == null) {
+          indices = new ArrayList<>();
         }
-        events.add(event);
+        indices.add(i);
       }
+      ++i;
     }
-    return events;
+    return indices;
   }
 
   @Override

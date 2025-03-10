@@ -633,9 +633,35 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return false;
   }
 
+  /**
+   * Remove the given event from this clip lane
+   *
+   * @param event Event to remove
+   * @return this
+   */
   public LXClipLane<T> removeEvent(T event) {
     this.mutableEvents.remove(event);
     this.onChange.bang();
+    return this;
+  }
+
+  /**
+   * Remove events at the given indices, which must be sorted ascending
+   *
+   * @param eventIndices List of event indices to remove, sorted ascending
+   * @return this
+   */
+  public LXClipLane<T> removeEvents(List<Integer> eventIndices) {
+    if (!eventIndices.isEmpty()) {
+      List<T> toRemove = new ArrayList<>();
+      for (int index : eventIndices) {
+        toRemove.add(this.mutableEvents.get(index));
+      }
+      // Use removeAll to avoid N array-shifting operations on the
+      // underlying ArrayList
+      this.mutableEvents.removeAll(toRemove);
+      this.onChange.bang();
+    }
     return this;
   }
 
