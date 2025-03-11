@@ -23,7 +23,11 @@ import java.util.Arrays;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
+import heronarts.lx.utils.LXUtils;
+
 public abstract class MidiNote extends LXShortMessage {
+
+  private boolean isMutable = false;
 
   protected MidiNote(int command, int channel, int pitch, int velocity) throws InvalidMidiDataException {
     super(command, channel, pitch, velocity);
@@ -43,11 +47,14 @@ public abstract class MidiNote extends LXShortMessage {
       (byte) (pitch & 0xff),
       (byte) (velocity & 0xff)
     };
+    MidiNote note;
     switch (command) {
-    case ShortMessage.NOTE_ON: return new MidiNoteOn.Mutable(data);
-    case ShortMessage.NOTE_OFF: return new MidiNoteOff(data);
-    default: throw new InvalidMidiDataException("MidiNote.constructMutable must take NOTE_ON or NOTE_OFF command");
+      case ShortMessage.NOTE_ON: note = new MidiNoteOn(data); break;
+      case ShortMessage.NOTE_OFF: note = new MidiNoteOff(data); break;
+      default: throw new InvalidMidiDataException("MidiNote.constructMutable must take NOTE_ON or NOTE_OFF command");
     }
+    note.isMutable = true;
+    return note;
   }
 
   public MidiNote mutableCopy() {
@@ -97,8 +104,24 @@ public abstract class MidiNote extends LXShortMessage {
     return !isNoteOn();
   }
 
+  public void setPitch(int pitch) {
+    if (!this.isMutable) {
+      throw new IllegalStateException("May not setPitch() on non-mutable MIDI note");
+    }
+    if (!LXUtils.inRange(pitch, 0, NUM_PITCHES - 1)) {
+      throw new IllegalArgumentException("Pitch must fall in range [0-" + (NUM_PITCHES-1) + "]");
+    }
+    this.data[1] = (byte) (pitch & 0xFF);
+  }
+
   public void setVelocity(int velocity) {
-    throw new IllegalStateException("May only MidiNote.setVelocity() on a mutable NOTE ON message");
+    if (!this.isMutable) {
+      throw new IllegalStateException("May not setVelocity() on non-mutable MIDI note");
+    }
+    if (!LXUtils.inRange(velocity, 1, MAX_VELOCITY)) {
+      throw new IllegalArgumentException("Velocity must fall in range [1-" + MAX_VELOCITY + "]");
+    }
+    this.data[2] = (byte) (velocity & 0xFF);
   }
 
   /**

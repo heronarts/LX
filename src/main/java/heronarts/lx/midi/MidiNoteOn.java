@@ -31,23 +31,8 @@ public class MidiNoteOn extends MidiNote {
     super(message, ShortMessage.NOTE_ON);
   }
 
-  private MidiNoteOn(byte[] data) {
+  MidiNoteOn(byte[] data) {
     super(data);
-  }
-
-  public static class Mutable extends MidiNoteOn {
-
-    Mutable(byte[] data) {
-      super(data);
-    }
-
-    @Override
-    public void setVelocity(int velocity) {
-      if (velocity < 1 || velocity > MAX_VELOCITY) {
-        throw new IllegalArgumentException("Velocity must fall in range [1-" + MAX_VELOCITY + "]");
-      }
-      this.data[2] = (byte) (velocity & 0xFF);
-    }
   }
 
   @Override
