@@ -3373,7 +3373,7 @@ public abstract class LXCommand {
         private final Map<T, Cursor> fromCursors;
         private final Map<T, Cursor> toCursors;
         private final Runnable undoHook;
-        private final ArrayList<T> originalEvents;
+        private ArrayList<T> originalEvents = null;
         private Operation operation;
 
         public SetCursors(LXClipLane<T> clipLane, Cursor fromSelectionMin, Cursor fromSelectionMax, Map<T, Double> fromValues, Map<T, Cursor> fromCursors, Map<T, Cursor> toCursors) {
@@ -3390,11 +3390,6 @@ public abstract class LXCommand {
           this.fromSelectionMax = fromSelectionMax.immutable();
           this.toSelectionMin = fromSelectionMin.clone();
           this.toSelectionMax = fromSelectionMax.clone();
-
-          // Take a snapshot of the state of clip events at the beginning of this operation, which
-          // may have update() called a bunch of times, and we always want to apply changes relative
-          // to the state of the list at the beginning of a click-drag operation, for example
-          this.originalEvents = new ArrayList<>(clipLane.events);
         }
 
         @Override
@@ -3413,6 +3408,14 @@ public abstract class LXCommand {
         @Override
         public void perform(LX lx) throws InvalidCommandException {
           LXClipLane<T> clipLane = this.clipLane.get();
+
+          if (this.originalEvents == null) {
+            // Take a snapshot of the state of clip events at the beginning of this operation, which
+            // may have update() called a bunch of times, and we always want to apply changes relative
+            // to the state of the list at the beginning of a click-drag operation, for example
+            this.originalEvents = new ArrayList<>(clipLane.events);
+          }
+
           if (this.preState == null) {
             this.preState = LXSerializable.Utils.toObject(clipLane, true);
           }
@@ -3427,6 +3430,7 @@ public abstract class LXCommand {
         @Override
         public void undo(LX lx) throws InvalidCommandException {
           this.clipLane.get().load(lx, this.preState);
+          this.originalEvents = null;
           if (this.undoHook != null) {
             this.undoHook.run();
           }
@@ -3516,6 +3520,69 @@ public abstract class LXCommand {
           @Override
           public void undo(LX lx) throws InvalidCommandException {
             setVelocity(this.fromVelocity);
+          }
+        }
+
+        public static class EditNote extends LXCommand {
+          private final ComponentReference<MidiNoteClipLane> clipLane;
+          private final int noteOnIndex;
+          private List<MidiNoteClipEvent> originalEvents = null;
+          private final Cursor fromCursor;
+          private final Cursor toCursor;
+          private final int fromPitch;
+          private int toPitch;
+
+          public EditNote(MidiNoteClipLane clipLane, MidiNoteClipEvent midiNote) {
+            if (!midiNote.isNoteOn()) {
+              throw new IllegalArgumentException("Must pass NOTE ON to Clip.Event.Midi.EditNote");
+            }
+            this.clipLane = new ComponentReference<>(clipLane);
+            this.noteOnIndex = clipLane.events.indexOf(midiNote);
+            this.fromPitch = midiNote.midiNote.getPitch();
+            this.fromCursor = midiNote.cursor.clone();
+            this.toPitch = this.fromPitch;
+            this.toCursor = midiNote.cursor.clone();
+          }
+
+          @Override
+          public String getDescription() {
+            return "Edit Note";
+          }
+
+          public EditNote updatePitch(int pitch) {
+            this.toPitch = pitch;
+            return this;
+          }
+
+          public EditNote updateCursor(Cursor cursor) {
+            this.toCursor.set(cursor);
+            return this;
+          }
+
+          public EditNote update(int pitch, Cursor cursor) {
+            this.toPitch = pitch;
+            this.toCursor.set(cursor);
+            return this;
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            final MidiNoteClipLane clipLane = this.clipLane.get();
+            if (this.originalEvents == null) {
+              this.originalEvents = new ArrayList<>(clipLane.events);
+            }
+            clipLane.editNote(this.originalEvents.get(this.noteOnIndex), this.toPitch, this.toCursor, this.originalEvents, true);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            if (this.originalEvents == null) {
+              throw new InvalidCommandException(new IllegalStateException("Cannot undo Clip.Event.Midi.EditNote that was not performed (or double-undo?)"));
+            }
+            MidiNoteClipLane clipLane = this.clipLane.get();
+            MidiNoteClipEvent noteOn = this.originalEvents.get(this.noteOnIndex);
+            clipLane.editNote(noteOn, this.fromPitch, this.fromCursor, this.originalEvents, false);
+            this.originalEvents = null;
           }
         }
 

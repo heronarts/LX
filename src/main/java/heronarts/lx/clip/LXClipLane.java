@@ -199,7 +199,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return _cursorIndex(events, cursor, false);
   }
 
-  private void _insertEvent(T event) {
+  protected void _insertEvent(T event) {
     if (CursorOp().isAfterOrEqual(event.cursor, lastEventCursor())) {
       // Quick check... shortcut in normal recording mode when we're not
       // overdubbing and the cursor is past all the prior events anyways

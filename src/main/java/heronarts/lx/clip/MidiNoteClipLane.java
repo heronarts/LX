@@ -1,16 +1,15 @@
 package heronarts.lx.clip;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.ListIterator;
-import java.util.Set;
-
+import java.util.List;
 import javax.sound.midi.InvalidMidiDataException;
+import javax.sound.midi.ShortMessage;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.midi.MidiNote;
-import heronarts.lx.midi.MidiNoteOff;
 import heronarts.lx.parameter.MutableParameter;
 
 public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
@@ -77,20 +76,26 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   public boolean removeRange(Cursor from, Cursor to) {
     // Use a set here since we'll add note on/off pairs without
     // checking for redundancy
-    final Set<MidiNoteClipEvent> toRemove = new HashSet<>();
-    final ListIterator<MidiNoteClipEvent> iter = eventIterator(from);
+    List<MidiNoteClipEvent> toRemove = null;
     final Cursor.Operator CursorOp = CursorOp();
-    while (iter.hasNext()) {
-      MidiNoteClipEvent event = iter.next();
-      if (CursorOp.isAfter(event.cursor, to)) {
+    for (MidiNoteClipEvent noteOn : this.events) {
+      if (CursorOp.isAfter(noteOn.cursor, to)) {
         break;
       }
-      // Ensure we remove note on and off pairs
-      toRemove.add(event);
-      toRemove.add(event.partner);
+      if (noteOn.isNoteOn() &&
+          CursorOp.isBefore(noteOn.cursor, to) &&
+          CursorOp.isAfter(noteOn.getNoteOff().cursor, from)) {
+
+        // Ensure we remove note on and off pairs
+        if (toRemove == null) {
+          toRemove = new ArrayList<>();
+        }
+        toRemove.add(noteOn);
+        toRemove.add(noteOn.partner);
+      }
     }
 
-    if (!toRemove.isEmpty()) {
+    if (toRemove != null) {
       this.mutableEvents.removeAll(toRemove);
       this.onChange.bang();
       return true;
@@ -106,7 +111,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       if (existingNoteOn != null) {
         // Terminate the previously held note with a note-off
         try {
-          MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, new MidiNoteOff(note.getChannel(), pitch));
+          MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, MidiNote.constructMutable(ShortMessage.NOTE_OFF, note.getChannel(), pitch, 0));
           existingNoteOn.setNoteOff(noteOff);
           recordEvent(noteOff);
           this.noteStack[pitch] = null;
@@ -137,6 +142,58 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   @Override
   protected void endLoadEvents() {
     Arrays.fill(this.loadStack, null);
+  }
+
+  public void editNote(MidiNoteClipEvent editNoteOn, int toPitch, Cursor toCursor, List<MidiNoteClipEvent> restoreOriginal, boolean checkDelete) {
+    Cursor.Operator CursorOp = CursorOp();
+    Cursor delta = editNoteOn.getNoteOff().cursor.subtract(editNoteOn.cursor);
+    Cursor toEnd = toCursor.add(delta);
+
+    this.mutableEvents.begin();
+
+    if ((restoreOriginal != null) && (restoreOriginal.size() != this.events.size())) {
+      this.mutableEvents.set(restoreOriginal);
+    }
+
+    if (checkDelete) {
+      // Delete stuff that conflicts with the new location!
+      List<MidiNoteClipEvent> toRemove = null;
+      for (MidiNoteClipEvent noteOn : this.events) {
+        // Find all notes that overlap with the target move in some way
+        if ((noteOn != editNoteOn) &&
+            noteOn.isNoteOn() &&
+            (noteOn.midiNote.getPitch() == toPitch) &&
+            CursorOp.isBefore(noteOn.cursor, toEnd) &&
+            CursorOp.isAfter(noteOn.getNoteOff().cursor, toCursor)) {
+          if (toRemove == null) {
+            toRemove = new ArrayList<>();
+          }
+          toRemove.add(noteOn);
+          toRemove.add(noteOn.partner);
+        }
+      }
+      if (toRemove != null) {
+        this.mutableEvents.removeAll(toRemove);
+      }
+    }
+
+
+    MidiNoteClipEvent editNoteOff = editNoteOn.getNoteOff();
+    editNoteOn.midiNote.setPitch(toPitch);
+    editNoteOff.midiNote.setPitch(toPitch);
+
+    if (!CursorOp.isEqual(editNoteOn.cursor, toCursor)) {
+      this.mutableEvents.remove(editNoteOn);
+      this.mutableEvents.remove(editNoteOff);
+      editNoteOn.setCursor(toCursor);
+      editNoteOff.cursor.set(toEnd);
+      // Re-insert at appropriate position
+      _insertEvent(editNoteOn);
+      _insertEvent(editNoteOff);
+    }
+
+    this.mutableEvents.commit();
+    this.onChange.bang();
   }
 
   @Override
