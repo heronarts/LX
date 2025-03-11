@@ -37,7 +37,26 @@ public abstract class MidiNote extends LXShortMessage {
     super(data);
   }
 
-  public abstract MidiNote mutableCopy();
+  public static MidiNote constructMutable(int command, int channel, int pitch, int velocity) throws InvalidMidiDataException {
+    final byte[] data = {
+      (byte) ((command & 0xF0) | (channel & 0x0F)),
+      (byte) pitch,
+      (byte) velocity
+    };
+    switch (command) {
+    case ShortMessage.NOTE_ON: return new MidiNoteOn.Mutable(data);
+    case ShortMessage.NOTE_OFF: return new MidiNoteOff(data);
+    default: throw new InvalidMidiDataException("MidiNote.constructMutable must take NOTE_ON or NOTE_OFF command");
+    }
+  }
+
+  public MidiNote mutableCopy() {
+    try {
+      return constructMutable(getCommand(), getChannel(), getPitch(), getVelocity());
+    } catch (InvalidMidiDataException imdx) {
+      throw new IllegalStateException("MidiNote.mutableCopy can't already hold bad data??? " + this);
+    }
+  }
 
   public static final int NUM_PITCHES = 128;
   public static final int MAX_VELOCITY = 127;

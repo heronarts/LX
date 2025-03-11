@@ -18,8 +18,6 @@
 
 package heronarts.lx.midi;
 
-import java.util.Arrays;
-
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
@@ -37,10 +35,10 @@ public class MidiNoteOn extends MidiNote {
     super(data);
   }
 
-  public static class MutableMidiNoteOn extends MidiNoteOn {
+  public static class Mutable extends MidiNoteOn {
 
-    private MutableMidiNoteOn(MidiNoteOn note) {
-      super(Arrays.copyOf(note.data, note.data.length));
+    Mutable(byte[] data) {
+      super(data);
     }
 
     @Override
@@ -50,11 +48,6 @@ public class MidiNoteOn extends MidiNote {
       }
       this.data[2] = (byte) (velocity & 0xFF);
     }
-  }
-
-  @Override
-  public MutableMidiNoteOn mutableCopy() {
-    return new MutableMidiNoteOn(this);
   }
 
   @Override

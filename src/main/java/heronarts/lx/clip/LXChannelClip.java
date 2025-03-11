@@ -118,7 +118,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
 
   @Override
   public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
-    if (isRunning() && this.bus.arm.isOn()) {
+    if (isRecording()) {
       this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, nextPattern));
     }
   }

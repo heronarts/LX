@@ -6,12 +6,9 @@ import java.util.ListIterator;
 import java.util.Set;
 
 import javax.sound.midi.InvalidMidiDataException;
-import javax.sound.midi.ShortMessage;
-
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOff;
 import heronarts.lx.parameter.MutableParameter;
@@ -104,28 +101,27 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   protected void recordNote(MidiNote note) {
     // Clip lanes disallow multiple notes stacked on the same pitch
     final int pitch = note.getPitch();
-    final MidiNoteClipEvent noteOn = this.noteStack[pitch];
+    final MidiNoteClipEvent existingNoteOn = this.noteStack[pitch];
     if (note.isNoteOn()) {
-      if (noteOn != null) {
+      if (existingNoteOn != null) {
         // Terminate the previously held note with a note-off
         try {
-          MidiNoteOff noteOff = new MidiNoteOff(note.getChannel(), pitch);
-          MidiNoteClipEvent noteOffEvent = new MidiNoteClipEvent(this, noteOff);
-          noteOn.setNoteOff(noteOffEvent);
-          recordEvent(noteOffEvent);
+          MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, new MidiNoteOff(note.getChannel(), pitch));
+          existingNoteOn.setNoteOff(noteOff);
+          recordEvent(noteOff);
           this.noteStack[pitch] = null;
         } catch (InvalidMidiDataException imdx) {
           // Not possible with args from a valid event
         }
       }
       // Record the new note on
-      recordEvent(this.noteStack[pitch] = new MidiNoteClipEvent(this, note));
+      recordEvent(this.noteStack[pitch] = new MidiNoteClipEvent(this, note.mutableCopy()));
     } else {
-      if (noteOn != null) {
+      if (existingNoteOn != null) {
         // Only record note-off events if the note was actually held!
-        MidiNoteClipEvent noteOffEvent = new MidiNoteClipEvent(this, note);
-        noteOn.setNoteOff(noteOffEvent);
-        recordEvent(noteOffEvent);
+        MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, note.mutableCopy());
+        existingNoteOn.setNoteOff(noteOff);
+        recordEvent(noteOff);
       }
       this.noteStack[pitch] = null;
     }
@@ -150,15 +146,13 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     int data1 = eventObj.get(MidiNoteClipEvent.KEY_DATA_1).getAsInt();
     int data2 = eventObj.get(MidiNoteClipEvent.KEY_DATA_2).getAsInt();
     try {
-      ShortMessage sm = new ShortMessage();
-      sm.setMessage(command, channel, data1, data2);
-      MidiNote midiNote = (MidiNote) LXShortMessage.fromShortMessage(sm);
+      MidiNote midiNote = MidiNote.constructMutable(command, channel, data1, data2);
       int pitch = midiNote.getPitch();
 
       MidiNoteClipEvent noteHeld = this.loadStack[pitch];
       if (midiNote.isNoteOn()) {
         if (noteHeld == null) {
-          MidiNoteClipEvent noteOnEvent = new MidiNoteClipEvent(this, (MidiNote) LXShortMessage.fromShortMessage(sm));
+          MidiNoteClipEvent noteOnEvent = new MidiNoteClipEvent(this, midiNote);
           this.loadStack[pitch] = noteOnEvent;
           return noteOnEvent;
         } else {
@@ -166,7 +160,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
         }
       } else {
         if (noteHeld != null) {
-          MidiNoteClipEvent noteOffEvent = new MidiNoteClipEvent(this, (MidiNote) LXShortMessage.fromShortMessage(sm));
+          MidiNoteClipEvent noteOffEvent = new MidiNoteClipEvent(this, midiNote);
           noteHeld.setNoteOff(noteOffEvent);
           this.loadStack[pitch] = null;
           return noteOffEvent;

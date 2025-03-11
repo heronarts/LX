@@ -262,7 +262,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private final LXParameterListener parameterRecorder = this::recordParameterChange;
 
   private void recordParameterChange(LXParameter p) {
-    if (isRunning() && this.bus.arm.isOn()) {
+    if (isRecording()) {
       LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
       ParameterClipLane lane = getParameterLane(parameter, true);
       if (!lane.isInOverdubPlayback() && lane.shouldRecordParameterChange(parameter)) {
