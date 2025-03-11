@@ -1,6 +1,9 @@
 package heronarts.lx.clip;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.ListIterator;
+import java.util.Set;
 
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
@@ -71,6 +74,31 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     this.mutableEvents.commit();
     this.onChange.bang();
     return this;
+  }
+
+  @Override
+  public boolean removeRange(Cursor from, Cursor to) {
+    // Use a set here since we'll add note on/off pairs without
+    // checking for redundancy
+    final Set<MidiNoteClipEvent> toRemove = new HashSet<>();
+    final ListIterator<MidiNoteClipEvent> iter = eventIterator(from);
+    final Cursor.Operator CursorOp = CursorOp();
+    while (iter.hasNext()) {
+      MidiNoteClipEvent event = iter.next();
+      if (CursorOp.isAfter(event.cursor, to)) {
+        break;
+      }
+      // Ensure we remove note on and off pairs
+      toRemove.add(event);
+      toRemove.add(event.partner);
+    }
+
+    if (!toRemove.isEmpty()) {
+      this.mutableEvents.removeAll(toRemove);
+      this.onChange.bang();
+      return true;
+    }
+    return false;
   }
 
   protected void recordNote(MidiNote note) {

@@ -9,7 +9,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 public class MidiNoteClipEvent extends LXClipEvent<MidiNoteClipEvent> {
 
   public final MidiNote midiNote;
-  private MidiNoteClipEvent partner;
+  MidiNoteClipEvent partner;
 
   MidiNoteClipEvent(MidiNoteClipLane lane, MidiNote midiNote) {
     super(lane);
