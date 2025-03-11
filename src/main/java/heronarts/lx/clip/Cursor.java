@@ -429,7 +429,8 @@ public class Cursor implements LXSerializable {
       double decimal = snapUnits - (long) snapUnits;
       if (decimal < SNAP_THRESHOLD) {
         // It's at the bottom
-        cursor.millis = (Math.floor(snapUnits) - 1) * snapSize.millis;
+        double multiple = LXUtils.max(0, Math.floor(snapUnits) - 1);
+        cursor.millis = multiple * snapSize.millis;
       } else {
         cursor.millis = Math.floor(snapUnits) * snapSize.millis;
       }
