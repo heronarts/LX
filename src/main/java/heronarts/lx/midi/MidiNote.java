@@ -39,9 +39,9 @@ public abstract class MidiNote extends LXShortMessage {
 
   public static MidiNote constructMutable(int command, int channel, int pitch, int velocity) throws InvalidMidiDataException {
     final byte[] data = {
-      (byte) ((command & 0xF0) | (channel & 0x0F)),
-      (byte) pitch,
-      (byte) velocity
+      (byte) ((command & 0xf0) | (channel & 0x0f)),
+      (byte) (pitch & 0xff),
+      (byte) (velocity & 0xff)
     };
     switch (command) {
     case ShortMessage.NOTE_ON: return new MidiNoteOn.Mutable(data);
