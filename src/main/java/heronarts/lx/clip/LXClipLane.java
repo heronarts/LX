@@ -31,6 +31,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand.Clip.Event.SetCursors.Operation;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXEngineThreadArrayList;
 import heronarts.lx.utils.LXUtils;
@@ -38,6 +39,7 @@ import heronarts.lx.utils.LXUtils;
 public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   public final MutableParameter uiHeight = new MutableParameter("UI Height");
+  public final BooleanParameter uiExpanded = new BooleanParameter("UI Expanded", true);
 
   public final MutableParameter onChange = new MutableParameter();
 
@@ -57,6 +59,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected LXClipLane(LXClip clip) {
     setParent(clip);
     this.clip = clip;
+    addInternalParameter("uiExpanded", this.uiExpanded);
     addInternalParameter("uiHeight", this.uiHeight);
   }
 
@@ -678,6 +681,8 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   @Override
   public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+
     final List<T> loadEvents = new ArrayList<>();
     if (obj.has(KEY_EVENTS)) {
       beginLoadEvents();
@@ -695,7 +700,6 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     // Update underlying threaded array list in one fell swoop
     this.mutableEvents.set(loadEvents);
-
     this.onChange.bang();
   }
 

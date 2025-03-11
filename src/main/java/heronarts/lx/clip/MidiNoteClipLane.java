@@ -11,11 +11,25 @@ import heronarts.lx.LX;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOff;
+import heronarts.lx.parameter.MutableParameter;
 
 public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
 
+  /**
+   * Zoom is specified as multiple of lane height
+   */
+  public final MutableParameter uiZoom =
+    new MutableParameter("UI Zoom", 4)
+    .setDescription("Amount of UI zoom on the MIDI clip lane");
+
+  public final MutableParameter uiOffset =
+    new MutableParameter("UI Offset", -1)
+    .setDescription("Scroll offset of MIDI piano roll");
+
   protected MidiNoteClipLane(LXClip clip) {
     super(clip);
+    addInternalParameter("uiZoom ", this.uiZoom);
+    addInternalParameter("uiOffset", this.uiOffset);
   }
 
   @Override
@@ -48,6 +62,15 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   @Override
   void loopCursor(Cursor to) {
     resetNoteStack(to);
+  }
+
+  public MidiNoteClipLane removeNote(MidiNoteClipEvent note) {
+    this.mutableEvents.begin();
+    this.mutableEvents.remove(note);
+    this.mutableEvents.remove(note.getNoteOff());
+    this.mutableEvents.commit();
+    this.onChange.bang();
+    return this;
   }
 
   protected void recordNote(MidiNote note) {

@@ -37,6 +37,8 @@ import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEvent;
 import heronarts.lx.clip.LXClipLane;
+import heronarts.lx.clip.MidiNoteClipEvent;
+import heronarts.lx.clip.MidiNoteClipLane;
 import heronarts.lx.clip.ParameterClipEvent;
 import heronarts.lx.clip.ParameterClipLane;
 import heronarts.lx.clip.PatternClipEvent;
@@ -3429,6 +3431,94 @@ public abstract class LXCommand {
             this.undoHook.run();
           }
         }
+      }
+
+      public static class Midi {
+
+        public static class RemoveNote extends LXCommand {
+
+          private final ComponentReference<MidiNoteClipLane> clipLane;
+          private final int noteOnIndex;
+          private final JsonObject preState;
+
+          public RemoveNote(MidiNoteClipLane clipLane, MidiNoteClipEvent midiNote) {
+            if (!midiNote.isNoteOn()) {
+              throw new IllegalArgumentException("Must pass NOTE ON to Clip.Event.Midi.RemoveNote");
+            }
+            this.clipLane = new ComponentReference<>(clipLane);
+            this.noteOnIndex = clipLane.events.indexOf(midiNote);
+            this.preState = LXSerializable.Utils.toObject(clipLane, true);
+          }
+
+          @Override
+          public String getDescription() {
+            return "Delete Note";
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            try {
+              final MidiNoteClipLane clipLane = this.clipLane.get();
+              clipLane.removeNote(clipLane.events.get(this.noteOnIndex));
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            this.clipLane.get().load(lx, this.preState);
+          }
+
+        }
+
+        public static class SetVelocity extends LXCommand {
+          private final ComponentReference<MidiNoteClipLane> clipLane;
+          private final int noteOnIndex;
+          private final int fromVelocity;
+          private int toVelocity;
+
+          public SetVelocity(MidiNoteClipLane clipLane, MidiNoteClipEvent midiNote) {
+            if (!midiNote.isNoteOn()) {
+              throw new IllegalArgumentException("Must pass NOTE ON to Clip.Event.Midi.SetVelocity");
+            }
+            this.clipLane = new ComponentReference<>(clipLane);
+            this.noteOnIndex = clipLane.events.indexOf(midiNote);
+            this.fromVelocity = midiNote.midiNote.getVelocity();
+            this.toVelocity = this.fromVelocity;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Change Velocity";
+          }
+
+          private void setVelocity(int velocity) throws InvalidCommandException {
+            try {
+              MidiNoteClipLane clipLane = this.clipLane.get();
+              clipLane.events.get(this.noteOnIndex).midiNote.setVelocity(velocity);
+              clipLane.onChange.bang();
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+
+          public SetVelocity update(int toVelocity) {
+            this.toVelocity = toVelocity;
+            return this;
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            setVelocity(this.toVelocity);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            setVelocity(this.fromVelocity);
+          }
+        }
+
       }
 
       public static class Pattern {
