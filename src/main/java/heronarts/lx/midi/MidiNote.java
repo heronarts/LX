@@ -33,7 +33,14 @@ public abstract class MidiNote extends LXShortMessage {
     super(message, command);
   }
 
+  MidiNote(byte[] data) {
+    super(data);
+  }
+
+  public abstract MidiNote mutableCopy();
+
   public static final int NUM_PITCHES = 128;
+  public static final int MAX_VELOCITY = 127;
 
   private final static String[] PITCH_STRINGS = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
@@ -69,6 +76,10 @@ public abstract class MidiNote extends LXShortMessage {
 
   public boolean isNoteOff() {
     return !isNoteOn();
+  }
+
+  public void setVelocity(int velocity) {
+    throw new IllegalStateException("May only MidiNote.setVelocity() on a mutable NOTE ON message");
   }
 
   /**

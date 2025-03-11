@@ -39,8 +39,10 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
 
   @Override
   public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
-    if (message instanceof MidiNote) {
-      this.midiNoteLane.recordNote((MidiNote) message);
+    if (message instanceof MidiNote note) {
+      // Make a mutable copy here, the same note may end up in many clips and they
+      // each may modify it in different ways (e.g. editing note velocity)
+      this.midiNoteLane.recordNote(note.mutableCopy());
     }
   }
 
