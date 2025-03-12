@@ -196,6 +196,59 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     Arrays.fill(this.loadEventNoteStack, null);
   }
 
+  public boolean isClear(int pitch, Cursor from, Cursor to) {
+    Cursor.Operator CursorOp = CursorOp();
+    for (MidiNoteClipEvent noteOn : this.events) {
+      if (CursorOp.isAfter(noteOn.cursor, to)) {
+        return true;
+      }
+      if (noteOn.isNoteOn() && (noteOn.midiNote.getPitch() == pitch)) {
+        MidiNoteClipEvent noteOff = noteOn.getNoteOff();
+        if (noteOff == null) {
+          return false;
+        }
+        if (CursorOp.isAfter(noteOff.cursor, from)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private void _insertNote(MidiNoteClipEvent noteOn, MidiNoteClipEvent noteOff) {
+    // Insert properly, note on goes *after* last note-off of the same note
+    int insertIndex = cursorInsertIndex(noteOn.cursor);
+    this.mutableEvents.add(insertIndex, noteOn);
+    if (CursorOp().isEqual(noteOn.cursor, noteOff.cursor)) {
+      // Zero-length notes allowed! Ensure note on/off are sequential adjacent
+      this.mutableEvents.add(insertIndex + 1, noteOff);
+    } else {
+      // Ensure the note off goes *before* any subsequent noteOn of the same pitch
+      this.mutableEvents.add(cursorPlayIndex(noteOff.cursor), noteOff);
+    }
+  }
+
+  public MidiNoteClipEvent insertNote(int pitch, int velocity, Cursor from, Cursor to) {
+    if (!isClear(pitch, from, to)) {
+      return null;
+    }
+    try {
+      MidiNoteClipEvent noteOn = new MidiNoteClipEvent(this, ShortMessage.NOTE_ON, 0, pitch, velocity);
+      MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, ShortMessage.NOTE_OFF, 0, pitch, 0);
+      noteOn.setNoteOff(noteOff);
+      noteOn.setCursor(from);
+      noteOff.setCursor(to);
+
+      this.mutableEvents.begin();
+      _insertNote(noteOn, noteOff);
+      this.mutableEvents.commit();
+      this.onChange.bang();
+
+      return noteOn;
+    } catch (InvalidMidiDataException imdx) {
+      return null;
+    }
+  }
 
   public void editNote(MidiNoteClipEvent editNoteOn, int toPitch, Cursor toStart, Cursor toEnd, List<MidiNoteClipEvent> restoreOriginal, boolean checkDelete) {
     Cursor.Operator CursorOp = CursorOp();
@@ -251,17 +304,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       // Update cursors
       editNoteOn.cursor.set(toStart);
       editNoteOff.cursor.set(toEnd);
-
-      // Re-insert properly, note on goes *after* last note-off of the same note
-      int insertIndex = cursorInsertIndex(editNoteOn.cursor);
-      this.mutableEvents.add(insertIndex, editNoteOn);
-      if (CursorOp.isEqual(editNoteOn.cursor, editNoteOff.cursor)) {
-        // Zero-length notes allowed! Ensure note on/off are sequential adjacent
-        this.mutableEvents.add(insertIndex + 1, editNoteOff);
-      } else {
-        // Ensure the note off goes *before* any subsequent noteOn of the same pitch
-        this.mutableEvents.add(cursorPlayIndex(editNoteOff.cursor), editNoteOff);
-      }
+      _insertNote(editNoteOn, editNoteOff);
     }
 
     this.mutableEvents.commit();

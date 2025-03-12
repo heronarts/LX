@@ -3439,6 +3439,56 @@ public abstract class LXCommand {
 
       public static class Midi {
 
+        public static class InsertNote extends LXCommand {
+
+          private final ComponentReference<MidiNoteClipLane> clipLane;
+          private final int pitch;
+          private final int velocity;
+          private final Cursor from, to;
+          private int noteOnIndex = -1;
+
+          public InsertNote(MidiNoteClipLane clipLane, int pitch, int velocity, Cursor from, Cursor to) {
+            this.clipLane = new ComponentReference<>(clipLane);
+            this.pitch = pitch;
+            this.velocity = velocity;
+            this.from = from.clone();
+            this.to = to.clone();
+          }
+
+          @Override
+          public String getDescription() {
+            return "Add Note";
+          }
+
+          @Override
+          public boolean isIgnored() {
+            return this.noteOnIndex < 0;
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            MidiNoteClipLane clipLane = this.clipLane.get();
+            MidiNoteClipEvent noteOn = clipLane.insertNote(this.pitch, this.velocity, this.from, this.to);
+            if (noteOn == null) {
+              this.noteOnIndex = -1;
+            } else {
+              this.noteOnIndex = clipLane.events.indexOf(noteOn);
+            }
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            if (this.noteOnIndex >= 0) {
+              try {
+                final MidiNoteClipLane clipLane = this.clipLane.get();
+                clipLane.removeNote(clipLane.events.get(this.noteOnIndex));
+              } catch (Exception x) {
+                throw new InvalidCommandException(x);
+              }
+            }
+          }
+        }
+
         public static class RemoveNote extends LXCommand {
 
           private final ComponentReference<MidiNoteClipLane> clipLane;

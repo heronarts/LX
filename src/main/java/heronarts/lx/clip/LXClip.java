@@ -1128,9 +1128,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private void runFirstRecording() {
     // Write any queued events
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.commitRecordEvents();
-    }
+    commitRecordCursor();
 
     // Recording mode... lane and event listeners will pick up and record
     // all the events. All we need to do here is update the clip length
