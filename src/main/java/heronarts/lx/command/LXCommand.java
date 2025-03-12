@@ -3538,6 +3538,9 @@ public abstract class LXCommand {
             if (!midiNote.isNoteOn()) {
               throw new IllegalArgumentException("Must pass NOTE ON to Clip.Event.Midi.EditNote");
             }
+            if (midiNote.getNoteOff() == null) {
+              throw new IllegalArgumentException("EditNote must have valid note-off pair");
+            }
             this.clipLane = new ComponentReference<>(clipLane);
             this.noteOnIndex = clipLane.events.indexOf(midiNote);
             this.fromPitch = midiNote.midiNote.getPitch();

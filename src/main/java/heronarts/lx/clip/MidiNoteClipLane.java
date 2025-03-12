@@ -68,7 +68,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   public MidiNoteClipLane removeNote(MidiNoteClipEvent note) {
     this.mutableEvents.begin();
     this.mutableEvents.remove(note);
-    this.mutableEvents.remove(note.getNoteOff());
+    this.mutableEvents.remove(note.getNoteOff()); // no-op if null
     this.mutableEvents.commit();
     this.onChange.bang();
     return this;
@@ -81,22 +81,25 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     List<MidiNoteClipEvent> toRemove = null;
     final Cursor.Operator CursorOp = CursorOp();
     for (MidiNoteClipEvent noteOn : this.events) {
-      if (noteOn.isNoteOn() &&
-          CursorOp.isBefore(noteOn.cursor, to) &&
-          CursorOp.isAfter(noteOn.getNoteOff().cursor, from)) {
-
-        // Ensure we remove note on and off pairs
-        if (toRemove == null) {
-          toRemove = new ArrayList<>();
-        }
-        toRemove.add(noteOn);
-        toRemove.add(noteOn.getNoteOff());
-      }
       if (CursorOp.isAfter(noteOn.cursor, to)) {
         break;
       }
+      if (noteOn.isNoteOn() && CursorOp.isBefore(noteOn.cursor, to)) {
+        // Check that noteOff exists... it might be absent when we're actively
+        // in recording mode and a note is being held. Don't delete it
+        // from the range in that case (who is trying to delete as they record
+        // anyways??)
+        MidiNoteClipEvent noteOff = noteOn.getNoteOff();
+        if ((noteOff != null) && CursorOp.isAfter(noteOff.cursor, from)) {
+          // Ensure we remove note on and off pairs
+          if (toRemove == null) {
+            toRemove = new ArrayList<>();
+          }
+          toRemove.add(noteOn);
+          toRemove.add(noteOff);
+        }
+      }
     }
-
     if (toRemove != null) {
       this.mutableEvents.removeAll(toRemove);
       this.onChange.bang();
@@ -198,7 +201,6 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     Cursor.Operator CursorOp = CursorOp();
 
     this.mutableEvents.begin();
-
     if ((restoreOriginal != null) && (restoreOriginal.size() != this.events.size())) {
       this.mutableEvents.set(restoreOriginal);
     }
@@ -207,26 +209,32 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       // Delete stuff that conflicts with the new location!
       List<MidiNoteClipEvent> toRemove = null;
       for (MidiNoteClipEvent noteOn : this.events) {
+        // Notes after toEnd can't possibly overlap
+        if (CursorOp.isAfter(noteOn.cursor, toEnd)) {
+          break;
+        }
         // Find all notes that overlap with the target move in some way
         if ((noteOn != editNoteOn) &&
             noteOn.isNoteOn() &&
             (noteOn.midiNote.getPitch() == toPitch) &&
-            CursorOp.isBefore(noteOn.cursor, toEnd) &&
-            CursorOp.isAfter(noteOn.getNoteOff().cursor, toStart)) {
-          if (toRemove == null) {
-            toRemove = new ArrayList<>();
+            CursorOp.isBefore(noteOn.cursor, toEnd)) {
+
+          // Check for existence of noteOff. It might not exist if we're actively in recording
+          // mode. Trying to drag some other note over an actively-recording note?? Unclear how
+          // this is going to play out...
+          MidiNoteClipEvent noteOff = noteOn.getNoteOff();
+          if ((noteOff != null) && CursorOp.isAfter(noteOn.getNoteOff().cursor, toStart)) {
+            if (toRemove == null) {
+              toRemove = new ArrayList<>();
+            }
+            toRemove.add(noteOn);
+            toRemove.add(noteOff);
           }
-          toRemove.add(noteOn);
-          toRemove.add(noteOn.getNoteOff());
-        }
-        if (CursorOp.isAfter(noteOn.cursor, toEnd)) {
-          break;
         }
       }
       if (toRemove != null) {
         this.mutableEvents.removeAll(toRemove);
       }
-
     }
 
     MidiNoteClipEvent editNoteOff = editNoteOn.getNoteOff();
