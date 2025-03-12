@@ -3668,7 +3668,9 @@ public abstract class LXCommand {
           public void undo(LX lx) throws InvalidCommandException {
             if (this.noteOn != null) {
               super.undo(lx);
-              this.clipLane.get().removeNote(this.noteOn);
+              MidiNoteClipLane clipLane = this.clipLane.get();
+              MidiNoteClipEvent event = clipLane.events.get(this.noteOnIndex);
+              clipLane.removeNote(event);
               this.noteOn = null;
             }
           }

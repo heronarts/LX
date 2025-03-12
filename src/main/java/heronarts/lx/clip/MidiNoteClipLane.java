@@ -254,9 +254,9 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     Cursor.Operator CursorOp = CursorOp();
 
     this.mutableEvents.begin();
-    if (restoreOriginal.size() != this.events.size()) {
-      this.mutableEvents.set(restoreOriginal);
-    }
+
+    // The edit may have caused deletions or re-orderings, first put the array back how it was
+    this.mutableEvents.set(restoreOriginal);
 
     if (checkDelete) {
       // Delete stuff that conflicts with the new location!
