@@ -250,11 +250,11 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     }
   }
 
-  public void editNote(MidiNoteClipEvent editNoteOn, int toPitch, Cursor toStart, Cursor toEnd, List<MidiNoteClipEvent> restoreOriginal, boolean checkDelete) {
+  public void editNote(MidiNoteClipEvent editNoteOn, int toPitch, int toVelocity, Cursor toStart, Cursor toEnd, List<MidiNoteClipEvent> restoreOriginal, boolean checkDelete) {
     Cursor.Operator CursorOp = CursorOp();
 
     this.mutableEvents.begin();
-    if ((restoreOriginal != null) && (restoreOriginal.size() != this.events.size())) {
+    if (restoreOriginal.size() != this.events.size()) {
       this.mutableEvents.set(restoreOriginal);
     }
 
@@ -289,6 +289,8 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
         this.mutableEvents.removeAll(toRemove);
       }
     }
+
+    editNoteOn.midiNote.setVelocity(toVelocity);
 
     MidiNoteClipEvent editNoteOff = editNoteOn.getNoteOff();
     editNoteOn.midiNote.setPitch(toPitch);
