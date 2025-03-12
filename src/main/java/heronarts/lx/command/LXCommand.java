@@ -3763,24 +3763,34 @@ public abstract class LXCommand {
 
         public static class MoveEvent extends LXCommand {
 
-          private final ComponentReference<PatternClipLane> clipLane;
-          private final int eventIndex;
-          private final Cursor fromCursor;
-          private final int fromPatternIndex;
-          private final Cursor toCursor;
-          private int toPatternIndex;
+          protected final ComponentReference<PatternClipLane> clipLane;
+          protected int eventIndex;
+          protected final Cursor fromCursor;
+          protected final Cursor toCursor;
+
+          protected int fromPatternIndex;
+          protected int toPatternIndex;
+
+          protected MoveEvent(PatternClipLane lane, Cursor cursor) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.fromCursor = cursor.clone();
+            this.toCursor = cursor.clone();
+          }
 
           public MoveEvent(PatternClipLane lane, PatternClipEvent clipEvent) {
-            this.clipLane = new ComponentReference<>(lane);
-            this.fromCursor = clipEvent.cursor.clone();
-            this.toCursor = clipEvent.cursor.clone();
-            this.eventIndex = lane.events.indexOf(clipEvent);
-            this.fromPatternIndex = clipEvent.getPattern().getIndex();
+            this(lane, clipEvent, clipEvent.cursor);
           }
 
           public MoveEvent(PatternClipLane lane, PatternClipEvent clipEvent, Cursor cursor) {
-            this(lane, clipEvent);
+            this(lane, clipEvent.cursor);
+            setEvent(clipEvent);
             this.toCursor.set(cursor);
+            this.toPatternIndex = clipEvent.getPattern().getIndex();
+          }
+
+          protected void setEvent(PatternClipEvent clipEvent) {
+            this.eventIndex = this.clipLane.get().events.indexOf(clipEvent);
+            this.fromPatternIndex = clipEvent.getPattern().getIndex();
           }
 
           public MoveEvent update(Cursor cursor, int toPatternIndex) {
@@ -3813,6 +3823,45 @@ public abstract class LXCommand {
           @Override
           public void undo(LX lx) throws InvalidCommandException {
             moveTo(this.fromCursor, this.fromPatternIndex);
+          }
+
+        }
+
+        public static class InsertEvent extends MoveEvent {
+
+          private PatternClipEvent event = null;
+
+          public InsertEvent(PatternClipLane clipLane, Cursor cursor, int patternIndex) {
+            super(clipLane, cursor);
+            this.fromPatternIndex = patternIndex;
+            this.toPatternIndex = patternIndex;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Add Pattern Change";
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            if (this.event == null) {
+              PatternClipLane clipLane = this.clipLane.get();
+              this.event = new PatternClipEvent(clipLane, this.fromCursor, this.fromPatternIndex);
+              clipLane.insertEvent(this.event);
+              setEvent(this.event);
+            }
+            super.perform(lx);
+          }
+
+          public PatternClipEvent getEvent() {
+            return this.event;
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            PatternClipLane clipLane = this.clipLane.get();
+            clipLane.removeEvent(clipLane.events.get(this.eventIndex));
+            this.event = null;
           }
 
         }
