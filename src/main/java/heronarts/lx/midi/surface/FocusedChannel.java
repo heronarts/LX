@@ -57,12 +57,12 @@ public class FocusedChannel {
       this.focusedChannel = (LXChannel) channel;
       this.focusedChannel.controlSurfaceSemaphore.increment();
     }
+    this.listener.onChannelFocused(channel);
   }
 
   private void onChannelFocused(LXParameter p) {
     LXBus bus = this.isAux ? this.lx.engine.mixer.getFocusedChannelAux() : this.lx.engine.mixer.getFocusedChannel();
     setFocusedChannel(bus);
-    this.listener.onChannelFocused(bus);
   }
 
   public void register() {
