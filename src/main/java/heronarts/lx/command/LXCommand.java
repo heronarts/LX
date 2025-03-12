@@ -3534,8 +3534,8 @@ public abstract class LXCommand {
           protected final int fromPitch;
           protected final int fromVelocity;
 
-          private Cursor toStart;
-          private Cursor toEnd;
+          private final Cursor toStart;
+          private final Cursor toEnd;
           private int toPitch;
           private int toVelocity;
 
@@ -3545,6 +3545,11 @@ public abstract class LXCommand {
             this.fromVelocity = velocity;
             this.fromStart = start.clone();
             this.fromEnd = end.clone();
+
+            this.toPitch = pitch;
+            this.toVelocity = velocity;
+            this.toStart = start.clone();
+            this.toEnd = end.clone();
           }
 
           public EditNote(MidiNoteClipLane clipLane, MidiNoteClipEvent noteOn) {
@@ -3565,10 +3570,6 @@ public abstract class LXCommand {
               throw new IllegalArgumentException("EditNote must have valid note-off pair");
             }
             this.noteOnIndex = this.clipLane.get().events.indexOf(midiNote);
-            this.toPitch = midiNote.midiNote.getPitch();
-            this.toVelocity = midiNote.midiNote.getVelocity();
-            this.toStart = midiNote.cursor.clone();
-            this.toEnd = midiNote.getNoteOff().cursor.clone();
           }
 
           @Override
@@ -3630,8 +3631,8 @@ public abstract class LXCommand {
 
           private MidiNoteClipEvent noteOn = null;
 
-          public InsertNote(MidiNoteClipLane clipLane, int pitch, int velocity, Cursor from, Cursor to) {
-            super(clipLane, pitch, velocity, from, to);
+          public InsertNote(MidiNoteClipLane clipLane, int pitch, int velocity, Cursor start, Cursor end) {
+            super(clipLane, pitch, velocity, start, end);
           }
 
           @Override
@@ -3646,11 +3647,13 @@ public abstract class LXCommand {
 
           @Override
           public void perform(LX lx) throws InvalidCommandException {
-            if (this.noteOnIndex < 0) {
+            if (this.noteOn == null) {
               MidiNoteClipLane clipLane = this.clipLane.get();
               this.noteOn = clipLane.insertNote(this.fromPitch, this.fromVelocity, this.fromStart, this.fromEnd);
               if (this.noteOn != null) {
                 setNote(this.noteOn);
+                // NOTE: This is crucial in the redo() case, the toValues may have been updated!
+                super.perform(lx);
               }
             } else {
               super.perform(lx);
@@ -3664,11 +3667,7 @@ public abstract class LXCommand {
           @Override
           public void undo(LX lx) throws InvalidCommandException {
             if (this.noteOn != null) {
-              if (this.originalEvents != null) {
-                // Undo destructive edits from note length change
-                super.undo(lx);
-              }
-              // Remove the note itself
+              super.undo(lx);
               this.clipLane.get().removeNote(this.noteOn);
               this.noteOn = null;
             }
