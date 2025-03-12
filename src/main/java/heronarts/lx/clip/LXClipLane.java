@@ -685,7 +685,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
     final List<T> loadEvents = new ArrayList<>();
     if (obj.has(KEY_EVENTS)) {
-      beginLoadEvents();
+      beginLoadEvents(loadEvents);
       JsonArray eventsArr = obj.get(KEY_EVENTS).getAsJsonArray();
       for (JsonElement eventElem : eventsArr) {
         JsonObject eventObj = eventElem.getAsJsonObject();
@@ -695,7 +695,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
           loadEvents.add(event);
         }
       }
-      endLoadEvents();
+      endLoadEvents(loadEvents);
     }
 
     // Update underlying threaded array list in one fell swoop
@@ -703,9 +703,9 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     this.onChange.bang();
   }
 
-  protected void beginLoadEvents() {}
+  protected void beginLoadEvents(List<T> loadEvents) {}
 
-  protected void endLoadEvents() {}
+  protected void endLoadEvents(List<T> loadEvents) {}
 
   protected abstract T loadEvent(LX lx, JsonObject eventObj);
 

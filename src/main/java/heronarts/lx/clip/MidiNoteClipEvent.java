@@ -1,5 +1,7 @@
 package heronarts.lx.clip;
 
+import javax.sound.midi.InvalidMidiDataException;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -9,7 +11,11 @@ import heronarts.lx.mixer.LXAbstractChannel;
 public class MidiNoteClipEvent extends LXClipEvent<MidiNoteClipEvent> {
 
   public final MidiNote midiNote;
-  MidiNoteClipEvent partner;
+  private MidiNoteClipEvent partner;
+
+  MidiNoteClipEvent(MidiNoteClipLane lane, int command, int channel, int data1, int data2) throws InvalidMidiDataException {
+    this(lane, MidiNote.constructMutable(command, channel, data1, data2));
+  }
 
   MidiNoteClipEvent(MidiNoteClipLane lane, MidiNote midiNote) {
     super(lane);
@@ -18,6 +24,10 @@ public class MidiNoteClipEvent extends LXClipEvent<MidiNoteClipEvent> {
 
   public boolean isNoteOn() {
     return this.midiNote.isNoteOn();
+  }
+
+  public boolean isNoteOff() {
+    return this.midiNote.isNoteOff();
   }
 
   void setNoteOff(MidiNoteClipEvent noteOff) {

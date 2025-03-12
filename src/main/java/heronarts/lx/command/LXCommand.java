@@ -3527,8 +3527,10 @@ public abstract class LXCommand {
           private final ComponentReference<MidiNoteClipLane> clipLane;
           private final int noteOnIndex;
           private List<MidiNoteClipEvent> originalEvents = null;
-          private final Cursor fromCursor;
-          private final Cursor toCursor;
+          private final Cursor fromStart;
+          private final Cursor toStart;
+          private final Cursor fromEnd;
+          private final Cursor toEnd;
           private final int fromPitch;
           private int toPitch;
 
@@ -3539,9 +3541,11 @@ public abstract class LXCommand {
             this.clipLane = new ComponentReference<>(clipLane);
             this.noteOnIndex = clipLane.events.indexOf(midiNote);
             this.fromPitch = midiNote.midiNote.getPitch();
-            this.fromCursor = midiNote.cursor.clone();
             this.toPitch = this.fromPitch;
-            this.toCursor = midiNote.cursor.clone();
+            this.fromStart = midiNote.cursor.clone();
+            this.toStart = midiNote.cursor.clone();
+            this.fromEnd = midiNote.getNoteOff().cursor.clone();
+            this.toEnd = midiNote.getNoteOff().cursor.clone();
           }
 
           @Override
@@ -3554,14 +3558,15 @@ public abstract class LXCommand {
             return this;
           }
 
-          public EditNote updateCursor(Cursor cursor) {
-            this.toCursor.set(cursor);
+          public EditNote updateCursor(Cursor start, Cursor end) {
+            this.toStart.set(start);
+            this.toEnd.set(end);
             return this;
           }
 
-          public EditNote update(int pitch, Cursor cursor) {
-            this.toPitch = pitch;
-            this.toCursor.set(cursor);
+          public EditNote update(int pitch, Cursor start, Cursor end) {
+            updatePitch(pitch);
+            updateCursor(start, end);
             return this;
           }
 
@@ -3571,7 +3576,7 @@ public abstract class LXCommand {
             if (this.originalEvents == null) {
               this.originalEvents = new ArrayList<>(clipLane.events);
             }
-            clipLane.editNote(this.originalEvents.get(this.noteOnIndex), this.toPitch, this.toCursor, this.originalEvents, true);
+            clipLane.editNote(this.originalEvents.get(this.noteOnIndex), this.toPitch, this.toStart, this.toEnd, this.originalEvents, true);
           }
 
           @Override
@@ -3581,7 +3586,7 @@ public abstract class LXCommand {
             }
             MidiNoteClipLane clipLane = this.clipLane.get();
             MidiNoteClipEvent noteOn = this.originalEvents.get(this.noteOnIndex);
-            clipLane.editNote(noteOn, this.fromPitch, this.fromCursor, this.originalEvents, false);
+            clipLane.editNote(noteOn, this.fromPitch, this.fromStart, this.fromEnd, this.originalEvents, false);
             this.originalEvents = null;
           }
         }
