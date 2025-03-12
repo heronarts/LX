@@ -197,13 +197,12 @@ public class Cursor implements LXSerializable {
      * @param cursor Cursor to constrain
      * @param min Minimum acceptable cursor value
      * @param max Maximum acceptable cursor value
-     * @return
+     * @return This cursor, modified to fall within bounds
      */
     public default Cursor constrain(Cursor cursor, Cursor min, Cursor max) {
       if (isBefore(cursor, min)) {
         cursor.set(min);
-      }
-      if (isAfter(cursor, max)) {
+      } else if (isAfter(cursor, max)) {
         cursor.set(max);
       }
       return cursor;
