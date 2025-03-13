@@ -672,7 +672,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Safely set the loop end marker to a specific value (in time units)
    *
    * @param loopEnd Cursor position on the timeline
-   * @param return this
+   * @return this
    */
   public LXClip setLoopEnd(Cursor loopEnd) {
     final Cursor oldEnd = this.loopEnd.cursor.clone();
