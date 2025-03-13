@@ -40,6 +40,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   public final MutableParameter uiHeight = new MutableParameter("UI Height");
   public final BooleanParameter uiExpanded = new BooleanParameter("UI Expanded", true);
+  public final BooleanParameter uiMaximized = new BooleanParameter("UI Maximized", false);
 
   public final MutableParameter onChange = new MutableParameter();
 
@@ -59,8 +60,9 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected LXClipLane(LXClip clip) {
     setParent(clip);
     this.clip = clip;
-    addInternalParameter("uiExpanded", this.uiExpanded);
     addInternalParameter("uiHeight", this.uiHeight);
+    addInternalParameter("uiExpanded", this.uiExpanded);
+    addInternalParameter("uiMaximized", this.uiMaximized);
   }
 
   void resetOverdub() {
