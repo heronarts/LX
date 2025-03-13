@@ -3612,7 +3612,11 @@ public abstract class LXCommand {
             if (this.originalEvents == null) {
               this.originalEvents = new ArrayList<>(clipLane.events);
             }
-            clipLane.editNote(this.originalEvents.get(this.noteOnIndex), this.toPitch, this.toVelocity, this.toStart, this.toEnd, this.originalEvents, true);
+            Cursor.Operator CursorOp = clipLane.clip.CursorOp();
+            boolean cursorMoved =
+              !CursorOp.isEqual(this.fromStart, this.toStart) ||
+              !CursorOp.isEqual(this.fromEnd, this.toEnd);
+            clipLane.editNote(this.originalEvents.get(this.noteOnIndex), this.toPitch, this.toVelocity, this.toStart, this.toEnd, this.originalEvents, true, cursorMoved);
           }
 
           @Override
@@ -3622,7 +3626,7 @@ public abstract class LXCommand {
             }
             MidiNoteClipLane clipLane = this.clipLane.get();
             MidiNoteClipEvent noteOn = this.originalEvents.get(this.noteOnIndex);
-            clipLane.editNote(noteOn, this.fromPitch, this.fromVelocity, this.fromStart, this.fromEnd, this.originalEvents, false);
+            clipLane.editNote(noteOn, this.fromPitch, this.fromVelocity, this.fromStart, this.fromEnd, this.originalEvents, false, false);
             this.originalEvents = null;
           }
         }

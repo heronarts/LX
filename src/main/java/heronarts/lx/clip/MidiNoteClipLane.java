@@ -250,7 +250,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     }
   }
 
-  public void editNote(MidiNoteClipEvent editNoteOn, int toPitch, int toVelocity, Cursor toStart, Cursor toEnd, List<MidiNoteClipEvent> restoreOriginal, boolean checkDelete) {
+  public void editNote(MidiNoteClipEvent editNoteOn, int toPitch, int toVelocity, Cursor toStart, Cursor toEnd, List<MidiNoteClipEvent> restoreOriginal, boolean checkDelete, boolean cursorMoved) {
     Cursor.Operator CursorOp = CursorOp();
 
     this.mutableEvents.begin();
@@ -262,14 +262,18 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       // Delete stuff that conflicts with the new location!
       List<MidiNoteClipEvent> toRemove = null;
       for (MidiNoteClipEvent noteOn : this.events) {
+        if (noteOn.isNoteOff() || (noteOn == editNoteOn)) {
+          // Skip note-off messages or note being edited
+          continue;
+        }
+
         // Notes after toEnd can't possibly overlap
         if (CursorOp.isAfter(noteOn.cursor, toEnd)) {
           break;
         }
+
         // Find all notes that overlap with the target move in some way
-        if ((noteOn != editNoteOn) &&
-            noteOn.isNoteOn() &&
-            (noteOn.midiNote.getPitch() == toPitch) &&
+        if ((noteOn.midiNote.getPitch() == toPitch) &&
             CursorOp.isBefore(noteOn.cursor, toEnd)) {
 
           // Check for existence of noteOff. It might not exist if we're actively in recording
@@ -290,22 +294,21 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       }
     }
 
+    // Update velocity
     editNoteOn.midiNote.setVelocity(toVelocity);
 
+    // Update pitch
     MidiNoteClipEvent editNoteOff = editNoteOn.getNoteOff();
     editNoteOn.midiNote.setPitch(toPitch);
     editNoteOff.midiNote.setPitch(toPitch);
 
-    if (!CursorOp.isEqual(editNoteOn.cursor, toStart) ||
-        !CursorOp.isEqual(editNoteOff.cursor, toEnd)) {
-
-      // Remove
+    // Move position
+    editNoteOn.cursor.set(toStart);
+    editNoteOff.cursor.set(toEnd);
+    if (cursorMoved) {
+      // Need to ensure proper ordering if cursors were modified from original
       this.mutableEvents.remove(editNoteOn);
       this.mutableEvents.remove(editNoteOff);
-
-      // Update cursors
-      editNoteOn.cursor.set(toStart);
-      editNoteOff.cursor.set(toEnd);
       _insertNote(editNoteOn, editNoteOff);
     }
 
