@@ -153,10 +153,16 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * @return Iterator beginning at fromCursor
    */
   public ListIterator<T> eventIterator(List<T> events, Cursor fromCursor, boolean inclusive) {
-    int index = LXUtils.constrain(_cursorIndex(events, fromCursor, inclusive), 0, events.size());
-    return events.listIterator(index);
+    return events.listIterator(eventIndex(events, fromCursor, inclusive));
   }
 
+  public int eventIndex(List<T> events, Cursor fromCursor, boolean inclusive) {
+    return eventIndex(events, fromCursor, inclusive, 0);
+  }
+
+  public int eventIndex(List<T> events, Cursor fromCursor, boolean inclusive, int offset) {
+    return LXUtils.constrain(_cursorIndex(events, fromCursor, inclusive) + offset, 0, events.size());
+  }
 
   private int _cursorIndex(List<T> events, Cursor cursor, boolean inclusive) {
     final int geq = inclusive ? -1 : 0;
