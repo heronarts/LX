@@ -170,7 +170,7 @@ public class LXDynamicColor extends LXModulatorComponent implements LXOscCompone
       }
 
     case CYCLE:
-      return this.color.hue.getValue() + this.basis.getValue() * 360;
+      return (this.color.hue.getValue() + this.basis.getValue() * 360) % 360;
 
     default:
     case FIXED:
