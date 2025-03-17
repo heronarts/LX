@@ -211,7 +211,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Stop playback of the clip
    */
   public final QuantizedTriggerParameter stop =
-    new QuantizedTriggerParameter.Launch(lx, "Stop", this::stop)
+    new QuantizedTriggerParameter.Launch(lx, "Stop", this::_launchStop)
     .setDescription("Stop this clip");
 
   protected final List<LXClipLane<?>> mutableLanes = new ArrayList<>();
@@ -437,6 +437,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return "clip/" + (index + 1);
   }
 
+  private boolean isQuantizedLaunch = false;
+
   /**
    * Invoked when we launch from the main launch() function or grid trigger. In this case
    * we also recall snapshots.
@@ -455,7 +457,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * we also recall snapshots
    */
   private void _launchAutomation() {
+    this.isQuantizedLaunch = true;
     this.trigger.trigger();
+  }
+
+  private void _launchStop() {
+    // TODO(clips): what we actually need to do here is finish running the cursor up to
+    // the quantization boundary and then stop running there
+    stop();
   }
 
   private void setTransportReference(boolean quantize) {
@@ -484,15 +493,22 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.startCursorReference.set(this.cursor);
   }
 
+  private void launchTransport() {
+    setCursor(this.launchFromCursor.constrain(this));
+    setTransportReference(this.isQuantizedLaunch);
+    this.isQuantizedLaunch = false;
+  }
+
   @Override
   protected void onTrigger() {
     super.onTrigger();
     if (isRunning()) {
       // This is a "restart" operation, we were already running but we've been re-triggered
-      // Retrieve and apply the launchFrom position
-      setCursor(this.launchFromCursor.constrain(this));
-      setTransportReference(true);
+      // Call launchTransport directly here because onStart() will not be invoked as per a
+      // normal launch-from-stopped situation
+      launchTransport();
     }
+
   }
 
   @Override
@@ -804,10 +820,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         clip.stop();
       }
     }
-    // Retrieve and apply the launchFrom position
-    setCursor(this.launchFromCursor.constrain(this));
-
-    setTransportReference(true);
+    // Kick off the transport
+    launchTransport();
 
     // Perform any cursor initialization at this point
     initializeCursor(this.cursor);
