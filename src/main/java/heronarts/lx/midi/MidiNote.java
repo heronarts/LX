@@ -66,6 +66,7 @@ public abstract class MidiNote extends LXShortMessage {
   }
 
   public static final int NUM_PITCHES = 128;
+  public static final int NUM_CHANNELS = 16;
   public static final int MAX_VELOCITY = 127;
 
   private final static String[] PITCH_STRINGS = {
@@ -104,6 +105,16 @@ public abstract class MidiNote extends LXShortMessage {
     return !isNoteOn();
   }
 
+  public void setChannel(int channel) {
+    if (!this.isMutable) {
+      throw new IllegalStateException("May not setPitch() on non-mutable MIDI note");
+    }
+    if (!LXUtils.inRange(channel, 0, NUM_CHANNELS - 1)) {
+      throw new IllegalArgumentException("Channel must fall in range [0-" + (NUM_CHANNELS-1) + "]");
+    }
+    this.data[0] = (byte) (getCommand() | (channel & 0x0F));
+  }
+
   public void setPitch(int pitch) {
     if (!this.isMutable) {
       throw new IllegalStateException("May not setPitch() on non-mutable MIDI note");
@@ -128,7 +139,7 @@ public abstract class MidiNote extends LXShortMessage {
    * Keeps count of a stack of midi notes
    */
   public static class Stack {
-    private int[] notes = new int[128];
+    private int[] notes = new int[NUM_PITCHES];
     private int noteCount = 0;
 
     public void onMidiNote(MidiNote note) {
@@ -142,11 +153,6 @@ public abstract class MidiNote extends LXShortMessage {
           --this.noteCount;
         }
       }
-    }
-
-    public void clear() {
-      Arrays.fill(this.notes, 0);
-      this.noteCount = 0;
     }
 
     public int getNoteCount() {
@@ -166,9 +172,7 @@ public abstract class MidiNote extends LXShortMessage {
     }
 
     public void reset() {
-      for (int i = 0; i < this.notes.length; ++i) {
-        this.notes[i] = 0;
-      }
+      Arrays.fill(this.notes, 0);
       this.noteCount = 0;
     }
 

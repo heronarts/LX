@@ -3524,6 +3524,58 @@ public abstract class LXCommand {
           }
         }
 
+        public static class SetChannel extends LXCommand {
+          private final ComponentReference<MidiNoteClipLane> clipLane;
+          private final int noteOnIndex;
+          private final int fromChannel;
+          private int toChannel;
+
+          public SetChannel(MidiNoteClipLane clipLane, MidiNoteClipEvent midiNote) {
+            if (!midiNote.isNoteOn()) {
+              throw new IllegalArgumentException("Must pass NOTE ON to Clip.Event.Midi.SetChannel");
+            }
+            this.clipLane = new ComponentReference<>(clipLane);
+            this.noteOnIndex = clipLane.events.indexOf(midiNote);
+            this.fromChannel= midiNote.midiNote.getChannel();
+            this.toChannel = this.fromChannel;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Change Channel";
+          }
+
+          private void setChannel(int channel) throws InvalidCommandException {
+            try {
+              MidiNoteClipLane clipLane = this.clipLane.get();
+              MidiNoteClipEvent noteOn = clipLane.events.get(this.noteOnIndex);
+              noteOn.midiNote.setChannel(channel);
+              MidiNoteClipEvent noteOff = noteOn.getNoteOff();
+              if (noteOff != null) {
+                noteOff.midiNote.setChannel(channel);
+              }
+              clipLane.onChange.bang();
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+
+          public SetChannel update(int toChannel) {
+            this.toChannel = LXUtils.constrain(toChannel, 0, MidiNote.NUM_CHANNELS - 1);
+            return this;
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            setChannel(this.toChannel);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            setChannel(this.fromChannel);
+          }
+        }
+
         public static class EditNote extends LXCommand {
           protected final ComponentReference<MidiNoteClipLane> clipLane;
           protected int noteOnIndex = -1;
