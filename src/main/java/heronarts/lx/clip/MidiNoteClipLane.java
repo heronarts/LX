@@ -65,6 +65,42 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     resetRecordNoteStack(to);
   }
 
+  void onStopRecording() {
+    // Recording is finished, add note-off messages for any hung notes
+    this.mutableEvents.begin();
+
+    boolean changed = false;
+    for (MidiNoteClipEvent noteOn : this.recordNoteStack) {
+      if (noteOn != null) {
+        try {
+          MidiNoteClipEvent noteOff = new MidiNoteClipEvent(
+            this,
+            ShortMessage.NOTE_OFF,
+            noteOn.midiNote.getChannel(),
+            noteOn.midiNote.getPitch(),
+            0
+          );
+          noteOff.setCursor(this.clip.cursor);
+          noteOn.setNoteOff(noteOff);
+          int insertIndex = CursorOp().isEqual(noteOn.cursor, noteOff.cursor) ?
+            cursorInsertIndex(noteOff.cursor) :
+            cursorPlayIndex(noteOff.cursor);
+          this.mutableEvents.add(insertIndex, noteOff);
+          changed = true;
+        } catch (InvalidMidiDataException imdx) {
+          LX.error(imdx, "WTF, note clone has bad MIDI data");
+        }
+      }
+    }
+    Arrays.fill(this.recordNoteStack, null);
+
+    this.mutableEvents.commit();
+    if (changed) {
+      this.onChange.bang();
+    }
+
+  }
+
   public MidiNoteClipLane removeNote(MidiNoteClipEvent note) {
     this.mutableEvents.begin();
     this.mutableEvents.remove(note);
@@ -116,12 +152,16 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       if (existingNoteOn != null) {
         // Terminate the previously held note with a note-off
         try {
-          MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, ShortMessage.NOTE_OFF, note.getChannel(), pitch, 0);
+          // NOTE: always note-off on the same channel as held note
+          final int channel = existingNoteOn.midiNote.getChannel();
+          MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, ShortMessage.NOTE_OFF, channel, pitch, 0);
           existingNoteOn.setNoteOff(noteOff);
           recordEvent(noteOff);
           this.recordNoteStack[pitch] = null;
+          LX.warning("Terminated previous note for stacked note-on: " + existingNoteOn);
         } catch (InvalidMidiDataException imdx) {
           // Not possible with args from a valid event
+          LX.error(imdx, "WTF, note clone has bad MIDI data");
         }
       }
       // Record the new note on
@@ -129,7 +169,14 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     } else {
       if (existingNoteOn != null) {
         // Only record note-off events if the note was actually held!
-        MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, note.mutableCopy());
+        // Enforce note-off being on the same channel as the note-on it succeeds
+        final int heldChannel = existingNoteOn.midiNote.getChannel();
+        MidiNote mutableOff = note.mutableCopy();
+        if (mutableOff.getChannel() != heldChannel) {
+          mutableOff.setChannel(heldChannel);
+          LX.warning("Fixed MIDI channel (" + heldChannel + ") for note-off on held pitch: " + note);
+        }
+        MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, mutableOff);
         existingNoteOn.setNoteOff(noteOff);
         recordEvent(noteOff);
       }
@@ -163,6 +210,10 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
         }
       } else {
         if (noteHeld != null) {
+          if (channel != noteHeld.midiNote.getChannel()) {
+            LX.error("Fixing note-off channel mismatch in MIDI clip lane: " + eventObj);
+            midiNote.setChannel(noteHeld.midiNote.getChannel());
+          }
           MidiNoteClipEvent noteOffEvent = new MidiNoteClipEvent(this, midiNote);
           noteHeld.setNoteOff(noteOffEvent);
           this.loadEventNoteStack[pitch] = null;
@@ -246,6 +297,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
 
       return noteOn;
     } catch (InvalidMidiDataException imdx) {
+      LX.error(imdx, "WTF, note clone has bad MIDI data");
       return null;
     }
   }

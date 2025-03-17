@@ -38,6 +38,12 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
   }
 
   @Override
+  protected void onStopRecording() {
+    super.onStopRecording();
+    this.midiNoteLane.onStopRecording();
+  }
+
+  @Override
   public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
     if (message instanceof MidiNote note) {
       if (isRecording()) {
