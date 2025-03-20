@@ -89,11 +89,15 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   public final LXNormalizedParameter parameter;
-  private final double initialNormalized;
+  private double initialNormalized;
 
   private ParameterClipLane(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
     super(clip);
     this.parameter = parameter;
+    this.initialNormalized = initialNormalized;
+  }
+
+  void updateDefaultValue(double initialNormalized) {
     this.initialNormalized = initialNormalized;
   }
 

@@ -416,6 +416,24 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     this.lx.engine.mixer.masterBus.stopClips.setQuantization(this.launchQuantization);
   }
 
+  /**
+   * Whether launch quantization is enabled in the tempo engine
+   *
+   * @return If a launch quantization division is selected
+   */
+  public boolean hasLaunchQuantization() {
+    return this.launchQuantization.getObject().hasDivision();
+  }
+
+  /**
+   * Gets the current launch quantization value
+   *
+   * @return Division value, or null if none selected
+   */
+  public Division getLaunchQuantization() {
+    return this.launchQuantization.getObject().getDivision();
+  }
+
   private static final String PATH_BEAT = "beat";
   private static final String PATH_BEAT_WITHIN_BAR = "beat-within-bar";
   private static final String PATH_SET_BPM = "setBPM";

@@ -352,6 +352,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return this
    */
   public LXClip launch() {
+    this.launchFromCursor.set(this.playStart.cursor);
     this.launch.trigger();
     return this;
   }
@@ -444,6 +445,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private boolean isQuantizedLaunch = false;
+  private Tempo.Division isQuantizedStop = null;
 
   /**
    * Invoked when we launch from the main launch() function or grid trigger. In this case
@@ -468,9 +470,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void _launchStop() {
-    // TODO(clips): what we actually need to do here is finish running the cursor up to
-    // the quantization boundary and then stop running there
-    stop();
+    if (isRunning()) {
+      if ((this.timeBase.getEnum() == Cursor.TimeBase.TEMPO) &&
+          this.lx.engine.tempo.hasLaunchQuantization()) {
+        this.isQuantizedStop = this.lx.engine.tempo.getLaunchQuantization();
+      } else {
+        stop();
+      }
+    }
   }
 
   private void setTransportReference(boolean quantize) {
@@ -993,7 +1000,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private void updateParameterDefaults() {
     for (LXNormalizedParameter p : this.parameterDefaults.keySet()) {
-      this.parameterDefaults.put(p, p.getBaseNormalized());
+      double defaultValue = p.getBaseNormalized();
+      this.parameterDefaults.put(p, defaultValue);
+      ParameterClipLane lane = getParameterLane(p, false);
+      if (lane != null) {
+        lane.updateDefaultValue(defaultValue);
+      }
     }
   }
 
@@ -1098,6 +1110,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         // clock sources that the Tempo class deals with. We must explicitly *not* compute
         // things based upon deltaMs and BPM-math here, the Tempo class is smarter than
         // that and may be incorporating skew-correction, nudging, etc.
+        if (this.isQuantizedStop != null) {
+          // We need to keep running up to the stop tempo position
+          CursorOp().snapFloor(transportCursor, this, constructTempoCursor(this.isQuantizedStop));
+        }
         final Cursor elapsed = transportCursor.subtract(this.startTransportReference);
 
         // Then add that delta to the reference start cursor position
@@ -1119,14 +1135,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     computeNextCursor(deltaMs);
 
     if (this.bus.arm.isOn()) {
+      // Recording
       if (!this.hasTimeline) {
         runFirstRecording();
       } else {
         runOverdub();
       }
-
     } else {
-
+      // Playback
       boolean runAutomation = false;
 
       // Run clip automation if enabled
@@ -1146,6 +1162,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       if (!runAutomation && !this.snapshot.isInTransition()) {
         stop();
       }
+    }
+
+    // Explicit quantized stop
+    if (this.isQuantizedStop != null) {
+      stop();
+      this.isQuantizedStop = null;
     }
   }
 

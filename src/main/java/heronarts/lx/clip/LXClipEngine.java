@@ -260,8 +260,12 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     .setDescription("Stops all clips running in the whole project");
 
   public final QuantizedTriggerParameter launchPatternCycle =
-    new QuantizedTriggerParameter(lx, "Launch Pattern Cycle", this::triggerPatternCycle)
-    .setDescription("Triggers a pattern cycle on every eligble channel");
+    new QuantizedTriggerParameter(lx, "Launch Pattern Cycle", this.triggerPatternCycle::trigger)
+    .setDescription("Triggers a pattern cycle on every eligible channel");
+
+  public final QuantizedTriggerParameter triggerPatternCycle =
+    new QuantizedTriggerParameter(lx, "Trigger Pattern Cycle", this::triggerPatternCycle)
+    .setDescription("Triggers a pattern cycle on every eligible channel");
 
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
@@ -302,7 +306,8 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
     addParameter("stopClips", this.stopClips);
-    addParameter("triggerPatternCycle", this.launchPatternCycle);
+    addParameter("launchPatternCycle", this.launchPatternCycle);
+    addParameter("triggerPatternCycle", this.triggerPatternCycle);
     addParameter("timeBaseDefault", this.timeBaseDefault);
     addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
@@ -525,16 +530,28 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
    * @return this
    */
   public LXClipEngine stopClips() {
+    return stopClips(true);
+  }
+
+  public LXClipEngine stopClips(boolean quantized) {
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       for (LXClip clip : channel.clips) {
         if (clip != null) {
-          clip.stop();
+          if (quantized) {
+            clip.stop.trigger();
+          } else {
+            clip.stop();
+          }
         }
       }
     }
     for (LXClip clip : this.lx.engine.mixer.masterBus.clips) {
       if (clip != null) {
-        clip.stop();
+        if (quantized) {
+          clip.stop.trigger();
+        } else {
+          clip.stop();
+        }
       }
     }
     return this;

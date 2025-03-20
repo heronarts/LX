@@ -390,10 +390,29 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     return "Clip";
   }
 
+  /**
+   * Stops all clips, subject to launch quantization
+   *
+   * @return this
+   */
   public LXBus stopClips() {
+    return stopClips(true);
+  }
+
+  /**
+   * Stop all clips, optionally observing launch quantization
+   *
+   * @param quantized Whether to observe launch quantization
+   * @return
+   */
+  public LXBus stopClips(boolean quantized) {
     for (LXClip clip : this.clips) {
       if (clip != null) {
-        clip.stop();
+        if (quantized) {
+          clip.stop.trigger();
+        } else {
+          clip.stop();
+        }
       }
     }
     return this;
