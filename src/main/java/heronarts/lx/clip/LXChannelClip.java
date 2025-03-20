@@ -23,8 +23,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
-import heronarts.lx.mixer.LXAbstractChannel;
-import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.pattern.LXPattern;
 
 public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Listener {
@@ -84,23 +82,17 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   @Override
   protected void onStartRecording(boolean isOverdub) {
     if (this.channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
-      LXPattern activePattern = this.channel.getActivePattern();
-      if (activePattern != null) {
+      LXPattern targetPattern = this.channel.getTargetPattern();
+      if (targetPattern != null) {
         // If we're overdubbing - only record a pattern event at the start of recording if the present
         // state is *different* from what was already in the pattern clip lane
         PatternClipEvent previousPattern = this.patternLane.getPreviousEvent(this.cursor);
-        if (!isOverdub || ((previousPattern != null) && (previousPattern.getPattern() != activePattern))) {
-          this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, activePattern));
+        if (!isOverdub || ((previousPattern != null) && (previousPattern.getPattern() != targetPattern))) {
+          this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, targetPattern));
         }
       }
     }
   }
-
-  @Override
-  public void indexChanged(LXAbstractChannel channel) {}
-
-  @Override
-  public void groupChanged(LXChannel channel, LXGroup group) {}
 
   @Override
   public void patternAdded(LXChannel channel, LXPattern pattern) {
@@ -113,19 +105,10 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   }
 
   @Override
-  public void patternMoved(LXChannel channel, LXPattern pattern) {
-  }
-
-  @Override
   public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
     if (isRecording()) {
-      this.patternLane.recordEvent(new PatternClipEvent(this.patternLane, nextPattern));
+      this.patternLane.recordPatternEvent(nextPattern);
     }
-  }
-
-  @Override
-  public void patternDidChange(LXChannel channel, LXPattern pattern) {
-
   }
 
   @Override

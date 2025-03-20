@@ -10,9 +10,12 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.midi.MidiNote;
+import heronarts.lx.midi.MidiNoteOff;
 import heronarts.lx.parameter.MutableParameter;
 
 public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
+
+  public final LXAbstractChannelClip clip;
 
   /**
    * Zoom is specified as multiple of lane height
@@ -25,8 +28,9 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     new MutableParameter("UI Offset", -1)
     .setDescription("Scroll offset of MIDI piano roll");
 
-  protected MidiNoteClipLane(LXClip clip) {
+  protected MidiNoteClipLane(LXAbstractChannelClip clip) {
     super(clip);
+    this.clip = clip;
     addInternalParameter("uiZoom ", this.uiZoom);
     addInternalParameter("uiOffset", this.uiOffset);
   }
@@ -41,36 +45,66 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     return "MIDI Note";
   }
 
-  private final MidiNoteClipEvent[] recordNoteStack = new MidiNoteClipEvent[MidiNote.NUM_PITCHES];
-
-  private void resetRecordNoteStack(Cursor to) {
-    Arrays.fill(this.recordNoteStack, null);
-
-    // Process everything up to the initial playback point
-    int index = cursorPlayIndex(to);
-    for (int i = 0; i < index; ++i) {
-      MidiNoteClipEvent noteEvent = this.events.get(i);
-      this.recordNoteStack[noteEvent.midiNote.getPitch()] =
-        noteEvent.midiNote.isNoteOn() ? noteEvent : null;
+  void playNote(MidiNoteClipEvent event) {
+    final int pitch = event.midiNote.getPitch();
+    MidiNoteClipEvent noteHeld = this.playbackNoteStack[pitch];
+    if (event.isNoteOn()) {
+      if (noteHeld != null) {
+        LX.warning("Firing note-off for stacked playback note: " + event);
+        try {
+          this.clip.channel.midiDispatch(new MidiNoteOff(event.midiNote.getChannel(), pitch));
+        } catch (InvalidMidiDataException imdx) {
+          LX.error(imdx, "WTF invalid note-clone in MidiNoteClipLane.playNote");
+        }
+      }
+      this.playbackNoteStack[pitch] = event;
+      this.recordNoteStack[pitch] = event;
+      this.clip.channel.midiDispatch(event.midiNote);
+    } else {
+      if (noteHeld != null) {
+        final int heldChannel = noteHeld.midiNote.getChannel();
+        MidiNote noteOff = event.midiNote;
+        if (heldChannel != event.midiNote.getChannel()) {
+          // Ensure the channel is correct
+          try {
+            noteOff = new MidiNoteOff(heldChannel, pitch);
+            LX.warning("Adjusting note-off channel (" + heldChannel + ") for playback note-off: " + event.midiNote);
+          } catch (InvalidMidiDataException imdx) {
+            LX.error(imdx, "WTF invalid note-clone in MidiNoteClipLane.playNote");
+          }
+        }
+        this.clip.channel.midiDispatch(noteOff);
+      } else {
+        LX.warning("Ignoring note-off for non-held note: " + event.midiNote);
+      }
+      this.playbackNoteStack[pitch] = null;
+      this.recordNoteStack[pitch] = null;
     }
   }
 
-  @Override
-  void initializeCursor(Cursor to) {
-    resetRecordNoteStack(to);
+  private void terminatePlaybackNotes() {
+    for (MidiNoteClipEvent noteOn : this.playbackNoteStack) {
+      if (noteOn != null) {
+        try {
+          this.clip.channel.midiDispatch(new MidiNoteOff(
+            noteOn.midiNote.getChannel(),
+            noteOn.midiNote.getPitch()
+          ));
+          LX.warning("Firing note-off for lingering note: " + noteOn.midiNote);
+        } catch (InvalidMidiDataException imdx) {
+          LX.error(imdx, "WTF, note clone has bad MIDI data");
+        }
+      }
+    }
+    Arrays.fill(this.playbackNoteStack, null);
   }
 
-  @Override
-  void loopCursor(Cursor to) {
-    resetRecordNoteStack(to);
-  }
-
-  void onStopRecording() {
+  private void terminateRecordingNotes(Cursor to) {
     // Recording is finished, add note-off messages for any hung notes
     this.mutableEvents.begin();
 
     boolean changed = false;
-    for (MidiNoteClipEvent noteOn : this.recordNoteStack) {
+    for (MidiNoteClipEvent noteOn : this.recordInputStack) {
       if (noteOn != null) {
         try {
           MidiNoteClipEvent noteOff = new MidiNoteClipEvent(
@@ -80,12 +114,13 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
             noteOn.midiNote.getPitch(),
             0
           );
-          noteOff.setCursor(this.clip.cursor);
+          noteOff.setCursor(to);
           noteOn.setNoteOff(noteOff);
           int insertIndex = CursorOp().isEqual(noteOn.cursor, noteOff.cursor) ?
             cursorInsertIndex(noteOff.cursor) :
             cursorPlayIndex(noteOff.cursor);
           this.mutableEvents.add(insertIndex, noteOff);
+          LX.warning("Recorded note-off for hung note on recording: " + noteOn);
           changed = true;
         } catch (InvalidMidiDataException imdx) {
           LX.error(imdx, "WTF, note clone has bad MIDI data");
@@ -93,12 +128,80 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       }
     }
     Arrays.fill(this.recordNoteStack, null);
+    Arrays.fill(this.recordInputStack, null);
 
     this.mutableEvents.commit();
     if (changed) {
       this.onChange.bang();
     }
+  }
 
+  void onStopPlayback() {
+    terminatePlaybackNotes();
+  }
+
+  // All notes that the clip has actually triggered, whether due to timeline playback or input
+  // which need to be cleared when playback stops
+  private final MidiNoteClipEvent[] playbackNoteStack = new MidiNoteClipEvent[MidiNote.NUM_PITCHES];
+
+  // Notes that new recording input may conflict with, but were not necessarily actually played,
+  // e.g. notes that are on the clip timeline that began before the start playback point but
+  // continue past the current cursor. These notes may need to be truncated if new recording
+  // comes in that conflicts with them.
+  private final MidiNoteClipEvent[] recordNoteStack = new MidiNoteClipEvent[MidiNote.NUM_PITCHES];
+
+  // Notes that have been actually input by new recording. When recording stops or the loop finishes
+  // these notes will need to be terminated.
+  private final MidiNoteClipEvent[] recordInputStack = new MidiNoteClipEvent[MidiNote.NUM_PITCHES];
+
+  private void initializeRecordNoteStack(Cursor to) {
+    Arrays.fill(this.recordNoteStack, null);
+    Arrays.fill(this.recordInputStack, null);
+
+    // Process everything up to the initial playback point
+    int index = cursorPlayIndex(to);
+    for (int i = 0; i < index; ++i) {
+      MidiNoteClipEvent noteEvent = this.events.get(i);
+      this.recordNoteStack[noteEvent.midiNote.getPitch()] = noteEvent.midiNote.isNoteOn() ? noteEvent : null;
+    }
+  }
+
+  void onStopRecording() {
+    terminatePlaybackNotes();
+    terminateRecordingNotes(this.clip.cursor);
+  }
+
+  @Override
+  void initializeCursorPlayback(Cursor to) {
+    Arrays.fill(this.playbackNoteStack, null);
+    initializeRecordNoteStack(to);
+  }
+
+  @Override
+  void jumpCursor(Cursor from, Cursor to) {
+    // TODO(clips): this could be improved to compare the before/after cursor positions and figure
+    // out if some notes were held across those positions, don't terminate them all, etc.
+    terminatePlaybackNotes();
+    terminateRecordingNotes(from);
+    initializeCursorPlayback(to);
+  }
+
+  @Override
+  void loopCursor(Cursor from, Cursor to) {
+    jumpCursor(this.clip.loopEnd.cursor, to);
+  }
+
+  @Override
+  void overdubCursor(Cursor from, Cursor to, boolean inclusive) {
+    commitRecordQueue(false);
+    playCursor(from, to, inclusive);
+  }
+
+  @Override
+  MidiNoteClipLane commitRecordQueue(boolean notify) {
+    // TODO(clips): handle all the mess here! check the state of the various
+    // note stacks and insert/remove any manner of stuff that needs changing
+    return this;
   }
 
   public MidiNoteClipLane removeNote(MidiNoteClipEvent note) {
@@ -147,40 +250,43 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   protected void recordNote(MidiNote note) {
     // Clip lanes disallow multiple notes stacked on the same pitch
     final int pitch = note.getPitch();
-    final MidiNoteClipEvent existingNoteOn = this.recordNoteStack[pitch];
+    final MidiNoteClipEvent recordNoteOn = this.recordNoteStack[pitch];
     if (note.isNoteOn()) {
-      if (existingNoteOn != null) {
+      if (recordNoteOn != null) {
         // Terminate the previously held note with a note-off
         try {
           // NOTE: always note-off on the same channel as held note
-          final int channel = existingNoteOn.midiNote.getChannel();
+          final int channel = recordNoteOn.midiNote.getChannel();
           MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, ShortMessage.NOTE_OFF, channel, pitch, 0);
-          existingNoteOn.setNoteOff(noteOff);
+          recordNoteOn.setNoteOff(noteOff);
           recordEvent(noteOff);
           this.recordNoteStack[pitch] = null;
-          LX.warning("Terminated previous note for stacked note-on: " + existingNoteOn);
+          LX.warning("Terminated previous note for stacked note-on: " + recordNoteOn);
         } catch (InvalidMidiDataException imdx) {
           // Not possible with args from a valid event
           LX.error(imdx, "WTF, note clone has bad MIDI data");
         }
       }
       // Record the new note on
-      recordEvent(this.recordNoteStack[pitch] = new MidiNoteClipEvent(this, note.mutableCopy()));
+      MidiNoteClipEvent noteOn = new MidiNoteClipEvent(this, note.mutableCopy());
+      this.recordNoteStack[pitch] = noteOn;
+      this.recordInputStack[pitch] = noteOn;
+      recordEvent(noteOn);
     } else {
-      if (existingNoteOn != null) {
+      if (recordNoteOn != null) {
         // Only record note-off events if the note was actually held!
         // Enforce note-off being on the same channel as the note-on it succeeds
-        final int heldChannel = existingNoteOn.midiNote.getChannel();
+        final int heldChannel = recordNoteOn.midiNote.getChannel();
         MidiNote mutableOff = note.mutableCopy();
         if (mutableOff.getChannel() != heldChannel) {
           mutableOff.setChannel(heldChannel);
           LX.warning("Fixed MIDI channel (" + heldChannel + ") for note-off on held pitch: " + note);
         }
         MidiNoteClipEvent noteOff = new MidiNoteClipEvent(this, mutableOff);
-        existingNoteOn.setNoteOff(noteOff);
+        recordNoteOn.setNoteOff(noteOff);
         recordEvent(noteOff);
       }
-      this.recordNoteStack[pitch] = null;
+      this.recordInputStack[pitch] = null;
     }
   }
 

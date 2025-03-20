@@ -47,7 +47,6 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public final LXClip clip;
 
   protected boolean overdubActive = false;
-  protected T overdubLastOriginalEvent = null;
 
   protected final LXEngineThreadArrayList<T> mutableEvents = new LXEngineThreadArrayList<>();
 
@@ -67,7 +66,6 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   void resetOverdub() {
     this.overdubActive = false;
-    this.overdubLastOriginalEvent = null;
   }
 
   public int getIndex() {
@@ -83,19 +81,23 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   final List<T> recordQueue = new ArrayList<>();
 
-  protected LXClipLane<T> recordEvent(T event) {
+  protected final LXClipLane<T> recordEvent(T event) {
     this.recordQueue.add(event);
     return this;
   }
 
-  LXClipLane<T> commitRecordEvents() {
-    this.mutableEvents.begin();
-    for (T event : this.recordQueue) {
-      _insertEvent(event);
+  LXClipLane<T> commitRecordQueue(boolean notify) {
+    if (!this.recordQueue.isEmpty()) {
+      this.mutableEvents.begin();
+      for (T event : this.recordQueue) {
+        _insertEvent(event);
+      }
+      this.recordQueue.clear();
+      this.mutableEvents.commit();
+      if (notify) {
+        this.onChange.bang();
+      }
     }
-    this.recordQueue.clear();
-    this.mutableEvents.commit();
-    this.onChange.bang();
     return this;
   }
 
@@ -576,39 +578,27 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    *
    * @param to Cursor position to start playback from
    */
-  void initializeCursor(Cursor to) {}
+  void initializeCursorPlayback(Cursor to) {}
+
+  /**
+   * Subclasses may override to take action when cursor position jumps mid-playback
+   *
+   * @param to Cursor position to jump playback to
+   */
+  void jumpCursor(Cursor from, Cursor to) {}
 
   /**
    * Subclasses may override this method if they need to take an action when
    * looping is performed and the cursor returns to a prior position.
    *
+   * @param from End of loop that cursor rewound from
    * @param to Cursor rewound to loop position
    */
-  void loopCursor(Cursor to) {}
+  void loopCursor(Cursor from, Cursor to) {}
 
-  void overdubCursor(Cursor from, Cursor to) {
-    final List<T> toRemove = new ArrayList<>();
-    final ListIterator<T> iter = eventIterator(from);
-    final Cursor.Operator CursorOp = CursorOp();
-    while (iter.hasNext()) {
-      T event = iter.next();
-      if (CursorOp.isAfterOrEqual(event.cursor, to)) {
-        break;
-      }
-      this.overdubLastOriginalEvent = event;
-      if (this.overdubActive) {
-        toRemove.add(event);
-      }
-    }
-    if (!toRemove.isEmpty()) {
-      this.mutableEvents.removeAll(toRemove);
-      this.onChange.bang();
-    }
-  }
+  abstract void overdubCursor(Cursor from, Cursor to, boolean inclusive);
 
-  void postOverdubCursor(Cursor from, Cursor to) {}
-
-  void advanceCursor(Cursor from, Cursor to, boolean inclusive) {
+  void playCursor(Cursor from, Cursor to, boolean inclusive) {
     final Cursor.Operator CursorOp = CursorOp();
     final int limit = inclusive ? 0 : -1;
     final ListIterator<T> iter = eventIterator(from);
@@ -622,24 +612,20 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   public boolean removeRange(Cursor from, Cursor to) {
-    final List<LXClipEvent<?>> toRemove = new ArrayList<>();
-    final ListIterator<T> iter = eventIterator(from);
-    final Cursor.Operator CursorOp = CursorOp();
-    while (iter.hasNext()) {
-      T event = iter.next();
-      if (CursorOp.isAfter(event.cursor, to)) {
-        break;
+    return removeRange(from, to, true);
+  }
+
+  protected boolean removeRange(Cursor from, Cursor to, boolean notify) {
+    if (!this.mutableEvents.isEmpty()) {
+      int fromIndex = cursorPlayIndex(from);
+      int toIndex = cursorInsertIndex(to);
+      if (toIndex > fromIndex) {
+        this.mutableEvents.removeRange(fromIndex, toIndex);
+        if (notify) {
+          this.onChange.bang();
+        }
+        return true;
       }
-      toRemove.add(event);
-    }
-
-    // Do the removal in a single operation, since we are using
-    // a CopyOnWriteArrayList
-    if (!toRemove.isEmpty()) {
-      this.mutableEvents.removeAll(toRemove);
-      this.onChange.bang();
-      return true;
-
     }
     return false;
   }

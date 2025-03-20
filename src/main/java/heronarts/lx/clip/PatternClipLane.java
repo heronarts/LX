@@ -57,6 +57,25 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
     }
   }
 
+  private boolean internalTrigger = false;
+
+  private void triggerPattern(LXPattern pattern) {
+    this.internalTrigger = true;
+    this.channel.goPattern(pattern);
+    this.internalTrigger = false;
+  }
+
+  void playPatternEvent(PatternClipEvent pattern) {
+    triggerPattern(pattern.getPattern());
+  }
+
+  void recordPatternEvent(LXPattern pattern) {
+    if (!this.internalTrigger) {
+      recordEvent(new PatternClipEvent(this, pattern));
+      this.overdubActive = true;
+    }
+  }
+
   /**
    * Return a list of the indices of events in this clip lane that reference the given pattern
    *
@@ -88,7 +107,7 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
     return "Pattern";
   }
 
-  private LXPattern getPatternAtCursor(Cursor to) {
+  private LXPattern getPatternBeforeCursor(Cursor to) {
     if (!this.events.isEmpty()) {
       int index = cursorPlayIndex(to);
       return this.events.get(index > 0 ? index - 1 : index).getPattern();
@@ -96,24 +115,89 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
     return null;
   }
 
-  private void setPatternAtCursor(Cursor to) {
+  private LXPattern getPatternAtCursor(Cursor to) {
+    if (!this.events.isEmpty()) {
+      int index = cursorInsertIndex(to);
+      return this.events.get(index > 0 ? index - 1 : index).getPattern();
+    }
+    return null;
+  }
+
+  private void triggerPatternAtCursor(Cursor to) {
     LXPattern pattern = getPatternAtCursor(to);
-    if (pattern != null) {
-      LXChannel channel = pattern.getChannel();
-      if ((channel.getActivePattern() != pattern) && (channel.getNextPattern() != pattern)) {
-        channel.goPattern(pattern);
-      }
+    if ((pattern != null) && (this.channel.getTargetPattern() != pattern)) {
+      triggerPattern(pattern);
     }
   }
 
   @Override
-  void initializeCursor(Cursor to) {
-    setPatternAtCursor(to);
+  void initializeCursorPlayback(Cursor to) {
+    triggerPatternAtCursor(to);
   }
 
   @Override
-  void loopCursor(Cursor to) {
-    setPatternAtCursor(to);
+  void loopCursor(Cursor from, Cursor to) {
+    if (this.overdubActive) {
+      LXPattern loopStart = getPatternBeforeCursor(to);
+      LXPattern loopEnd = getPatternBeforeCursor(from);
+      if (loopStart != loopEnd) {
+        recordEvent(new PatternClipEvent(this, to, loopEnd));
+      }
+    } else {
+      triggerPatternAtCursor(to);
+    }
+  }
+
+  @Override
+  void overdubCursor(Cursor from, Cursor to, boolean inclusive) {
+    if (this.overdubActive) {
+
+      boolean changed = false;
+      this.mutableEvents.begin();
+
+      PatternClipEvent stitchOuter = null;
+
+      if (!this.mutableEvents.isEmpty()) {
+        int startIndex = cursorPlayIndex(from);
+        int endIndex = inclusive ? cursorInsertIndex(to) : cursorPlayIndex(to);
+
+        if (CursorOp().isBefore(to, this.clip.length.cursor)) {
+          stitchOuter = new PatternClipEvent(this, to, this.events.get(endIndex > 0 ? endIndex - 1 : endIndex).getPattern());
+        }
+
+        if (endIndex > startIndex) {
+          this.mutableEvents.removeRange(startIndex, endIndex);
+          changed = true;
+        }
+      }
+
+      // Insert the new stuff
+      if (!this.recordQueue.isEmpty()) {
+        commitRecordQueue(false);
+        changed = true;
+      }
+
+      // Add an outer stitch if it's not redundant
+      if (stitchOuter != null) {
+        int stitchIndex = cursorInsertIndex(stitchOuter.cursor);
+        if ((stitchIndex == 0) || (this.events.get(stitchIndex-1).getPattern() != stitchOuter.getPattern())) {
+          this.mutableEvents.add(stitchIndex, stitchOuter);
+          changed = true;
+        }
+      }
+
+      // All done
+      this.mutableEvents.commit();
+      if (changed) {
+        this.onChange.bang();
+      }
+
+    } else {
+
+      // Just play it back
+      playCursor(from, to, inclusive);
+
+    }
   }
 
   @Override

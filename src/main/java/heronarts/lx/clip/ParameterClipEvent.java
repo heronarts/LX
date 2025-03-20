@@ -14,6 +14,10 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     this(lane, lane.parameter.getBaseNormalized());
   }
 
+  ParameterClipEvent(ParameterClipLane lane, Cursor cursor) {
+    this(lane, cursor, lane.parameter.getBaseNormalized());
+  }
+
   ParameterClipEvent(ParameterClipLane lane, double normalized) {
     super(lane, lane.parameter.getParent());
     this.lane = lane;
@@ -65,7 +69,7 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
 
   @Override
   public String toString() {
-    return this.cursor.toString() + " -> " + getNormalized();
+    return this.cursor.toString() + " -> " + this.lane.parameter.getLabel() + "=" + getNormalized();
   }
 
   protected static final String KEY_NORMALIZED = "normalized";

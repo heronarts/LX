@@ -326,144 +326,11 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     return false;
   }
 
-  private static final double SMOOTHING_THRESHOLD_MS = 250;
-
-  protected ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
-    final int insertIndex = cursorInsertIndex(this.clip.cursor);
-    final ParameterClipEvent previousEvent = (insertIndex > 0) ? (ParameterClipEvent) this.events.get(insertIndex - 1) : null;
-    if (previousEvent == null) {
-      // On the first parameter automation, we need to drop a dot with the initial value
-      // before this modified value, say a knob was at 0 when recording started, and a first
-      // event comes in with value 50 many seconds later, the automation clip should not *only*
-      // contain this value of 50, it should have 0 up to the point that the 50 is received and
-      // then a jump (e.g. we also don't want a smooth interpolation from 0 to 50)
-      if (hasStitching()) {
-        recordEvent(new ParameterClipEvent(this, this.initialNormalized));
-      }
-    } else if (hasInterpolation() && (this.clip.cursor.getDeltaMillis(previousEvent.cursor) > SMOOTHING_THRESHOLD_MS)) {
-      // For normalized parameters, check if there was a jump in value... for smoothly
-      // received knob turns or MIDI that happen close in time we just record the event itself,
-      // but if significant time has elapsed, then for the same reason as above, we need to
-      // record whatever value the envelope would have held at this point
-      double normalized = 0;
-      if (insertIndex < this.events.size()) {
-        // If there's an event ahead of the previous event, preserve the interpolation between
-        // the two
-        final ParameterClipEvent nextEvent = this.events.get(insertIndex);
-        normalized = LXUtils.lerp(
-          previousEvent.getNormalized(),
-          nextEvent.getNormalized(),
-          CursorOp().getLerpFactor(this.clip.cursor, previousEvent.cursor, nextEvent.cursor)
-        );
-      } else {
-        normalized = previousEvent.getNormalized();
-      }
-      recordEvent(new ParameterClipEvent(this, normalized));
-    }
-    recordEvent(event);
-    this.overdubActive = true;
-    return this;
-  }
-
   public ParameterClipEvent insertEvent(Cursor cursor, double normalized) {
     ParameterClipEvent event = new ParameterClipEvent(this, normalized);
     event.setCursor(cursor);
     super.insertEvent(event);
     return event;
-  }
-
-  private boolean inOverdubPlayback = false;
-
-  public boolean isInOverdubPlayback() {
-    return this.inOverdubPlayback;
-  }
-
-  @Override
-  void postOverdubCursor(Cursor from, Cursor to) {
-    if (!this.overdubActive) {
-      // No overdubs happening? Play back the automation! Set a flag so we suppress
-      // recording changes due to the parameter listeners that will file...
-      this.inOverdubPlayback = true;
-      advanceCursor(from, to, false);
-      this.inOverdubPlayback = false;
-      return;
-    }
-
-    if (hasStitching()) {
-      // Okay, here we will have nuked everything original in [from, to) and
-      // possibly inserted new events at from. If there are events ahead of us,
-      // we need to preserve new overdubbed value until "to" and then jump
-      // to whatever *would* have been at "to" prior to the overdub
-      int index = cursorPlayIndex(to);
-      if (index < this.events.size()) {
-        // If there are still pre-overdub events ahead, we need to connect the new overdub recording
-        // to the old stuff that existed prior
-
-        // There must be something behind us if overdub was active... extend that value
-        if (index > 1) {
-          ParameterClipEvent previous = this.events.get(index - 1);
-          this.mutableEvents.add(index++, new ParameterClipEvent(this, to, previous.getNormalized()));
-        }
-
-        // Interpolate what the deleted stuff would have looked like
-        ParameterClipEvent next = this.events.get(index);
-        if (CursorOp().isAfter(next.cursor, to)) {
-          double normalizedValue = 0;
-          if (this.overdubLastOriginalEvent == null) {
-            // There was no original stuff before this, just jump to the new value
-            normalizedValue = next.getNormalized();
-          } else {
-            // There was original stuff before this! Figure out what the interpolation would have been
-            ParameterClipEvent prior = this.overdubLastOriginalEvent;
-            normalizedValue = LXUtils.lerp(
-              prior.getNormalized(),
-              next.getNormalized(),
-              CursorOp().getLerpFactor(to, prior.cursor, next.cursor)
-            );
-          }
-
-          // Add the new event at "to"
-          this.mutableEvents.add(index, new ParameterClipEvent(this, to, normalizedValue));
-        }
-      }
-    }
-  }
-
-  @Override
-  void advanceCursor(Cursor from, Cursor to, boolean inclusive) {
-    if (this instanceof Trigger) {
-      // Trigger events just fire in a basic way, no interpolated or stepped value stuff
-      super.advanceCursor(from, to, inclusive);
-      return;
-    }
-
-    int size = this.events.size();
-    if (size == 0) {
-      return;
-    }
-    int nextIndex = LXUtils.min(cursorInsertIndex(to), size-1);
-    ParameterClipEvent next = this.events.get(nextIndex);
-    ParameterClipEvent prior = (nextIndex > 0) ? this.events.get(nextIndex - 1) : null;
-
-    if (CursorOp().isAfter(from, next.cursor)) {
-      // Do nothing, we've already passed it all
-    } else if (prior == null) {
-      // Nothing before us, set the first value
-      this.parameter.setNormalized(next.getNormalized());
-    } else if (CursorOp().isAfter(to, next.cursor)) {
-      // We're past the last event, just set its value
-      this.parameter.setNormalized(next.getNormalized());
-    } else if (hasInterpolation()) {
-      // Interpolate value between the two events surrounding us
-      this.parameter.setNormalized(LXUtils.lerp(
-        prior.getNormalized(),
-        next.getNormalized(),
-        CursorOp().getLerpFactor(to, prior.cursor, next.cursor)
-      ));
-    } else {
-      // Stick with the prior value until next is actually reached
-      this.parameter.setNormalized(prior.getNormalized());
-    }
   }
 
   public void setEventsNormalized(Map<ParameterClipEvent, Double> normalized) {
@@ -481,6 +348,186 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     if (changed) {
       this.onChange.bang();
     }
+  }
+
+  // RECORDING CONTROL
+
+  private static final double SMOOTHING_THRESHOLD_MS = 250;
+
+  protected ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
+    if (hasStitching()) {
+      final int insertIndex = cursorInsertIndex(this.clip.cursor);
+      final ParameterClipEvent previousEvent = (insertIndex > 0) ? (ParameterClipEvent) this.events.get(insertIndex - 1) : null;
+      if (previousEvent == null) {
+        if (insertIndex < this.events.size()) {
+          // There's data ahead of us but we are overdubbing behind it, preserve that properly
+          ParameterClipEvent nextEvent = this.events.get(insertIndex);
+          recordEvent(new ParameterClipEvent(this, nextEvent.getNormalized()));
+        } else {
+          // On the first parameter automation, we need to drop a dot with the initial value
+          // before this modified value, say a knob was at 0 when recording started, and a first
+          // event comes in with value 50 many seconds later, the automation clip should not *only*
+          // contain this value of 50, it should have 0 up to the point that the 50 is received and
+          // then a jump (e.g. we also don't want a smooth interpolation from 0 to 50)
+          recordEvent(new ParameterClipEvent(this, this.initialNormalized));
+        }
+      } else if (hasInterpolation() && (this.clip.cursor.getDeltaMillis(previousEvent.cursor) > SMOOTHING_THRESHOLD_MS)) {
+        // For normalized parameters, check if there was a jump in value... for smoothly
+        // received knob turns or MIDI that happen close in time we just record the event itself,
+        // but if significant time has elapsed, then for the same reason as above, we need to
+        // record whatever value the envelope would have held at this point
+        double normalized = 0;
+        if (insertIndex < this.events.size()) {
+          // If there's an event ahead of the previous event, preserve the interpolation between
+          // the two
+          final ParameterClipEvent nextEvent = this.events.get(insertIndex);
+          normalized = LXUtils.lerp(
+            previousEvent.getNormalized(),
+            nextEvent.getNormalized(),
+            CursorOp().getLerpFactor(this.clip.cursor, previousEvent.cursor, nextEvent.cursor)
+          );
+        } else {
+          normalized = previousEvent.getNormalized();
+        }
+        recordEvent(new ParameterClipEvent(this, normalized));
+      }
+    }
+
+    // Now record the actual event
+    recordEvent(event);
+    this.overdubActive = true;
+    return this;
+  }
+
+  private boolean inPlayback = false;
+
+  public boolean isInPlayback() {
+    return this.inPlayback;
+  }
+
+  @Override
+  void loopCursor(Cursor from, Cursor to) {
+    if (this.overdubActive && hasStitching()) {
+      // Stitch what was before the start of the loop to the value at the end of the loop
+      if (!this.events.isEmpty()) {
+        ParameterClipEvent stitchLoopStart = stitchOuter(this.mutableEvents, to, cursorPlayIndex(to));
+        ParameterClipEvent stitchLoopEnd = stitchOuter(this.mutableEvents, to, cursorPlayIndex(from));
+        if (hasInterpolation()) {
+          recordEvent(stitchLoopStart);
+        }
+        recordEvent(stitchLoopEnd);
+      }
+    }
+  }
+
+  @Override
+  void playCursor(Cursor from, Cursor to, boolean inclusive) {
+    // Set a flag so we these don't trigger recording events
+    this.inPlayback = true;
+
+    if (this instanceof Trigger) {
+
+      // Trigger events just fire in a basic way, no interpolated or stepped value stuff
+      super.playCursor(from, to, inclusive);
+
+    } else if (!this.events.isEmpty()) {
+
+      // Boolean/Discrete/Normalized events always set value based upon envelope shape
+      int nextIndex = LXUtils.min(cursorInsertIndex(to), this.events.size()-1);
+      ParameterClipEvent next = this.events.get(nextIndex);
+      ParameterClipEvent prior = (nextIndex > 0) ? this.events.get(nextIndex - 1) : null;
+
+      if (CursorOp().isAfter(from, next.cursor)) {
+        // Do nothing, we've already passed it all
+      } else if (prior == null) {
+        // Nothing before us, set the first value
+        this.parameter.setNormalized(next.getNormalized());
+      } else if (CursorOp().isAfter(to, next.cursor)) {
+        // We're past the last event, just set its value
+        this.parameter.setNormalized(next.getNormalized());
+      } else if (hasInterpolation()) {
+        // Interpolate value between the two events surrounding us
+        this.parameter.setNormalized(LXUtils.lerp(
+          prior.getNormalized(),
+          next.getNormalized(),
+          CursorOp().getLerpFactor(to, prior.cursor, next.cursor)
+        ));
+      } else {
+        // Stick with the prior value until next is actually reached
+        this.parameter.setNormalized(prior.getNormalized());
+      }
+    }
+
+    this.inPlayback = false;
+  }
+
+  @Override
+  void overdubCursor(Cursor from, Cursor to, boolean inclusive) {
+    final Cursor.Operator CursorOp = CursorOp();
+
+    boolean changed = false;
+    this.mutableEvents.begin();
+
+    ParameterClipEvent stitchInner = null, stitchOuter = null;
+    int stitchInnerIndex = -1;
+
+    // Clear events in the [from-to] range, respecting inclusivity
+    if (this.overdubActive && !this.mutableEvents.isEmpty()) {
+      int startIndex = cursorPlayIndex(from);
+      int endIndex = inclusive ? cursorInsertIndex(to) : cursorPlayIndex(to);
+
+      if (CursorOp.isBefore(to, this.clip.length.cursor)) {
+        stitchOuter = stitchOuter(this.events, to, endIndex);
+      }
+
+      if (endIndex > startIndex) {
+        if (this.overdubActive) {
+          this.mutableEvents.removeRange(startIndex, endIndex);
+          changed = true;
+        }
+      }
+    }
+
+    // Insert the new events (presumably they are all at from)
+    if (!this.recordQueue.isEmpty()) {
+      commitRecordQueue(false);
+      changed = true;
+    }
+
+    if (this.overdubActive && !this.mutableEvents.isEmpty() && hasStitching()) {
+      // Okay, here we will have nuked everything original in [from, to] and
+      // possibly inserted new events at from. If there are events ahead of us,
+      // we need to preserve new overdubbed value until "to" and then jump
+      // to whatever *would* have been at "to" prior to the overdub
+      stitchInnerIndex = cursorPlayIndex(to);
+      if (stitchInnerIndex > 0) {
+        ParameterClipEvent innerEvent = this.events.get(stitchInnerIndex - 1);
+        if (CursorOp.isBefore(innerEvent.cursor, to)) {
+          stitchInner = new ParameterClipEvent(this, to, innerEvent.getNormalized());
+          this.mutableEvents.add(stitchInnerIndex, stitchInner);
+          changed = true;
+        }
+      }
+    }
+
+    // Now play back the range with edits applied (not outer stitch)
+    playCursor(from, to, inclusive);
+
+    // Add the outer stitch if it's not pointless
+    if (stitchOuter != null) {
+      stitchInsertIfNeeded(this.mutableEvents, stitchOuter, true);
+    }
+
+    // Kill inner stitch if unneeded
+    if (stitchInner != null) {
+      stitchRemoveIfRedundant(this.mutableEvents, stitchInner, stitchInnerIndex);
+    }
+
+    this.mutableEvents.commit();
+    if (changed) {
+      this.onChange.bang();
+    }
+
   }
 
   @Override

@@ -132,6 +132,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
 
     @Override
+    public CursorParameter reset() {
+      set(Cursor.ZERO);
+      return this;
+    }
+
+    @Override
     protected double onUpdateValue(double value) {
       if (!this.inSetCursor) {
         throw new IllegalStateException("Cannot update CursorParameter with direct setValue() call");
@@ -265,7 +271,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (isRecording()) {
       LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
       ParameterClipLane lane = getParameterLane(parameter, true);
-      if (!lane.isInOverdubPlayback() && lane.shouldRecordParameterChange(parameter)) {
+      if (!lane.isInPlayback() && lane.shouldRecordParameterChange(parameter)) {
         lane.recordParameterEvent(new ParameterClipEvent(lane));
       }
     }
@@ -434,7 +440,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public String getPath() {
-    return "clip/" + (index + 1);
+    return "clip/" + (this.index + 1);
   }
 
   private boolean isQuantizedLaunch = false;
@@ -500,13 +506,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   @Override
-  protected void onTrigger() {
+  protected final void onTrigger() {
     super.onTrigger();
     if (isRunning()) {
       // This is a "restart" operation, we were already running but we've been re-triggered
       // Call launchTransport directly here because onStart() will not be invoked as per a
       // normal launch-from-stopped situation
+      Cursor from = this.cursor.clone();
       launchTransport();
+      if (!CursorOp().isEqual(from, this.cursor)) {
+        jumpCursor(from, this.cursor);
+      }
     }
 
   }
@@ -767,7 +777,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (this.loop.isOn() && isRunning() && !this.bus.arm.isOn()) {
       if (CursorOp().isBefore(this.cursor, oldEnd) && CursorOp().isAfter(this.cursor, this.loopEnd.cursor)) {
         // Advance cursor to previous loop end, playing everything
-        advanceCursor(this.cursor, oldEnd, true);
+        playCursor(this.cursor, oldEnd, true);
         // Wrap cursor back to start of loop
         setCursor(this.loopStart);
 
@@ -793,10 +803,20 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       if (isRunning()) {
         if (this.bus.arm.isOn()) {
           startHotOverdub();
-        } else {
+        } else if (this.isRecording) {
           if (this.hasTimeline) {
             stopHotOverdub();
+          } else {
+            stop();
           }
+        }
+      }
+    } else if (p == this.automationEnabled) {
+      if (!this.automationEnabled.isOn() && this.isRecording) {
+        if (this.hasTimeline) {
+          stopHotOverdub();
+        } else {
+          stop();
         }
       }
     } else if (p == this.loopStart || p == this.loopLength) {
@@ -813,18 +833,21 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Start from a stopped state, e.g. this.running has transitioned false -> true
    */
   @Override
-  protected void onStart() {
+  protected final void onStart() {
     // Stop other clips on the bus
     for (LXClip clip : this.bus.clips) {
       if (clip != null && clip != this) {
         clip.stop();
       }
     }
+
     // Kick off the transport
     launchTransport();
 
     // Perform any cursor initialization at this point
-    initializeCursor(this.cursor);
+    for (LXClipLane<?> lane : this.lanes) {
+      lane.initializeCursorPlayback(this.cursor);
+    }
 
     // Check for recording state
     if (this.bus.arm.isOn()) {
@@ -863,7 +886,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Stop from a rec/play state, fires when this.running has transitioned true -> false
    */
   @Override
-  protected void onStop() {
+  protected final void onStop() {
     super.onStop();
 
     // Wrap up any recording/playback state
@@ -883,6 +906,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.snapshot.stopTransition();
   }
 
+  private void _startRecording(boolean isOverdub) {
+    this.automationEnabled.setValue(true);
+    updateParameterDefaults();
+    resetRecordingState();
+    onStartRecording(isOverdub);
+  }
+
   private void startFirstRecording() {
     this.cursor.reset();
     this.length.reset();
@@ -890,19 +920,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.loopStart.reset();
     this.playStart.reset();
     this.playEnd.reset();
-
-    // Begin recording automation
-    this.automationEnabled.setValue(true);
-    updateParameterDefaults();
-    resetRecordingState();
-    onStartRecording(false);
+    _startRecording(false);
   }
 
   private void startOverdub() {
-    // TODO(mcslee): toggle an overdub / replace recording mode
-    updateParameterDefaults();
-    resetRecordingState();
-    onStartRecording(true);
+    _startRecording(true);
   }
 
   private void resetRecordingState() {
@@ -928,17 +950,28 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     onStopRecording();
   }
 
-  private void stopPlayback() {}
+  private void stopPlayback() {
+    onStopPlayback();
+  }
 
   // State change notifications to subclasses
 
-  protected void onStartRecording(boolean isOverdub) {
-    // Subclasses may override
-  }
+  /**
+   * Subclasses may override
+   *
+   * @param isOverdub Whether this was overdub recording
+   */
+  protected void onStartRecording(boolean isOverdub) {}
 
-  protected void onStopRecording() {
-    // Subclasses may override
-  }
+  /**
+   * Subclasses may override
+   */
+  protected void onStopRecording() {}
+
+  /**
+   * Subclasses may override
+   */
+  protected void onStopPlayback() {}
 
   private void clearLanes() {
     Iterator<LXClipLane<?>> iter = this.mutableLanes.iterator();
@@ -1028,40 +1061,20 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this;
   }
 
-  private void initializeCursor(Cursor to) {
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.initializeCursor(to);
-    }
+  private void jumpCursor(Cursor from, Cursor to) {
+    this.lanes.forEach(lane -> lane.jumpCursor(from, to));
   }
 
-  private void loopCursor(Cursor to) {
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.loopCursor(to);
-    }
+  private void loopCursor(Cursor from, Cursor to) {
+    this.lanes.forEach(lane -> lane.loopCursor(from, to));
   }
 
-  private void advanceCursor(Cursor from, Cursor to, boolean inclusive) {
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.advanceCursor(from, to, inclusive);
-    }
+  private void playCursor(Cursor from, Cursor to, boolean inclusive) {
+    this.lanes.forEach(lane -> lane.playCursor(from, to, inclusive));
   }
 
-  private void overdubCursor(Cursor from, Cursor to) {
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.overdubCursor(from, to);
-    }
-  }
-
-  private void commitRecordCursor() {
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.commitRecordEvents();
-    }
-  }
-
-  private void postOverdubCursor(Cursor from, Cursor to) {
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.postOverdubCursor(from, to);
-    }
+  private void overdubCursor(Cursor from, Cursor to, boolean inclusive) {
+    this.lanes.forEach(lane -> lane.overdubCursor(from, to, inclusive));
   }
 
   private void computeNextCursor(double deltaMs) {
@@ -1112,17 +1125,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         runOverdub();
       }
 
-      // TODO(clips): refactor into above methods, over-dubbing should also respect looping
-      // whereas first recording always extends
-      setCursor(this.nextCursor);
-
     } else {
 
       boolean runAutomation = false;
 
       // Run clip automation if enabled
       if (this.automationEnabled.isOn()) {
-        runAutomation = runAutomation();
+        runAutomation = runAutomation(false);
       }
 
       // NOTE(mcslee): the snapshot does not finish its interpolation if
@@ -1133,7 +1142,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         this.snapshot.loop(deltaMs);
       }
 
-      // If automation adn snapshot are both finished, stop
+      // If automation and snapshot are both finished, stop
       if (!runAutomation && !this.snapshot.isInTransition()) {
         stop();
       }
@@ -1142,45 +1151,43 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private void runFirstRecording() {
     // Write any queued events
-    commitRecordCursor();
+    this.lanes.forEach(lane -> lane.commitRecordQueue(true));
 
     // Recording mode... lane and event listeners will pick up and record
     // all the events. All we need to do here is update the clip length
     this.length.set(this.nextCursor);
+    this.loopStart.reset();
+    this.loopLength.set(this.nextCursor);
+    this.playStart.reset();
+    this.playEnd.set(this.nextCursor);
+
+    // First recording extends length continuously
+    setCursor(this.nextCursor);
   }
 
   private void runOverdub() {
-    // Overdubbing! FIRST we erase anything the cursor is going over
-    // in the case that overdub is active, nuking [this.cursor->nextCursor)
-    overdubCursor(this.cursor, this.nextCursor);
-
-    // Then we write queued recording events, at this.cursor
-    commitRecordCursor();
-
-    // Parameter lanes need some special logic to merge old and new
-    postOverdubCursor(this.cursor, this.nextCursor);
-
-    // TODO: Figure out how overdub works
-    // TODO: Stop recording if we cross the play end marker?
-
-    // Extend length once the end of clip is reached
-    if (CursorOp().isBefore(this.length.cursor, this.nextCursor)) {
-      this.length.set(this.nextCursor);
-    }
+    runAutomation(true);
   }
 
   /**
    * Runs the clip automation
    *
+   * @param isOverdub Whether in overdub recording mode
    * @return <code>true</code> if we should keep running, <code>false</code> otherwise
    */
-  private boolean runAutomation() {
+  private boolean runAutomation(boolean isOverdub) {
 
     final Cursor.Operator CursorOp = CursorOp();
     boolean isLoop = this.loop.isOn();
+    boolean extendOverdub = false;
 
     // Determine playback finish position
-    Cursor endCursor = isLoop ? this.loopEnd.cursor : this.playEnd.cursor;
+    Cursor endCursor = this.playEnd.cursor;
+    if (isLoop) {
+      endCursor = this.loopEnd.cursor;
+    } else if (isOverdub) {
+      endCursor = this.length.cursor;
+    }
 
     // End markers only apply when the cursor passes over them. If playback was started
     // past them, the effective end point will be the clip length.
@@ -1189,16 +1196,34 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       isLoop = false;
     }
 
+    // Check if we're overdubbing out of a loop and extending length
+    if (isOverdub && !isLoop && CursorOp.isAfter(this.nextCursor, endCursor)) {
+      endCursor = this.nextCursor;
+      extendOverdub = true;
+    }
+
     if (CursorOp.isBefore(this.nextCursor, endCursor)) {
       // Normal play frame, no looping. Execute this content, move
       // the cursor, and continue
-      advanceCursor(this.cursor, this.nextCursor, false);
+      if (isOverdub) {
+        overdubCursor(this.cursor, this.nextCursor, false);
+      } else {
+        playCursor(this.cursor, this.nextCursor, false);
+      }
       setCursor(this.nextCursor);
       return true;
     }
 
     // We have reached the end, play everything up to the end *inclusive*
-    advanceCursor(this.cursor, endCursor, true);
+    if (isOverdub) {
+      overdubCursor(this.cursor, endCursor, true);
+      if (extendOverdub) {
+        this.length.set(endCursor);
+        this.playEnd.set(endCursor);
+      }
+    } else {
+      playCursor(this.cursor, endCursor, true);
+    }
 
     // TODO(clips): definitely need some special MIDI lane processing here
     // and in various other stop points, to ensure that we send a MIDI note off
@@ -1213,7 +1238,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return false;
     }
 
-    // We are in a  loop!
+    // We are in a loop!
     if (CursorOp().isZero(this.loopLength.cursor)) {
       // Clip is non-zero length but loop is zero length, wtf? Should have been prevented
       // by loop length limits... bail out
@@ -1222,31 +1247,39 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return false;
     }
 
-    runAutomationLoop();
+    runAutomationLoop(isOverdub);
     return true;
   }
 
-  private void runAutomationLoop() {
+  private void runAutomationLoop(boolean isOverdub) {
 
     // Wrap into new loop, play automation up to next position
     while (true) {
 
       // Rewind by loop length
       this.nextCursor._subtract(this.loopLength.cursor);
-      loopCursor(this.loopStart.cursor);
+      loopCursor(this.loopEnd.cursor, this.loopStart.cursor);
 
       if (CursorOp().isBefore(this.nextCursor, this.loopEnd.cursor)) {
         // Normal expected behavior, we're back within the loop but
         // have not reached its end. Run animations from start of loop
         // up to the new position
-        advanceCursor(this.loopStart.cursor, this.nextCursor, false);
+        if (isOverdub) {
+          overdubCursor(this.loopStart.cursor, this.nextCursor, false);
+        } else {
+          playCursor(this.loopStart.cursor, this.nextCursor, false);
+        }
         break;
       }
 
       // Loop length is equal or smaller than frame, wtf?! Should be exceedingly
       // rare unless framerate is super low, but run through the *entire* loop,
       // inclusive and then we'll take another pass
-      advanceCursor(this.loopStart.cursor, this.loopEnd.cursor, true);
+      if (isOverdub) {
+        overdubCursor(this.loopStart.cursor, this.loopEnd.cursor, true);
+      } else {
+        playCursor(this.loopStart.cursor, this.loopEnd.cursor, true);
+      }
     }
 
     // Leave the cursor as far into the loop as it got

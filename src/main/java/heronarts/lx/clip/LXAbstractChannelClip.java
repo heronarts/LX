@@ -38,6 +38,12 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
   }
 
   @Override
+  protected void onStopPlayback() {
+    super.onStopPlayback();
+    this.midiNoteLane.onStopPlayback();
+  }
+
+  @Override
   protected void onStopRecording() {
     super.onStopRecording();
     this.midiNoteLane.onStopRecording();

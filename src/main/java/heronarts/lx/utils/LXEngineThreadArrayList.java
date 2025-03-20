@@ -163,6 +163,11 @@ public class LXEngineThreadArrayList<T> implements List<T>, RandomAccess {
     return false;
   }
 
+  public void removeRange(int fromIndex, int toIndex) {
+    this.engineList.subList(fromIndex, toIndex).clear();
+    setUIThreadList();
+  }
+
   @Override
   public boolean containsAll(Collection<?> c) {
     return this.engineList.containsAll(c);

@@ -21,6 +21,11 @@ public class PatternClipEvent extends LXClipEvent<PatternClipEvent> {
     this.pattern = pattern;
   }
 
+  PatternClipEvent(PatternClipLane lane, Cursor cursor, LXPattern pattern) {
+    this(lane, pattern);
+    setCursor(cursor);
+  }
+
   public LXPattern getPattern() {
     return this.pattern;
   }
@@ -35,7 +40,7 @@ public class PatternClipEvent extends LXClipEvent<PatternClipEvent> {
 
   @Override
   public void execute() {
-    this.lane.channel.goPattern(this.pattern);
+    this.lane.playPatternEvent(this);
   }
 
   protected static final String KEY_PATTERN_INDEX = "patternIndex";
