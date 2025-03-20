@@ -259,12 +259,13 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new QuantizedTriggerParameter(lx, "Stop Clips", this::stopClips)
     .setDescription("Stops all clips running in the whole project");
 
-  public final QuantizedTriggerParameter launchPatternCycle =
-    new QuantizedTriggerParameter(lx, "Launch Pattern Cycle", this.triggerPatternCycle::trigger)
-    .setDescription("Triggers a pattern cycle on every eligible channel");
-
   public final QuantizedTriggerParameter triggerPatternCycle =
     new QuantizedTriggerParameter(lx, "Trigger Pattern Cycle", this::triggerPatternCycle)
+    .setDescription("Triggers a pattern cycle on every eligible channel");
+
+  // NB(mcslee): chain parameters in case there are modulation mappings from the trigger cycle parameter!
+  public final QuantizedTriggerParameter launchPatternCycle =
+    new QuantizedTriggerParameter(lx, "Launch Pattern Cycle", this.triggerPatternCycle::trigger)
     .setDescription("Triggers a pattern cycle on every eligible channel");
 
   /**

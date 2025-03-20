@@ -192,14 +192,14 @@ public class LXChannel extends LXAbstractChannel {
     new MutableParameter("Control-Surfaces", 0)
     .setDescription("How many control surfaces are controlling this component");
 
+  public final TriggerParameter triggerPatternCycle =
+    new TriggerParameter("Trigger Pattern Cycle", this::onTriggerPatternCycle)
+    .setDescription("Triggers a pattern change on the channel");
+
   // NB(mcslee): chain parameters in case there are modulation mappings from the trigger cycle parameter!
   public final QuantizedTriggerParameter launchPatternCycle =
     new QuantizedTriggerParameter.Launch(lx, "Launch Pattern Cycle", this.triggerPatternCycle::trigger)
     .setDescription("Launches a pattern change on the channel");
-
-  public final TriggerParameter triggerPatternCycle =
-    new TriggerParameter("Trigger Pattern Cycle", this::onTriggerPatternCycle)
-    .setDescription("Triggers a pattern change on the channel");
 
   public final BooleanParameter viewPatternLabel =
     new BooleanParameter("View Pattern Label", false)
