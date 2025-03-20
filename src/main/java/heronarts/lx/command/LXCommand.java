@@ -3117,7 +3117,6 @@ public abstract class LXCommand {
       public final Marker marker;
       private final Cursor fromCursor;
       private Cursor toCursor;
-      private boolean ignore = false;
 
       /**
        * Move clip marker to a new value (in time units)
@@ -3134,11 +3133,6 @@ public abstract class LXCommand {
         return "Move Clip " + this.marker.label;
       }
 
-      @Override
-      public boolean isIgnored() {
-        return this.ignore;
-      }
-
       public SetMarker update(Cursor toCursor) {
         this.toCursor.set(toCursor);
         return this;
@@ -3146,12 +3140,7 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        LXClip clip = this.clip.get();
-        this.ignore = clip.isRecording();
-        if (this.ignore) {
-          return;
-        }
-        this.marker.setCursor(clip, this.toCursor);
+        this.marker.setCursor(this.clip.get(), this.toCursor);
       }
 
       @Override
