@@ -878,13 +878,6 @@ public class Cursor implements LXSerializable {
     return this.millis - that.millis;
   }
 
-  @Deprecated
-  Cursor setMillis(double millis) {
-    // TODO(clips): infer the correct beatCount and beatBasis
-    this.millis = millis;
-    return this;
-  }
-
   @Override
   public String toString() {
     return String.format("%.2f/%d/%.2f", this.millis, this.beatCount, this.beatBasis);
