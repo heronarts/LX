@@ -2987,47 +2987,6 @@ public abstract class LXCommand {
 
     }
 
-    public static class Launch extends LXCommand {
-
-      private final ComponentReference<LXClip> clip;
-      private final List<LXCommand> commands = new ArrayList<LXCommand>();
-      private boolean ignore = false;
-
-      public Launch(LXClip clip) {
-        this.clip = new ComponentReference<LXClip>(clip);
-      }
-
-      @Override
-      public String getDescription() {
-        return "Launch Clip";
-      }
-
-      @Override
-      public void perform(LX lx) {
-        this.commands.clear();
-        LXClip clip = this.clip.get();
-        // Were we recording, or snapshot was not enabled?
-        this.ignore = clip.bus.arm.isOn() || !clip.snapshotEnabled.isOn();
-        if (!this.ignore) {
-          clip.snapshot.getCommands(this.commands);
-        }
-        clip.launch();
-      }
-
-      @Override
-      public boolean isIgnored() {
-        return this.ignore;
-      }
-
-      @Override
-      public void undo(LX lx) throws InvalidCommandException {
-        for (LXCommand command : this.commands) {
-          command.undo(lx);
-        }
-      }
-
-    }
-
     public static class Record extends LXCommand {
 
       private final ComponentReference<LXClip> clip;
