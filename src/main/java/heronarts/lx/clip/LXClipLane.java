@@ -64,7 +64,8 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     addInternalParameter("uiMaximized", this.uiMaximized);
   }
 
-  void resetOverdub() {
+  void resetRecordingState() {
+    this.recordQueue.clear();
     this.overdubActive = false;
   }
 

@@ -928,10 +928,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void resetRecordingState() {
-    for (LXClipLane<?> lane : this.lanes) {
-      lane.recordQueue.clear();
-      lane.resetOverdub();
-    }
+    this.lanes.forEach(lane -> lane.resetRecordingState());
+
   }
 
   private void startPlayback() {}
@@ -943,10 +941,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.playStart.reset();
     this.playEnd.set(this.length);
     this.hasTimeline = true;
+    resetRecordingState();
     onStopRecording();
   }
 
   private void stopOverdub() {
+    resetRecordingState();
     onStopRecording();
   }
 
@@ -1224,13 +1224,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     } else {
       playCursor(this.cursor, endCursor, true);
     }
-
-    // TODO(clips): definitely need some special MIDI lane processing here
-    // and in various other stop points, to ensure that we send a MIDI note off
-    // for any MIDI events that have had a Note On, but for which the Note Off
-    // lies outside of the loop region. This happens in the looping case, but
-    // could also happen in any case of stopping recording or stopping playback
-    // where notes are hanging. Need to identify and handle those as well.
 
     // If the clip has no length, or is not in a loop, then we're done at the end
     if (CursorOp.isZero(this.length.cursor) || !isLoop) {
