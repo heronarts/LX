@@ -117,7 +117,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   public final LXListenableParameter removeListener(LXParameterListener listener) {
     if (!this.listeners.contains(listener)) {
-      LX.error(new Exception(), "Trying to remove unregistered LXParameterListener " + getCanonicalPath() + " " + listener.getClass().getName());
+      LX.error(new IllegalStateException("Trying to remove unregistered LXParameterListener " + getCanonicalPath() + " " + listener.getClass().getName()));
     }
     this.listeners.remove(listener);
     return this;
