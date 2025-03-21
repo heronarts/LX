@@ -32,7 +32,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
-import heronarts.lx.LXLayer;
+import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXLayeredComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXRunnableComponent;
@@ -541,11 +541,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       _removeLane(this.lanes.get(i));
     }
     LX.dispose(this.snapshot);
+    super.dispose();
     this.listeners.forEach(listener -> LX.warning("Stranded LXClip.Listener: " + listener));
     this.listeners.clear();
-    super.dispose();
   }
-
 
   public double getLength() {
     return this.length.getValue();
@@ -1020,16 +1019,40 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     p.removeListener(this.parameterRecorder);
   }
 
+  /**
+   * Be explicit storing these in a tree, we need to ensure we unregister everything
+   * correctly in the case that the children or layers of a component are modified
+   * between the time we register and unregister.
+   */
+  private final Map<LXComponent, List<LXComponent>> registeredChildren = new HashMap<>();
+
+  private List<LXComponent> _registeredChildren(LXComponent component) {
+    List<LXComponent> list = this.registeredChildren.get(component);
+    if (list == null) {
+      list = new ArrayList<>();
+      this.registeredChildren.put(component, list);
+    }
+    return list;
+  }
+
   protected void registerComponent(LXComponent component) {
     for (LXParameter p : component.getParameters()) {
       if (p instanceof LXListenableNormalizedParameter) {
         registerParameter((LXListenableNormalizedParameter) p);
       }
     }
-    if (component instanceof LXLayeredComponent) {
-      for (LXLayer layer : ((LXLayeredComponent) component).getLayers()) {
+    final List<LXComponent> registeredChildren = _registeredChildren(component);
+    if (component instanceof LXLayeredComponent layered) {
+      layered.getLayers().forEach(layer -> {
+        registeredChildren.add(layer);
         registerComponent(layer);
-      }
+      });
+    }
+    if (component instanceof LXDeviceComponent device) {
+      device.automationChildren.values().forEach(child -> {
+        registeredChildren.add(child);
+        registerComponent(child);
+      });
     }
   }
 
@@ -1058,10 +1081,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         }
       }
     }
-    if (component instanceof LXLayeredComponent) {
-      for (LXLayer layer : ((LXLayeredComponent) component).getLayers()) {
-        unregisterComponent(layer);
-      }
+    final List<LXComponent> registeredChildren = this.registeredChildren.remove(component);
+    if (registeredChildren != null) {
+      registeredChildren.forEach(child -> unregisterComponent(child));
     }
   }
 

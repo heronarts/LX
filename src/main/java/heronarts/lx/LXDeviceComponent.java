@@ -22,8 +22,11 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -122,6 +125,15 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   private final LXParameterListener viewListener;
   private final LXParameterListener viewPriorityListener;
 
+  private final LinkedHashMap<String, LXComponent> mutableAutomationChildren =
+    new LinkedHashMap<String, LXComponent>();
+
+  /**
+   * An immutable view of the map of child components.
+   */
+  public final Map<String, LXComponent> automationChildren =
+    Collections.unmodifiableMap(this.mutableAutomationChildren);
+
   /**
    * A semaphore used to keep count of how many remote control surfaces may be
    * controlling this component. This may be used by UI implementations to indicate
@@ -163,6 +175,19 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     });
 
     setDescription(getDeviceDescription(getClass()));
+  }
+
+  /**
+   * Adds a child to this device which can receive automation coming from snapshots or clip lanes
+   *
+   * @param path Component path
+   * @param child Component
+   * @return this
+   */
+  protected LXDeviceComponent addAutomationChild(String path, LXComponent child) {
+    addChild(path, child);
+    this.mutableAutomationChildren.put(path, child);
+    return this;
   }
 
   public static String getDeviceDescription(Class<? extends LXDeviceComponent> cls) {

@@ -652,6 +652,9 @@ public abstract class LXSnapshot extends LXComponent {
     for (LXLayer layer : device.getLayers()) {
       addLayeredView(scope, layer);
     }
+    for (LXComponent child : device.automationChildren.values()) {
+      addDeviceChildView(scope, child);
+    }
   }
 
   protected void addLayeredView(ViewScope scope, LXLayeredComponent component) {
@@ -662,6 +665,14 @@ public abstract class LXSnapshot extends LXComponent {
     }
     for (LXLayer layer : component.getLayers()) {
       addLayeredView(scope, layer);
+    }
+  }
+
+  protected void addDeviceChildView(ViewScope scope, LXComponent component) {
+    for (LXParameter p : component.getParameters()) {
+      if (p != component.label) {
+        addParameterView(scope, p);
+      }
     }
   }
 
