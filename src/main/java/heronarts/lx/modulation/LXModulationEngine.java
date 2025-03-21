@@ -318,6 +318,8 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
   public void dispose() {
     clear();
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXModulationEngine.Listener: " + listener));
+    this.listeners.clear();
   }
 
   @Override

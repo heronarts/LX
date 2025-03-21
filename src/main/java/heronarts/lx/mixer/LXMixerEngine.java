@@ -1217,6 +1217,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     clear();
     LX.dispose(this.masterBus);
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXMixerEngine.Listener: " + listener));
+    this.listeners.clear();
   }
 
   /**

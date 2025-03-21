@@ -1089,4 +1089,11 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     return this.trigger;
   }
 
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded Tempo.Listener: " + listener));
+    this.listeners.clear();
+  }
+
 }

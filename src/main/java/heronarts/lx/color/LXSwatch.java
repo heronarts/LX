@@ -290,6 +290,8 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     }
     this.mutableColors.clear();
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXSwatch.Listener: " + listener));
+    this.listeners.clear();
   }
 
 }

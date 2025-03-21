@@ -390,6 +390,13 @@ public class LXScheduler extends LXComponent implements LXLoopTask {
     }
   }
 
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXScheduler.Listener: " + listener));
+    this.listeners.clear();
+  }
+
   private final static String KEY_VERSION = "version";
   private final static String KEY_TIMESTAMP = "timestamp";
   private final static String KEY_ENTRIES = "entries";

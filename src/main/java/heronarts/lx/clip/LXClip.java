@@ -541,6 +541,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       _removeLane(this.lanes.get(i));
     }
     LX.dispose(this.snapshot);
+    this.listeners.forEach(listener -> LX.warning("Stranded LXClip.Listener: " + listener));
     this.listeners.clear();
     super.dispose();
   }

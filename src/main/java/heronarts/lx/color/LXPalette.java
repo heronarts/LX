@@ -647,6 +647,8 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     this.mutableSwatches.clear();
     LX.dispose(this.swatch);
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXPalette.Listener: " + listener));
+    this.listeners.clear();
   }
 
   private static final String KEY_SWATCHES = "swatches";

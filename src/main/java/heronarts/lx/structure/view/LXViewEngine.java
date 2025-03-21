@@ -333,6 +333,8 @@ public class LXViewEngine extends LXComponent implements LX.Listener {
   public void dispose() {
     this.lx.removeListener(this);
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXViewEngine.Listener: " + listener));
+    this.listeners.clear();
   }
 
   private static final String KEY_VIEWS = "views";

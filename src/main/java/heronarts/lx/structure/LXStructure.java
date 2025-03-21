@@ -967,4 +967,11 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
     return null;
   }
+
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXStructure.Listener: " + listener));
+    this.listeners.clear();
+  }
 }

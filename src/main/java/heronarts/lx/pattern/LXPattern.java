@@ -655,6 +655,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.enabled.removeListener(this.onEnabled);
     this.compositeMode.removeListener(this.onCompositeMode);
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXPattern.Listener: " + listener));
+    this.listeners.clear();
   }
 
 }

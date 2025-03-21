@@ -483,9 +483,11 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
       LX.dispose(effect);
     }
     this.mutableEffects.clear();
+    super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXBus.Listener: " + listener));
+    this.clipListeners.forEach(listener -> LX.warning("Stranded LXBus.ClipListener: " + listener));
     this.listeners.clear();
     this.clipListeners.clear();
-    super.dispose();
   }
 
   @Override

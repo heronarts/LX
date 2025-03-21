@@ -409,6 +409,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     }
     super.dispose();
     this.blendBuffer.dispose();
+    this.midiListeners.forEach(listener -> LX.warning("Stranded LXAbstractChannel.MidiListener: " + listener));
+    this.listeners.forEach(listener -> LX.warning("Stranded LXAbstractChannel.Listener: " + listener));
     this.midiListeners.clear();
     this.listeners.clear();
   }

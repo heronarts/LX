@@ -1108,11 +1108,10 @@ public class LXChannel extends LXAbstractChannel {
     if (this.thread.hasStarted) {
       this.thread.interrupt();
     }
-    this.listeners.clear();
-
     this.renderBuffer.dispose();
-
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXChannel.Listener: " + listener));
+    this.listeners.clear();
   }
 
   @Override

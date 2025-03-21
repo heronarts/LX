@@ -739,6 +739,13 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
   }
 
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXSnapshotEngine.Listener: " + listener));
+    this.listeners.clear();
+  }
+
   private static final String KEY_SNAPSHOTS = "snapshots";
 
   @Override
