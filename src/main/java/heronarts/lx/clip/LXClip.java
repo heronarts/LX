@@ -168,6 +168,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
+  public enum ClipView {
+    AUTOMATION,
+    SNAPSHOT;
+  }
+
   public final EnumParameter<Cursor.TimeBase> timeBase =
     new EnumParameter<Cursor.TimeBase>("Time Base", Cursor.TimeBase.ABSOLUTE)
     .setDescription("Whether clip timing is absolute or tempo-based");
@@ -244,6 +249,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Reference BPM of the clip");
 
+  public final EnumParameter<ClipView> clipView =
+    new EnumParameter<>("Clip View", ClipView.AUTOMATION);
+
   public final MutableParameter zoom = new MutableParameter("Zoom", 1);
 
   public final Cursor.Operator CursorOp() {
@@ -319,6 +327,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("automationEnabled", this.automationEnabled);
     addParameter("customSnapshotTransition", this.customSnapshotTransition);
 
+    addInternalParameter("clipView", this.clipView);
     addInternalParameter("launchAutomation", this.launchAutomation);
     addInternalParameter("zoom", this.zoom);
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this));
@@ -404,8 +413,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void _playFrom(Cursor cursor) {
-    this.launchFromCursor.set(CursorOp().bound(cursor, this));
-    trigger();
+    if (this.hasTimeline) {
+      this.launchFromCursor.set(CursorOp().bound(cursor, this));
+      trigger();
+    }
   }
 
   /**
