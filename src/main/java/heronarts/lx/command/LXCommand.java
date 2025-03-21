@@ -2918,15 +2918,21 @@ public abstract class LXCommand {
       private final int index;
       private JsonObject clipObj;
       private JsonObject oldClipObj;
+      private boolean enableSnapshot;
 
-      public Add(LXBus bus, int index) {
-        this(bus, index, null);
+      public Add(LXBus bus, int index, boolean enableSnapshot) {
+        this(bus, index, null, enableSnapshot);
       }
 
       public Add(LXBus bus, int index, JsonObject clipObj) {
+        this(bus, index, clipObj, false);
+      }
+
+      private Add(LXBus bus, int index, JsonObject clipObj, boolean enableSnapshot) {
         this.bus = new ComponentReference<LXBus>(bus);
         this.index = index;
         this.clipObj = clipObj;
+        this.enableSnapshot = enableSnapshot;
       }
 
       @Override
@@ -2943,7 +2949,9 @@ public abstract class LXCommand {
           this.oldClipObj = LXSerializable.Utils.toObject(lx, existing);
           bus.removeClip(this.index);
         }
-        LXClip clip = bus.addClip(this.clipObj, this.index);
+        LXClip clip = (this.clipObj != null) ?
+          bus.addClip(this.clipObj, this.index) :
+          bus.addClip(this.index, this.enableSnapshot);
         this.clipObj = LXSerializable.Utils.toObject(lx, clip);
       }
 

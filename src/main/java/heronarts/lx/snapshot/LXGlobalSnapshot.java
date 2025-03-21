@@ -111,9 +111,7 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
   // Initializes a new snapshot with views of everything
   // relevant in the project scope. It's a bit of an arbitrary selection at the moment
   @Override
-  public void initialize() {
-    LX lx = getLX();
-
+  public void initializeViews() {
     addParameterView(ViewScope.OUTPUT, lx.engine.output.brightness);
     addParameterView(ViewScope.MIXER, lx.engine.mixer.crossfader);
     for (LXAbstractChannel bus : lx.engine.mixer.channels) {

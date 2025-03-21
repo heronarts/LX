@@ -57,7 +57,7 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
   }
 
   @Override
-  public void initialize() {
+  protected void initializeViews() {
     initializeClipBus(this.clip.bus);
   }
 

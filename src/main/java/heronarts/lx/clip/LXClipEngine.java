@@ -284,6 +284,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new EnumParameter<Cursor.TimeBase>("Time-Base Default", Cursor.TimeBase.TEMPO)
     .setDescription("Which time-base new clips use by default");
 
+  public final BooleanParameter clipSnapshotDefault =
+    new BooleanParameter("Clip Snapshot Default", false)
+    .setDescription("Whether new clips have a snapshot by default");
+
   /**
    * A semaphore used to keep count of how many remote control surfaces may be
    * controlling this component. This may be used by UI implementations to indicate
@@ -310,6 +314,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("launchPatternCycle", this.launchPatternCycle);
     addParameter("triggerPatternCycle", this.triggerPatternCycle);
     addParameter("timeBaseDefault", this.timeBaseDefault);
+    addParameter("clipSnapshotDefault", this.clipSnapshotDefault);
     addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
     addParameter("gridPatternOffset", this.gridPatternOffset);

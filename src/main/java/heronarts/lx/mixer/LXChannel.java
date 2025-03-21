@@ -964,10 +964,10 @@ public class LXChannel extends LXAbstractChannel {
   public void loop(double deltaMs) {
     long loopStart = System.nanoTime();
 
-    // Delegate to LXChannelBus loop method
+    // Delegate to LXAbstractChannel loop method
     super.loop(deltaMs);
 
-    // LXChannelBus will have figured out if we need to run everything.
+    // LXAbstractChannel will have figured out if we need to run everything.
     // If not, then we're done here and skip the rest.
     if (!this.isAnimating) {
       this.profiler.loopNanos = System.nanoTime() - loopStart;

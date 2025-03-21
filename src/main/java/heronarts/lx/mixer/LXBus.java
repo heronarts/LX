@@ -338,18 +338,11 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   }
 
   public LXClip getClip(int index) {
-    return getClip(index, false);
-  }
-
-  public LXClip getClip(int index, boolean create) {
     if (index >= lx.engine.clips.numScenes.getValuei()) {
       return null;
     }
     if (index < this.clips.size()) {
       return this.clips.get(index);
-    }
-    if (create) {
-      return addClip(index);
     }
     return null;
   }
@@ -359,10 +352,18 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   }
 
   public LXClip addClip(int index) {
-    return addClip(null, index);
+    return addClip(index, false);
+  }
+
+  public LXClip addClip(int index, boolean enableSnapshot) {
+    return addClip(null, index, enableSnapshot);
   }
 
   public LXClip addClip(JsonObject clipObj, int index) {
+    return addClip(clipObj, index, false);
+  }
+
+  private LXClip addClip(JsonObject clipObj, int index, boolean enableSnapshot) {
     if (index >= LXClipEngine.MAX_SCENES) {
       throw new IllegalArgumentException("Cannot add clip at index >= " + LXClipEngine.MAX_SCENES);
     }
@@ -376,7 +377,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     if (clipObj != null) {
       clip.load(this.lx, clipObj);
     } else {
-      clip.snapshot.initialize();
+      clip.snapshotEnabled.setValue(enableSnapshot);
       clip.label.setValue(getClipLabel() + "-" + (index+1));
     }
     this.mutableClips.set(index, clip);
@@ -429,7 +430,7 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
   }
 
   public void removeClip(int index) {
-    LXClip clip = getClip(index, false);
+    LXClip clip = getClip(index);
     if (clip != null) {
       this.mutableClips.set(index, null);
       if (this.lx.engine.clips.getFocusedClip() == clip) {

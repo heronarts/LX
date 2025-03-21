@@ -224,7 +224,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   public final List<LXClipLane<?>> lanes = Collections.unmodifiableList(this.mutableLanes);
 
   public final BooleanParameter snapshotEnabled =
-    new BooleanParameter("Snapshot", true)
+    new BooleanParameter("Snapshot", false)
     .setDescription("Whether snapshot recall is enabled for this clip");
 
   public final BooleanParameter snapshotTransitionEnabled =
@@ -830,6 +830,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     } else if (p == this.loopStart || p == this.loopLength) {
       // Keep loopEnd updated to always be accurately derived
       this.loopEnd.set(this.loopStart.cursor.add(this.loopLength.cursor));
+    } else if (p == this.snapshotEnabled) {
+      // Check load flag, when loading from JsonObj the snapshotEnabled
+      // param will be restored before the snapshot gets loaded
+      if (this.snapshotEnabled.isOn() && !this.inLoad) {
+        this.snapshot.initialize();
+      }
     }
   }
 
@@ -1444,12 +1450,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
+  private boolean inLoad = false;
+
   @Override
   public void load(LX lx, JsonObject obj) {
     clearLanes();
 
     // Load parameters before lanes, which need to know clip timing mode
+    this.inLoad = true;
     super.load(lx, obj);
+    this.inLoad = false;
 
     // For legacy clips, restore raw values, set loop and play markers
     if (obj.has(KEY_PARAMETERS)) {

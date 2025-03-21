@@ -358,9 +358,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   @Override
   public void loop(double deltaMs) {
-    if (this.autoMute.isOn()) {
-      this.isAutoMuted.setValue(this.fader.getValue() == 0);
-    }
+    this.isAutoMuted.setValue(this.autoMute.isOn() && (this.fader.getValue() == 0));
+
     // Figure out if we need to loop components and modulators etc.
     this.isAnimating = isAnimating();
     super.loop(deltaMs, this.isAnimating);
