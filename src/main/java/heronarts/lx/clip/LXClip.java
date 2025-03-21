@@ -821,11 +821,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
     } else if (p == this.automationEnabled) {
       if (!this.automationEnabled.isOn() && this.isRecording) {
-        if (this.hasTimeline) {
-          stopHotOverdub();
-        } else {
-          stop();
-        }
+        stop();
       }
     } else if (p == this.loopStart || p == this.loopLength) {
       // Keep loopEnd updated to always be accurately derived
