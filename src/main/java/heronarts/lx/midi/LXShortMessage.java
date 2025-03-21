@@ -62,6 +62,10 @@ public abstract class LXShortMessage extends ShortMessage implements LXMidiMessa
     }
   }
 
+  LXShortMessage(byte[] data) {
+    super(data);
+  }
+
   public LXShortMessage setSource(LXMidiSource source) {
     this.source = source;
     return this;

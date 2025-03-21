@@ -18,6 +18,7 @@
 
 package heronarts.lx.effect;
 
+import java.util.List;
 import java.util.Map;
 
 import com.google.gson.JsonElement;
@@ -43,6 +44,49 @@ import heronarts.lx.structure.view.LXViewDefinition;
  * frame. Only the current frame is provided at runtime.
  */
 public abstract class LXEffect extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent {
+
+  public interface Container {
+
+    public List<LXEffect> getEffects();
+
+    public default LXEffect getEffect(int i) {
+      return getEffects().get(i);
+    }
+
+    public default LXEffect getEffect(String label) {
+      for (LXEffect effect : getEffects()) {
+        if (effect.getLabel().equals(label)) {
+          return effect;
+        }
+      }
+      return null;
+    }
+
+    public default Container addEffect(LXEffect effect) {
+      return addEffect(effect, -1);
+    }
+
+    public Container addEffect(LXEffect effect, int index);
+
+    public Container moveEffect(LXEffect effect, int index);
+
+    public Container removeEffect(LXEffect effect);
+
+    public default LXEffect loadEffect(LX lx, JsonObject effectObj, int index) {
+      String effectClass = effectObj.get(LXComponent.KEY_CLASS).getAsString();
+      LXEffect effect;
+      try {
+        effect = lx.instantiateEffect(effectClass);
+      } catch (LX.InstantiationException x) {
+        LX.error("Using placeholder class for missing effect: " + effectClass);
+        effect = new LXEffect.Placeholder(lx, x);
+        lx.pushError(x, effectClass + " could not be loaded. " + x.getMessage());
+      }
+      effect.load(lx, effectObj);
+      addEffect(effect, index);
+      return effect;
+    }
+  }
 
   /**
    * Placeholder pattern for when a class is missing
@@ -246,6 +290,10 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
 
   public boolean isPatternEffect() {
     return getParent() instanceof LXPattern;
+  }
+
+  public Container getContainer() {
+    return (Container) getParent();
   }
 
   public LXBus getBus() {

@@ -260,11 +260,7 @@ public class FocusedDevice {
       final LXEffect effect = (LXEffect) this.device;
       final int effectIndex = effect.getIndex();
       if (effectIndex > 0) {
-        if (effect.isBusEffect()) {
-          registerDevice(effect.getBus().getEffect(effectIndex - 1));
-        } else {
-          registerDevice(effect.getPattern().getEffect(effectIndex - 1));
-        }
+        registerDevice(effect.getContainer().getEffect(effectIndex - 1));
       } else if (this.bus instanceof LXChannel) {
         LXChannel channel = (LXChannel) this.bus;
         LXPattern pattern = channel.getFocusedPattern();

@@ -1429,10 +1429,17 @@ public class LX {
   }
 
   public static boolean LOG_WARNINGS = false;
+  public static boolean LOG_DEBUG = false;
 
   public static void warning(String message) {
     if (LOG_WARNINGS) {
       _log(System.out, "<WARNING> " + message);
+    }
+  }
+
+  public static void debug(String message) {
+    if (LOG_DEBUG) {
+      _log(System.out, "<DEBUG> " + message);
     }
   }
 

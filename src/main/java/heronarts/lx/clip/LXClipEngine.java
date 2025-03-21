@@ -18,6 +18,9 @@
 
 package heronarts.lx.clip;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -26,6 +29,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.Tempo;
 import heronarts.lx.midi.surface.MixerSurface;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXChannel;
@@ -37,6 +41,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -80,6 +85,137 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     }
   };
 
+  public static class Grid extends LXComponent implements LXOscComponent {
+
+    public interface Listener {
+      public void onGridChanged(Grid grid);
+    }
+
+    public enum Mode {
+      ADAPTIVE("A"),
+      FIXED("F");
+
+      public final String label;
+
+      private Mode(String label) {
+        this.label = label;
+      }
+
+      @Override
+      public String toString() {
+        return this.label;
+      }
+    }
+
+    public enum Spacing {
+      NARROWEST("Narrowest", 64),
+      NARROW("Narrow", 32),
+      MEDIUM("Medium", 16),
+      WIDE("Wide", 8),
+      WIDEST("Widest", 4);
+
+      public final String label;
+      public final int divisions;
+
+      private Spacing(String label, int divisions) {
+        this.label = label;
+        this.divisions = divisions;
+      }
+
+      @Override
+      public String toString() {
+        return this.label;
+      }
+    }
+
+    public enum TimeDivision {
+      QUARTER_SECOND("¼ second", 1000/4f),
+      HALF_SECOND("½ second", 1000/2f),
+      SECOND("1 second", 1000),
+      TWO_SECONDS("2 seconds", 2000),
+      FOUR_SECONDS("4 seconds", 4000);
+
+      public final String label;
+      public final float millis;
+
+      private TimeDivision(String label, float millis) {
+        this.label = label;
+        this.millis = millis;
+      }
+
+      @Override
+      public String toString() {
+        return this.label;
+      }
+    }
+
+    public final BooleanParameter snap =
+      new BooleanParameter("Snap", true)
+      .setDescription("Toggles grid snapping on or off");
+
+    public final EnumParameter<Mode> mode =
+      new EnumParameter<Mode>("Mode", Mode.ADAPTIVE)
+      .setDescription("Whether grid lines are fixed or adaptive to the visible region");
+
+    public final EnumParameter<Spacing> adaptiveSpacing =
+      new EnumParameter<>("Spacing", Spacing.MEDIUM)
+      .setDescription("Relative spacing of grid lines in Adaptive mode")
+      .setWrappable(false);
+
+    public final EnumParameter<TimeDivision> fixedSpacingAbsolute =
+      new EnumParameter<TimeDivision>("Fixed Grid Spacing", TimeDivision.SECOND)
+      .setDescription("Grid line spacing in Fixed mode when time scale is absolute")
+      .setWrappable(false);
+
+    public final ObjectParameter<Tempo.Quantization> fixedSpacingTempo =
+      new ObjectParameter<Tempo.Quantization>("Fixed Grid Spacing", new Tempo.Quantization[] {
+        Tempo.Division.EIGHT.toQuantization("8 Bars"),
+        Tempo.Division.FOUR.toQuantization("4 Bars"),
+        Tempo.Division.DOUBLE.toQuantization("2 Bars"),
+        Tempo.Division.WHOLE.toQuantization("1 Bar"),
+        Tempo.Division.HALF,
+        Tempo.Division.QUARTER,
+        Tempo.Division.EIGHTH,
+        Tempo.Division.SIXTEENTH
+      })
+      .setDescription("Grid line spacing in Fixed mode when time scale is tempo")
+      .setWrappable(false);
+
+    private Grid(LX lx) {
+      super(lx);
+      addParameter("snap", this.snap);
+      addParameter("mode", this.mode);
+      addParameter("adaptiveSpacing", this.adaptiveSpacing);
+      addParameter("fixedSpacingAbsolute", this.fixedSpacingAbsolute);
+      addParameter("fixedSpacingTempo", this.fixedSpacingTempo);
+    }
+
+    @Override
+    public void onParameterChanged(LXParameter p) {
+      super.onParameterChanged(p);
+      for (Listener listener : this.listeners) {
+        listener.onGridChanged(this);
+      }
+    }
+
+    private final List<Listener> listeners = new ArrayList<Listener>();
+
+    public final void addListener(Listener listener) {
+      Objects.requireNonNull(listener, "May not add null LXClipEngine.Grid.Listener");
+      if (this.listeners.contains(listener)) {
+        throw new IllegalStateException("May not add duplicate LXClipEngine.Grid.Listener: " + listener);
+      }
+      this.listeners.add(listener);
+    }
+
+    public final void removeListener(Listener listener) {
+      if (!this.listeners.contains(listener)) {
+        throw new IllegalStateException("May not remove non-registered LXClipEngine.Grid.Listener: " + listener);
+      }
+      this.listeners.remove(listener);
+    }
+  }
+
   public static final int MIN_SCENES = 8;
   public static final int MAX_SCENES = 128;
 
@@ -88,6 +224,8 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   private final QuantizedTriggerParameter[] patternScenes = new QuantizedTriggerParameter[MAX_SCENES];
 
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
+
+  public final Grid grid;
 
   public final BooleanParameter gridViewExpanded =
     new BooleanParameter("Grid View", false)
@@ -121,9 +259,14 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     new QuantizedTriggerParameter(lx, "Stop Clips", this::stopClips)
     .setDescription("Stops all clips running in the whole project");
 
+  public final QuantizedTriggerParameter triggerPatternCycle =
+    new QuantizedTriggerParameter(lx, "Trigger Pattern Cycle", this::triggerPatternCycle)
+    .setDescription("Triggers a pattern cycle on every eligible channel");
+
+  // NB(mcslee): chain parameters in case there are modulation mappings from the trigger cycle parameter!
   public final QuantizedTriggerParameter launchPatternCycle =
-    new QuantizedTriggerParameter(lx, "Launch Pattern Cycle", this::triggerPatternCycle)
-    .setDescription("Triggers a pattern cycle on every eligble channel");
+    new QuantizedTriggerParameter(lx, "Launch Pattern Cycle", this.triggerPatternCycle::trigger)
+    .setDescription("Triggers a pattern cycle on every eligible channel");
 
   /**
    * Amount of time taken in seconds to transition into a new snapshot view
@@ -136,6 +279,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   public final BooleanParameter snapshotTransitionEnabled =
     new BooleanParameter("Snapshot Transitions", false)
     .setDescription("When enabled, transitions between clip snapshots use interpolation");
+
+  public final EnumParameter<Cursor.TimeBase> timeBaseDefault =
+    new EnumParameter<Cursor.TimeBase>("Time-Base Default", Cursor.TimeBase.TEMPO)
+    .setDescription("Which time-base new clips use by default");
 
   /**
    * A semaphore used to keep count of how many remote control surfaces may be
@@ -160,12 +307,16 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     addParameter("snapshotTransitionEnabled", this.snapshotTransitionEnabled);
     addParameter("snapshotTransitionTimeSecs", this.snapshotTransitionTimeSecs);
     addParameter("stopClips", this.stopClips);
-    addParameter("triggerPatternCycle", this.launchPatternCycle);
+    addParameter("launchPatternCycle", this.launchPatternCycle);
+    addParameter("triggerPatternCycle", this.triggerPatternCycle);
+    addParameter("timeBaseDefault", this.timeBaseDefault);
     addParameter("gridMode", this.gridMode);
     addParameter("gridViewOffset", this.gridViewOffset);
     addParameter("gridPatternOffset", this.gridPatternOffset);
     addParameter("gridViewExpanded", this.gridViewExpanded);
     addParameter("clipInspectorExpanded", this.clipInspectorExpanded);
+
+    addChild("grid", this.grid = new Grid(lx));
 
     this.launchPatternCycle.addListener(this.patternSceneListener);
     this.stopClips.addListener(this.clipSceneListener);
@@ -380,16 +531,28 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
    * @return this
    */
   public LXClipEngine stopClips() {
+    return stopClips(true);
+  }
+
+  public LXClipEngine stopClips(boolean quantized) {
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       for (LXClip clip : channel.clips) {
         if (clip != null) {
-          clip.stop();
+          if (quantized) {
+            clip.stop.trigger();
+          } else {
+            clip.stop();
+          }
         }
       }
     }
     for (LXClip clip : this.lx.engine.mixer.masterBus.clips) {
       if (clip != null) {
-        clip.stop();
+        if (quantized) {
+          clip.stop.trigger();
+        } else {
+          clip.stop();
+        }
       }
     }
     return this;

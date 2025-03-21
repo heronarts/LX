@@ -107,12 +107,6 @@ public class ObservableList<T> implements List<T> {
     }
   }
 
-  private void notifyRemoved(Collection<? extends T> items) {
-    for (T item : items) {
-      notifyRemoved(item);
-    }
-  }
-
   // List<T> methods
 
   @Override

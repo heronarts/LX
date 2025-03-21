@@ -1004,7 +1004,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         return;
       case STOP_ALL_CLIPS:
         if (this.clipLaunchEnabled.isOn()) {
-          this.lx.engine.clips.stopClips();
+          this.lx.engine.clips.stopClips.trigger();
         }
         return;
       }
@@ -1095,7 +1095,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
       }
       return;
     case CLIP_STOP:
-      channel.stopClips();
+      channel.stopClips.trigger();
       return;
     case CHANNEL_FOCUS:
       if (this.shiftOn) {

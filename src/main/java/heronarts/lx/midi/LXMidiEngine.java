@@ -178,11 +178,24 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   public final DiscreteParameter computerKeyboardOctave =
     new DiscreteParameter("Computer MIDI Keyboard Octave", 5, 0, 11)
+    .setFormatter(v -> {
+      int octave = (int) v;
+      int lowNote = octave * 12;
+      int highNote = lowNote + 14;
+      String lowPitch = MidiNote.getPitchString(lowNote);
+      String highPitch = MidiNote.getPitchString(highNote);
+      return lowPitch + " to " + highPitch + " (" + lowNote + "-" + highNote + ")";
+    }, true)
     .setDescription("What octave the MIDI computer keyboard is in");
 
   public final ObjectParameter<Integer> computerKeyboardVelocity =
     new ObjectParameter<Integer>("Computer MIDI Keyboard Velocity", new Integer[] { 1, 20, 40, 60, 80, 100, 127 }, 100)
     .setDescription("What velocity the MIDI computer keyboard uses");
+
+  public final DiscreteParameter computerKeyboardChannel =
+    new DiscreteParameter("Computer MIDI Keyboard Channel", 0, MidiNote.NUM_CHANNELS)
+    .setFormatter(v -> { return "Ch." + (int) (v + 1); }, true)
+    .setDescription("What channel the MIDI computer keyboard uses");
 
   public LXMidiEngine(LX lx) {
     super(lx);
@@ -204,9 +217,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     this.computerKeyboardOctave.setMappable(false);
     this.computerKeyboardVelocity.setMappable(false);
     this.computerKeyboardVelocity.setWrappable(false);
+    this.computerKeyboardChannel.setMappable(false);
     addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
     addParameter("computerKeyboardOctave", this.computerKeyboardOctave);
     addParameter("computerKeyboardVelocity", this.computerKeyboardVelocity);
+    addParameter("computerKeyboardChannel", this.computerKeyboardChannel);
     addArray(TEMPLATE_PATH, this.templates);
   }
 

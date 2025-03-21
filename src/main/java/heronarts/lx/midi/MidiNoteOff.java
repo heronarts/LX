@@ -23,6 +23,10 @@ import javax.sound.midi.ShortMessage;
 
 public class MidiNoteOff extends MidiNote {
 
+  MidiNoteOff(byte[] data) {
+    super(data);
+  }
+
   MidiNoteOff(ShortMessage message) {
     super(message, ShortMessage.NOTE_OFF);
   }
@@ -35,4 +39,5 @@ public class MidiNoteOff extends MidiNote {
   public String toString() {
     return "MidiNoteOff:" + getChannel() + ":Pitch:" + getPitch() + ":Vel:" + getVelocity();
   }
+
 }

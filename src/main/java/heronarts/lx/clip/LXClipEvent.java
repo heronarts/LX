@@ -20,57 +20,49 @@ package heronarts.lx.clip;
 
 import java.util.Comparator;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 
-public abstract class LXClipEvent implements Comparator<LXClipEvent>, LXSerializable {
+public abstract class LXClipEvent<T extends LXClipEvent<?>> implements Comparator<T>, LXSerializable {
 
-  protected final LXClipLane lane;
+  protected final LXClipLane<T> lane;
   protected final LXComponent component;
-  protected double cursor;
+  public final Cursor cursor;
 
-  LXClipEvent(LXClipLane lane) {
+  LXClipEvent(LXClipLane<T> lane) {
     this(lane, lane.clip.cursor, null);
   }
 
-  LXClipEvent(LXClipLane lane, LXComponent component) {
+  LXClipEvent(LXClipLane<T> lane, LXComponent component) {
     this(lane, lane.clip.cursor, component);
   }
 
-  LXClipEvent(LXClipLane lane, double cursor) {
+  LXClipEvent(LXClipLane<T> lane, Cursor cursor) {
     this(lane, cursor, null);
   }
 
-  LXClipEvent(LXClipLane lane, double cursor, LXComponent component) {
+  LXClipEvent(LXClipLane<T> lane, Cursor cursor, LXComponent component) {
     this.lane = lane;
-    this.cursor = cursor;
+    this.cursor = cursor.clone();
     this.component = component;
   }
 
-  public double getCursor() {
+  public Cursor getCursor() {
     return this.cursor;
   }
 
-  LXClipEvent setCursor(double cursor) {
-    this.cursor = cursor;
+  LXClipEvent<T> setCursor(Cursor cursor) {
+    this.cursor.set(cursor);
     return this;
   }
 
-  public double getBasis() {
-    return this.cursor / this.lane.clip.length.getValue();
-  }
-
   @Override
-  public int compare(LXClipEvent arg0, LXClipEvent arg1) {
-    if (arg0.cursor < arg1.cursor) {
-      return -1;
-    } else if (arg0.cursor > arg1.cursor) {
-      return 1;
-    }
-    return 0;
+  public int compare(T arg0, T arg1) {
+    return this.lane.clip.timeBase.getEnum().operator.compare(arg0.cursor, arg1.cursor);
   }
 
   public abstract void execute();
@@ -80,12 +72,19 @@ public abstract class LXClipEvent implements Comparator<LXClipEvent>, LXSerializ
   @Override
   public void load(LX lx, JsonObject obj) {
     if (obj.has(KEY_CURSOR)) {
-      this.cursor = obj.get(KEY_CURSOR).getAsDouble();
+      JsonElement cursorElem = obj.get(KEY_CURSOR);
+      if (cursorElem.isJsonObject()) {
+        this.cursor.load(lx, cursorElem.getAsJsonObject());
+      } else {
+        // Legacy-load... these were from old projects when cursors were only in raw double,
+        // we'll need to infer the tempo-values from the clip's reference BPM
+        this.cursor.set(this.lane.clip.constructAbsoluteCursor(cursorElem.getAsDouble()));
+      }
     }
   }
 
   @Override
   public void save(LX lx, JsonObject obj) {
-    obj.addProperty(KEY_CURSOR, this.cursor);
+    obj.add(KEY_CURSOR, LXSerializable.Utils.toObject(lx, this.cursor));
   }
 }

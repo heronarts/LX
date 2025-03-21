@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -55,7 +54,7 @@ import heronarts.lx.utils.LXUtils;
  * A pattern is the core object that the animation engine uses to generate
  * colors for all the points.
  */
-public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent {
+public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent, LXEffect.Container {
 
   /**
    * Placeholder pattern for when a class is missing
@@ -428,10 +427,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this.compositeDampingLevel;
   }
 
-  public final LXPattern addEffect(LXEffect effect) {
-    return addEffect(effect, -1);
-  }
-
+  @Override
   public final LXPattern addEffect(LXEffect effect, int index) {
     if (index > this.mutableEffects.size()) {
       throw new IllegalArgumentException("Illegal effect index: " + index);
@@ -448,6 +444,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this;
   }
 
+  @Override
   public final LXPattern removeEffect(LXEffect effect) {
     int index = this.mutableEffects.indexOf(effect);
     if (index >= 0) {
@@ -465,18 +462,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this;
   }
 
-  public LXPattern reloadEffect(LXEffect effect) {
-    if (!this.effects.contains(effect)) {
-      throw new IllegalStateException("Cannot reload effect not on a pattern");
-    }
-    int index = effect.getIndex();
-    JsonObject effectObj = new JsonObject();
-    effect.save(getLX(), effectObj);
-    removeEffect(effect);
-    loadEffect(effectObj, index);
-    return this;
-  }
-
   private void _reindexEffects() {
     int i = 0;
     for (LXEffect e : this.mutableEffects) {
@@ -484,6 +469,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     }
   }
 
+  @Override
   public LXPattern moveEffect(LXEffect effect, int index) {
     if (index < 0 || index >= this.mutableEffects.size()) {
       throw new IllegalArgumentException("Cannot move effect to invalid index: " + index);
@@ -500,21 +486,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this;
   }
 
+  @Override
   public final List<LXEffect> getEffects() {
     return this.effects;
-  }
-
-  public LXEffect getEffect(int i) {
-    return this.effects.get(i);
-  }
-
-  public LXEffect getEffect(String label) {
-    for (LXEffect effect : this.effects) {
-      if (effect.getLabel().equals(label)) {
-        return effect;
-      }
-    }
-    return null;
   }
 
   public static final String PATH_EFFECT = "effect";
@@ -664,31 +638,14 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
     // Add the effects
     if (obj.has(KEY_EFFECTS)) {
-      JsonArray effectsArray = obj.getAsJsonArray(KEY_EFFECTS);
-      for (JsonElement effectElement : effectsArray) {
-        JsonObject effectObj = (JsonObject) effectElement;
-        loadEffect(effectObj, -1);
+      for (JsonElement effectElement : obj.getAsJsonArray(KEY_EFFECTS)) {
+        loadEffect(this.lx, (JsonObject) effectElement, -1);
       }
     }
 
     super.load(lx, obj);
 
     this.compositeDampingLevel = this.enabled.isOn() ? 1 : 0;
-  }
-
-  private LXEffect loadEffect(JsonObject effectObj, int index) {
-    String effectClass = effectObj.get("class").getAsString();
-    LXEffect effect;
-    try {
-      effect = this.lx.instantiateEffect(effectClass);
-    } catch (LX.InstantiationException x) {
-      LX.error("Using placeholder class for missing effect: " + effectClass);
-      effect = new LXEffect.Placeholder(this.lx, x);
-      this.lx.pushError(x, effectClass + " could not be loaded. " + x.getMessage());
-    }
-    effect.load(this.lx, effectObj);
-    addEffect(effect, index);
-    return effect;
   }
 
   @Override

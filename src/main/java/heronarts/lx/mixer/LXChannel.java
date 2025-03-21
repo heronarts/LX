@@ -192,17 +192,14 @@ public class LXChannel extends LXAbstractChannel {
     new MutableParameter("Control-Surfaces", 0)
     .setDescription("How many control surfaces are controlling this component");
 
-  public final QuantizedTriggerParameter launchPatternCycle =
-    new QuantizedTriggerParameter.Launch(lx, "Launch Pattern Cycle", () -> {
-      // NB(mcslee): do this via parameter in case there are modulation mappings
-      // from the trigger cycle parameter!
-      this.triggerPatternCycle.trigger();
-    })
-    .setDescription("Launches a pattern change on the channel");
-
   public final TriggerParameter triggerPatternCycle =
     new TriggerParameter("Trigger Pattern Cycle", this::onTriggerPatternCycle)
     .setDescription("Triggers a pattern change on the channel");
+
+  // NB(mcslee): chain parameters in case there are modulation mappings from the trigger cycle parameter!
+  public final QuantizedTriggerParameter launchPatternCycle =
+    new QuantizedTriggerParameter.Launch(lx, "Launch Pattern Cycle", this.triggerPatternCycle::trigger)
+    .setDescription("Launches a pattern change on the channel");
 
   public final BooleanParameter viewPatternLabel =
     new BooleanParameter("View Pattern Label", false)
@@ -685,31 +682,6 @@ public class LXChannel extends LXAbstractChannel {
     return this;
   }
 
-  public LXChannel reloadPattern(LXPattern pattern) {
-    if (!this.patterns.contains(pattern)) {
-      throw new IllegalStateException("Cannot reload pattern not on a channel");
-    }
-    boolean active = (pattern == getActivePattern());
-    boolean focused = (pattern == getFocusedPattern());
-
-    // TODO(mcslee): Collect and restore global modulations to this pattern!
-    int index = pattern.getIndex();
-    JsonObject patternObj = new JsonObject();
-    pattern.save(getLX(), patternObj);
-    removePattern(pattern);
-    LXPattern newPattern = loadPattern(patternObj, index);
-    if (focused) {
-      this.focusedPattern.setValue(newPattern.getIndex());
-    }
-    if (active) {
-      goPattern(newPattern);
-      if (this.transition != null) {
-        finishTransition();
-      }
-    }
-    return this;
-  }
-
   public final int getFocusedPatternIndex() {
     return this.focusedPattern.getValuei();
   }
@@ -812,13 +784,28 @@ public class LXChannel extends LXAbstractChannel {
   /**
    * Activates the given pattern, which must belong to this channel.
    *
-   * @param pattern Pattern to acivate
+   * @param pattern Pattern to activate
    * @return this
    */
   public final LXChannel goPattern(LXPattern pattern) {
+    return goPattern(pattern, false);
+  }
+
+  /**
+   * Activates the given pattern, which must belong to this channel. Transition
+   * can be optionally skipped
+   *
+   * @param pattern Pattern to activate
+   * @param skipTransition Skip over a transition
+   * @return this
+   */
+  public final LXChannel goPattern(LXPattern pattern, boolean skipTransition) {
     int index = this.patterns.indexOf(pattern);
     if (index >= 0) {
       goPatternIndex(index);
+    }
+    if (skipTransition && (this.transition != null)) {
+      finishTransition();
     }
     return this;
   }
@@ -826,7 +813,7 @@ public class LXChannel extends LXAbstractChannel {
   private final List<LXPattern> randomEligible = new ArrayList<LXPattern>();
 
   /**
-   * Activates a randomly seleted pattern on the channel, from the set of
+   * Activates a randomly selected pattern on the channel, from the set of
    * patterns that have auto cycle enabled.
    *
    * @return this
@@ -1197,7 +1184,7 @@ public class LXChannel extends LXAbstractChannel {
     super.load(lx, obj);
   }
 
-  private LXPattern loadPattern(JsonObject patternObj, int index) {
+  public LXPattern loadPattern(JsonObject patternObj, int index) {
     String patternClass = patternObj.get(KEY_CLASS).getAsString();
     LXPattern pattern;
     try {

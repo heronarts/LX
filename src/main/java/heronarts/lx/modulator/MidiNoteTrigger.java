@@ -61,6 +61,7 @@ public class MidiNoteTrigger extends LXModulator implements LXTriggerSource, LXO
   public MidiNoteTrigger(String label) {
     super(label);
     setMappingSource(false);
+    addParameter("legato", this.legato);
     addParameter("triggerOut", this.triggerOut);
     addParameter("pitchOut", this.pitchOut);
     addParameter("velocityOut", this.velocityOut);

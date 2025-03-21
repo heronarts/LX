@@ -45,6 +45,13 @@ public class LXCompoundModulation extends LXParameterModulation {
     public List<LXCompoundModulation> getModulations();
 
     /**
+     * Gets a list of modulation applied to this parameter for use on UI thread
+     *
+     * @return List of modulations applied to this parameter for use on UI thread
+     */
+    public List<LXCompoundModulation> getUIThreadModulations();
+
+    /**
      * Add a modulation to this parameter
      *
      * @param modulation Modulation to add

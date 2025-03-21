@@ -18,10 +18,16 @@
 
 package heronarts.lx.midi;
 
+import java.util.Arrays;
+
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
+import heronarts.lx.utils.LXUtils;
+
 public abstract class MidiNote extends LXShortMessage {
+
+  private boolean isMutable = false;
 
   protected MidiNote(int command, int channel, int pitch, int velocity) throws InvalidMidiDataException {
     super(command, channel, pitch, velocity);
@@ -31,7 +37,39 @@ public abstract class MidiNote extends LXShortMessage {
     super(message, command);
   }
 
-  private final static String[] PITCHES = {
+  MidiNote(byte[] data) {
+    super(data);
+  }
+
+  public static MidiNote constructMutable(int command, int channel, int pitch, int velocity) throws InvalidMidiDataException {
+    final byte[] data = {
+      (byte) ((command & 0xf0) | (channel & 0x0f)),
+      (byte) (pitch & 0xff),
+      (byte) (velocity & 0xff)
+    };
+    MidiNote note;
+    switch (command) {
+      case ShortMessage.NOTE_ON: note = new MidiNoteOn(data); break;
+      case ShortMessage.NOTE_OFF: note = new MidiNoteOff(data); break;
+      default: throw new InvalidMidiDataException("MidiNote.constructMutable must take NOTE_ON or NOTE_OFF command");
+    }
+    note.isMutable = true;
+    return note;
+  }
+
+  public MidiNote mutableCopy() {
+    try {
+      return constructMutable(getCommand(), getChannel(), getPitch(), getVelocity());
+    } catch (InvalidMidiDataException imdx) {
+      throw new IllegalStateException("MidiNote.mutableCopy can't already hold bad data??? " + this);
+    }
+  }
+
+  public static final int NUM_PITCHES = 128;
+  public static final int NUM_CHANNELS = 16;
+  public static final int MAX_VELOCITY = 127;
+
+  private final static String[] PITCH_STRINGS = {
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
   };
 
@@ -40,7 +78,7 @@ public abstract class MidiNote extends LXShortMessage {
     // no clear standard about what number C MIDI note 60 should be given, but
     // Ableton and "European" manufacturers seem to call it C3. Sticking with
     // that as matching Ableton is probably the most common use case.
-    return PITCHES[pitch % 12] +  Integer.toString(pitch/12 - 2);
+    return PITCH_STRINGS[pitch % 12] +  Integer.toString(pitch/12 - 2);
   }
 
   public String getPitchString() {
@@ -67,11 +105,41 @@ public abstract class MidiNote extends LXShortMessage {
     return !isNoteOn();
   }
 
+  public void setChannel(int channel) {
+    if (!this.isMutable) {
+      throw new IllegalStateException("May not setPitch() on non-mutable MIDI note");
+    }
+    if (!LXUtils.inRange(channel, 0, NUM_CHANNELS - 1)) {
+      throw new IllegalArgumentException("Channel must fall in range [0-" + (NUM_CHANNELS-1) + "]");
+    }
+    this.data[0] = (byte) (getCommand() | (channel & 0x0F));
+  }
+
+  public void setPitch(int pitch) {
+    if (!this.isMutable) {
+      throw new IllegalStateException("May not setPitch() on non-mutable MIDI note");
+    }
+    if (!LXUtils.inRange(pitch, 0, NUM_PITCHES - 1)) {
+      throw new IllegalArgumentException("Pitch must fall in range [0-" + (NUM_PITCHES-1) + "]");
+    }
+    this.data[1] = (byte) (pitch & 0xFF);
+  }
+
+  public void setVelocity(int velocity) {
+    if (!this.isMutable) {
+      throw new IllegalStateException("May not setVelocity() on non-mutable MIDI note");
+    }
+    if (!LXUtils.inRange(velocity, 1, MAX_VELOCITY)) {
+      throw new IllegalArgumentException("Velocity must fall in range [1-" + MAX_VELOCITY + "]");
+    }
+    this.data[2] = (byte) (velocity & 0xFF);
+  }
+
   /**
    * Keeps count of a stack of midi notes
    */
   public static class Stack {
-    private int[] notes = new int[128];
+    private int[] notes = new int[NUM_PITCHES];
     private int noteCount = 0;
 
     public void onMidiNote(MidiNote note) {
@@ -91,14 +159,20 @@ public abstract class MidiNote extends LXShortMessage {
       return this.noteCount;
     }
 
+    public int getNoteCount(int pitch) {
+      return this.notes[pitch];
+    }
+
     public boolean isNoteHeld() {
       return this.noteCount > 0;
     }
 
+    public boolean isNoteHeld(int pitch) {
+      return this.notes[pitch] > 0;
+    }
+
     public void reset() {
-      for (int i = 0; i < this.notes.length; ++i) {
-        this.notes[i] = 0;
-      }
+      Arrays.fill(this.notes, 0);
       this.noteCount = 0;
     }
 

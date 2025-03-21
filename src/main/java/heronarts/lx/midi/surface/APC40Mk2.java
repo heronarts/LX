@@ -1601,7 +1601,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           this.colorClipboard = null;
           this.focusColor = null;
         } else if (this.gridMode == GridMode.CLIP) {
-          this.lx.engine.clips.stopClips();
+          this.lx.engine.clips.stopClips.trigger();
         } else if (this.gridMode == GridMode.PATTERN) {
           if (isPerformanceMode()) {
             getFocusedChannelAltTarget().setValue(lx.engine.mixer.channels.size());
@@ -1609,7 +1609,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               this.lx.engine.mixer.selectChannel(lx.engine.mixer.masterBus);
             }
           } else {
-            this.lx.engine.clips.triggerPatternCycle();
+            this.lx.engine.clips.launchPatternCycle.trigger();
           }
         }
         return;
@@ -1770,12 +1770,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
       break;
     case CLIP_STOP:
       if (this.gridMode == GridMode.CLIP) {
-        channel.stopClips();
+        channel.stopClips.trigger();
       } else if (this.gridMode == GridMode.PATTERN) {
         if (isPerformanceMode()) {
           getFocusedChannelAltTarget().setValue(channel.getIndex());
         } else if (channel.isPlaylist()) {
-          ((LXChannel) channel).triggerPatternCycle.trigger();
+          ((LXChannel) channel).launchPatternCycle.trigger();
         }
       }
       break;

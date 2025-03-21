@@ -56,13 +56,14 @@ import heronarts.lx.utils.LXUtils;
  */
 public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTriggerSource {
 
-  public final static double DEFAULT_MIN_BPM = 20;
-  public final static double DEFAULT_MAX_BPM = 240;
+  public final static double DEFAULT_BPM = 120;
+  public final static double MIN_BPM = 20;
+  public final static double MAX_BPM = 240;
 
   private static final double MAX_SLEW_CORRECTION = 3.9;
 
-  private double minOscBpm = DEFAULT_MIN_BPM;
-  private double maxOscBpm = DEFAULT_MAX_BPM;
+  private double minOscBpm = MIN_BPM;
+  private double maxOscBpm = MAX_BPM;
 
   public interface Quantization {
     public default boolean hasDivision() {
@@ -210,7 +211,6 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   private final static double MS_PER_MINUTE = 60000;
-  private final static double DEFAULT_BPM = 120;
   private final static int MAX_BEATS_PER_BAR = 16;
 
   public final EnumParameter<ClockSource> clockSource =
@@ -223,7 +223,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     .setDescription("Beats per bar");
 
   public final BoundedParameter bpm =
-    new BoundedParameter("BPM", DEFAULT_BPM, this.minOscBpm, this.maxOscBpm)
+    new BoundedParameter("BPM", DEFAULT_BPM, MIN_BPM, MAX_BPM)
     .setOscMode(BoundedParameter.OscMode.ABSOLUTE)
     .setDescription("Beats per minute of the master tempo");
 
@@ -272,6 +272,10 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     .setDescription("Temporarily decreases tempo while engaged");
 
   private final LinearEnvelope nudge = new LinearEnvelope(1, 1, 5000);
+
+  public final BooleanParameter follow =
+    new BooleanParameter("Follow", false)
+    .setDescription("When enabled, the clip UI follows the cursor");
 
   public final MutableParameter period =
     new MutableParameter(MS_PER_MINUTE / DEFAULT_BPM)
@@ -393,6 +397,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     addParameter("trigger", this.trigger);
     addParameter("enabled", this.enabled);
     addParameter("launchQuantization", this.launchQuantization);
+    addParameter("follow", this.follow);
     addModulator("nudge", this.nudge);
 
     addLegacyParameter("beatsPerMeasure", this.beatsPerBar);
@@ -409,6 +414,24 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     this.lx.engine.clips.stopClips.setQuantization(this.launchQuantization);
     this.lx.engine.clips.launchPatternCycle.setQuantization(this.launchQuantization);
     this.lx.engine.mixer.masterBus.stopClips.setQuantization(this.launchQuantization);
+  }
+
+  /**
+   * Whether launch quantization is enabled in the tempo engine
+   *
+   * @return If a launch quantization division is selected
+   */
+  public boolean hasLaunchQuantization() {
+    return this.launchQuantization.getObject().hasDivision();
+  }
+
+  /**
+   * Gets the current launch quantization value
+   *
+   * @return Division value, or null if none selected
+   */
+  public Division getLaunchQuantization() {
+    return this.launchQuantization.getObject().getDivision();
   }
 
   private static final String PATH_BEAT = "beat";
@@ -430,7 +453,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   public boolean isValidOscBpm(double bpm) {
-    return bpm >= this.minOscBpm && bpm <= this.maxOscBpm;
+    return LXUtils.inRange(bpm, this.minOscBpm, this.maxOscBpm);
   }
 
   @Override

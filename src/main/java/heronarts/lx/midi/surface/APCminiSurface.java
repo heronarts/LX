@@ -1215,9 +1215,9 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
         } else if (pitch == NOTE.STOP_ALL_CLIPS) {
           // Global stop/trigger action
           if (isGridModePatterns()) {
-            this.lx.engine.clips.triggerPatternCycle();
+            this.lx.engine.clips.launchPatternCycle.trigger();
           } else if (isGridModeClips()) {
-            this.lx.engine.clips.stopClips();
+            this.lx.engine.clips.stopClips.trigger();
           }
         }
       }
@@ -1310,10 +1310,10 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
           case CLIP_STOP:
             if (isGridModePatterns()) {
               if (channel.isPlaylist()) {
-                ((LXChannel) channel).triggerPatternCycle.trigger();
+                ((LXChannel) channel).launchPatternCycle.trigger();
               }
             } else if (isGridModeClips()) {
-              channel.stopClips();
+              channel.stopClips.trigger();
             }
             break;
           }

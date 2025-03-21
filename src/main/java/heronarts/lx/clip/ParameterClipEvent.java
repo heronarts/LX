@@ -3,28 +3,52 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.utils.LXUtils;
 
-public class ParameterClipEvent extends LXClipEvent {
+public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
 
-  public final LXNormalizedParameter parameter;
+  public final ParameterClipLane lane;
   private double normalized;
 
-  ParameterClipEvent(LXClipLane lane, LXNormalizedParameter parameter) {
-    this(lane, parameter, parameter.getBaseNormalized());
+  ParameterClipEvent(ParameterClipLane lane) {
+    this(lane, lane.parameter.getBaseNormalized());
   }
 
-  ParameterClipEvent(LXClipLane lane, LXNormalizedParameter parameter, double normalized) {
-    super(lane, parameter.getParent());
-    this.parameter = parameter;
-    this.normalized = normalized;
+  ParameterClipEvent(ParameterClipLane lane, Cursor cursor) {
+    this(lane, cursor, lane.parameter.getBaseNormalized());
+  }
+
+  ParameterClipEvent(ParameterClipLane lane, double normalized) {
+    super(lane, lane.parameter.getParent());
+    this.lane = lane;
+    this.normalized = normalizeEventValue(normalized);
+  }
+
+  ParameterClipEvent(ParameterClipLane lane, Cursor cursor, double normalized) {
+    this(lane, normalized);
+    setCursor(cursor);
+  }
+
+  private double normalizeEventValue(double normalized) {
+    if (this.lane instanceof ParameterClipLane.Boolean) {
+      normalized = (normalized > .5f) ? 1 : 0;
+    } else {
+      normalized = LXUtils.constrain(normalized, 0, 1);
+    }
+    return normalized;
+  }
+
+  boolean _setNormalized(double normalized) {
+    normalized = normalizeEventValue(normalized);
+    if (this.normalized != normalized) {
+      this.normalized = normalized;
+      return true;
+    }
+    return false;
   }
 
   public ParameterClipEvent setNormalized(double normalized) {
-    normalized = LXUtils.constrain(normalized, 0, 1);
-    if (this.normalized != normalized) {
-      this.normalized = normalized;
+    if (_setNormalized(normalized)) {
       this.lane.onChange.bang();
     }
     return this;
@@ -34,9 +58,18 @@ public class ParameterClipEvent extends LXClipEvent {
     return this.normalized;
   }
 
+  public float getNormalizedf() {
+    return (float) this.normalized;
+  }
+
   @Override
   public void execute() {
-    this.parameter.setNormalized(this.normalized);
+    this.lane.parameter.setNormalized(this.normalized);
+  }
+
+  @Override
+  public String toString() {
+    return this.cursor.toString() + " -> " + this.lane.parameter.getLabel() + "=" + getNormalized();
   }
 
   protected static final String KEY_NORMALIZED = "normalized";

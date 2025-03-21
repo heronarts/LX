@@ -31,6 +31,10 @@ public class MidiNoteOn extends MidiNote {
     super(message, ShortMessage.NOTE_ON);
   }
 
+  MidiNoteOn(byte[] data) {
+    super(data);
+  }
+
   @Override
   public String toString() {
     return "MidiNoteOn:" + getChannel() + ":Pitch:" + getPitch() + ":Vel:" + getVelocity();
