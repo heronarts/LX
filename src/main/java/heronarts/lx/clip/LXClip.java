@@ -881,8 +881,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Start overdubbing from an already-playing state
    */
   public void startHotOverdub() {
-    // TODO: mcslee to review
-    stopPlayback();
     this.isRecording = true;
     startOverdub();
   }

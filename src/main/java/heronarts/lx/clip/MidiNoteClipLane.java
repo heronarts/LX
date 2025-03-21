@@ -188,7 +188,10 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   }
 
   void onStopRecording() {
-    terminatePlaybackNotes();
+    if (!this.clip.isRunning()) {
+      // Terminate if actually stopped (isRunning() still true if we stopped a hot overdub)
+      terminatePlaybackNotes();
+    }
     terminateRecordingNotes(this.clip.cursor);
   }
 
