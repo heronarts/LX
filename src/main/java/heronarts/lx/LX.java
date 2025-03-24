@@ -36,6 +36,7 @@ import heronarts.lx.scheduler.LXScheduler;
 import heronarts.lx.structure.LXFixture;
 import heronarts.lx.structure.LXStructure;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -1103,11 +1104,38 @@ public class LX {
   }
 
   public void openProject(File file) {
+    openProject(file, false);
+  }
+
+  public void openProject(File file, boolean checkVersion) {
+    try (FileReader fr = new FileReader(file)) {
+      final JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      final String fileVersion = obj.has(KEY_VERSION) ? obj.get(KEY_VERSION).getAsString() : null;
+      if (!LX.VERSION.equals(fileVersion)) {
+        LX.warning(file.getName() + ": project version " + fileVersion + " does not match app version " + LX.VERSION);
+        if (checkVersion) {
+          showConfirmDialog(
+            "Project version: " + fileVersion + "\nApp version: " + LX.VERSION + "\n\nThe project may not load properly, proceed?",
+            () -> _openProject(file, obj)
+          );
+          return;
+        }
+      }
+      _openProject(file, obj);
+    } catch (FileNotFoundException fnfx) {
+      LX.error(fnfx, "Project file not found: " + fnfx.getLocalizedMessage());
+      pushError(fnfx, "Project file not found: " + fnfx.getLocalizedMessage());
+    } catch (IOException iox) {
+      LX.error("Could not read project file: " + iox.getLocalizedMessage());
+      pushError(iox, "Could not read project file: " + iox.getLocalizedMessage());
+    }
+  }
+
+  private void _openProject(File file, JsonObject obj) {
     for (ProjectListener projectListener : this.projectListeners) {
       projectListener.projectChanged(file, ProjectListener.Change.TRY);
     }
-    try (FileReader fr = new FileReader(file)) {
-      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+    try {
       closeProject();
       this.componentRegistry.projectLoading = true;
       this.componentRegistry.setIdCounter(getMaxId(obj, this.componentRegistry.getIdCounter()) + 1);
@@ -1126,9 +1154,6 @@ public class LX {
       this.componentRegistry.projectLoading = false;
       setProject(file, ProjectListener.Change.OPEN);
       LX.log("Project loaded successfully from " + file.toString());
-    } catch (IOException iox) {
-      LX.error("Could not load project file: " + iox.getLocalizedMessage());
-      pushError(iox, "Could not load project file: " + iox.getLocalizedMessage());
     } catch (Exception x) {
       LX.error(x, "Exception in openProject: " + x.getLocalizedMessage());
       pushError(x, "Exception in openProject: " + x.getLocalizedMessage());
@@ -1162,6 +1187,10 @@ public class LX {
     } else {
       confirm.run();
     }
+  }
+
+  public void showConfirmDialog(String message, Runnable confirm) {
+    confirm.run();
   }
 
   protected void showConfirmUnsavedProjectDialog(String message, Runnable confirm) {
