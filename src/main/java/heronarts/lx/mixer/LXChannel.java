@@ -273,13 +273,17 @@ public class LXChannel extends LXAbstractChannel {
     return this.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND;
   }
 
-  void updateTransitionBlendOptions() {
+  private void disposeTransitionBlendOptions() {
     for (LXBlend blend : this.transitionBlendMode.getObjects()) {
       if (blend != null) {
         LX.dispose(blend);
       }
     }
-    this.transitionBlendMode.setObjects(this.lx.engine.mixer.instantiateTransitionBlends());
+  }
+
+  void updateTransitionBlendOptions() {
+    disposeTransitionBlendOptions();
+    this.transitionBlendMode.setObjects(this.lx.engine.mixer.instantiateTransitionBlends(this));
   }
 
   @Override
@@ -1110,6 +1114,7 @@ public class LXChannel extends LXAbstractChannel {
     }
     this.renderBuffer.dispose();
     super.dispose();
+    disposeTransitionBlendOptions();
     this.listeners.forEach(listener -> LX.warning("Stranded LXChannel.Listener: " + listener));
     this.listeners.clear();
   }

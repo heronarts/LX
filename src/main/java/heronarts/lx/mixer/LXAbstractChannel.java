@@ -253,13 +253,17 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     return false;
   }
 
-  void updateChannelBlendOptions() {
+  private void disposeChannelBlendOptions() {
     for (LXBlend blend : this.blendMode.getObjects()) {
       if (blend != null) {
         LX.dispose(blend);
       }
     }
-    this.blendMode.setObjects(lx.engine.mixer.instantiateChannelBlends());
+  }
+
+  void updateChannelBlendOptions() {
+    disposeChannelBlendOptions();
+    this.blendMode.setObjects(lx.engine.mixer.instantiateChannelBlends(this));
     this.activeBlend = this.blendMode.getObject();
     this.activeBlend.onActive();
   }
@@ -407,6 +411,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
       this.thread.interrupt();
     }
     super.dispose();
+    disposeChannelBlendOptions();
     this.blendBuffer.dispose();
     this.midiListeners.forEach(listener -> LX.warning("Stranded LXAbstractChannel.MidiListener: " + listener));
     this.listeners.forEach(listener -> LX.warning("Stranded LXAbstractChannel.Listener: " + listener));

@@ -74,6 +74,11 @@ public abstract class LXBlend extends LXModulatorComponent {
     this.name = LXComponent.getComponentName(this, "Blend");
   }
 
+  public LXBlend setBlendContext(LXComponent parent) {
+    super.setParent(parent);
+    return this;
+  }
+
   /**
    * Sets name of this blend mode
    *

@@ -266,13 +266,17 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return LXChannel.PATH_PATTERN + "/" + (this.index + 1);
   }
 
-  public void updateCompositeBlendOptions() {
+  private void disposeCompositeBlendOptions() {
     for (LXBlend blend : this.compositeMode.getObjects()) {
       if (blend != null) {
         LX.dispose(blend);
       }
     }
-    this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends());
+  }
+
+  public void updateCompositeBlendOptions() {
+    disposeCompositeBlendOptions();
+    this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends(this));
     this.activeCompositeBlend = this.compositeMode.getObject();
     this.activeCompositeBlend.onActive();
   }
@@ -655,6 +659,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.enabled.removeListener(this.onEnabled);
     this.compositeMode.removeListener(this.onCompositeMode);
     super.dispose();
+    disposeCompositeBlendOptions();
     this.listeners.forEach(listener -> LX.warning("Stranded LXPattern.Listener: " + listener));
     this.listeners.clear();
   }

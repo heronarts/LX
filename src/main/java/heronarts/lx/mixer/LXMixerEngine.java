@@ -301,11 +301,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return super.handleOscMessage(message, parts, index);
   }
 
-  private LXBlend[] instantiateBlends(List<Class<? extends LXBlend>> blendTypes) {
+  private LXBlend[] instantiateBlends(List<Class<? extends LXBlend>> blendTypes, LXComponent context) {
     List<LXBlend> blends = new ArrayList<LXBlend>(blendTypes.size());
     for (Class<? extends LXBlend> blend : blendTypes) {
       try {
-        blends.add(this.lx.instantiateBlend(blend));
+        blends.add(this.lx.instantiateBlend(blend).setBlendContext(context));
       } catch (LX.InstantiationException x) {
         this.lx.pushError(x, "Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?");
       }
@@ -313,24 +313,28 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return blends.toArray(new LXBlend[0]);
   }
 
-  public LXBlend[] instantiateChannelBlends() {
-    return instantiateBlends(this.lx.registry.channelBlends);
+  public LXBlend[] instantiateChannelBlends(LXComponent context) {
+    return instantiateBlends(this.lx.registry.channelBlends, context);
   }
 
-  protected LXBlend[] instantiateTransitionBlends() {
-    return instantiateBlends(this.lx.registry.transitionBlends);
+  protected LXBlend[] instantiateTransitionBlends(LXChannel channel) {
+    return instantiateBlends(this.lx.registry.transitionBlends, channel);
   }
 
   protected LXBlend[] instantiateCrossfaderBlends() {
-    return instantiateBlends(this.lx.registry.crossfaderBlends);
+    return instantiateBlends(this.lx.registry.crossfaderBlends, this);
   }
 
-  private void updateCrossfaderBlendOptions() {
+  private void disposeCrossfaderBlendOptions() {
     for (LXBlend blend : this.crossfaderBlendMode.getObjects()) {
       if (blend != null) {
         LX.dispose(blend);
       }
     }
+  }
+
+  private void updateCrossfaderBlendOptions() {
+    disposeCrossfaderBlendOptions();
     this.crossfaderBlendMode.setObjects(instantiateCrossfaderBlends());
     this.activeCrossfaderBlend = this.crossfaderBlendMode.getObject();
     this.activeCrossfaderBlend.onActive();
@@ -1217,6 +1221,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     clear();
     LX.dispose(this.masterBus);
     super.dispose();
+    disposeCrossfaderBlendOptions();
     this.listeners.forEach(listener -> LX.warning("Stranded LXMixerEngine.Listener: " + listener));
     this.listeners.clear();
   }
