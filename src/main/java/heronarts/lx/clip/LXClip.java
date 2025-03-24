@@ -820,12 +820,18 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (p == this.bus.arm) {
       if (isRunning()) {
         if (this.bus.arm.isOn()) {
-          startHotOverdub();
+          if (this.hasTimeline) {
+            startHotOverdub();
+          } else {
+            // Super rare/weird case, thing is running because a snapshot is recalling
+            // and then we set bus arm to true in the midst of that happening!
+            startHotFirstRecording();
+          }
         } else if (this.isRecording) {
           if (this.hasTimeline) {
             stopHotOverdub();
           } else {
-            stop();
+            stopHotFirstRecording();
           }
         }
       }
@@ -848,6 +854,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   // If recording was stopped by turning off the bus arm, we can no longer use bus.arm.isOn()
   // to know if we were running.  And so... tracking it here.
   private boolean isRecording = false;
+
+  // If an overdub recording resulted in the length being extended (we may snap its length at
+  // the end of the overdub recording if so)
+  private boolean isOverdubExtension = false;
 
   /**
    * Start from a stopped state, e.g. this.running has transitioned false -> true
@@ -884,23 +894,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
-   * Start overdubbing from an already-playing state
-   */
-  public void startHotOverdub() {
-    this.isRecording = true;
-    startOverdub();
-  }
-
-  /**
-   * Stop overdubbing from a hot-overdub state
-   */
-  public void stopHotOverdub() {
-    stopOverdub();
-    this.isRecording = false;
-    // cursor advancement will continue...
-  }
-
-  /**
    * Stop from a rec/play state, fires when this.running has transitioned true -> false
    */
   @Override
@@ -919,6 +912,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     } else {
       stopPlayback();
     }
+
+    // Clear extension flag
+    this.isOverdubExtension = false;
 
     // Finish snapshot transition
     this.snapshot.stopTransition();
@@ -941,32 +937,120 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     _startRecording(false);
   }
 
+  private void startHotFirstRecording() {
+    startFirstRecording();
+    setTransportReference(false);
+  }
+
   private void startOverdub() {
     _startRecording(true);
   }
 
-  private void resetRecordingState() {
-    this.lanes.forEach(lane -> lane.resetRecordingState());
+  private void startHotOverdub() {
+    this.isRecording = true;
+    startOverdub();
+  }
 
+
+  private void resetRecordingState() {
+    this.isOverdubExtension = false;
+    this.lanes.forEach(lane -> lane.resetRecordingState());
   }
 
   private void startPlayback() {}
 
-  private void stopFirstRecording() {
-    this.length.set(this.cursor);
+  private void setRecordingLength(Cursor length, boolean isOverdub, boolean hotStop) {
+    if ((this.timeBase.getEnum() == Cursor.TimeBase.TEMPO) && this.lx.engine.tempo.hasLaunchQuantization()) {
+      setQuantizedRecordingLength(length, isOverdub, hotStop);
+    } else {
+      this.length.set(length);
+    }
+  }
+
+  private void setQuantizedRecordingLength(Cursor length, boolean isOverdub, boolean hotStop) {
+    // If we stopped a recording in tempo mode with launch quanitzation, we round the clip length to
+    // the nearest quantization boundary so it will loop cleanly.
+    final Cursor.Operator CursorOp = CursorOp();
+    final Cursor snapSize = constructTempoCursor(this.lx.engine.tempo.getLaunchQuantization());
+    Cursor snap = CursorOp().snap(length.clone(), this, snapSize);
+
+    // But, that could *shorten* the length
+    if (CursorOp.isBefore(snap, length)) {
+      // Check if we would be clobbering data by shortening
+      for (LXClipLane<?> lane : this.lanes) {
+        if (!lane.events.isEmpty()) {
+          final LXClipEvent<?> lastEvent = lane.events.get(lane.events.size() - 1);
+          if (CursorOp.isAfter(lastEvent.cursor, snap)) {
+            // If so, force snap to the longer snap value
+            snap = CursorOp().snapCeiling(length.clone(), this, constructTempoCursor(this.lx.engine.tempo.getLaunchQuantization()));
+            break;
+          }
+        }
+      }
+    }
+    this.length.set(snap);
+    this.playEnd.set(this.length);
+    if (isOverdub) {
+      if (hotStop) {
+        // Leave cursor where it is unless we shortened the clip
+        this.cursor.bound(this);
+      } else {
+        this.cursor.set(this.length.cursor);
+      }
+    } else {
+      // First recording sets loop to true
+      this.loop.setValue(true);
+      if (hotStop) {
+        // Hot stop cursor keeps on playing from where it was, or
+        // jumps back into loop if shortened
+        if (CursorOp.isAfter(this.cursor, this.length.cursor)) {
+          this.cursor.set(this.cursor.subtract(this.length.cursor));
+          setTransportReference(false);
+        }
+      } else {
+        // Otherwise put the cursor at the end, wherever it was
+        this.cursor.set(this.length.cursor);
+      }
+    }
+  }
+
+  private void _stopFirstRecording(boolean hotStop) {
     this.loopStart.reset();
-    this.loopLength.set(this.length);
     this.playStart.reset();
+    setRecordingLength(this.cursor, false, hotStop);
+    this.loopLength.set(this.length);
     this.playEnd.set(this.length);
     this.hasTimeline = true;
     resetRecordingState();
     onStopRecording();
   }
 
-  private void stopOverdub() {
+  private void stopFirstRecording() {
+    _stopFirstRecording(false);
+  }
+
+  private void stopHotFirstRecording() {
+    _stopFirstRecording(true);
+  }
+
+  private void _stopOverdub(boolean hotStop) {
+    if (this.isOverdubExtension) {
+      setRecordingLength(this.cursor, true, hotStop);
+    }
     resetRecordingState();
     onStopRecording();
   }
+
+  private void stopOverdub() {
+    _stopOverdub(false);
+  }
+
+  private void stopHotOverdub() {
+    _stopOverdub(true);
+    this.isRecording = false;
+    // cursor advancement will continue...
+  }
+
 
   private void stopPlayback() {
     onStopPlayback();
@@ -1274,6 +1358,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (isOverdub) {
       overdubCursor(this.cursor, endCursor, true);
       if (extendOverdub) {
+        this.isOverdubExtension = true;
         this.length.set(endCursor);
         this.playEnd.set(endCursor);
       }

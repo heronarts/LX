@@ -276,6 +276,16 @@ public class Cursor implements LXSerializable {
     public Cursor snapFloor(Cursor cursor, LXClip clip, Cursor snapSize);
 
     /**
+     * Snaps this cursor's value to the nearest interval, strictly at this point or after
+     *
+     * @param cursor Cursor to snap
+     * @param clip Clip context
+     * @param snapSize Snap interval
+     * @return Cursor, updated - may exceed clip length
+     */
+    public Cursor snapCeiling(Cursor cursor, LXClip clip, Cursor snapSize);
+
+    /**
      * Snap this cursor's value up to the next interval
      *
      * @param clip Clip context
@@ -403,6 +413,14 @@ public class Cursor implements LXSerializable {
     @Override
     public Cursor snapFloor(Cursor cursor, LXClip clip, Cursor snapSize) {
       double multiple = Math.floor(cursor.millis / snapSize.millis);
+      cursor.millis = multiple * snapSize.millis;
+      _setBeatCountBasisFromMillis(cursor, clip);
+      return cursor;
+    }
+
+    @Override
+    public Cursor snapCeiling(Cursor cursor, LXClip clip, Cursor snapSize) {
+      double multiple = Math.ceil(cursor.millis / snapSize.millis);
       cursor.millis = multiple * snapSize.millis;
       _setBeatCountBasisFromMillis(cursor, clip);
       return cursor;
@@ -544,6 +562,15 @@ public class Cursor implements LXSerializable {
     public Cursor snapFloor(Cursor cursor, LXClip clip, Cursor snapSize) {
       final double snapBeatBasis = (snapSize.beatCount + snapSize.beatBasis);
       final double multiple = Math.floor((cursor.beatCount + cursor.beatBasis) / snapBeatBasis);
+      cursor._setBeatCountBasis(multiple * snapBeatBasis);
+      _setMillisFromTempo(cursor, clip);
+      return cursor;
+    }
+
+    @Override
+    public Cursor snapCeiling(Cursor cursor, LXClip clip, Cursor snapSize) {
+      final double snapBeatBasis = (snapSize.beatCount + snapSize.beatBasis);
+      final double multiple = Math.ceil((cursor.beatCount + cursor.beatBasis) / snapBeatBasis);
       cursor._setBeatCountBasis(multiple * snapBeatBasis);
       _setMillisFromTempo(cursor, clip);
       return cursor;
