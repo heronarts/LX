@@ -23,7 +23,7 @@ import heronarts.lx.LX;
 import heronarts.lx.midi.LXMidiInput;
 import heronarts.lx.midi.LXMidiOutput;
 
-@LXMidiSurface.Name("Akai APC Mini mk2")
+@LXMidiSurface.Name("Akai APCmini mk2")
 @LXMidiSurface.DeviceName("APC mini mk2 Control")
 public class APCminiMk2 extends APCminiSurface {
 
