@@ -22,6 +22,7 @@ import java.util.List;
 
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * An IndexBuffer is a representation of all the pixels that an output packet will
@@ -70,16 +71,10 @@ public class IndexBuffer {
     public final int startChannel;
 
     /**
-     * End channel (inclusive) for this segment
+     * How many bytes spacing is placed between each pixel value, typically this
+     * is byteEncoder.numBytes() but may be specified larger
      */
-    public final int endChannel;
-
-    /**
-     * Total length of this segment in bytes, which is either a function of the number
-     * of points and byte ordering for dynamic segments, or a static buffer length
-     * for static byte segments
-     */
-    public final int byteLength;
+    public final int outputStride;
 
     /**
      * Parameter to track the brightness level of this segment
@@ -125,11 +120,22 @@ public class IndexBuffer {
      * @param brightness Brightness of this segment
      */
     public Segment(int[] indices, LXBufferOutput.ByteEncoder byteEncoder, int channel, LXParameter brightness) {
+      this(indices, byteEncoder, channel, byteEncoder.getNumBytes(), brightness);
+    }
+
+    /**
+     * Segment with specified indices, byte ordering and channel offset, custom output stride
+     *
+     * @param indices Array of indices into master color buffer
+     * @param byteEncoder Byte encoder to send
+     * @param channel Channel offset in the output packet
+     * @param brightness Brightness of this segment
+     */
+    public Segment(int[] indices, LXBufferOutput.ByteEncoder byteEncoder, int channel, int outputStride, LXParameter brightness) {
       this.indices = indices;
       this.byteEncoder = byteEncoder;
-      this.byteLength = this.indices.length * this.byteEncoder.getNumBytes();
+      this.outputStride = outputStride;
       this.startChannel = channel;
-      this.endChannel = this.startChannel + this.byteLength - 1;
       this.brightness = brightness;
 
       // Unused here
@@ -144,14 +150,31 @@ public class IndexBuffer {
      */
     public Segment(byte[] staticBytes, int channel) {
       this.staticBytes = staticBytes;
-      this.byteLength = staticBytes.length;
       this.startChannel = channel;
-      this.endChannel = this.startChannel + this.byteLength - 1;
 
       // Unused here
       this.indices = null;
+      this.outputStride = 1;
       this.byteEncoder = null;
       this.brightness = null;
+    }
+
+    /**
+     * Gets the number of channels required in an output packet to send this segment
+     *
+     * @return required channels to send this segment
+     */
+    public int getRequiredChannels() {
+      int numChannels = 0;
+      if (this.byteEncoder != null) {
+        numChannels = this.outputStride * this.indices.length;
+        if (this.indices.length > 0) {
+          numChannels -= this.outputStride - this.byteEncoder.getNumBytes();
+        }
+      } else {
+        numChannels = this.staticBytes.length;
+      }
+      return this.startChannel + numChannels;
     }
   }
 
@@ -161,7 +184,8 @@ public class IndexBuffer {
   public final Segment[] segments;
 
   /**
-   * The total number of single-byte DMX channels in this index buffer
+   * The total number of single-byte DMX channels required by this index buffer
+   * to fit all of the data it contains
    */
   public final int numChannels;
 
@@ -223,12 +247,10 @@ public class IndexBuffer {
    */
   public IndexBuffer(Segment ... segments) {
     this.segments = segments;
-    int endChannel = -1;
+    int numChannels = 0;
     for (Segment segment : segments) {
-      if (segment.endChannel > endChannel) {
-        endChannel = segment.endChannel;
-      }
+      numChannels = LXUtils.max(numChannels, segment.getRequiredChannels());
     }
-    this.numChannels = endChannel + 1;
+    this.numChannels = numChannels;
   }
 }

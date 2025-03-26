@@ -165,6 +165,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_COMPONENT_ID = "componentId";
   private static final String KEY_NUM = "num";
   private static final String KEY_STRIDE = "stride";
+  private static final String KEY_OUTPUT_STRIDE = "outputStride";
   private static final String KEY_PAD_PRE = "padPre";
   private static final String KEY_PAD_POST = "padPost";
   private static final String KEY_REPEAT = "repeat";
@@ -546,11 +547,12 @@ public class JsonFixture extends LXFixture {
     private final byte[] headerBytes;
     private final byte[] footerBytes;
     private final boolean reverse;
+    private final int outputStride;
 
     // May or may not be specified, if null then the parent output definition is used
     private final JsonByteEncoderDefinition byteEncoder;
 
-    private JsonSegmentDefinition(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, JsonByteEncoderDefinition byteEncoder, byte[] headerBytes, byte[] footerBytes) {
+    private JsonSegmentDefinition(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, JsonByteEncoderDefinition byteEncoder, byte[] headerBytes, byte[] footerBytes, int outputStride) {
       this.start = start;
       this.num = num;
       this.stride = stride;
@@ -561,6 +563,7 @@ public class JsonFixture extends LXFixture {
       this.byteEncoder = byteEncoder;
       this.headerBytes = headerBytes;
       this.footerBytes = footerBytes;
+      this.outputStride = outputStride;
     }
   }
 
@@ -777,7 +780,7 @@ public class JsonFixture extends LXFixture {
       String message = jpx.getLocalizedMessage();
       Throwable cause = jpx.getCause();
       if (cause instanceof MalformedJsonException) {
-        message = "Invalid JSON in " + fixtureFile.getName() + ": " + ((MalformedJsonException)cause).getLocalizedMessage();
+        message = "Invalid JSON in " + fixtureFile.getName() + ": " + cause.getLocalizedMessage();
       }
       setError(jpx, message);
       setErrorLabel(fixtureType);
@@ -2139,9 +2142,10 @@ public class JsonFixture extends LXFixture {
       }
     }
 
-    JsonProtocolDefinition protocol = JsonProtocolDefinition.get(loadString(outputObj, KEY_PROTOCOL, true, "Output must specify a valid " + KEY_PROTOCOL));
+    final String protocolStr = loadString(outputObj, KEY_PROTOCOL, true, "Output must specify a valid " + KEY_PROTOCOL);
+    JsonProtocolDefinition protocol = JsonProtocolDefinition.get(protocolStr);
     if (protocol == null) {
-      addWarning("Output definition must define a valid protocol");
+      addWarning("Output definition must define a valid protocol, not recognized: " + protocolStr);
       return;
     }
 
@@ -2405,6 +2409,17 @@ public class JsonFixture extends LXFixture {
       segmentByteOrder = loadByteOrder(segmentObj, null);
     }
 
+    JsonByteEncoderDefinition byteEncoder = (segmentByteOrder != null) ? segmentByteOrder : outputByteOrder;
+    int outputStride = byteEncoder.byteEncoder.getNumBytes();
+    if (segmentObj.has(KEY_OUTPUT_STRIDE)) {
+      int customStride = loadInt(segmentObj, KEY_OUTPUT_STRIDE, true, "Output " + KEY_OUTPUT_STRIDE + " must be a valid integer");
+      if (customStride < outputStride) {
+        addWarning("Output stride may not be less than byte order size: " + customStride + " < " + outputStride);
+      } else {
+        outputStride = customStride;
+      }
+    }
+
     // The entire segment may be repeated - note that this is different from the basic
     // repeat option which repeats every *pixel* inline. The segment repeat option duplicates
     // output of the entire segment N times.
@@ -2422,7 +2437,7 @@ public class JsonFixture extends LXFixture {
     byte[] footerBytes = loadStaticBytes(segmentObj, KEY_FOOTER_BYTES);
 
     // Duplicate the definition N times (typically 1)
-    final JsonSegmentDefinition segment = new JsonSegmentDefinition(start, num, stride, repeat, padPre, padPost, reverse, segmentByteOrder, headerBytes, footerBytes);
+    final JsonSegmentDefinition segment = new JsonSegmentDefinition(start, num, stride, repeat, padPre, padPost, reverse, segmentByteOrder, headerBytes, footerBytes, outputStride);
     for (int i = 0; i < duplicate; ++i) {
       segments.add(segment);
     }
@@ -2552,7 +2567,8 @@ public class JsonFixture extends LXFixture {
         segment.reverse,
         (segment.byteEncoder != null) ? segment.byteEncoder.byteEncoder : output.byteEncoder.byteEncoder,
         segment.headerBytes,
-        segment.footerBytes
+        segment.footerBytes,
+        segment.outputStride
        ));
     }
 

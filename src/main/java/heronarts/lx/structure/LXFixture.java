@@ -141,8 +141,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Length of the index buffer (# of color index values))
     protected final int length;
 
-    // Total number of single-byte channels (# of individual color output bytes, does not include prefix/suffix)
-    protected final int numChannels;
+    // Number of output bytes per pixel index
+    protected final int outputStride;
 
     // Static bytes to prefix the output with
     protected final byte[] headerBytes;
@@ -184,12 +184,13 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder) {
-      this(start, num, stride, repeat, padPre, padPost, reverse, byteEncoder, null, null);
+      this(start, num, stride, repeat, padPre, padPost, reverse, byteEncoder, null, null, byteEncoder.getNumBytes());
     }
 
-    protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder, byte[] headerBytes, byte[] footerBytes) {
+    protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder, byte[] headerBytes, byte[] footerBytes, int outputStride) {
       this.length = num * repeat + padPre + padPost;
       this.indexBuffer = new int[this.length];
+      this.outputStride = outputStride;
       if (reverse) {
         start = start + stride * (num-1);
         stride = -stride;
@@ -208,7 +209,6 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
         this.indexBuffer[i++] = IndexBuffer.EMPTY_PIXEL;
       }
       this.byteEncoder = byteEncoder;
-      this.numChannels = this.length * byteEncoder.getNumBytes();
       this.headerBytes = headerBytes;
       this.footerBytes = footerBytes;
     }
@@ -224,9 +224,19 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       this.indexBuffer = indexBuffer;
       this.length = indexBuffer.length;
       this.byteEncoder = byteEncoder;
-      this.numChannels = indexBuffer.length * byteEncoder.getNumBytes();
+      this.outputStride = byteEncoder.getNumBytes();
       this.headerBytes = null;
       this.footerBytes = null;
+    }
+
+    public int getRequiredBytes(int indexLength) {
+      int requiredBytes = indexLength * this.outputStride;
+      if (indexLength > 0) {
+        // When output stride is greater than byte encoder size, we don't need
+        // those last padding bytes
+        requiredBytes -= this.outputStride - this.byteEncoder.getNumBytes();
+      }
+      return requiredBytes;
     }
 
     /**

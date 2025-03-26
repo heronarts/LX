@@ -167,6 +167,7 @@ public abstract class LXBufferOutput extends LXOutput {
 
         final ByteEncoder byteEncoder = segment.byteEncoder;
         final int numBytes = byteEncoder.getNumBytes();
+        final int stride = segment.outputStride;
 
         // TODO(mcslee): determine if there's actually any performance gain at all here by
         // putting branches outside of the for loops? If not just nuke this...
@@ -184,7 +185,7 @@ public abstract class LXBufferOutput extends LXOutput {
                 int b = (color & 0xff);
                 int w = (r + b + g) / 3;
                 buffer[offset] = gamma.white[w];
-                offset += numBytes;
+                offset += stride;
               }
             } else {
               for (int i = 0; i < segment.indices.length; ++i) {
@@ -201,7 +202,7 @@ public abstract class LXBufferOutput extends LXOutput {
                 buffer[offset + byteOffset[1]] = gamma.green[g];
                 buffer[offset + byteOffset[2]] = gamma.blue[b];
                 buffer[offset + byteOffset[3]] = gamma.white[w];
-                offset += numBytes;
+                offset += stride;
               }
             }
           } else {
@@ -211,7 +212,7 @@ public abstract class LXBufferOutput extends LXOutput {
               buffer[offset + byteOffset[0]] = gamma.red[((color >> 16) & 0xff)]; // R
               buffer[offset + byteOffset[1]] = gamma.green[((color >> 8) & 0xff)]; // G
               buffer[offset + byteOffset[2]] = gamma.blue[(color & 0xff)]; // B
-              offset += numBytes;
+              offset += stride;
             }
           }
         } else {
@@ -220,7 +221,7 @@ public abstract class LXBufferOutput extends LXOutput {
             int index = segment.indices[i];
             int color = (index >= 0) ? colors[index] : 0;
             byteEncoder.writeBytes(color, gamma, buffer, offset);
-            offset += numBytes;
+            offset += stride;
           }
         }
       }

@@ -52,11 +52,12 @@ public class LXStructureOutput extends LXOutput {
     private final LXFixture.Transport transport;
     private final InetAddress address;
     private final int port;
-    private final int universe;
+    private final int universe; // holds data offset for DDP/OPC
     private int priority;
     private boolean sequenceEnabled;
     private final KinetDatagram.Version kinetVersion;
     private float fps = 0f;
+    private final int[] collisionMask;
 
     private final List<IndexBuffer.Segment> segments = new ArrayList<IndexBuffer.Segment>();
 
@@ -69,10 +70,11 @@ public class LXStructureOutput extends LXOutput {
       this.priority = priority;
       this.sequenceEnabled = sequenceEnabled;
       this.kinetVersion = kinetVersion;
+      this.collisionMask = new int[(int) Math.ceil(protocol.maxChannels / Integer.SIZE)];
     }
 
     private void segmentCollision(int collisionStart, int collisionEnd) {
-      String err = this.protocol.toString() + this.address.toString() + " - duplicated ";
+      String err = this.protocol.toString() + this.address.toString() + " - collisions in ";
       switch (this.protocol) {
       case ARTNET:
       case SACN:
@@ -86,7 +88,9 @@ public class LXStructureOutput extends LXOutput {
           ((collisionStart == collisionEnd) ? (" channel " + collisionStart) : (" channels " + collisionStart + "-" + collisionEnd));
         break;
       case DDP:
-        err += "data offset " + this.universe;
+        err +=
+          "data offset " + this.universe +
+          ((collisionStart == collisionEnd) ? (" + [" + collisionStart + "]") : (" + [" + collisionStart + "-" + collisionEnd + "]"));
         break;
       case OPC:
         err +=
@@ -100,27 +104,55 @@ public class LXStructureOutput extends LXOutput {
       outputErrors.add(err);
     }
 
-    private void checkSegmentCollisions(int startChannel, int endChannel) {
-      for (IndexBuffer.Segment existing : this.segments) {
-        // If this one starts before an existing...
-        if (startChannel < existing.startChannel) {
-          // Then check if its end goes over the start, bad news
-          if (endChannel >= existing.startChannel) {
-            segmentCollision(existing.startChannel, LXUtils.min(endChannel, existing.endChannel));
+    private void checkSegmentCollisions(IndexBuffer.Segment segment) {
+      int minCollision = -1, maxCollision = -1;
+      int outputStride = 1;
+      int bytesPerIndex = 1;
+      if (segment.byteEncoder != null) {
+        bytesPerIndex = segment.byteEncoder.getNumBytes();
+        outputStride = segment.outputStride;
+      }
+      if (bytesPerIndex != outputStride) {
+        int indexChannel = segment.startChannel;
+        for (int i = 0; i < segment.indices.length; ++i) {
+          for (int j = 0; j < bytesPerIndex; ++j) {
+            int channel = indexChannel + j;
+            int bucket = channel / Integer.SIZE;
+            int mask = 1 << (channel % Integer.SIZE);
+            if (0 != (this.collisionMask[bucket] & mask)) {
+              if (minCollision < 0) {
+                minCollision = channel;
+              }
+              maxCollision = channel;
+            }
+            this.collisionMask[bucket] |= mask;
           }
-        } else if (startChannel <= existing.endChannel) {
-          // If it's start point is before the end of an exiting one, also bad news
-          segmentCollision(startChannel, LXUtils.min(endChannel, existing.endChannel));
+          indexChannel += outputStride;
         }
+      } else {
+        final int requiredChannels = segment.getRequiredChannels();
+        for (int channel = segment.startChannel; channel < requiredChannels; ++channel) {
+          int bucket = channel / Integer.SIZE;
+          int mask = 1 << (channel % Integer.SIZE);
+          if (0 != (this.collisionMask[bucket] & mask)) {
+            if (minCollision < 0) {
+              minCollision = channel;
+            }
+            maxCollision = channel;
+          }
+          this.collisionMask[bucket] |= mask;
+        }
+      }
+
+      if (minCollision >= 0) {
+        segmentCollision(minCollision, maxCollision);
       }
     }
 
     private void addStaticSegment(byte[] staticBytes, int startChannel, float fps) {
-      final int endChannel = startChannel + staticBytes.length - 1;
-      checkSegmentCollisions(startChannel, endChannel);
-
-      // Generate a static-byte segment
-      this.segments.add(new IndexBuffer.Segment(staticBytes, startChannel));
+      final IndexBuffer.Segment segment = new IndexBuffer.Segment(staticBytes, startChannel);
+      checkSegmentCollisions(segment);
+      this.segments.add(segment);
 
       // Reduce packet max FPS to the specified limit, if one exists and a lower limit is not already present
       if (fps > 0) {
@@ -131,12 +163,16 @@ public class LXStructureOutput extends LXOutput {
     }
 
     private void addDynamicSegment(LXFixture.Segment segment, int startChannel, int chunkStart, int chunkLength, float fps) {
-      final int endChannel = startChannel + chunkLength - 1;
-
-      checkSegmentCollisions(startChannel, endChannel);
-
       // Translate the fixture-scoped Segment into global address space
-      this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteEncoder, startChannel, segment.getBrightness()));
+      final IndexBuffer.Segment indexSegment = new IndexBuffer.Segment(
+        segment.toIndexBuffer(chunkStart, chunkLength),
+        segment.byteEncoder,
+        startChannel,
+        segment.outputStride,
+        segment.getBrightness()
+      );
+      checkSegmentCollisions(indexSegment);
+      this.segments.add(indexSegment);
 
       // Reduce packet max FPS to the specified limit, if one exists and a lower limit is not already present
       if (fps > 0) {
@@ -308,7 +344,7 @@ public class LXStructureOutput extends LXOutput {
       return output.protocol.maxChannels - this.channel;
     }
 
-    private void checkUniverseOverflow(boolean force) throws FixtureOutputException {
+    private void checkUniverseOverflow(int overflowChannel, boolean force) throws FixtureOutputException {
       if (force || (this.channel >= output.protocol.maxChannels)) {
         // Does this output protocol support universes? And/or are we at the last one?
         switch (output.protocol) {
@@ -331,7 +367,7 @@ public class LXStructureOutput extends LXOutput {
 
         // All good made it thru, let's bump up to the next universe
         ++this.universe;
-        this.channel = 0;
+        this.channel = overflowChannel;
         this.packet = _findPacket();
       }
     }
@@ -341,7 +377,7 @@ public class LXStructureOutput extends LXOutput {
         return;
       }
 
-      checkUniverseOverflow(false);
+      checkUniverseOverflow(0, false);
 
       int offset = 0;
       int remaining = staticBytes.length;
@@ -350,7 +386,7 @@ public class LXStructureOutput extends LXOutput {
         _addStaticSegment(Arrays.copyOfRange(staticBytes, offset, offset + available));
         offset += available;
         remaining -= available;
-        checkUniverseOverflow(false);
+        checkUniverseOverflow(0, false);
         available = availableBytes();
       }
       _addStaticSegment(Arrays.copyOfRange(staticBytes, offset, offset + remaining));
@@ -366,27 +402,33 @@ public class LXStructureOutput extends LXOutput {
         return;
       }
 
-      checkUniverseOverflow(false);
+      checkUniverseOverflow(0, false);
+
+      int availableBytes = availableBytes();
 
       int chunkStart = 0;
       int chunkLength = segment.length;
-      int available = availableBytes();
 
       // Is there not enough available space for the entire segment? If so, chunk the packet
-      while (available < chunkLength * segment.byteEncoder.getNumBytes()) {
-        // How many indices can fit into the remaining available bytes?
-        int chunkLimit = available / segment.byteEncoder.getNumBytes();
+      while (availableBytes < segment.getRequiredBytes(chunkLength)) {
+        // How many indices can fit into the remaining available bytes? Add padding in the
+        // case that stride exceeds bytes, since we don't necessarily need to fit those
+        // padding bytes into this universe
+        int padding = segment.outputStride - segment.byteEncoder.getNumBytes();
+        int chunkLimit = (availableBytes + padding) / segment.outputStride;
+        int overflowChannel = 0;
 
         // It could be 0, e.g. channel = 510 byteOrder RGB, can't fit an RGB pixel so
         // we must overflow...
         if (chunkLimit > 0) {
           _addDynamicSegment(segment, chunkStart, chunkLimit);
+          overflowChannel = this.channel % output.protocol.maxChannels;
           chunkStart += chunkLimit;
           chunkLength -= chunkLimit;
         }
 
-        checkUniverseOverflow(true);
-        available = availableBytes();
+        checkUniverseOverflow(overflowChannel, true);
+        availableBytes = availableBytes();
       }
 
       // Add the final chunk (the whole segment in the common case)
@@ -395,7 +437,7 @@ public class LXStructureOutput extends LXOutput {
 
     private void _addDynamicSegment(LXFixture.Segment segment, int chunkStart, int chunkLength) {
       this.packet.addDynamicSegment(segment, this.channel, chunkStart, chunkLength, this.output.fps);
-      this.channel += chunkLength * segment.byteEncoder.getNumBytes();
+      this.channel += chunkLength * segment.outputStride;
     }
 
     private Packet _findPacket() {
