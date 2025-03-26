@@ -18,10 +18,19 @@
 
 package heronarts.lx.parameter;
 
-public class CompoundEnumParameter<T extends Enum<?>> extends CompoundObjectParameter<T> {
+public class CompoundEnumParameter<T extends Enum<T>> extends CompoundObjectParameter<T> implements IEnumParameter<T> {
 
+  public final Class<T> enumClass;
+
+  @SuppressWarnings("unchecked")
   public CompoundEnumParameter(String label, T t) {
     super(label, EnumParameter.valuesFor(t), t);
+    this.enumClass = (Class<T>) t.getClass();
+  }
+
+  public CompoundEnumParameter<T> setEnum(String enumName) {
+    setValue(Enum.valueOf(this.enumClass, enumName));
+    return this;
   }
 
   @Override

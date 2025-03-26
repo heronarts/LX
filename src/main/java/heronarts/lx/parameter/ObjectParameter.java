@@ -140,6 +140,10 @@ public class ObjectParameter<T> extends DiscreteParameter {
     return this.objects;
   }
 
+  public T getBaseObject() {
+    return getObject();
+  }
+
   public T getObject() {
     return this.objects[getIndex()];
   }

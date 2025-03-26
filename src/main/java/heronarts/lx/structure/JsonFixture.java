@@ -58,6 +58,7 @@ import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.IEnumParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
@@ -1932,6 +1933,19 @@ public class JsonFixture extends LXFixture {
             continue;
           }
           final String path = parameter.getPath();
+
+          // Substitute enum/name parameter paths
+          if (parameter instanceof IEnumParameter<?>) {
+            String enumPath = LXSerializable.Utils.getEnumNamePath(path);
+            if (paramsObj.has(enumPath)) {
+              JsonElement enumParam = paramsObj.get(enumPath);
+              if (enumParam.isJsonPrimitive() && enumParam.getAsJsonPrimitive().isString()) {
+                paramsObj.addProperty(enumPath, replaceVariables(enumPath, enumParam.getAsJsonPrimitive().getAsString(), ParameterType.STRING));
+              }
+            }
+          }
+
+          // Substitute variable expressions in string/int/float/boolean values
           if (paramsObj.has(path)) {
             JsonElement param = paramsObj.get(path);
             if (param.isJsonPrimitive() && param.getAsJsonPrimitive().isString()) {

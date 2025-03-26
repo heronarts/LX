@@ -18,7 +18,7 @@
 
 package heronarts.lx.parameter;
 
-public class EnumParameter<T extends Enum<T>> extends ObjectParameter<T> {
+public class EnumParameter<T extends Enum<T>> extends ObjectParameter<T> implements IEnumParameter<T> {
 
   @SuppressWarnings("unchecked")
   static <T> T[] valuesFor(T o) {
@@ -70,6 +70,10 @@ public class EnumParameter<T extends Enum<T>> extends ObjectParameter<T> {
   public EnumParameter<T> addListener(LXParameterListener listener) {
     super.addListener(listener);
     return this;
+  }
+
+  public T getBaseEnum() {
+    return getBaseObject();
   }
 
   public T getEnum() {
