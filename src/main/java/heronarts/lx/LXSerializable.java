@@ -167,8 +167,9 @@ public interface LXSerializable {
             // be missing if saved by an older version of LX that didn't write enums,
             // or if the enum values have been changed in code. In those cases fall back
             // to the basic integer value.
-            if (obj.has(path + "/" + PATH_ENUM_NAME)) {
-              final JsonElement nameElem = obj.get(path + "/" + PATH_ENUM_NAME);
+            String enumNamePath = getEnumNamePath(path);
+            if (obj.has(enumNamePath)) {
+              final JsonElement nameElem = obj.get(enumNamePath);
               try {
                 enumParameter.setEnum(nameElem.getAsString());
                 fallbackInt = false;
