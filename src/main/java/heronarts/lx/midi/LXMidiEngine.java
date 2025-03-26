@@ -1354,10 +1354,8 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             surface.load(lx, surfaceObj);
             if (surface.connected.isOn()) {
               // Enable it immediately if it's connected
-              LX.log("Connected: " + surface);
               surface.enabled.setValue(true);
             } else {
-              LX.log("Set remember flag " + surface);
               // Otherwise flag that we want to remember it
               surface.setRememberFlag();
             }
