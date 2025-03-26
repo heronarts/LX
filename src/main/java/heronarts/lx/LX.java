@@ -55,6 +55,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Queue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -1107,15 +1109,50 @@ public class LX {
     openProject(file, false);
   }
 
+  private static final Pattern versionPattern = Pattern.compile("^(\\d+)\\.(\\d+)\\.(\\d+)(?:-([\\w.-]+))?$");
+
+  private boolean isNewerVersion(String version) {
+    try {
+      Matcher thisVersion = versionPattern.matcher(LX.VERSION);
+      Matcher thatVersion = versionPattern.matcher(version);
+      if (thisVersion.matches() && thatVersion.matches()) {
+        int thisMajor = Integer.valueOf(thisVersion.group(1));
+        int thisMinor = Integer.valueOf(thisVersion.group(2));
+        int thisPatch = Integer.valueOf(thisVersion.group(3));
+
+        int thatMajor = Integer.valueOf(thatVersion.group(1));
+        int thatMinor = Integer.valueOf(thatVersion.group(2));
+        int thatPatch = Integer.valueOf(thatVersion.group(3));
+
+        if (thatMajor > thisMajor) {
+          return true;
+        } else if (thatMajor == thisMajor) {
+          if (thatMinor > thisMinor) {
+            return true;
+          } else if (thatMinor == thisMinor) {
+            return thatPatch > thisPatch;
+          }
+        }
+      } else {
+        throw new IllegalArgumentException("Couldn't parse: " + version);
+      }
+    } catch (Exception x) {
+      error(x, "Failed to parse file version: " + version);
+    }
+    return false;
+  }
+
   public void openProject(File file, boolean checkVersion) {
     try (FileReader fr = new FileReader(file)) {
       final JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
       final String fileVersion = obj.has(KEY_VERSION) ? obj.get(KEY_VERSION).getAsString() : null;
-      if (!LX.VERSION.equals(fileVersion)) {
-        LX.warning(file.getName() + ": project version " + fileVersion + " does not match app version " + LX.VERSION);
+      if ((fileVersion != null) && isNewerVersion(fileVersion)) {
+        LX.warning(file.getName() + ": project version " + fileVersion + " is newer than app version " + LX.VERSION);
         if (checkVersion) {
           showConfirmDialog(
-            "Project version: " + fileVersion + "\nApp version: " + LX.VERSION + "\n\nThe project may not load properly, proceed?",
+            "Project version: " + fileVersion + "\n" +
+            "App version: " + LX.VERSION + "\n\n" +
+            "The project may not load properly, proceed?",
             () -> _openProject(file, obj)
           );
           return;
