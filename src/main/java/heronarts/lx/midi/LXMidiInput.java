@@ -67,6 +67,7 @@ public class LXMidiInput extends LXMidiDevice implements LXMidiSource, LXSeriali
         MidiSelector.updateInputs(engine.inputs);
       }
       this.enabled.setValue(this.channelEnabled.isOn() || this.controlEnabled.isOn() || this.syncEnabled.isOn());
+      engine.saveDevices();
     };
     this.channelEnabled.addListener(enabledListener);
     this.controlEnabled.addListener(enabledListener);

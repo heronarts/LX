@@ -136,10 +136,8 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
       this.remember = false;
       final boolean on = this.enabled.isOn();
       if (on) {
-
         // Make sure I/O channels are enabled
         setInputState(on);
-
         // Enable sending and turn on the surface
         this._enabled = on;
         onEnable(on);
@@ -150,6 +148,7 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
         this._enabled = on;
         setInputState(on);
       }
+      lx.engine.midi.saveDevices();
     });
 
     this.connected.addListener(p -> {
@@ -185,6 +184,7 @@ public abstract class LXMidiSurface extends LXComponent implements LXMidiListene
     } else if (p == this.destinationDevice) {
       setOutput(this.destinationDevice.getOutput());
     }
+    this.lx.engine.midi.saveDevices();
   }
 
   private boolean hasInputListener = false;

@@ -36,9 +36,6 @@ public abstract class LXMidiDevice implements LXMidiTerminal {
     new BooleanParameter("Enabled", false)
     .setMappable(false);
 
-  // Helper used by LXMidiEngine to check active
-  boolean keepAlive = true;
-
   /**
    * Whether the MIDI device is connected. It is possible for enabled to be true, but for
    * this parameter to end up being false if the device connection is lost. So long as
