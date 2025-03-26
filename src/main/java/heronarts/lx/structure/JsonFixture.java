@@ -44,6 +44,7 @@ import com.google.gson.JsonPrimitive;
 import com.google.gson.stream.MalformedJsonException;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtSyncDatagram;
@@ -53,6 +54,7 @@ import heronarts.lx.output.LXDatagram;
 import heronarts.lx.output.LXOutput;
 import heronarts.lx.output.LXOutput.GammaTable;
 import heronarts.lx.output.StreamingACNDatagram;
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -130,6 +132,7 @@ public class JsonFixture extends LXFixture {
   private static final String TYPE_POINTS = "points";
   private static final String TYPE_STRIP = "strip";
   private static final String TYPE_ARC = "arc";
+  private static final String TYPE_CLASS = "class";
 
   // Parameters
   private static final String KEY_PARAMETERS = "parameters";
@@ -341,7 +344,8 @@ public class JsonFixture extends LXFixture {
     POINTS,
     STRIP,
     ARC,
-    JSON
+    JSON,
+    CLASS
   };
 
   public enum ParameterType {
@@ -1910,6 +1914,54 @@ public class JsonFixture extends LXFixture {
     return arc;
   }
 
+  private LXFixture loadNative(JsonObject nativeObj) {
+    String className = loadString(nativeObj, KEY_CLASS, true, "Fixture type must specify " + KEY_CLASS);
+    if (LXUtils.isEmpty(className)) {
+      addWarning("Fixture type must specify " + KEY_CLASS);
+      return null;
+    }
+
+    try {
+      LXFixture fixture = this.lx.instantiateFixture(className);
+      if (nativeObj.has(KEY_PARAMETERS)) {
+        JsonObject paramsObj = nativeObj.get(KEY_PARAMETERS).getAsJsonObject();
+        fixture.isLoading = true;
+        for (LXParameter parameter : fixture.getParameters()) {
+          if (parameter instanceof AggregateParameter) {
+            // Let this store/restore from the underlying parameter values
+            continue;
+          }
+          final String path = parameter.getPath();
+          if (paramsObj.has(path)) {
+            JsonElement param = paramsObj.get(path);
+            if (param.isJsonPrimitive() && param.getAsJsonPrimitive().isString()) {
+              String primitive = param.getAsJsonPrimitive().getAsString();
+              if (parameter instanceof StringParameter) {
+                paramsObj.addProperty(path, replaceVariables(path, primitive, ParameterType.STRING));
+              } else if (parameter instanceof BooleanParameter) {
+                boolean boolVal = evaluateBooleanExpression(paramsObj, path, primitive);
+                paramsObj.addProperty(path, boolVal);
+              } else if (parameter instanceof DiscreteParameter) {
+                int intVal = (int) evaluateVariableExpression(paramsObj, path, primitive, ParameterType.INT);
+                paramsObj.addProperty(path, intVal);
+              } else {
+                int floatVal = (int) evaluateVariableExpression(paramsObj, path, primitive, ParameterType.FLOAT);
+                paramsObj.addProperty(path, floatVal);
+              }
+            }
+            LXSerializable.Utils.loadParameter(parameter, paramsObj, path);
+          }
+
+        }
+        fixture.isLoading = false;
+      }
+      return fixture;
+    } catch (Exception x) {
+      addWarning("Failed to load native fixture class " + className + ": " + x.getMessage());
+    }
+    return null;
+  }
+
   private void loadComponents(JsonObject obj) {
     JsonArray componentsArr = loadArray(obj, KEY_COMPONENTS);
     if (componentsArr == null) {
@@ -1977,6 +2029,8 @@ public class JsonFixture extends LXFixture {
         loadChild(childObj, ChildType.STRIP, null);
       } else if (TYPE_ARC.equals(type)) {
         loadChild(childObj, ChildType.ARC, null);
+      } else if (TYPE_CLASS.equals(type)) {
+        loadChild(childObj, ChildType.CLASS, null);
       } else {
         loadChild(childObj, ChildType.JSON, type);
       }
@@ -2009,6 +2063,9 @@ public class JsonFixture extends LXFixture {
       break;
     case ARC:
       child = loadArc(childObj);
+      break;
+    case CLASS:
+      child = loadNative(childObj);
       break;
     case JSON:
       if ((jsonType == null) || jsonType.isEmpty() || jsonType.equals(PATH_SEPARATOR)) {

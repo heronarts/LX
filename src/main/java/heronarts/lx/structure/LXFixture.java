@@ -1291,7 +1291,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   // Flag to avoid unnecessary work while parameters are being loaded... we'll fix
   // everything *after* the parameters are all loaded.
-  private boolean isLoading = false;
+  boolean isLoading = false;
 
   @Override
   public void load(LX lx, JsonObject obj) {
