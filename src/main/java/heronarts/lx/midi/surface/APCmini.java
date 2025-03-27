@@ -56,11 +56,12 @@ public class APCmini extends APCminiSurface {
   public static final int LED_RED_BLINK = 4;
   public static final int LED_YELLOW = 5;
   public static final int LED_YELLOW_BLINK = 6;
+  public static final int LED_CLIP_STOP_BLINK = 2;
 
   // Configurable color options
   public static final int LED_PATTERN_ACTIVE = LED_RED;
   public static final int LED_PATTERN_INACTIVE = LED_YELLOW;
-  public static final int LED_PATTERN_FOCUSED = LED_YELLOW_BLINK;
+  public static final int LED_PATTERN_FOCUSED = LED_YELLOW;
   public static final int LED_PATTERN_ENABLED = LED_GREEN;
   public static final int LED_PATTERN_DISABLED = LED_RED;
   public static final int LED_PATTERN_DISABLED_FOCUSED = LED_RED_BLINK;
@@ -70,7 +71,7 @@ public class APCmini extends APCminiSurface {
   public static final int LED_CLIP_INACTIVE = LED_YELLOW;
   public static final int LED_CLIP_PLAY = LED_GREEN;
   public static final int LED_CLIP_PLAY_PENDING = LED_GREEN_BLINK;
-  public static final int LED_CLIP_STOP_PENDING = LED_RED_BLINK;
+  public static final int LED_CLIP_STOP_PENDING = LED_CLIP_STOP_BLINK;
   public static final int LED_CLIP_ARM = LED_RED;
   public static final int LED_CLIP_RECORD = LED_RED_BLINK;
   public static final int LED_CLIP_RECORD_PENDING = LED_YELLOW_BLINK;
