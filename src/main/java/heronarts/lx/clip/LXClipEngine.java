@@ -476,15 +476,21 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   }
 
   private void _launchClipSceneScheduled(int index) {
+    boolean didSomething = false;
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       LXClip clip = channel.getClip(index);
       if (clip != null) {
         clip.launch.trigger();
+        didSomething = true;
       }
     }
     LXClip clip = this.lx.engine.mixer.masterBus.getClip(index);
     if (clip != null) {
       clip.launch.trigger();
+      didSomething = true;
+    }
+    if (!didSomething) {
+      this.scenes[index].cancel();
     }
   }
 
@@ -541,13 +547,17 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   }
 
   private void _launchPatternSceneScheduled(int index) {
+    boolean didSomething = false;
     for (LXAbstractChannel bus : lx.engine.mixer.channels) {
       if (bus instanceof LXChannel channel) {
-        if ((index < channel.patterns.size()) &&
-            (channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST)) {
-          channel.patterns.get(index).launch.trigger();
+        if ((index < channel.patterns.size()) && channel.isPlaylist()) {
+          channel.getPattern(index).launch.trigger();
+          didSomething = true;
         }
       }
+    }
+    if (!didSomething) {
+      this.patternScenes[index].cancel();
     }
   }
 
