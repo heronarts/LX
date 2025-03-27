@@ -1791,8 +1791,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             final int clipIndex = index + this.mixerSurface.getGridClipOffset();
             LXClip clip = channel.getClip(clipIndex);
             if (clip == null) {
-              clip = channel.addClip(clipIndex);
-              clip.loop.setValue(this.shiftOn);
+              clip = channel.addClip(clipIndex, this.lx.engine.clips.clipSnapshotDefault.isOn() ^ this.shiftOn);
             } else if (this.shiftOn) {
               clip.loop.toggle();
             } else if (clip.isRunning()) {
