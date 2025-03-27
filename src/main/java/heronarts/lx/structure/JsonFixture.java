@@ -2396,7 +2396,7 @@ public class JsonFixture extends LXFixture {
         num += childFixture.totalSize();
       }
       if (offset >= num) {
-        addWarning("Output " + KEY_COMPONENT_INDEX + " start value " + offset + " exceeds size " + num);
+        addWarning("Output " + KEY_COMPONENT_ID + "=" + componentId + " start value " + offset + " exceeds size " + num);
         return;
       }
       start += offset;
@@ -2428,7 +2428,7 @@ public class JsonFixture extends LXFixture {
         num += childFixture.totalSize();
       }
       if (offset >= num) {
-        addWarning("Output " + KEY_COMPONENT_INDEX + " start value " + offset + " exceeds size " + num);
+        addWarning("Output " + KEY_COMPONENT_INDEX + "=" + componentIndex + " start value " + offset + " exceeds size " + num);
         return;
       }
       start += offset;
