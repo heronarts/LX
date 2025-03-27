@@ -851,7 +851,7 @@ public class LXChannel extends LXAbstractChannel {
    * @return this
    */
   public final LXChannel goPatternIndex(int index) {
-    if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
+    if (!isPlaylist()) {
       return this;
     }
     if (index < 0 || index >= this.patterns.size()) {
