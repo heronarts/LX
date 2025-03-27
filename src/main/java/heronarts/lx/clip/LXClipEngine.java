@@ -32,6 +32,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.midi.surface.MixerSurface;
 import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -256,7 +257,8 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     .setDescription("Number of active patterns");
 
   public final QuantizedTriggerParameter stopClips =
-    new QuantizedTriggerParameter(lx, "Stop Clips", this::stopClips)
+    new QuantizedTriggerParameter(lx, "Stop Clips", this::_stopClipsQuantized)
+    .onSchedule(this::_stopClipsScheduled)
     .setDescription("Stops all clips running in the whole project");
 
   public final QuantizedTriggerParameter triggerPatternCycle =
@@ -301,8 +303,8 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   private final CopyOnWriteArraySet<MixerSurface> controlSurfaces =
     new CopyOnWriteArraySet<MixerSurface>();
 
-  private final LXParameterListener clipSceneListener = this::onLaunchClipScene;
-  private final LXParameterListener patternSceneListener = this::onLaunchPatternScene;
+  private final LXParameterListener clipSceneListener = this::_launchClipSceneUnique;
+  private final LXParameterListener patternSceneListener = this::_launchPatternSceneUnique;
 
   public LXClipEngine(LX lx) {
     super(lx, "Clips");
@@ -330,44 +332,18 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     for (int i = 0; i < this.scenes.length; ++i) {
       final int sceneIndex = i;
       this.scenes[i] =
-        new QuantizedTriggerParameter(lx, "Launch Scene-" + (i+1), () -> { triggerScene(sceneIndex); })
+        new QuantizedTriggerParameter(lx, "Launch Scene-" + (i+1), (quantized) -> _launchClipSceneQuantized(sceneIndex, quantized))
+        .onSchedule(() -> _launchClipSceneScheduled(sceneIndex))
         .setDescription("Launches scene " + (i+1));
       this.scenes[i].addListener(this.clipSceneListener);
       addParameter("scene-" + (i+1), this.scenes[i]);
 
       this.patternScenes[i] =
-        new QuantizedTriggerParameter(lx, "Launch Pattern-" + (i+1), () -> { triggerPatternScene(sceneIndex); })
+        new QuantizedTriggerParameter(lx, "Launch Pattern-" + (i+1), (quantized) -> _launchPatternSceneQuantized(sceneIndex, quantized))
+        .onSchedule(() -> _launchPatternSceneScheduled(sceneIndex))
         .setDescription("Launches all patterns at index " + (i+1));
       this.patternScenes[i].addListener(this.patternSceneListener);
       addParameter("pattern-" + (i+1), this.patternScenes[i]);
-    }
-  }
-
-  // Ensure that two clip scenes can't be pending at once
-  private void onLaunchClipScene(LXParameter p) {
-    if (p.getValue() > 0) {
-      for (QuantizedTriggerParameter scene : this.scenes) {
-        if (p != scene) {
-          scene.cancel();
-        }
-      }
-    }
-    if (p != this.stopClips) {
-      this.stopClips.cancel();
-    }
-  }
-
-  // Ensure that two pattern scenes can't be pending at once
-  private void onLaunchPatternScene(LXParameter p) {
-    if (p.getValue() > 0) {
-      for (QuantizedTriggerParameter pattern : this.patternScenes) {
-        if (p != pattern) {
-          pattern.cancel();
-        }
-      }
-      if (p != this.launchPatternCycle) {
-        this.launchPatternCycle.cancel();
-      }
     }
   }
 
@@ -475,7 +451,51 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   }
 
   /**
-   * Launches the scene at given index
+   * Launches the scene at given index, subject to launch quantization
+   *
+   * @param index Scene index
+   * @return this
+   */
+  public LXClipEngine launchScene(int index) {
+    this.scenes[index].trigger();
+    return this;
+  }
+
+  // Ensure that two clip scenes can't be pending at once
+  private void _launchClipSceneUnique(LXParameter p) {
+    if (p.getValue() > 0) {
+      for (QuantizedTriggerParameter scene : this.scenes) {
+        if (p != scene) {
+          scene.cancel();
+        }
+      }
+    }
+    if (p != this.stopClips) {
+      this.stopClips.cancel();
+    }
+  }
+
+  private void _launchClipSceneScheduled(int index) {
+    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
+      LXClip clip = channel.getClip(index);
+      if (clip != null) {
+        clip.launch.trigger();
+      }
+    }
+    LXClip clip = this.lx.engine.mixer.masterBus.getClip(index);
+    if (clip != null) {
+      clip.launch.trigger();
+    }
+  }
+
+  private void _launchClipSceneQuantized(int index, boolean quantized) {
+    if (!quantized) {
+      triggerScene(index);
+    }
+  }
+
+  /**
+   * Triggers the scene at given index immediately
    *
    * @param index Scene index
    * @return this
@@ -496,17 +516,58 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
   }
 
   /**
+   * Launches the pattern scene at given index, subject to launch quantization
+   *
+   * @param index Pattern scene index
+   * @return this
+   */
+  public LXClipEngine launchPatternScene(int index) {
+    this.patternScenes[index].trigger();
+    return this;
+  }
+
+  // Ensure that two pattern scenes can't be pending at once
+  private void _launchPatternSceneUnique(LXParameter p) {
+    if (p.getValue() > 0) {
+      for (QuantizedTriggerParameter pattern : this.patternScenes) {
+        if (p != pattern) {
+          pattern.cancel();
+        }
+      }
+      if (p != this.launchPatternCycle) {
+        this.launchPatternCycle.cancel();
+      }
+    }
+  }
+
+  private void _launchPatternSceneScheduled(int index) {
+    for (LXAbstractChannel bus : lx.engine.mixer.channels) {
+      if (bus instanceof LXChannel channel) {
+        if ((index < channel.patterns.size()) &&
+            (channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST)) {
+          channel.patterns.get(index).launch.trigger();
+        }
+      }
+    }
+  }
+
+  private void _launchPatternSceneQuantized(int index, boolean quantized) {
+    if (!quantized) {
+      triggerPatternScene(index);
+    }
+  }
+
+  /**
    * Triggers all patterns at the given index
    *
    * @param index Pattern index
    * @return this
    */
   public LXClipEngine triggerPatternScene(int index) {
-    for (LXAbstractChannel channel : lx.engine.mixer.channels) {
-      if (channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) channel;
-        if (index < c.patterns.size()) {
-          c.goPatternIndex(index);
+    for (LXAbstractChannel bus : lx.engine.mixer.channels) {
+      if (bus instanceof LXChannel channel) {
+        if (index < channel.patterns.size()) {
+          channel.goPatternIndex(index);
         }
       }
     }
@@ -519,15 +580,37 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
    * @return this
    */
   public LXClipEngine triggerPatternCycle() {
-    for (LXAbstractChannel channel : lx.engine.mixer.channels) {
-      if (channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) channel;
-        if (c.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
-          c.triggerPatternCycle.trigger();
+    for (LXAbstractChannel bus : this.lx.engine.mixer.channels) {
+      if (bus instanceof LXChannel channel) {
+        if (channel.isPlaylist()) {
+          channel.triggerPatternCycle.trigger();
         }
       }
     }
     return this;
+  }
+
+  private void _stopClipsScheduled() {
+    boolean hasPendingStop = false;
+    for (LXBus bus : this.lx.engine.mixer.channels) {
+      bus.stopClips.trigger();
+      if (bus.stopClips.pending.isOn()) {
+        hasPendingStop = true;
+      }
+    }
+    this.lx.engine.mixer.masterBus.stopClips.trigger();
+    if (this.lx.engine.mixer.masterBus.stopClips.pending.isOn()) {
+      hasPendingStop = true;
+    }
+    if (!hasPendingStop) {
+      this.stopClips.cancel();
+    }
+  }
+
+  private void _stopClipsQuantized(boolean quantized) {
+    if (!quantized) {
+      stopClips();
+    }
   }
 
   /**
@@ -536,30 +619,10 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
    * @return this
    */
   public LXClipEngine stopClips() {
-    return stopClips(true);
-  }
-
-  public LXClipEngine stopClips(boolean quantized) {
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      for (LXClip clip : channel.clips) {
-        if (clip != null) {
-          if (quantized) {
-            clip.stop.trigger();
-          } else {
-            clip.stop();
-          }
-        }
-      }
+      channel.stopClips();
     }
-    for (LXClip clip : this.lx.engine.mixer.masterBus.clips) {
-      if (clip != null) {
-        if (quantized) {
-          clip.stop.trigger();
-        } else {
-          clip.stop();
-        }
-      }
-    }
+    this.lx.engine.mixer.masterBus.stopClips();
     return this;
   }
 

@@ -210,13 +210,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   public final QuantizedTriggerParameter launch =
     new QuantizedTriggerParameter.Launch(lx, "Launch", this::_launch)
+    .onSchedule(this::_launchAutomationScheduled)
     .setDescription("Launch this clip");
 
   /**
    * Launches the clip's automation playback, if there is any
    */
   public final QuantizedTriggerParameter launchAutomation =
-    new QuantizedTriggerParameter.Launch(lx, "Launch", this::_launchAutomation);
+    new QuantizedTriggerParameter.Launch(lx, "Launch", this::_launchAutomation)
+    .onSchedule(this::_launchAutomationScheduled);
 
   /**
    * Stop playback of the clip
@@ -458,6 +460,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private boolean isQuantizedLaunch = false;
   private Tempo.Division isQuantizedStop = null;
 
+  private void _launchAutomationScheduled() {
+    for (LXClip clip : this.bus.clips) {
+      if ((clip != null) && (clip != this)) {
+        clip.launch.cancel();
+        clip.launchAutomation.cancel();
+      }
+    }
+  }
+
   /**
    * Invoked when we launch from the main launch() function or grid trigger. In this case
    * we also recall snapshots.
@@ -480,7 +491,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.trigger.trigger();
   }
 
-  private void _launchStop() {
+  private void _launchStop(boolean quantized) {
     if (isRunning()) {
       if ((this.timeBase.getEnum() == Cursor.TimeBase.TEMPO) &&
           this.lx.engine.tempo.hasLaunchQuantization()) {
@@ -866,10 +877,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   protected final void onStart() {
     // Stop other clips on the bus
     for (LXClip clip : this.bus.clips) {
-      if (clip != null && clip != this) {
+      if ((clip != null) && (clip != this)) {
         clip.stop();
       }
     }
+
+    this.bus.onClipStart(this);
 
     // Kick off the transport
     launchTransport();
@@ -918,6 +931,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     // Finish snapshot transition
     this.snapshot.stopTransition();
+
+    this.bus.onClipStop(this);
   }
 
   private void _startRecording(boolean isOverdub) {

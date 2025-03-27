@@ -104,7 +104,8 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     .setDescription("Whether the channel is selected");
 
   public final QuantizedTriggerParameter stopClips =
-    new QuantizedTriggerParameter(lx, "Stop Clips", this::stopClips)
+    new QuantizedTriggerParameter(lx, "Stop Clips", this::_stopClipsQuantized)
+    .onSchedule(this::_stopClipsScheduled)
     .setDescription("Stops all clips running on the bus");
 
   public final BooleanParameter controlsExpandedCue =
@@ -124,6 +125,12 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
 
   private final List<LXClip> mutableClips = new ArrayList<LXClip>();
   public final List<LXClip> clips = Collections.unmodifiableList(this.mutableClips);
+
+  private LXClip runningClip = null;
+
+  public final BooleanParameter hasRunningClip =
+    new BooleanParameter("Clip Running", false)
+    .setDescription("Flag indicates when a clip is active on this bus");
 
   private final List<Listener> listeners = new ArrayList<Listener>();
   private final List<ClipListener> clipListeners = new ArrayList<ClipListener>();
@@ -387,33 +394,74 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     return clip;
   }
 
+  /**
+   * NOT A PUBLIC API! DO NOT CALL THIS!
+   * Used by LXClip internals
+   *
+   * @param clip Clip that started running on this bus
+   */
+  public void onClipStart(LXClip clip) {
+    if (this.runningClip != null) {
+      LX.error(new IllegalStateException("LXBus.onClipStart() called while another clip still running: " + clip));
+    }
+    this.runningClip = clip;
+    this.hasRunningClip.setValue(true);
+  }
+
+  /**
+   * NOT A PUBLIC API! DO NOT CALL THIS!
+   * Used by LXClip internals
+   *
+   * @param clip Clip that stopped running on this bus
+   */
+  public void onClipStop(LXClip clip) {
+    if (this.runningClip != clip) {
+      LX.error(new IllegalStateException("LXBus.onClipStop() called for clip that wasn't started here? " + clip));
+    }
+    this.hasRunningClip.setValue(false);
+    this.runningClip = null;
+  }
+
+  public LXClip getRunningClip() {
+    return this.runningClip;
+  }
+
   protected String getClipLabel() {
     return "Clip";
   }
 
+  private void _stopClipsScheduled() {
+    boolean hasStoppingClip = false;
+    for (LXClip clip : this.clips) {
+      if (clip != null) {
+        if (clip.isRunning()) {
+          clip.stop.trigger();
+          hasStoppingClip = true;
+        }
+        clip.launch.cancel();
+        clip.launchAutomation.cancel();
+      }
+    }
+    if (!hasStoppingClip) {
+      this.stopClips.cancel();
+    }
+  }
+
+  private void _stopClipsQuantized(boolean quantized) {
+    if (!quantized) {
+      stopClips();
+    }
+  }
+
   /**
-   * Stops all clips, subject to launch quantization
+   * Stops all clips
    *
    * @return this
    */
   public LXBus stopClips() {
-    return stopClips(true);
-  }
-
-  /**
-   * Stop all clips, optionally observing launch quantization
-   *
-   * @param quantized Whether to observe launch quantization
-   * @return
-   */
-  public LXBus stopClips(boolean quantized) {
     for (LXClip clip : this.clips) {
       if (clip != null) {
-        if (quantized) {
-          clip.stop.trigger();
-        } else {
-          clip.stop();
-        }
+        clip.stop();
       }
     }
     return this;

@@ -150,11 +150,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     .setDescription("Whether the pattern is eligible for playlist cycling or compositing");
 
   public final TriggerParameter recall =
-    new TriggerParameter("Recall", () -> { getChannel().goPattern(this); })
+    new TriggerParameter("Recall", () -> getChannel().goPattern(this))
     .setDescription("Recalls this pattern to become active on the channel");
 
   public final QuantizedTriggerParameter launch =
     new QuantizedTriggerParameter.Launch(lx, "Launch", this.recall::trigger)
+    .onSchedule(this::_launchScheduled)
     .setDescription("Launches this pattern to become active on the channel");
 
   public final ObjectParameter<LXBlend> compositeMode =
@@ -287,6 +288,14 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   public int getIndex() {
     return this.index;
+  }
+
+  private void _launchScheduled() {
+    for (LXPattern pattern : getChannel().patterns) {
+      if (pattern != this) {
+        pattern.launch.cancel();
+      }
+    }
   }
 
   /**
