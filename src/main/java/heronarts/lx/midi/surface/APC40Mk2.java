@@ -1210,16 +1210,16 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     int pitch = CLIP_LAUNCH + channelIndex + CLIP_LAUNCH_COLUMNS * (CLIP_LAUNCH_ROWS - 1 - slotIndex);
     if ((channel != null) && (clip != null)) {
       color = channel.arm.isOn() ? LED_RED_HALF : clip.loop.isOn() ? LED_CYAN : LED_GRAY;
-      if (clip.isRunning()) {
+      if (clip.isPending()) {
+        sendNoteOn(LED_MODE_PRIMARY, pitch, channel.arm.isOn() ? LED_RED : LED_GREEN);
+        mode = LED_MODE_BLINK;
+        color = LED_OFF;
+      } else if (clip.isRunning()) {
         color = channel.arm.isOn() ? LED_RED : LED_GREEN;
         sendNoteOn(LED_MODE_PRIMARY, pitch, color);
         mode = LED_MODE_PULSE;
         color = channel.arm.isOn() ? LED_RED_HALF :
                 clip.loop.isOn() ? LED_CYAN : LED_GREEN_HALF;
-      } else if (clip.isPending()) {
-        sendNoteOn(LED_MODE_PRIMARY, pitch, channel.arm.isOn() ? LED_RED : LED_GREEN);
-        mode = LED_MODE_BLINK;
-        color = LED_OFF;
       }
     }
     sendNoteOn(mode, pitch, color);
@@ -1795,7 +1795,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             } else if (this.shiftOn) {
               clip.loop.toggle();
             } else if (clip.isRunning()) {
-              clip.stop();
+              if (clip.isRecording()) {
+                clip.stop();
+              } else {
+                clip.launchAutomation();
+                this.lx.engine.clips.setFocusedClip(clip);
+              }
             } else {
               clip.launch();
               this.lx.engine.clips.setFocusedClip(clip);
