@@ -60,6 +60,7 @@ public class APCminiMk2 extends APCminiSurface {
   public static final int LED_YELLOW = 12;
   public static final int LED_GREEN = 21;
   public static final int LED_BLUE = 67;
+  public static final int LED_CLIP_STOP_BLINK = 2;
 
   // Brightness and Behavior are set by MIDI Channel
   // Multi color (grid buttons)
@@ -108,6 +109,8 @@ public class APCminiMk2 extends APCminiSurface {
   public static final int LED_CLIP_RECORD_COLOR = LED_RED;
   public static final int LED_CLIP_RECORD_PENDING_BEHAVIOR = MIDI_CHANNEL_MULTI_BLINK_EIGHTH;
   public static final int LED_CLIP_RECORD_PENDING_COLOR = LED_RED;
+  public static final int LED_CLIP_STOP_PENDING_BEHAVIOR = MIDI_CHANNEL_MULTI_BLINK_EIGHTH;
+  public static final int LED_CLIP_STOP_PENDING_COLOR = LED_CLIP_STOP_BLINK;
 
   public static final int LED_PARAMETER_INCREMENT_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
   public static final int LED_PARAMETER_INCREMENT_COLOR = LED_GREEN;
@@ -406,6 +409,11 @@ public class APCminiMk2 extends APCminiSurface {
       @Override
       public int getClipPlayPendingColor() {
         return LED_CLIP_PLAY_PENDING_COLOR;
+      }
+
+      @Override
+      public int getClipStopPendingColor() {
+        return LED_CLIP_STOP_PENDING_COLOR;
       }
 
     };

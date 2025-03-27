@@ -241,6 +241,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
     public int getClipPlayColor();
     public int getClipPlayPendingBehavior();
     public int getClipPlayPendingColor();
+    public int getClipStopPendingColor();
 
   }
 
@@ -285,6 +286,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
     public final int CLIP_PLAY_COLOR;
     public final int CLIP_PLAY_PENDING_BEHAVIOR;
     public final int CLIP_PLAY_PENDING_COLOR;
+    public final int CLIP_STOP_PENDING_COLOR;
 
     private Led() {
       final LedDefinitions def = getLedDefinitions();
@@ -329,6 +331,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       this.CLIP_PLAY_COLOR = def.getClipPlayColor();
       this.CLIP_PLAY_PENDING_BEHAVIOR = def.getClipPlayPendingBehavior();
       this.CLIP_PLAY_PENDING_COLOR = def.getClipPlayPendingColor();
+      this.CLIP_STOP_PENDING_COLOR = def.getClipStopPendingColor();
     }
 
   }
@@ -623,6 +626,8 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       channel.enabled.addListener(this);
       channel.crossfadeGroup.addListener(this);
       channel.arm.addListener(this);
+      channel.stopClips.pending.addListener(this);
+      channel.hasRunningClip.addListener(this);
       if (channel instanceof LXChannel c) {
         c.focusedPattern.addListener(this);
         c.patterns.forEach(pattern -> this.patternListeners.put(pattern, new PatternListener(pattern)));
@@ -658,6 +663,8 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       } else if (p == this.channel.arm) {
         sendNoteOn(MIDI_CHANNEL_SINGLE, NOTE.CHANNEL_BUTTON + index, LED_ON(channel.arm.isOn()));
         sendChannelClips(index, this.channel);
+      } else if (p == this.channel.stopClips.pending || p == this.channel.hasRunningClip) {
+        sendChannelButton(index, this.channel);
       }
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
@@ -679,6 +686,8 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       this.channel.enabled.removeListener(this);
       this.channel.crossfadeGroup.removeListener(this);
       this.channel.arm.removeListener(this);
+      this.channel.stopClips.pending.removeListener(this);
+      this.channel.hasRunningClip.removeListener(this);
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
         c.focusedPattern.removeListener(this);
@@ -997,7 +1006,6 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
     }
   }
 
-
   private void sendClip(int channelIndex, LXAbstractChannel channel, int clipIndex, LXClip clip) {
     if (!isGridModeClips() || channelIndex < 0 || channelIndex >= CLIP_LAUNCH_COLUMNS || clipIndex < 0 || clipIndex >= CLIP_LAUNCH_ROWS) {
       return;
@@ -1126,8 +1134,11 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
           color = LED_ON(channel.arm.isOn());
           break;
         case CLIP_STOP:
-          // Action button, on only when pressed
-          color = LED_OFF;
+          if (channel.stopClips.pending.isOn()) {
+            color = LED.CLIP_STOP_PENDING_COLOR;
+          } else {
+            color = LED_ON(channel.hasRunningClip.isOn());
+          }
           break;
         }
       }
@@ -1364,11 +1375,6 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       }
 
     } else {
-
-      // Momentary buttons when firing clip trigger
-      if (this.channelButtonMode == ChannelButtonMode.CLIP_STOP) {
-        sendNoteOn(MIDI_CHANNEL_SINGLE, pitch, LED_ON(on));
-      }
 
       if (on) {
         LXAbstractChannel channel = getChannel(pitch - NOTE.CHANNEL_BUTTON);

@@ -70,6 +70,7 @@ public class APCmini extends APCminiSurface {
   public static final int LED_CLIP_INACTIVE = LED_YELLOW;
   public static final int LED_CLIP_PLAY = LED_GREEN;
   public static final int LED_CLIP_PLAY_PENDING = LED_GREEN_BLINK;
+  public static final int LED_CLIP_STOP_PENDING = LED_RED_BLINK;
   public static final int LED_CLIP_ARM = LED_RED;
   public static final int LED_CLIP_RECORD = LED_RED_BLINK;
   public static final int LED_CLIP_RECORD_PENDING = LED_YELLOW_BLINK;
@@ -366,6 +367,11 @@ public class APCmini extends APCminiSurface {
       @Override
       public int getClipPlayPendingColor() {
         return LED_CLIP_PLAY_PENDING;
+      }
+
+      @Override
+      public int getClipStopPendingColor() {
+        return LED_CLIP_STOP_PENDING;
       }
 
     };
