@@ -422,7 +422,13 @@ public class LXStructureOutput extends LXOutput {
         // we must overflow...
         if (chunkLimit > 0) {
           _addDynamicSegment(segment, chunkStart, chunkLimit);
-          overflowChannel = this.channel % output.protocol.maxChannels;
+          // If the output stride walks us *into* the next universe, we
+          // preserve that spacing (e.g. sending a white byte at
+          // channel offset 3 with stride 4, the 2nd universe it lands in
+          // should also start on channel 3)
+          if (this.channel > output.protocol.maxChannels) {
+            overflowChannel = this.channel % output.protocol.maxChannels;
+          }
           chunkStart += chunkLimit;
           chunkLength -= chunkLimit;
         }
