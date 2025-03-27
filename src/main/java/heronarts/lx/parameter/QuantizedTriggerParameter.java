@@ -40,6 +40,10 @@ public class QuantizedTriggerParameter extends TriggerParameter {
 
   private int semaphore = 0;
 
+  private Runnable onSchedule = null;
+
+  private QuantizedTriggerFunction onQuantizedTrigger = null;
+
   private OutputMode outputMode = OutputMode.SINGLE;
 
   private static final Map<Tempo.Division, List<QuantizedTriggerParameter>> pendingInstances =
@@ -56,7 +60,7 @@ public class QuantizedTriggerParameter extends TriggerParameter {
 
   private void _onQuantizationChanged(LXParameter p) {
     if (getQuantization() == Tempo.Quantization.NONE) {
-      resolve();
+      _resolve(true);
     } else if (this.pending.isOn()) {
       // The quantization value has changed while the parameter is pending,
       _addPendingInstance();
@@ -89,29 +93,54 @@ public class QuantizedTriggerParameter extends TriggerParameter {
     MULTIPLE
   };
 
+  public interface QuantizedTriggerFunction {
+    /**
+     * A trigger function which specifies whether the trigger action was immediate
+     * or deferred by quantization
+     *
+     * @param quantized Whether trigger was instantaneous or deferred
+     */
+    public void onTrigger(boolean quantized);
+  }
+
   /**
    * Quantized parameter which uses the global launch quantization setting.
    */
   public static class Launch extends QuantizedTriggerParameter {
     public Launch(LX lx, String label) {
-      this(lx, label, null);
+      this(lx, label, (Runnable) null);
     }
 
     public Launch(LX lx, String label, Runnable onTrigger) {
       super(lx, label, lx.engine.tempo.launchQuantization, onTrigger);
     }
+
+    public Launch(LX lx, String label, QuantizedTriggerFunction onTrigger) {
+      super(lx, label, lx.engine.tempo.launchQuantization, onTrigger);
+    }
+
   }
 
   public QuantizedTriggerParameter(LX lx, String label) {
-    this(lx, label, null, null);
+    this(lx, label, null, (Runnable) null);
   }
 
   public QuantizedTriggerParameter(LX lx, String label, ObjectParameter<Tempo.Quantization> quantization) {
-    this(lx, label, quantization, null);
+    this(lx, label, quantization, (Runnable) null);
   }
 
   public QuantizedTriggerParameter(LX lx, String label, Runnable onTrigger) {
     this(lx, label, null, onTrigger);
+  }
+
+  public QuantizedTriggerParameter(LX lx, String label, QuantizedTriggerFunction onTrigger) {
+    this(lx, label, null, (Runnable) null);
+    onQuantizedTrigger(onTrigger);
+  }
+
+  public QuantizedTriggerParameter(LX lx, String label, ObjectParameter<Tempo.Quantization> quantization, QuantizedTriggerFunction onTrigger) {
+    this(lx, label, quantization, (Runnable) null);
+    onQuantizedTrigger(onTrigger);
   }
 
   public QuantizedTriggerParameter(LX lx, String label, ObjectParameter<Tempo.Quantization> quantization, Runnable onTrigger) {
@@ -128,7 +157,7 @@ public class QuantizedTriggerParameter extends TriggerParameter {
     }
     this.quantization = quantization;
     if (this.quantization == null || !this.quantization.getObject().hasDivision()) {
-      resolve();
+      _resolve(true);
     }
     if (this.quantization != null) {
       this.quantization.addListener(this.quantizationListener, true);
@@ -173,15 +202,31 @@ public class QuantizedTriggerParameter extends TriggerParameter {
     return (this.quantization == null) ? Tempo.Quantization.NONE : this.quantization.getObject();
   }
 
+  public QuantizedTriggerParameter onSchedule(Runnable onSchedule) {
+    this.onSchedule = onSchedule;
+    return this;
+  }
+
+  public QuantizedTriggerParameter onQuantizedTrigger(QuantizedTriggerFunction onQuantizedTrigger) {
+    if (this.onQuantizedTrigger != null) {
+      LX.error(new Exception(), "WARNING / SHOULDFIX: Overwriting previous onQuantizedTrigger on QuantizedTriggerParameter: " + getCanonicalPath());
+    }
+    this.onQuantizedTrigger = onQuantizedTrigger;
+    return this;
+  }
+
   @Override
   protected void _onTrigger() {
     increment();
     Quantization quantization = getQuantization();
     if (!quantization.hasDivision() || quantization.getDivision().isActive()) {
-      resolve();
+      _resolve(false);
     } else {
       this.pending.setValue(true);
       _addPendingInstance();
+      if (this.onSchedule != null) {
+        this.onSchedule.run();
+      }
     }
   }
 
@@ -197,9 +242,16 @@ public class QuantizedTriggerParameter extends TriggerParameter {
    * Resolves the pending state and fires the trigger
    */
   public void resolve() {
+    _resolve(this.pending.isOn());
+  }
+
+  private void _resolve(boolean quantized) {
     this.pending.setValue(false);
     for (int i = 0; i < this.semaphore; ++i) {
       this.out.trigger();
+      if (this.onQuantizedTrigger != null) {
+        this.onQuantizedTrigger.onTrigger(quantized);
+      }
     }
     this.semaphore = 0;
   }
@@ -244,7 +296,7 @@ public class QuantizedTriggerParameter extends TriggerParameter {
       if (trigger.lx == lx &&
           trigger.pending.isOn() &&
           trigger.getQuantization().getDivision() == division) {
-        trigger.resolve();
+        trigger._resolve(true);
       }
     }
   }
