@@ -56,6 +56,7 @@ public class APCminiMk2 extends APCminiSurface {
   public static final int LED_GRAY_75 = 2;
   public static final int LED_WHITE = 3;
   public static final int LED_RED = 5;
+  public static final int LED_RED_HALF = 6;
   public static final int LED_YELLOW = 12;
   public static final int LED_GREEN = 21;
   public static final int LED_BLUE = 67;
@@ -70,12 +71,12 @@ public class APCminiMk2 extends APCminiSurface {
   public static final int MIDI_CHANNEL_MULTI_90_PERCENT = 5;
   public static final int MIDI_CHANNEL_MULTI_100_PERCENT = 6;
   public static final int MIDI_CHANNEL_MULTI_PULSE_SIXTEENTH = 7;
-  public static final int MIDI_CHANNEL_MULTI_PULSE_EIGTH = 8;
+  public static final int MIDI_CHANNEL_MULTI_PULSE_EIGHTH = 8;
   public static final int MIDI_CHANNEL_MULTI_PULSE_QUARTER = 9;
   public static final int MIDI_CHANNEL_MULTI_PULSE_HALF = 10;
   public static final int MIDI_CHANNEL_MULTI_BLINK_TWENTYFOURTH = 11;
   public static final int MIDI_CHANNEL_MULTI_BLINK_SIXTEENTH = 12;
-  public static final int MIDI_CHANNEL_MULTI_BLINK_EIGTH = 13;
+  public static final int MIDI_CHANNEL_MULTI_BLINK_EIGHTH = 13;
   public static final int MIDI_CHANNEL_MULTI_BLINK_QUARTER = 14;
   public static final int MIDI_CHANNEL_MULTI_BLINK_HALF = 15;
 
@@ -86,7 +87,9 @@ public class APCminiMk2 extends APCminiSurface {
   public static final int LED_PATTERN_ENABLED_COLOR = LED_GREEN;
   public static final int LED_PATTERN_DISABLED_BEHAVIOR = MIDI_CHANNEL_MULTI_50_PERCENT;
   public static final int LED_PATTERN_DISABLED_COLOR = LED_WHITE;
-  public static final int LED_PATTERN_TRANSITION_BEHAVIOR = MIDI_CHANNEL_MULTI_PULSE_SIXTEENTH;
+  public static final int LED_PATTERN_PENDING_BEHAVIOR = MIDI_CHANNEL_MULTI_BLINK_EIGHTH;
+  public static final int LED_PATTERN_PENDING_COLOR = LED_GREEN;
+  public static final int LED_PATTERN_TRANSITION_BEHAVIOR = MIDI_CHANNEL_MULTI_PULSE_QUARTER;
   public static final int LED_PATTERN_TRANSITION_COLOR = LED_RED;
   public static final int LED_PATTERN_FOCUSED_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
   public static final int LED_PATTERN_FOCUSED_COLOR = LED_YELLOW;
@@ -95,12 +98,16 @@ public class APCminiMk2 extends APCminiSurface {
 
   public static final int LED_CLIP_INACTIVE_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
   public static final int LED_CLIP_INACTIVE_COLOR = LED_GRAY_50;
-  public static final int LED_CLIP_PLAY_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
+  public static final int LED_CLIP_PLAY_BEHAVIOR = MIDI_CHANNEL_MULTI_PULSE_HALF;
   public static final int LED_CLIP_PLAY_COLOR = LED_GREEN;
+  public static final int LED_CLIP_PLAY_PENDING_BEHAVIOR = MIDI_CHANNEL_MULTI_BLINK_EIGHTH;
+  public static final int LED_CLIP_PLAY_PENDING_COLOR = LED_CLIP_PLAY_COLOR;
   public static final int LED_CLIP_ARM_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
-  public static final int LED_CLIP_ARM_COLOR = LED_RED;
-  public static final int LED_CLIP_RECORD_BEHAVIOR = MIDI_CHANNEL_MULTI_BLINK_EIGTH;
+  public static final int LED_CLIP_ARM_COLOR = LED_RED_HALF;
+  public static final int LED_CLIP_RECORD_BEHAVIOR = MIDI_CHANNEL_MULTI_PULSE_HALF;
   public static final int LED_CLIP_RECORD_COLOR = LED_RED;
+  public static final int LED_CLIP_RECORD_PENDING_BEHAVIOR = MIDI_CHANNEL_MULTI_BLINK_EIGHTH;
+  public static final int LED_CLIP_RECORD_PENDING_COLOR = LED_RED;
 
   public static final int LED_PARAMETER_INCREMENT_BEHAVIOR = MIDI_CHANNEL_MULTI_100_PERCENT;
   public static final int LED_PARAMETER_INCREMENT_COLOR = LED_GREEN;
@@ -332,6 +339,16 @@ public class APCminiMk2 extends APCminiSurface {
       }
 
       @Override
+      public int getPatternPendingBehavior() {
+        return LED_PATTERN_PENDING_BEHAVIOR;
+      }
+
+      @Override
+      public int getPatternPendingColor() {
+        return LED_PATTERN_PENDING_COLOR;
+      }
+
+      @Override
       public int getClipRecordBehavior() {
         return LED_CLIP_RECORD_BEHAVIOR;
       }
@@ -339,6 +356,16 @@ public class APCminiMk2 extends APCminiSurface {
       @Override
       public int getClipRecordColor() {
         return LED_CLIP_RECORD_COLOR;
+      }
+
+      @Override
+      public int getClipRecordPendingBehavior() {
+        return LED_CLIP_RECORD_PENDING_BEHAVIOR;
+      }
+
+      @Override
+      public int getClipRecordPendingColor() {
+        return LED_CLIP_RECORD_PENDING_COLOR;
       }
 
       @Override
@@ -369,6 +396,16 @@ public class APCminiMk2 extends APCminiSurface {
       @Override
       public int getClipPlayColor() {
         return LED_CLIP_PLAY_COLOR;
+      }
+
+      @Override
+      public int getClipPlayPendingBehavior() {
+        return LED_CLIP_PLAY_PENDING_BEHAVIOR;
+      }
+
+      @Override
+      public int getClipPlayPendingColor() {
+        return LED_CLIP_PLAY_PENDING_COLOR;
       }
 
     };
