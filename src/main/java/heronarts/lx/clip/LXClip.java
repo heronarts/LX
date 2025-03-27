@@ -432,21 +432,39 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
-   * If stopped, play from Play Start marker.
-   * If playing or recording, stop.
+   * Trigger the clip, whether from control surface or UI
+   *
+   * @param focus Whether to focus the clip
+   * @return this
    */
-  public LXClip toggleAction(boolean quantize) {
-    if (isRunning()) {
-      if (quantize) {
-        this.stop.trigger();
-      } else {
-        stop();
-      }
+  public LXClip triggerAction(boolean focus) {
+    return triggerAction(focus, true);
+  }
+
+  /**
+   * Trigger the clip, whether from control surface or UI
+   *
+   * @param focus Whether to focus the clip
+   * @param fromGrid Whether this is a quantized grid launch
+   * @return this
+   */
+  public LXClip triggerAction(boolean focus, boolean fromGrid) {
+    if (isRecording()) {
+      stop();
     } else {
-      if (quantize) {
-        launchAutomationFrom(this.playStart.cursor);
+      if (!fromGrid) {
+        if (isRunning()) {
+          stop();
+        } else {
+          _playFrom(this.playStart.cursor);
+        }
+      } else if (isRunning()) {
+        launchAutomation();
       } else {
-        _playFrom(this.playStart.cursor);
+        launch();
+      }
+      if (focus) {
+        this.lx.engine.clips.focusedClip.setClip(this);
       }
     }
     return this;

@@ -1794,16 +1794,8 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
               clip = channel.addClip(clipIndex, this.lx.engine.clips.clipSnapshotDefault.isOn() ^ this.shiftOn);
             } else if (this.shiftOn) {
               clip.loop.toggle();
-            } else if (clip.isRunning()) {
-              if (clip.isRecording()) {
-                clip.stop();
-              } else {
-                clip.launchAutomation();
-                this.lx.engine.clips.setFocusedClip(clip);
-              }
             } else {
-              clip.launch();
-              this.lx.engine.clips.setFocusedClip(clip);
+              clip.triggerAction(true);
             }
           }
         }
