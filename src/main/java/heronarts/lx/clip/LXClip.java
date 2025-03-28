@@ -1603,6 +1603,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     // Load parameters before lanes, which need to know clip timing mode
     this.inLoad = true;
+    this.timeBase.reset(); // For legacy case where it doesn't exist
     super.load(lx, obj);
     this.inLoad = false;
 
