@@ -841,15 +841,32 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
     return this.gridMode == GridMode.PARAMETERS;
   }
 
+  private void setGridMode(LXClipEngine.GridMode gridMode) {
+    setGridMode(gridMode, true);
+  }
+
+  private void setGridMode(LXClipEngine.GridMode gridMode, boolean send) {
+    setGridMode(switch (gridMode) {
+      case PATTERNS -> GridMode.PATTERNS;
+      case CLIPS -> GridMode.CLIPS;
+    }, send);
+  }
+
   private void setGridMode(GridMode gridMode) {
+    setGridMode(gridMode, true);
+  }
+
+  private void setGridMode(GridMode gridMode, boolean send) {
     if (this.gridMode != gridMode) {
       this.gridMode = gridMode;
       this.mixerSurface.setGridMode(gridMode.engineGridMode);
       if (gridMode.engineGridMode != null) {
         lx.engine.clips.gridMode.setValue(gridMode.engineGridMode);
       }
-      sendGridModeButtons();
-      sendGrid();
+      if (send) {
+        sendGridModeButtons();
+        sendGrid();
+      }
     }
   }
 
@@ -872,8 +889,8 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
   @Override
   protected void onEnable(boolean on) {
     if (on) {
-      initialize();
       register();
+      // initialize(); // not needed, register() kicks everything needed
     } else {
       if (this.isRegistered) {
         unregister();
@@ -884,7 +901,6 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
   @Override
   protected void onReconnect() {
     initialize();
-    this.deviceListener.resend();
   }
 
   private void initialize() {
@@ -898,28 +914,13 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       this.deviceListener.resend();
     } else {
       for (int i = 0; i < NUM_CHANNELS; ++i) {
-        LXAbstractChannel channel = getChannel(i);
+        final LXAbstractChannel channel = getChannel(i);
         switch (this.gridMode) {
-          case PATTERNS:
-            sendChannelPatterns(i, channel);
-            break;
-          case CLIPS:
-            sendChannelClips(i, channel);
-            break;
-          case PARAMETERS:
-            break;
-        }
+          case PATTERNS -> sendChannelPatterns(i, channel);
+          case CLIPS -> sendChannelClips(i, channel);
+          case PARAMETERS -> {}
+        };
       }
-    }
-  }
-
-  private void clearGrid() {
-    sendNoteOn(MIDI_CHANNEL_SINGLE, NOTE.FADER_CTRL_VOLUME, LED_OFF);
-    sendNoteOn(MIDI_CHANNEL_SINGLE, NOTE.FADER_CTRL_PAN, LED_OFF);
-    sendNoteOn(MIDI_CHANNEL_SINGLE, NOTE.FADER_CTRL_SEND, LED_OFF);
-    sendNoteOn(MIDI_CHANNEL_SINGLE, NOTE.FADER_CTRL_DEVICE, LED_OFF);
-    for (int i = 0; i < NUM_CHANNELS; ++i) {
-      sendChannelPatterns(i, null);
     }
   }
 
@@ -1060,12 +1061,6 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
     }
   }
 
-  private void clearChannelButtonRow() {
-    for (int i = 0; i < NUM_CHANNELS; ++i) {
-      sendNoteOn(MIDI_CHANNEL_SINGLE, NOTE.CHANNEL_BUTTON + i, LED_OFF);
-    }
-  }
-
   private void sendSceneLaunchButtons() {
     if (this.shiftOn) {
       sendNoteOn(MIDI_CHANNEL_SINGLE, NOTE.CHANNEL_BUTTON_MODE_FOCUS, LED_ON(this.channelButtonMode == ChannelButtonMode.FOCUS));
@@ -1151,32 +1146,28 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
 
   private final LXParameterListener gridModeListener = p -> {
     if (this.gridMode != GridMode.PARAMETERS) {
-      setGridMode(switch (this.lx.engine.clips.gridMode.getEnum()) {
-        case PATTERNS -> GridMode.PATTERNS;
-        case CLIPS -> GridMode.CLIPS;
-      });
+      setGridMode(this.lx.engine.clips.gridMode.getEnum());
     }
   };
 
   private void register() {
     this.isRegistered = true;
 
+    setGridMode(this.lx.engine.clips.gridMode.getEnum(), false);
     this.mixerSurface.register();
     this.focusedChannel.register();
     this.deviceListener.focusedDevice.register();
-    this.lx.engine.clips.gridMode.addListener(this.gridModeListener, true);
+    this.lx.engine.clips.gridMode.addListener(this.gridModeListener);
   }
 
   private void unregister() {
     this.isRegistered = false;
 
-    this.mixerSurface.unregister();
+    this.mixerSurface.unregister(); // clears the grid + channel buttons
     this.deviceListener.focusedDevice.unregister();
     this.focusedChannel.unregister();
     this.lx.engine.clips.gridMode.removeListener(this.gridModeListener);
 
-    clearGrid();
-    clearChannelButtonRow();
     clearSceneLaunchButtons();
   }
 
