@@ -601,7 +601,8 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   void playCursor(Cursor from, Cursor to, boolean inclusive) {
     final Cursor.Operator CursorOp = CursorOp();
-    final int limit = inclusive ? 0 : -1;
+    // final int limit = inclusive ? 0 : -1;
+    final int limit = -1; // do NOT execute events at T = loopEnd/playEnd
     final ListIterator<T> iter = eventIterator(from);
     while (iter.hasNext()) {
       T event = iter.next();

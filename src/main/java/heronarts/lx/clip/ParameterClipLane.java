@@ -360,12 +360,12 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   protected ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
     if (hasStitching()) {
-      final int insertIndex = cursorInsertIndex(this.clip.cursor);
-      final ParameterClipEvent previousEvent = (insertIndex > 0) ? (ParameterClipEvent) this.events.get(insertIndex - 1) : null;
+      final int cursorIndex = cursorPlayIndex(this.clip.cursor);
+      final ParameterClipEvent previousEvent = (cursorIndex > 0) ? (ParameterClipEvent) this.events.get(cursorIndex - 1) : null;
       if (previousEvent == null) {
-        if (insertIndex < this.events.size()) {
+        if (cursorIndex < this.events.size()) {
           // There's data ahead of us but we are overdubbing behind it, preserve that properly
-          ParameterClipEvent nextEvent = this.events.get(insertIndex);
+          ParameterClipEvent nextEvent = this.events.get(cursorIndex);
           recordEvent(new ParameterClipEvent(this, nextEvent.getNormalized()));
         } else {
           // On the first parameter automation, we need to drop a dot with the initial value
@@ -381,10 +381,10 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         // but if significant time has elapsed, then for the same reason as above, we need to
         // record whatever value the envelope would have held at this point
         double normalized = 0;
-        if (insertIndex < this.events.size()) {
+        if (cursorIndex < this.events.size()) {
           // If there's an event ahead of the previous event, preserve the interpolation between
           // the two
-          final ParameterClipEvent nextEvent = this.events.get(insertIndex);
+          final ParameterClipEvent nextEvent = this.events.get(cursorIndex);
           normalized = LXUtils.lerp(
             previousEvent.getNormalized(),
             nextEvent.getNormalized(),
@@ -414,12 +414,16 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     if (this.overdubActive && hasStitching()) {
       // Stitch what was before the start of the loop to the value at the end of the loop
       if (!this.events.isEmpty()) {
-        ParameterClipEvent stitchLoopStart = stitchOuter(this.mutableEvents, to, cursorPlayIndex(to));
-        ParameterClipEvent stitchLoopEnd = stitchOuter(this.mutableEvents, to, cursorPlayIndex(from));
-        if (hasInterpolation()) {
-          recordEvent(stitchLoopStart);
+        ParameterClipEvent stitchBeforeLoop = null;
+        if (!CursorOp().isZero(to)) {
+          // Stitch the loop start point with the pre-loop value
+          recordEvent(stitchBeforeLoop = stitchOuter(this.mutableEvents, to, cursorPlayIndex(to)));
         }
-        recordEvent(stitchLoopEnd);
+        // Now insert the value from the end of the loop
+        ParameterClipEvent stitchLoopEnd = stitchOuter(this.mutableEvents, to, cursorPlayIndex(from));
+        if ((stitchBeforeLoop == null) || (stitchBeforeLoop.getNormalized() != stitchLoopEnd.getNormalized())) {
+          recordEvent(stitchLoopEnd);
+        }
       }
     }
   }
@@ -437,17 +441,12 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     } else if (!this.events.isEmpty()) {
 
       // Boolean/Discrete/Normalized events always set value based upon envelope shape
-      int nextIndex = LXUtils.min(cursorInsertIndex(to), this.events.size()-1);
-      ParameterClipEvent next = this.events.get(nextIndex);
-      ParameterClipEvent prior = (nextIndex > 0) ? this.events.get(nextIndex - 1) : null;
+      int toIndex = LXUtils.min(cursorPlayIndex(to), this.events.size()-1);
+      ParameterClipEvent next = this.events.get(toIndex);
+      ParameterClipEvent prior = (toIndex > 0) ? this.events.get(toIndex - 1) : null;
 
-      if (CursorOp().isAfter(from, next.cursor)) {
-        // Do nothing, we've already passed it all
-      } else if (prior == null) {
-        // Nothing before us, set the first value
-        this.parameter.setNormalized(next.getNormalized());
-      } else if (CursorOp().isAfter(to, next.cursor)) {
-        // We're past the last event, just set its value
+      if ((prior == null) || CursorOp().isAfter(to, next.cursor)) {
+        // Either this is the only point, or we're after the last point
         this.parameter.setNormalized(next.getNormalized());
       } else if (hasInterpolation()) {
         // Interpolate value between the two events surrounding us

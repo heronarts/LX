@@ -233,7 +233,8 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     }
 
     final Cursor.Operator CursorOp = CursorOp();
-    final int limit = inclusive ? 0 : -1;
+    // final int limit = inclusive ? 0 : -1;
+    final int limit = -1; // do NOT trigger a NoteOn at loopEnd/playEnd
     for (int index = cursorPlayIndex(from); index < this.events.size(); ++index) {
       final MidiNoteClipEvent note = this.events.get(index);
       if (CursorOp.compare(note.cursor, to) > limit) {
@@ -242,7 +243,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
 
       // Don't trigger events that were created/inserted by the overdub action
       if (!this.overdubEvents.contains(note)) {
-        // We're curent recording this note and need to clobber a future one!
+        // We're currently recording this note and need to clobber a future one!
         if (note.isNoteOn() && (this.recordInputStack[note.midiNote.getPitch()] != null)) {
           this.mutableEvents.remove(index);
           this.mutableEvents.remove(note.getNoteOff()); // strictly ahead of the noteOn
