@@ -292,7 +292,7 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   @Override
   public int getGradientColor(float lerp) {
-    lerp *= this.paletteDepth.getValue();
+    lerp *= this.paletteDepth.getValuef();
     if (this.paletteInvert.isOn()) {
       lerp = 1 - lerp;
     }
