@@ -491,10 +491,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Invoked when we launch from the main launch() function or grid trigger. In this case
    * we also recall snapshots.
    */
-  private void _launch() {
+  private void _launch(boolean quantized) {
     // Grid/master launch is always from the play start position
     this.launchFromCursor.set(this.playStart.cursor.bound(this));
-    _launchAutomation();
+    _launchAutomation(quantized);
     if (!isArmed() && this.snapshotEnabled.isOn()) {
       this.snapshot.recall();
     }
@@ -504,17 +504,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Invoked when we launch from the main launch() function or grid trigger. In this case
    * we also recall snapshots
    */
-  private void _launchAutomation() {
-    this.isQuantizedLaunch = true;
+  private void _launchAutomation(boolean quantized) {
+    this.isQuantizedLaunch = quantized;
     this.trigger.trigger();
   }
 
   private void _launchStop(boolean quantized) {
     if (isRunning()) {
-      if ((this.timeBase.getEnum() == Cursor.TimeBase.TEMPO) &&
-          this.lx.engine.tempo.hasLaunchQuantization()) {
-        this.isQuantizedStop = this.lx.engine.tempo.getLaunchQuantization();
-      } else {
+      this.isQuantizedStop = (quantized && (this.timeBase.getEnum() == Cursor.TimeBase.TEMPO)) ?
+        this.lx.engine.tempo.getLaunchQuantization() :
+        null;
+      if (this.isQuantizedStop == null) {
         stop();
       }
     }
