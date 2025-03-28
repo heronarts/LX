@@ -910,21 +910,6 @@ public class Cursor implements LXSerializable {
     return String.format("%.2f/%d/%.2f", this.millis, this.beatCount, this.beatBasis);
   }
 
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) {
-      return true;
-    }
-    if (o instanceof Cursor) {
-      Cursor that = (Cursor) o;
-      return
-        this.millis == that.millis &&
-        this.beatCount == that.beatCount &&
-        this.beatBasis == that.beatBasis;
-    }
-    return false;
-  }
-
   private static final String KEY_MILLIS = "millis";
   private static final String KEY_BEAT_COUNT = "beatCount";
   private static final String KEY_BEAT_BASIS = "beatBasis";
