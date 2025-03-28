@@ -361,7 +361,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   protected ParameterClipLane recordParameterEvent(ParameterClipEvent event) {
     if (hasStitching()) {
       final int cursorIndex = cursorPlayIndex(this.clip.cursor);
-      final ParameterClipEvent previousEvent = (cursorIndex > 0) ? (ParameterClipEvent) this.events.get(cursorIndex - 1) : null;
+      final ParameterClipEvent previousEvent = (cursorIndex > 0) ? this.events.get(cursorIndex - 1) : null;
       if (previousEvent == null) {
         if (cursorIndex < this.events.size()) {
           // There's data ahead of us but we are overdubbing behind it, preserve that properly
