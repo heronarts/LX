@@ -1005,7 +1005,7 @@ public class LX {
         try (JsonWriter writer = new JsonWriter(new FileWriter(autosave))) {
           writer.setIndent("  ");
           new GsonBuilder().create().toJson(obj, writer);
-          LX.log("Project auto-saved successfully to " + autosave.toString());
+          LX.debug("Project auto-saved successfully to " + autosave.toString());
         } catch (IOException iox) {
           LX.error(iox, "Could not auto-save project to output file: " + autosave.toString());
         }
