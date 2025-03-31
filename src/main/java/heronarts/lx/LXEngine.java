@@ -1455,6 +1455,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // TODO(mcslee): remove loop tasks that other things might have added? maybe
     // need to separate application-owned loop tasks from project-specific ones...
 
+    // Disable output by default, project must explicitly re-open
+    this.output.enabled.setValue(false);
+
     // Clear all the modulation and mixer content
     this.snapshots.clear();
     this.modulation.setFlagLoadModulations(false);
