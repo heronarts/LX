@@ -92,6 +92,10 @@ public class LXUtils {
     return value < min ? min : (value > max ? max : value);
   }
 
+  public static long clampl(long value, long min, long max) {
+    return value < min ? min : (value > max ? max : value);
+  }
+
   public static double constrain(double value, double min, double max) {
     return value < min ? min : (value > max ? max : value);
   }
@@ -101,6 +105,10 @@ public class LXUtils {
   }
 
   public static int constrain(int value, int min, int max) {
+    return value < min ? min : (value > max ? max : value);
+  }
+
+  public static long constrainl(long value, long min, long max) {
     return value < min ? min : (value > max ? max : value);
   }
 

@@ -67,7 +67,7 @@ public class CompoundObjectParameter<T> extends CompoundDiscreteParameter {
   }
 
   @Override
-  public CompoundObjectParameter<T> setRange(int minValue, int maxValue) {
+  public CompoundObjectParameter<T> setRange(int minValue, long maxValue) {
     if (this.objects!= null && (this.objects.length != maxValue - minValue)) {
       throw new UnsupportedOperationException("May not call setRange on an ObjectParameter with Object list of different length");
     }

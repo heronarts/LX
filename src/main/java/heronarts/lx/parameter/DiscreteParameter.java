@@ -27,9 +27,9 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
 
   protected int minValue;
 
-  protected int maxValue;
+  protected int maxValue; // inclusive
 
-  protected int range;
+  protected long range;
 
   private String[] options = null;
 
@@ -149,15 +149,44 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
     return this.minValue + ((int) (value - this.minValue) % this.range);
   }
 
-  public int getMinValue() {
+  /**
+   * Returns the minimum value (inclusive) this parameter can hold
+   *
+   * @return Min value, inclusive
+   */
+  public final int getMinValue() {
     return this.minValue;
   }
 
-  public int getMaxValue() {
+  /**
+   * Returns the maximum value (inclusive) this parameter can hold
+   *
+   * @return Maximum value, inclusive
+   */
+  public final int getMaxValue() {
     return this.maxValue;
   }
 
-  public int getRange() {
+  /**
+   * Gets the number of discrete values this parameter can hold as an integer. Will
+   * throw an exception if the range is too large to be represented as an integer.
+   *
+   * @return Number of distinct values this parameter can hold
+   */
+  public final int getRangei() {
+    if (this.range > Integer.MAX_VALUE) {
+      throw new IllegalStateException("Cannot provide integer range for DiscreteParameter exceeding integer bounds: " + this + " -> " + this.range);
+    }
+    return (int) this.range;
+  }
+
+  /**
+   * Returns the number of discrete values this parameter can hold, the size of the
+   * inclusive range [getMinValue(), getMaxValue()]
+   *
+   * @return Number of distinct values this parameter can hold
+   */
+  public final long getRange() {
     return this.range;
   }
 
@@ -209,7 +238,10 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @return Parameter with options updated
    */
   public DiscreteParameter setOptions(Formatter formatter) {
-    String[] options = new String[this.range];
+    if (this.range > Integer.MAX_VALUE) {
+      throw new IllegalStateException("Cannot setOptions() on a DiscreteParameter outside of Integer size range:"  + this.range);
+    }
+    String[] options = new String[(int) this.range];
     int i = 0;
     for (int v = this.minValue; v <= this.maxValue; ++v) {
       options[i++] = formatter.format(v);
@@ -247,7 +279,21 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @param maxValue Maximum value, exclusive
    * @return this
    */
-  public DiscreteParameter setRange(int minValue, int maxValue) {
+  public final DiscreteParameter setRange(int minValue, int maxValue) {
+    return setRange(minValue, (long) maxValue);
+  }
+
+  /**
+   * Sets the range from [minValue, maxValue-1] inclusive
+   *
+   * @param minValue Minimum value
+   * @param maxValue Maximum value, exclusive
+   * @return this
+   */
+  public DiscreteParameter setRange(int minValue, long maxValue) {
+    if (maxValue > 1 + (long) Integer.MAX_VALUE) {
+      throw new IllegalArgumentException("DiscreteParameter maxValue may not exceed Integer.MAX_VALUE, given " + maxValue);
+    }
     if (this.options != null && (this.options.length != maxValue - minValue)) {
       throw new UnsupportedOperationException("May not call setRange on a DiscreteParameter with String options of different length");
     }
@@ -255,7 +301,7 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
       throw new IllegalArgumentException("DiscreteParameter must have range of at least 1");
     }
     this.minValue = minValue;
-    this.maxValue = maxValue - 1;
+    this.maxValue = (int) (maxValue - 1);
     this.range = maxValue - minValue;
     setValue(LXUtils.constrain(getBaseValuei(), this.minValue, this.maxValue));
     return this;
@@ -267,8 +313,8 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
    * @param range Number of discrete values
    * @return this
    */
-  public DiscreteParameter setRange(int range) {
-    return setRange(0, range);
+  public final DiscreteParameter setRange(int range) {
+    return setRange(0, (long) range);
   }
 
   /**
@@ -353,7 +399,8 @@ public class DiscreteParameter extends LXListenableNormalizedParameter {
   }
 
   protected int normalizedToValue(double normalized) {
-    return this.minValue + LXUtils.constrain((int) (normalized * this.range), 0, this.range-1);
+    long increment = LXUtils.constrainl((long) (normalized * this.range), 0, this.range-1);
+    return (int) (this.minValue + increment);
   }
 
   public DiscreteParameter setNormalized(double normalized) {
