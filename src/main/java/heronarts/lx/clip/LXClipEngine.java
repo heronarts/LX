@@ -384,13 +384,13 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
 
   public void updatePatternGridSize() {
     int max = 0;
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      if (channel instanceof LXChannel) {
-        max = LXUtils.max(max, ((LXChannel) channel).patterns.size());
+    for (LXAbstractChannel bus : this.lx.engine.mixer.channels) {
+      if (bus instanceof LXChannel channel) {
+        max = LXUtils.max(max, channel.patterns.size());
       }
     }
     this.numPatterns.setValue(LXUtils.max(MIN_SCENES, max));
-    this.gridPatternOffset.setRange(LXUtils.max(1, max));
+    this.gridPatternOffset.setRange(LXUtils.max(1, max - MIN_SCENES + 1));
   }
 
   public LXComponent addControlSurface(MixerSurface surface) {
