@@ -1112,34 +1112,47 @@ public class LX {
   private static final Pattern versionPattern = Pattern.compile("^(\\d+)\\.(\\d+)\\.(\\d+)(?:-([\\w.-]+))?$");
 
   private boolean isNewerVersion(String version) {
+    return compareVersion(LX.VERSION, version) < 0;
+  }
+
+  /**
+   * Compares two version strings for mismatch
+   *
+   * @param thisVersion First version
+   * @param thatVersion Second version
+   * @return true if thatVersion is newer than thisVersion
+   */
+  public static int compareVersion(String thisVersion, String thatVersion) {
     try {
-      Matcher thisVersion = versionPattern.matcher(LX.VERSION);
-      Matcher thatVersion = versionPattern.matcher(version);
-      if (thisVersion.matches() && thatVersion.matches()) {
-        int thisMajor = Integer.valueOf(thisVersion.group(1));
-        int thisMinor = Integer.valueOf(thisVersion.group(2));
-        int thisPatch = Integer.valueOf(thisVersion.group(3));
-
-        int thatMajor = Integer.valueOf(thatVersion.group(1));
-        int thatMinor = Integer.valueOf(thatVersion.group(2));
-        int thatPatch = Integer.valueOf(thatVersion.group(3));
-
-        if (thatMajor > thisMajor) {
-          return true;
-        } else if (thatMajor == thisMajor) {
-          if (thatMinor > thisMinor) {
-            return true;
-          } else if (thatMinor == thisMinor) {
-            return thatPatch > thisPatch;
-          }
-        }
-      } else {
-        throw new IllegalArgumentException("Couldn't parse: " + version);
+      Matcher thisMatcher = versionPattern.matcher(thisVersion);
+      Matcher thatMatcher = versionPattern.matcher(thatVersion);
+      if (!thisMatcher.matches()) {
+        throw new IllegalArgumentException("Couldn't parse: " + thisVersion);
       }
+      if (!thatMatcher.matches()) {
+        throw new IllegalArgumentException("Couldn't parse: " + thatVersion);
+      }
+      int thisMajor = Integer.valueOf(thisMatcher.group(1));
+      int thisMinor = Integer.valueOf(thisMatcher.group(2));
+      int thisPatch = Integer.valueOf(thisMatcher.group(3));
+
+      int thatMajor = Integer.valueOf(thatMatcher.group(1));
+      int thatMinor = Integer.valueOf(thatMatcher.group(2));
+      int thatPatch = Integer.valueOf(thatMatcher.group(3));
+
+      int majorCompare = thisMajor < thatMajor ? -1 : (thisMajor == thatMajor) ? 0 : 1;
+      if (majorCompare != 0) {
+        return majorCompare;
+      }
+      int minorCompare = thisMinor < thatMinor ? -1 : (thisMinor == thatMinor) ? 0 : 1;
+      if (minorCompare != 0) {
+        return minorCompare;
+      }
+      return thisPatch < thatPatch ? -1 : (thisPatch == thatPatch) ? 0 : 1;
     } catch (Exception x) {
-      error(x, "Failed to parse file version: " + version);
+      error(x, "Failed to parse LX version identifier");
     }
-    return false;
+    return 0;
   }
 
   public void openProject(File file, boolean checkVersion) {

@@ -30,7 +30,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -56,8 +55,17 @@ public class LXClassLoader extends URLClassLoader {
 
     private String name;
     private String author = "Unknown Author";
+    private String url = null;
+    private String version = null;
+    private int versionCompare = 0;
+    private String lxVersion = null;
 
     private Throwable error = null;
+    private int numPatterns = 0;
+    private int numEffects = 0;
+    private int numModulators = 0;
+    private int numFixtures = 0;
+    private int numPlugins = 0;
     private int numClasses = 0;
     private int numFailedClasses = 0;
 
@@ -81,6 +89,31 @@ public class LXClassLoader extends URLClassLoader {
       return this.author;
     }
 
+    public String getURL() {
+      return this.url;
+    }
+
+    public String getVersion() {
+      return this.version;
+    }
+
+    public void setLXVersion(LX lx, String lxVersion) {
+      this.lxVersion = lxVersion;
+      this.versionCompare = LX.compareVersion(LX.VERSION, lxVersion);
+      if (isNewerThanApp()) {
+        String err = "Package " + getName() + " was built for a newer version of Chromatik (" + lxVersion + "). You are running " + LX.VERSION + ". Content in this package may not behave correctly.";
+        lx.pushError(err);
+        LX.error(err);
+      }
+      if (isOutOfDate()) {
+        LX.error("Package " + getName() + " was built for an older version of Chromatik (" + lxVersion + "). You are running " + LX.VERSION + ". Content in this package may not behave correctly.");
+      }
+    }
+
+    public String getLXVersion() {
+      return this.lxVersion;
+    }
+
     private void setError(Throwable error) {
       this.error = error;
     }
@@ -91,6 +124,24 @@ public class LXClassLoader extends URLClassLoader {
 
     public int getNumFailedClasses() {
       return this.numFailedClasses;
+    }
+
+    public int getNumComponents(LXRegistry.ComponentType componentType) {
+      return switch (componentType) {
+      case EFFECT -> this.numEffects;
+      case FIXTURE -> this.numFixtures;
+      case MODULATOR -> this.numModulators;
+      case PATTERN -> this.numPatterns;
+      case PLUGIN -> this.numPlugins;
+      };
+    }
+
+    public boolean isOutOfDate() {
+      return this.versionCompare > 0;
+    }
+
+    public boolean isNewerThanApp() {
+      return this.versionCompare < 0;
     }
 
     public boolean hasError() {
@@ -179,18 +230,8 @@ public class LXClassLoader extends URLClassLoader {
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         String fileName = entry.getName();
-        if (fileName.equals(PACKAGE_DESCRIPTOR_FILE_NAME)) {
-          try {
-            JsonObject obj = new Gson().fromJson(new InputStreamReader(jarFile.getInputStream(entry)), JsonObject.class);
-            if (obj.has("name")) {
-              pack.name = obj.get("name").getAsString();
-            }
-            if (obj.has("author")) {
-              pack.author = obj.get("author").getAsString();
-            }
-          } catch (Throwable x) {
-            LX.error(x, "Exception reading lx.package contents for: " + jarFile);
-          }
+        if (PACKAGE_DESCRIPTOR_FILE_NAME.equals(fileName)) {
+          loadPackageMetadata(pack, jarFile, entry);
         } else if (fileName.endsWith(".class")) {
           loadClassEntry(pack, jarFile, className(fileName).replaceAll("/", "\\."));
         }
@@ -203,7 +244,37 @@ public class LXClassLoader extends URLClassLoader {
       pack.setError(e);
     }
 
+    if (pack.version == null) {
+      LX.error("Package does not contain any version information: " + file.getName());
+    }
     this.lx.registry.addPackage(pack);
+  }
+
+  private void loadPackageMetadata(Package pack, JarFile jarFile, JarEntry jarEntry) {
+    try (InputStreamReader isr = new InputStreamReader(jarFile.getInputStream(jarEntry))) {
+      JsonObject obj = new Gson().fromJson(isr, JsonObject.class);
+      if (obj.has("name")) {
+        pack.name = obj.get("name").getAsString();
+      }
+      if (obj.has("author")) {
+        pack.author = obj.get("author").getAsString();
+      }
+      if (obj.has("url")) {
+        pack.url = obj.get("url").getAsString();
+      }
+      if (obj.has("build")) {
+        JsonObject buildObj = obj.get("build").getAsJsonObject();
+        if (buildObj.has("version")) {
+          pack.version = buildObj.get("version").getAsString();
+        }
+        if (buildObj.has("lxVersion")) {
+          pack.setLXVersion(this.lx, buildObj.get("lxVersion").getAsString());
+        }
+      }
+
+    } catch (Throwable x) {
+      LX.error(x, "Exception reading lx.package contents for: " + jarFile);
+    }
   }
 
   private static String className(String fileName) {
@@ -220,7 +291,8 @@ public class LXClassLoader extends URLClassLoader {
       final int modifiers = clz.getModifiers();
       if (Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers)) {
 
-        if (this.lx.registry.isInstantiableComponent(clz)) {
+        LXRegistry.ComponentType componentType = this.lx.registry.getInstantiableComponentType(clz);
+        if (componentType != null) {
           // Okay, we loaded the class. But can we actually operate on it? Let's try
           // to get the name of this class to ensure it's not going to bork things
           // later due to unresolved dependencies that could throw an
@@ -229,6 +301,14 @@ public class LXClassLoader extends URLClassLoader {
           // TODO(mcslee): there must be some better way of checking this explicitly,
           // without instantiating the class, but more clear than getSimpleName()??
           clz.getSimpleName();
+          switch (componentType) {
+          case EFFECT -> ++pack.numEffects;
+          case FIXTURE -> ++pack.numFixtures;
+          case MODULATOR -> ++pack.numModulators;
+          case PATTERN -> ++pack.numPatterns;
+          case PLUGIN -> ++pack.numPlugins;
+          }
+
         }
 
         // Register all public, non-abstract components that we discover

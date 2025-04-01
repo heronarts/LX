@@ -691,21 +691,29 @@ public class LXRegistry implements LXSerializable {
     }
   }
 
-  private static final Class<?>[] COMPONENT_CLASSES = {
-    LXPattern.class,
-    LXEffect.class,
-    LXModulator.class,
-    LXFixture.class,
-    LXPlugin.class
-  };
+  public enum ComponentType {
+    PATTERN(LXPattern.class, "pattern"),
+    EFFECT(LXEffect.class, "effect"),
+    MODULATOR(LXModulator.class, "modulator"),
+    FIXTURE(LXFixture.class, "fixture"),
+    PLUGIN(LXPlugin.class, "plugin");
 
-  protected boolean isInstantiableComponent(Class<?> clz) {
-    for (Class<?> componentClass : COMPONENT_CLASSES) {
-      if (componentClass.isAssignableFrom(clz)) {
-        return true;
+    public final Class<?> componentClass;
+    public final String label;
+
+    private ComponentType(Class<?> componentClass, String label) {
+      this.componentClass = componentClass;
+      this.label = label;
+    }
+  }
+
+  protected ComponentType getInstantiableComponentType(Class<?> clz) {
+    for (ComponentType componentType : ComponentType.values()) {
+      if (componentType.componentClass.isAssignableFrom(clz)) {
+        return componentType;
       }
     }
-    return false;
+    return null;
   }
 
   private final Map<String, LXClassLoader.Package> duplicates = new HashMap<String, LXClassLoader.Package>();
