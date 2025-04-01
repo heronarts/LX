@@ -750,15 +750,21 @@ public abstract class LXCommand {
       private final Class<? extends LXPattern> patternClass;
       private ComponentReference<LXPattern> pattern = null;
       private JsonObject patternObj;
+      private int patternIndex;
 
       public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass) {
         this(channel, patternClass, null);
       }
 
       public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
+        this(channel, patternClass, patternObject, -1);
+      }
+
+      public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass, JsonObject patternObject, int patternIndex) {
         this.channel = new ComponentReference<LXChannel>(channel);
         this.patternClass = patternClass;
         this.patternObj = patternObject;
+        this.patternIndex = patternIndex;
       }
 
       @Override
@@ -775,7 +781,7 @@ public abstract class LXCommand {
           }
           // New pattern, we need to store its ID for future redo operations...
           this.patternObj = LXSerializable.Utils.toObject(instance);
-          this.channel.get().addPattern(instance);
+          this.channel.get().addPattern(instance, this.patternIndex);
           this.pattern = new ComponentReference<LXPattern>(instance);
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
