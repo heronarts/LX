@@ -510,6 +510,11 @@ public class LXOscEngine extends LXComponent {
       return this.active.isOn() && (this.state.getEnum() == IOState.BOUND);
     }
 
+    private boolean isAddressFiltered(String oscAddress) {
+      final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
+      return (prefixFilter != null) && !OscMessage.hasPrefix(oscAddress, prefixFilter);
+    }
+
     @Override
     public void onParameterChanged(LXParameter parameter) {
       // TODO(mcslee): contemplate accumulating OscMessages into OscBundle
@@ -526,28 +531,26 @@ public class LXOscEngine extends LXComponent {
       }
 
       // Apply prefix filter if it exists
-      final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
-      if ((prefixFilter != null) && !OscMessage.hasPrefix(address, prefixFilter)) {
+      if (isAddressFiltered(address)) {
         return;
       }
 
       // This checks out, set the osc message values and ship it
       oscMessage.clearArguments();
       oscMessage.setAddressPattern(address);
-      if (parameter instanceof BooleanParameter) {
-        oscInt.setValue(((BooleanParameter) parameter).isOn() ? 1 : 0);
+      if (parameter instanceof BooleanParameter b) {
+        oscInt.setValue(b.isOn() ? 1 : 0);
         oscMessage.add(oscInt);
-      } else if (parameter instanceof StringParameter) {
-        oscString.setValue(((StringParameter) parameter).getString());
+      } else if (parameter instanceof StringParameter string) {
+        oscString.setValue(string.getString());
         oscMessage.add(oscString);
-      } else if (parameter instanceof ColorParameter) {
-        oscInt.setValue(((ColorParameter) parameter).getBaseColor());
+      } else if (parameter instanceof ColorParameter color) {
+        oscInt.setValue(color.getBaseColor());
         oscMessage.add(oscInt);
-      } else if (parameter instanceof DiscreteParameter) {
-        oscInt.setValue(((DiscreteParameter) parameter).getBaseValuei());
+      } else if (parameter instanceof DiscreteParameter discrete) {
+        oscInt.setValue(discrete.getBaseValuei());
         oscMessage.add(oscInt);
-      } else if (parameter instanceof LXNormalizedParameter) {
-        LXNormalizedParameter normalizedParameter = (LXNormalizedParameter) parameter;
+      } else if (parameter instanceof LXNormalizedParameter normalizedParameter) {
         if (normalizedParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
           oscFloat.setValue(normalizedParameter.getBaseValuef());
         } else {
@@ -562,7 +565,7 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void sendMessage(String address, int value) {
-      if (isActive()) {
+      if (isActive() && !isAddressFiltered(address)) {
         oscMessage.clearArguments();
         oscMessage.setAddressPattern(address);
         oscInt.setValue(value);
@@ -572,7 +575,7 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void sendMessage(String address, float value) {
-      if (isActive()) {
+      if (isActive() && !isAddressFiltered(address)) {
         oscMessage.clearArguments();
         oscMessage.setAddressPattern(address);
         oscFloat.setValue(value);
@@ -582,7 +585,7 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void sendMessage(String address, String value) {
-      if (isActive()) {
+      if (isActive() && !isAddressFiltered(address)) {
         oscMessage.clearArguments();
         oscMessage.setAddressPattern(address);
         oscString.setValue(value);
