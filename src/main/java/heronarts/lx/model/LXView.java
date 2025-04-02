@@ -399,7 +399,7 @@ public class LXView extends LXModel {
       children[i] = cloneModel(clonedPoints, model.children[i]);
     }
 
-    LXModel clone = new LXModel(points, children, model.getNormalizationBounds(), model.metaData, model.tags);
+    LXModel clone = new LXModel(points, children, model.getNormalizationBounds(), model.metaData, model.tags, model.meshes);
     clone.transform.set(model.transform);
     return clone;
   }

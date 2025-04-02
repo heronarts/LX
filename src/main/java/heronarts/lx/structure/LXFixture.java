@@ -1016,7 +1016,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @return LXModel instance, or concrete subclass
    */
   protected LXModel constructModel(List<LXPoint> modelPoints, List<? extends LXModel> childModels, List<String> tags) {
-    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), tags);
+    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), tags, getModelMeshes());
   }
 
   /**
@@ -1189,6 +1189,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       }
     }
     return modelTags;
+  }
+
+  protected List<LXModel.Mesh> getModelMeshes() {
+    return null;
   }
 
   protected final static Submodel[] NO_SUBMODELS = new Submodel[0];
