@@ -253,8 +253,12 @@ public class LXClassLoader extends URLClassLoader {
   private void loadPackageMetadata(Package pack, JarFile jarFile, JarEntry jarEntry) {
     try (InputStreamReader isr = new InputStreamReader(jarFile.getInputStream(jarEntry))) {
       JsonObject obj = new Gson().fromJson(isr, JsonObject.class);
+      String name = "unknown";
+      String version = "unknown";
+      String lxVersion = "unknown";
+      String buildTimestamp = "";
       if (obj.has("name")) {
-        pack.name = obj.get("name").getAsString();
+        name = pack.name = obj.get("name").getAsString();
       }
       if (obj.has("author")) {
         pack.author = obj.get("author").getAsString();
@@ -265,12 +269,16 @@ public class LXClassLoader extends URLClassLoader {
       if (obj.has("build")) {
         JsonObject buildObj = obj.get("build").getAsJsonObject();
         if (buildObj.has("version")) {
-          pack.version = buildObj.get("version").getAsString();
+          version = pack.version = buildObj.get("version").getAsString();
         }
         if (buildObj.has("lxVersion")) {
-          pack.setLXVersion(this.lx, buildObj.get("lxVersion").getAsString());
+          pack.setLXVersion(this.lx, lxVersion = buildObj.get("lxVersion").getAsString());
+        }
+        if (buildObj.has("buildTimestamp")) {
+          buildTimestamp = " buildTimestamp:" + buildObj.get("buildTimestamp").getAsString();
         }
       }
+      LX.log("Package:" + name + " version:" + version + " lxVersion:" + lxVersion + buildTimestamp);
 
     } catch (Throwable x) {
       LX.error(x, "Exception reading lx.package contents for: " + jarFile);
