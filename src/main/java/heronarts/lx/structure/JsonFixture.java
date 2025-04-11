@@ -188,9 +188,9 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_MESHES = "meshes";
   private static final String KEY_MESH_COLOR = "color";
   private static final String KEY_MESH_VERTICES = "vertices";
-  private static final String KEY_MESH_X_WIDTH = "xw";
-  private static final String KEY_MESH_Y_WIDTH = "yw";
-  private static final String KEY_MESH_Z_WIDTH = "zw";
+  private static final String KEY_MESH_RECT_WIDTH = "width";
+  private static final String KEY_MESH_RECT_HEIGHT = "height";
+  private static final String KEY_MESH_RECT_AXIS = "axis";
 
   private static final String MESH_TYPE_UNIFORM_FILL = "uniformFill";
 
@@ -2604,21 +2604,6 @@ public class JsonFixture extends LXFixture {
     return byteOrder;
   }
 
-  private enum VertexType {
-    VERTEX,
-    RECT;
-
-    public static VertexType find(String str) {
-      str = str.toUpperCase();
-      for (VertexType candidate : values()) {
-        if (candidate.name().equals(str)) {
-          return candidate;
-        }
-      }
-      return null;
-    }
-  }
-
   private void loadUI(JsonObject obj) {
     if (!obj.has(KEY_UI)) {
       return;
@@ -2713,36 +2698,124 @@ public class JsonFixture extends LXFixture {
     this.mutableMeshes.add(new LXModel.Mesh(meshType, vertices, meshColor));
   }
 
+  private enum MeshVertexType {
+    VERTEX,
+    RECT;
+
+    public static MeshVertexType find(String str) {
+      str = str.toUpperCase();
+      for (MeshVertexType candidate : values()) {
+        if (candidate.name().equals(str)) {
+          return candidate;
+        }
+      }
+      return null;
+    }
+  }
+
   private void loadUIVertex(JsonObject vertexObj, List<LXVector> vertices) {
     LXVector vertex = loadVector(vertexObj, "Mesh vertex must contain one of x/y/z");
-    VertexType vertexType = VertexType.VERTEX;
+    MeshVertexType vertexType = MeshVertexType.VERTEX;
     if (vertexObj.has(KEY_TYPE)) {
       String typeStr = vertexObj.get(KEY_TYPE).getAsString();
-      vertexType = VertexType.find(typeStr);
+      vertexType = MeshVertexType.find(typeStr);
       if (vertexType == null) {
         addWarning("Unknown mesh vertex type: " + typeStr);
         return;
       }
     }
     switch (vertexType) {
-      case VERTEX -> {
-        vertices.add(vertex);
-      }
-      case RECT -> {
-        final float xw = loadFloat(vertexObj, KEY_MESH_X_WIDTH, true);
-        final float yw = loadFloat(vertexObj, KEY_MESH_Y_WIDTH, true);
-        final float zw = loadFloat(vertexObj, KEY_MESH_Z_WIDTH, true);
-        if ((xw == 0) && (yw == 0) && (zw == 0)) {
-          addWarning("Mesh type \"rect\" must provide non-zero xw/yw/zw");
-        }
-        vertices.add(vertex);
-        vertices.add(vertex.copy().add(0, yw, 0));
-        vertices.add(vertex.copy().add(xw, yw, zw));
-        vertices.add(vertex.copy().add(xw, yw, zw));
-        vertices.add(vertex.copy().add(xw, 0, zw));
-        vertices.add(vertex);
-      }
+      case VERTEX -> vertices.add(vertex);
+      case RECT -> loadUIVertexRect(vertexObj, vertex, vertices);
     };
+  }
+
+  private enum MeshRectAxis {
+    XY,
+    XZ,
+    YX,
+    YZ,
+    ZX,
+    ZY;
+
+    public static MeshRectAxis find(String str) {
+      str = str.toUpperCase();
+      for (MeshRectAxis candidate : values()) {
+        if (candidate.name().equals(str)) {
+          return candidate;
+        }
+      }
+      return null;
+    }
+  }
+
+  private void loadUIVertexRect(JsonObject vertexObj, LXVector vertex, List<LXVector> vertices) {
+    final float width = loadFloat(vertexObj, KEY_MESH_RECT_WIDTH, true);
+    final float height = loadFloat(vertexObj, KEY_MESH_RECT_HEIGHT, true);
+    if ((width == 0) || (height == 0)) {
+      addWarning("Mesh vertex type \"rect\" must provide non-zero width/height");
+      return;
+    }
+
+    MeshRectAxis rectAxis = MeshRectAxis.XY;
+    if (vertexObj.has(KEY_MESH_RECT_AXIS)) {
+      String axisStr = vertexObj.get(KEY_MESH_RECT_AXIS).getAsString();
+      rectAxis = MeshRectAxis.find(axisStr);
+      if (rectAxis == null) {
+        addWarning("Unknown mesh rect axis: " + axisStr);
+        return;
+      }
+    }
+    switch (rectAxis) {
+      case XY -> {
+        vertices.add(vertex);
+        vertices.add(vertex.copy().add(width, 0));
+        vertices.add(vertex.copy().add(0, height));
+        vertices.add(vertex.copy().add(0, height));
+        vertices.add(vertex.copy().add(width, 0));
+        vertices.add(vertex.copy().add(width, height));
+      }
+      case XZ -> {
+        vertices.add(vertex);
+        vertices.add(vertex.copy().add(width, 0, 0));
+        vertices.add(vertex.copy().add(0, 0, height));
+        vertices.add(vertex.copy().add(0, 0, height));
+        vertices.add(vertex.copy().add(width, 0, 0));
+        vertices.add(vertex.copy().add(width, 0, height));
+      }
+      case YX -> {
+        vertices.add(vertex);
+        vertices.add(vertex.copy().add(0, width, 0));
+        vertices.add(vertex.copy().add(height, 0, 0));
+        vertices.add(vertex.copy().add(height, 0, 0));
+        vertices.add(vertex.copy().add(0, width, 0));
+        vertices.add(vertex.copy().add(height, width, 0));
+      }
+      case YZ -> {
+        vertices.add(vertex);
+        vertices.add(vertex.copy().add(0, width, 0));
+        vertices.add(vertex.copy().add(0, 0, height));
+        vertices.add(vertex.copy().add(0, 0, height));
+        vertices.add(vertex.copy().add(0, width, 0));
+        vertices.add(vertex.copy().add(0, width, height));
+      }
+      case ZX -> {
+        vertices.add(vertex);
+        vertices.add(vertex.copy().add(0, 0, width));
+        vertices.add(vertex.copy().add(height, 0, 0));
+        vertices.add(vertex.copy().add(height, 0, 0));
+        vertices.add(vertex.copy().add(0, 0, width));
+        vertices.add(vertex.copy().add(height, 0, width));
+      }
+      case ZY -> {
+        vertices.add(vertex);
+        vertices.add(vertex.copy().add(0, 0, width));
+        vertices.add(vertex.copy().add(0, height, 0));
+        vertices.add(vertex.copy().add(0, height, 0));
+        vertices.add(vertex.copy().add(0, 0, width));
+        vertices.add(vertex.copy().add(0, height, width));
+      }
+    }
   }
 
   @Override
