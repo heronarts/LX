@@ -190,6 +190,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_MESH_VERTICES = "vertices";
   private static final String KEY_MESH_RECT_WIDTH = "width";
   private static final String KEY_MESH_RECT_HEIGHT = "height";
+  private static final String KEY_MESH_RECT_DEPTH = "depth";
   private static final String KEY_MESH_RECT_AXIS = "axis";
 
   private static final String MESH_TYPE_UNIFORM_FILL = "uniformFill";
@@ -2700,7 +2701,8 @@ public class JsonFixture extends LXFixture {
 
   private enum MeshVertexType {
     VERTEX,
-    RECT;
+    RECT,
+    CUBOID;
 
     public static MeshVertexType find(String str) {
       str = str.toUpperCase();
@@ -2727,6 +2729,7 @@ public class JsonFixture extends LXFixture {
     switch (vertexType) {
       case VERTEX -> vertices.add(vertex);
       case RECT -> loadUIVertexRect(vertexObj, vertex, vertices);
+      case CUBOID -> loadUIVertexCuboid(vertexObj, vertex, vertices);
     };
   }
 
@@ -2766,6 +2769,10 @@ public class JsonFixture extends LXFixture {
         return;
       }
     }
+    _loadUIVertexRect(vertices, vertex, width, height, rectAxis);
+  }
+
+  private void _loadUIVertexRect(List<LXVector> vertices, LXVector vertex, float width, float height, MeshRectAxis rectAxis) {
     switch (rectAxis) {
       case XY -> {
         vertices.add(vertex);
@@ -2816,6 +2823,22 @@ public class JsonFixture extends LXFixture {
         vertices.add(vertex.copy().add(0, height, width));
       }
     }
+  }
+
+  private void loadUIVertexCuboid(JsonObject vertexObj, LXVector vertex, List<LXVector> vertices) {
+    final float width = loadFloat(vertexObj, KEY_MESH_RECT_WIDTH, true);
+    final float height = loadFloat(vertexObj, KEY_MESH_RECT_HEIGHT, true);
+    final float depth = loadFloat(vertexObj, KEY_MESH_RECT_DEPTH, true);
+    if ((width == 0) || (height == 0)) {
+      addWarning("Mesh vertex type \"cuboid\" must provide non-zero width/height/depth");
+      return;
+    }
+    _loadUIVertexRect(vertices, vertex, width, height, MeshRectAxis.XY);
+    _loadUIVertexRect(vertices, vertex.copy().add(0, height, 0), width, depth, MeshRectAxis.XZ);
+    _loadUIVertexRect(vertices, vertex.copy().add(0, height, depth), width, -height, MeshRectAxis.XY);
+    _loadUIVertexRect(vertices, vertex.copy().add(0, 0, depth), width, -depth, MeshRectAxis.XZ);
+    _loadUIVertexRect(vertices, vertex.copy().add(0, 0, depth), -depth, height, MeshRectAxis.ZY);
+    _loadUIVertexRect(vertices, vertex.copy().add(width, 0, 0), depth, height, MeshRectAxis.ZY);
   }
 
   @Override
