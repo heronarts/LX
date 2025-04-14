@@ -411,6 +411,11 @@ public class LXMatrix {
     return set(IDENTITY);
   }
 
+  public enum BufferOrder {
+    ROW_MAJOR,
+    COLUMN_MAJOR
+  }
+
   /**
    * Puts the matrix into a FloatBuffer
    *
@@ -418,53 +423,57 @@ public class LXMatrix {
    * @return Populated float buffer
    */
   public FloatBuffer put(FloatBuffer buffer) {
-    return put(buffer, false);
+    return put(buffer, BufferOrder.ROW_MAJOR);
   }
+
   /**
    * Puts the matrix into a FloatBuffer
    *
    * @param buffer Buffer object
-   * @param transpose Whether to transpose the matrix
+   * @param bufferOrder Matrix ordering in buffer
    * @return Populated float buffer
    */
-  public FloatBuffer put(FloatBuffer buffer, boolean transpose) {
-    if (transpose) {
-      buffer
-      .put(0,  this.m11)
-      .put(1,  this.m21)
-      .put(2,  this.m31)
-      .put(3,  this.m41)
-      .put(4,  this.m12)
-      .put(5,  this.m22)
-      .put(6,  this.m32)
-      .put(7,  this.m42)
-      .put(8,  this.m13)
-      .put(9,  this.m23)
-      .put(10, this.m33)
-      .put(11, this.m43)
-      .put(12, this.m14)
-      .put(13, this.m24)
-      .put(14, this.m34)
-      .put(15, this.m44);
-    } else {
-      buffer
-      .put(0,  this.m11)
-      .put(1,  this.m12)
-      .put(2,  this.m13)
-      .put(3,  this.m14)
-      .put(4,  this.m21)
-      .put(5,  this.m22)
-      .put(6,  this.m23)
-      .put(7,  this.m24)
-      .put(8,  this.m31)
-      .put(9,  this.m32)
-      .put(10, this.m33)
-      .put(11, this.m34)
-      .put(12, this.m41)
-      .put(13, this.m42)
-      .put(14, this.m43)
-      .put(15, this.m44);
-    }
+  public FloatBuffer put(FloatBuffer buffer, BufferOrder bufferOrder) {
+    switch (bufferOrder) {
+      case COLUMN_MAJOR ->
+        buffer
+        .put(0,  this.m11)
+        .put(1,  this.m21)
+        .put(2,  this.m31)
+        .put(3,  this.m41)
+        .put(4,  this.m12)
+        .put(5,  this.m22)
+        .put(6,  this.m32)
+        .put(7,  this.m42)
+        .put(8,  this.m13)
+        .put(9,  this.m23)
+        .put(10, this.m33)
+        .put(11, this.m43)
+        .put(12, this.m14)
+        .put(13, this.m24)
+        .put(14, this.m34)
+        .put(15, this.m44);
+
+      case ROW_MAJOR ->
+        buffer
+        .put(0,  this.m11)
+        .put(1,  this.m12)
+        .put(2,  this.m13)
+        .put(3,  this.m14)
+        .put(4,  this.m21)
+        .put(5,  this.m22)
+        .put(6,  this.m23)
+        .put(7,  this.m24)
+        .put(8,  this.m31)
+        .put(9,  this.m32)
+        .put(10, this.m33)
+        .put(11, this.m34)
+        .put(12, this.m41)
+        .put(13, this.m42)
+        .put(14, this.m43)
+        .put(15, this.m44);
+
+    };
     return buffer;
   }
 
