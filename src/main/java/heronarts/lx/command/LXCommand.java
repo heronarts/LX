@@ -835,7 +835,7 @@ public abstract class LXCommand {
         LXChannel channel = this.channel.get();
         LXPattern pattern = channel.loadPattern(this.patternObj, this.patternIndex);
         if (this.isActive) {
-          channel.goPattern(pattern);
+          channel.goPattern(pattern, true);
         }
         if (this.isFocused) {
           channel.focusedPattern.setValue(pattern.getIndex());
