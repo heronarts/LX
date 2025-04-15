@@ -187,6 +187,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_MESH = "mesh";
   private static final String KEY_MESHES = "meshes";
   private static final String KEY_MESH_COLOR = "color";
+  private static final String KEY_MESH_FILE = "file";
   private static final String KEY_MESH_VERTICES = "vertices";
   private static final String KEY_MESH_RECT_WIDTH = "width";
   private static final String KEY_MESH_RECT_HEIGHT = "height";
@@ -748,6 +749,22 @@ public class JsonFixture extends LXFixture {
     this.isLoaded = false;
     loadFixture(reloadParameters);
     regenerate();
+  }
+
+  private File _getMeshFile(String meshType) {
+    return this.lx.getMediaFile(LX.Media.FIXTURES, meshType.replace(PATH_SEPARATOR, File.separator), false);
+  }
+
+  private File getMeshFile(String meshType) {
+    final String prefix = getChildPrefix();
+    if (prefix != null) {
+      String prefixedType = prefix + PATH_SEPARATOR + meshType;
+      File meshFile = _getMeshFile(prefixedType);
+      if (meshFile.exists()) {
+        return meshFile;
+      }
+    }
+    return _getMeshFile(meshType);
   }
 
   private File getFixtureFile(String fixtureType) {
@@ -2633,15 +2650,10 @@ public class JsonFixture extends LXFixture {
     if (!meshEnabled) {
       return;
     }
-    if (!meshObj.has(KEY_MESH_VERTICES)) {
-      addWarning("UI mesh object must specify " + KEY_MESH_VERTICES);
-      return;
-    }
     if (!meshObj.has(KEY_TYPE)) {
       addWarning("UI mesh must specify " + KEY_TYPE);
       return;
     }
-
     LXModel.Mesh.Type meshType = null;
     String meshTypeStr = meshObj.get(KEY_TYPE).getAsString();
     if (MESH_TYPE_UNIFORM_FILL.equals(meshTypeStr)) {
@@ -2662,41 +2674,62 @@ public class JsonFixture extends LXFixture {
       }
     }
 
-    List<LXVector> vertices = new ArrayList<>();
-    JsonArray verticesArr = meshObj.get(KEY_MESH_VERTICES).getAsJsonArray();
-    for (JsonElement vertexElem : verticesArr) {
-      JsonObject vertexObj = vertexElem.getAsJsonObject();
-      if (vertexObj.has(KEY_INSTANCES)) {
-        int numInstances = loadInt(vertexObj, KEY_INSTANCES, true, "Vertex object must specify positive number of instances");
-        if (numInstances <= 0) {
-          addWarning("Vertex specifies illegal number of instances: " + numInstances);
-          return;
-        }
-        if (numInstances >= MAX_INSTANCES) {
-          addWarning("Vertex specifies too many instances: " + numInstances + " >= " + MAX_INSTANCES);
-          return;
-        }
-
-        // Load this child N times with an instance variable set
-        this.currentNumInstances = numInstances;
-        for (int i = 0; i < numInstances; ++i) {
-          this.currentChildInstance = i;
-          JsonObject instanceObj = vertexObj.deepCopy();
-          instanceObj.remove(KEY_INSTANCES);
-          loadUIVertex(instanceObj, vertices);
-        }
-        this.currentNumInstances = -1;
-        this.currentChildInstance = -1;
-      } else {
-        loadUIVertex(vertexObj, vertices);
-      }
-    }
-    if (vertices.isEmpty()) {
-      addWarning("UI mesh object must specify non-empty " + KEY_MESH_VERTICES);
+    if (meshObj.has(KEY_MESH_VERTICES) && meshObj.has(KEY_MESH_FILE)) {
+      addWarning("UI mesh may not specify both " + KEY_MESH_VERTICES + " and " + KEY_MESH_FILE);
       return;
     }
 
-    this.mutableMeshes.add(new LXModel.Mesh(meshType, vertices, meshColor));
+    if (!meshObj.has(KEY_MESH_VERTICES) && !meshObj.has(KEY_MESH_FILE)) {
+      addWarning("UI mesh must specify " + KEY_MESH_VERTICES + " or " + KEY_MESH_FILE);
+      return;
+    }
+
+    if (meshObj.has(KEY_MESH_VERTICES)) {
+      List<LXVector> vertices = new ArrayList<>();
+      JsonArray verticesArr = meshObj.get(KEY_MESH_VERTICES).getAsJsonArray();
+      for (JsonElement vertexElem : verticesArr) {
+        JsonObject vertexObj = vertexElem.getAsJsonObject();
+        if (vertexObj.has(KEY_INSTANCES)) {
+          int numInstances = loadInt(vertexObj, KEY_INSTANCES, true, "Vertex object must specify positive number of instances");
+          if (numInstances <= 0) {
+            addWarning("Vertex specifies illegal number of instances: " + numInstances);
+            return;
+          }
+          if (numInstances >= MAX_INSTANCES) {
+            addWarning("Vertex specifies too many instances: " + numInstances + " >= " + MAX_INSTANCES);
+            return;
+          }
+
+          // Load this child N times with an instance variable set
+          this.currentNumInstances = numInstances;
+          for (int i = 0; i < numInstances; ++i) {
+            this.currentChildInstance = i;
+            JsonObject instanceObj = vertexObj.deepCopy();
+            instanceObj.remove(KEY_INSTANCES);
+            loadUIVertex(instanceObj, vertices);
+          }
+          this.currentNumInstances = -1;
+          this.currentChildInstance = -1;
+        } else {
+          loadUIVertex(vertexObj, vertices);
+        }
+      }
+      if (vertices.isEmpty()) {
+        addWarning("UI mesh object must specify non-empty " + KEY_MESH_VERTICES);
+        return;
+      }
+
+      this.mutableMeshes.add(new LXModel.Mesh(meshType, vertices, meshColor));
+    } else if (meshObj.has(KEY_MESH_FILE)) {
+      final String meshFileStr = meshObj.get(KEY_MESH_FILE).getAsString();
+      final File meshFile = getMeshFile(meshFileStr);
+      if (!meshFile.exists()) {
+        addWarning("Cannot find UI mesh file: " + meshFileStr);
+        return;
+      } else {
+        this.mutableMeshes.add(new LXModel.Mesh(meshType, meshFile, meshColor));
+      }
+    }
   }
 
   private enum MeshVertexType {

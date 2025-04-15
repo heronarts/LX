@@ -18,6 +18,7 @@
 
 package heronarts.lx.model;
 
+import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -139,11 +140,20 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     public final Type type;
     public final int color;
     public final List<LXVector> vertices;
+    public final File file;
 
     public Mesh(Type type, List<LXVector> vertices, int color) {
       this.type = type;
       this.vertices = Collections.unmodifiableList(vertices);
       this.color = color;
+      this.file = null;
+    }
+
+    public Mesh(Type type, File meshFile, int color) {
+      this.type = type;
+      this.vertices = null;
+      this.color = color;
+      this.file = meshFile;
     }
   }
 
