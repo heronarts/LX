@@ -26,6 +26,9 @@ import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.transform.LXMatrix;
+import heronarts.lx.transform.LXParameterizedMatrix;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.CORE)
@@ -33,7 +36,7 @@ import heronarts.lx.utils.LXUtils;
 public class LinearMaskEffect extends LXEffect {
 
   public interface PositionFunction {
-    public float getPosition(LXPoint p);
+    public float getPosition(LXPoint p, LXMatrix t);
   }
 
   public interface DistanceFunction {
@@ -41,16 +44,29 @@ public class LinearMaskEffect extends LXEffect {
   }
 
   public enum Axis {
-    X("X-axis", p -> { return p.xn; }),
-    Y("Y-axis", p -> { return p.yn; }),
-    Z("Z-axis", p -> { return p.zn; });
+    X("X-axis",
+      (p, t) -> { return p.xn; },
+      (p, t) -> { return t.xn(p); }
+    ),
+
+    Y("Y-axis",
+      (p, t) -> { return p.yn; },
+      (p, t) -> { return t.yn(p); }
+    ),
+
+    Z("Z-axis",
+      (p, t) -> { return p.zn; },
+      (p, t) -> { return t.zn(p); }
+    );
 
     public final String label;
-    public final PositionFunction position;
+    public final PositionFunction basicPosition;
+    public final PositionFunction rotatePosition;
 
-    private Axis(String label, PositionFunction position) {
+    private Axis(String label, PositionFunction basicPosition, PositionFunction rotatePosition) {
       this.label = label;
-      this.position = position;
+      this.basicPosition = basicPosition;
+      this.rotatePosition = rotatePosition;
     }
 
     @Override
@@ -151,6 +167,28 @@ public class LinearMaskEffect extends LXEffect {
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Cue the mask effect");
 
+  public final BooleanParameter rotate =
+    new BooleanParameter("Rotate", false)
+    .setDescription("Whether to rotate the geometry");
+
+  public final CompoundParameter yaw =
+    new CompoundParameter("Yaw", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Yaw rotation");
+
+  public final CompoundParameter pitch =
+    new CompoundParameter("Pitch", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Pitch rotation");
+
+  public final CompoundParameter roll =
+    new CompoundParameter("Roll", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Roll rotation");
+
   public LinearMaskEffect(LX lx) {
     super(lx);
     addParameter("offset", this.offset);
@@ -162,13 +200,36 @@ public class LinearMaskEffect extends LXEffect {
     addParameter("fadePosition", this.fadePosition);
     addParameter("fadeSize", this.fadeSize);
     addParameter("cue", this.cue);
+    addTransformParameter("rotate", this.rotate);
+    addTransformParameter("yaw", this.yaw);
+    addTransformParameter("pitch", this.pitch);
+    addTransformParameter("roll", this.roll);
   }
+
+  private void addTransformParameter(String key, LXParameter parameter) {
+    addParameter(key, parameter);
+    this.transform.addParameter(parameter);
+  }
+
+  private final LXParameterizedMatrix transform = new LXParameterizedMatrix();
 
   @Override
   protected void run(double deltaMs, double enabledAmount) {
     final int effectMask = LXColor.blendMask(enabledAmount);
 
-    final PositionFunction axisFn = this.axis.getEnum().position;
+    final boolean rotate = this.rotate.isOn();
+    if (rotate) {
+      this.transform.update(matrix -> {
+        matrix
+          .translate(.5f, .5f, .5f)
+          .rotateZ((float) Math.toRadians(-this.roll.getValue()))
+          .rotateX((float) Math.toRadians(-this.pitch.getValue()))
+          .rotateY((float) Math.toRadians(-this.yaw.getValue()))
+          .translate(-.5f, -.5f, -.5f);
+      });
+    }
+
+    final PositionFunction axisFn = rotate ? this.axis.getEnum().rotatePosition : this.axis.getEnum().basicPosition;
     final DistanceFunction distanceFn = this.mode.getEnum().distance;
     final FadePosition fadeMode = this.fadePosition.getEnum();
     final FadeSize fadeSize = this.fadeSize.getEnum();
@@ -194,7 +255,7 @@ public class LinearMaskEffect extends LXEffect {
     }
 
     for (LXPoint p : model.points) {
-      final float distance = distanceFn.getDistance(axisFn.getPosition(p), offset);
+      final float distance = distanceFn.getDistance(axisFn.getPosition(p, this.transform), offset);
       final int mask = (int) LXUtils.constrainf(base - falloff * (distance - size), 0, 255);
       final int alpha = invert ? mask : (255 - mask);
       colors[p.index] = cue ? LXColor.grayn((255 - alpha) / 255f) :
