@@ -78,7 +78,8 @@ public class LX {
 
     public enum Type {
       EXCEPTION,
-      LICENSE;
+      LICENSE,
+      PLUGIN;
     }
 
     public final Type type;
@@ -1381,7 +1382,14 @@ public class LX {
 
   public boolean canInstantiate(Class<? extends LXComponent> clz) {
     LXLicense license = clz.getAnnotation(LXLicense.class);
-    return (license == null) || this.permissions.hasPackageLicense(license.value());
+    if ((license != null) && !this.permissions.hasPackageLicense(license.value())) {
+      return false;
+    }
+    LXComponent.PluginRequired pluginRequired = clz.getAnnotation(LXComponent.PluginRequired.class);
+    if ((pluginRequired != null) && !this.registry.isPluginClassEnabled(pluginRequired.value())) {
+      return false;
+    }
+    return true;
   }
 
   public LXModel instantiateModel(String className) throws InstantiationException {
@@ -1412,6 +1420,14 @@ public class LX {
       final String pkg = license.value();
       if (!this.permissions.hasPackageLicense(pkg)) {
         throw new InstantiationException(InstantiationException.Type.LICENSE, "Class requires valid license for package: " + pkg);
+      }
+    }
+
+    LXComponent.PluginRequired pluginRequired = cls.getAnnotation(LXComponent.PluginRequired.class);
+    if (pluginRequired != null) {
+      final Class<? extends LXPlugin> pluginClass = pluginRequired.value();
+      if (!this.registry.isPluginClassEnabled(pluginClass)) {
+        throw new InstantiationException(InstantiationException.Type.PLUGIN, LXComponent.getComponentName(cls) + " requires plugin " + LXPlugin.getPluginName(pluginClass));
       }
     }
 

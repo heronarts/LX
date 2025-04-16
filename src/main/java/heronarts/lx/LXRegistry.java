@@ -1215,6 +1215,15 @@ public class LXRegistry implements LXSerializable {
     return null;
   }
 
+  public boolean isPluginClassEnabled(Class<? extends LXPlugin> pluginClass) {
+    for (Plugin plugin : this.plugins) {
+      if (plugin.clazz.equals(pluginClass) && plugin.isEnabled) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private JsonArray pluginState = new JsonArray();
 
   private static final String KEY_PLUGINS = "plugins";

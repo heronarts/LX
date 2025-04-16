@@ -56,4 +56,10 @@ public interface LXPlugin {
    * Any resources used should be freed, listeners should be unregistered, etc.
    */
   public default void dispose() {}
+
+  public static String getPluginName(Class<? extends LXPlugin> pluginClass) {
+    Name annotation = pluginClass.getAnnotation(Name.class);
+    return (annotation != null) ? annotation.value() : pluginClass.getSimpleName();
+
+  }
 }

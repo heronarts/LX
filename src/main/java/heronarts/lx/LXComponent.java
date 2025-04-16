@@ -69,6 +69,17 @@ import heronarts.lx.parameter.StringParameter;
  */
 public abstract class LXComponent implements LXPath, LXParameterListener, LXSerializable {
 
+  /**
+   * An annotation to be applied to classes giving them
+   * a name in the UI different from their classname
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Name {
+    String value();
+  }
+
   @Documented
   @Target(ElementType.TYPE)
   @Retention(RetentionPolicy.RUNTIME)
@@ -85,6 +96,16 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   @Retention(RetentionPolicy.RUNTIME)
   public @interface Description {
     String value();
+  }
+
+  /**
+   * Specifies that this component requires the given plugin to operate properly
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface PluginRequired {
+    Class<? extends LXPlugin> value();
   }
 
   /**
@@ -335,6 +356,10 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @return Name of component type
    */
   public static String getComponentName(Class<? extends LXComponent> component, String suffix) {
+    Name name = component.getAnnotation(Name.class);
+    if (name != null) {
+      return name.value();
+    }
     LXComponentName annotation = component.getAnnotation(LXComponentName.class);
     if (annotation != null) {
       return annotation.value();
