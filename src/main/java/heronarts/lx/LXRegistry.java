@@ -1217,7 +1217,7 @@ public class LXRegistry implements LXSerializable {
 
   public boolean isPluginClassEnabled(Class<? extends LXPlugin> pluginClass) {
     for (Plugin plugin : this.plugins) {
-      if (plugin.clazz.equals(pluginClass) && plugin.isEnabled) {
+      if (plugin.clazz.equals(pluginClass) && plugin.isEnabled && !plugin.hasError) {
         return true;
       }
     }
