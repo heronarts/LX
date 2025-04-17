@@ -622,6 +622,9 @@ public class LXRegistry implements LXSerializable {
     return true;
   }
 
+  private static final String PACKAGE_MEDIA_DIR = "mediaDir";
+
+
   private void installPackageMedia(File file) {
     try (JarFile jarFile = new JarFile(file)) {
       JarEntry packageEntry = jarFile.getJarEntry(LXClassLoader.PACKAGE_DESCRIPTOR_FILE_NAME);
@@ -630,7 +633,11 @@ public class LXRegistry implements LXSerializable {
         return;
       }
       JsonObject obj = new Gson().fromJson(new InputStreamReader(jarFile.getInputStream(packageEntry)), JsonObject.class);
-      String packageDir = obj.get("mediaDir").getAsString();
+      if (!obj.has(PACKAGE_MEDIA_DIR)) {
+        this.lx.pushError("Package does not specify \"" + PACKAGE_MEDIA_DIR + "\", cannot install media: " + jarFile.getName());
+        return;
+      }
+      String packageDir = obj.get(PACKAGE_MEDIA_DIR).getAsString();
 
       Enumeration<JarEntry> entries = jarFile.entries();
       while (entries.hasMoreElements()) {
@@ -642,6 +649,14 @@ public class LXRegistry implements LXSerializable {
           copyPackageMedia(packageDir, LX.Media.MODELS, jarFile, entry);
         } else if (fileName.startsWith("projects/") && fileName.endsWith(".lxp")) {
           copyPackageMedia(packageDir, LX.Media.PROJECTS, jarFile, entry);
+        } else if (fileName.startsWith("scripts/") && fileName.endsWith(".js")) {
+          copyPackageMedia(packageDir, LX.Media.SCRIPTS, jarFile, entry);
+        } else if (fileName.startsWith("colors/") && fileName.endsWith(".lxc")) {
+          copyPackageMedia(packageDir, LX.Media.COLORS, jarFile, entry);
+        } else if (fileName.startsWith("views/") && fileName.endsWith(".lxv")) {
+          copyPackageMedia(packageDir, LX.Media.VIEWS, jarFile, entry);
+        } else if (fileName.startsWith("presets/") && fileName.endsWith(".lxd")) {
+          copyPackageMedia(packageDir, LX.Media.PRESETS, jarFile, entry);
         }
       }
     } catch (Throwable throwable) {
@@ -650,12 +665,27 @@ public class LXRegistry implements LXSerializable {
   }
 
   private void copyPackageMedia(String packageDirName, LX.Media media, JarFile jarFile, JarEntry entry) throws IOException {
-    // Lop off the first package media folder name
+    // Lop off the first package media type name
     String entryName = entry.getName();
     entryName = entryName.substring(entryName.indexOf('/') + 1);
 
     // Make a directory for the package media of this type
-    File packageDir = this.lx.getMediaFile(media, packageDirName, true);
+    File packageDir = (media == LX.Media.PRESETS) ?
+      this.lx.getMediaFolder(media, true) :
+      this.lx.getMediaFile(media, packageDirName, true);
+
+    // For presets, fork package name after device
+    if (media == LX.Media.PRESETS) {
+      int firstSlash = entryName.indexOf('/');
+      if (firstSlash < 0) {
+        entryName = packageDirName + '/' + entryName;
+      } else {
+        entryName =
+          entryName.substring(0, firstSlash) +
+          '/' + packageDirName +
+          entryName.substring(firstSlash);
+      }
+    }
 
     // Are their subdirs within this package's content? Break up if so...
     int lastSlash = entryName.lastIndexOf('/');
