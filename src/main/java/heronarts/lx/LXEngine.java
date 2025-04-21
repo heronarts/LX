@@ -558,6 +558,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   void updateEngineThreadClassLoader(LXClassLoader classLoader) {
     Thread engineThread = this.engineThread;
     if (engineThread != null) {
+      if (Thread.currentThread() != engineThread) {
+        throw new IllegalStateException("LXEngine.updateEngineThreadClassLoader() was called from some other non-engine thread: " + Thread.currentThread().getName());
+      }
       engineThread.setContextClassLoader(classLoader);
     }
   }
