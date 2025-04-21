@@ -568,6 +568,9 @@ public class LXRegistry implements LXSerializable {
     this.classLoader.load();
     loadClasspathPlugins();
 
+    // Update the engine thread class loader
+    this.lx.engine.updateEngineThreadClassLoader(this.classLoader);
+
     // Reload the available JSON fixture list
     this.mutableJsonFixtures.clear();
     this.mutableJsonFixtureErrors.clear();

@@ -555,6 +555,13 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this;
   }
 
+  void updateEngineThreadClassLoader(LXClassLoader classLoader) {
+    Thread engineThread = this.engineThread;
+    if (engineThread != null) {
+      engineThread.setContextClassLoader(classLoader);
+    }
+  }
+
   /**
    * Utility method to shut down and join the engine thread, only when specifically in P4 mode.
    *
@@ -673,6 +680,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       this.service.execute(() -> {
         engineThread = Thread.currentThread();
         engineThread.setName(EngineThread.THREAD_NAME);
+        engineThread.setContextClassLoader(lx.registry.classLoader);
         engineThread.setPriority(lx.flags.engineThreadPriority);
         LX.log("LXEngine.ExecutorService starting...");
         synchronized (bootstrap) {
@@ -746,6 +754,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     private EngineThread() {
       super(THREAD_NAME);
       setPriority(lx.flags.engineThreadPriority);
+      setContextClassLoader(lx.registry.classLoader);
     }
 
     @Override
