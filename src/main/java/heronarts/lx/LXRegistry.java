@@ -518,6 +518,10 @@ public class LXRegistry implements LXSerializable {
     this.classLoader = new LXClassLoader(lx);
   }
 
+  public LXClassLoader getClassLoader() {
+    return this.classLoader;
+  }
+
   public Class<?> getClass(String className) throws ClassNotFoundException {
     return Class.forName(className, true, this.classLoader);
   }
@@ -567,9 +571,6 @@ public class LXRegistry implements LXSerializable {
     this.classLoader = new LXClassLoader(this.lx);
     this.classLoader.load();
     loadClasspathPlugins();
-
-    // Update the engine thread class loader
-    this.lx.engine.updateEngineThreadClassLoader(this.classLoader);
 
     // Reload the available JSON fixture list
     this.mutableJsonFixtures.clear();
