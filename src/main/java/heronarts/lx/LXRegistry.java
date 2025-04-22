@@ -24,7 +24,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -628,8 +630,10 @@ public class LXRegistry implements LXSerializable {
 
   private static final String PACKAGE_MEDIA_DIR = "mediaDir";
 
+  private boolean packageMediaConflicts = false;
 
   private void installPackageMedia(File file) {
+    this.packageMediaConflicts = false;
     try (JarFile jarFile = new JarFile(file)) {
       JarEntry packageEntry = jarFile.getJarEntry(LXClassLoader.PACKAGE_DESCRIPTOR_FILE_NAME);
       if (packageEntry == null) {
@@ -666,7 +670,12 @@ public class LXRegistry implements LXSerializable {
     } catch (Throwable throwable) {
       LX.error(throwable, "Error loading JAR file " + file + " - " + throwable.getLocalizedMessage());
     }
+    if (this.packageMediaConflicts) {
+      this.lx.pushError("Package media files conflict with existing files, backups were made. See log for details.");
+    }
   }
+
+  private static final DateFormat BACKUP_DATE_FORMAT = new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss");
 
   private void copyPackageMedia(String packageDirName, LX.Media media, JarFile jarFile, JarEntry entry) throws IOException {
     // Lop off the first package media type name
@@ -702,12 +711,48 @@ public class LXRegistry implements LXSerializable {
     // Ensure package subdirs exist
     packageDir.mkdirs();
 
-    // Copy the file over
-    Files.copy(
-      jarFile.getInputStream(entry),
-      new File(packageDir, entryName).toPath(),
-      StandardCopyOption.REPLACE_EXISTING
-    );
+    // Make backups if clobbering existing content
+    final File destinationFile = new File(packageDir, entryName);
+
+    if (!destinationFile.exists()) {
+      // Just copy the file over
+      Files.copy(
+        jarFile.getInputStream(entry),
+        destinationFile.toPath(),
+        StandardCopyOption.REPLACE_EXISTING
+      );
+    } else {
+
+      final Path destinationFilePath = destinationFile.toPath();
+      final Path tmpFilePath = new File(packageDir, entryName + ".tmp").toPath();
+
+      // Write to a tmp file, check for changes
+      Files.copy(
+        jarFile.getInputStream(entry),
+        tmpFilePath,
+        StandardCopyOption.REPLACE_EXISTING
+      );
+      if (Files.mismatch(destinationFilePath, tmpFilePath) < 0) {
+        // No changes, nuke this tmp file
+        Files.delete(tmpFilePath);
+      } else {
+        // Note the conflict, backup the existing file, put the temp file into its place
+        this.packageMediaConflicts = true;
+        final String timestamp = BACKUP_DATE_FORMAT.format(Calendar.getInstance().getTime());
+        final Path backupFilePath = new File(packageDir, entryName + "-" + timestamp + ".backup").toPath();
+        Files.move(
+          destinationFilePath,
+          backupFilePath,
+          StandardCopyOption.REPLACE_EXISTING
+        );
+        Files.move(
+          tmpFilePath,
+          destinationFilePath,
+          StandardCopyOption.REPLACE_EXISTING
+        );
+        LX.error("Package media file conflict, backed up to: " + backupFilePath.toString());
+      }
+    }
   }
 
   public void uninstallPackage(LXClassLoader.Package pack) {
