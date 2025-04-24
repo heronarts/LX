@@ -796,8 +796,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
           sendChannelClipStop(index, this.channel);
         }
       }
-      if (this.channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) this.channel;
+      if (this.channel instanceof LXChannel c) {
         if (p == c.focusedPattern) {
           sendChannelPatterns(index, c);
         }
