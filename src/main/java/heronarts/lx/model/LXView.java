@@ -30,7 +30,7 @@ import heronarts.lx.structure.view.LXViewDefinition;
 public class LXView extends LXModel {
 
   public enum Normalization {
-    RELATIVE("Normalize to view bounds"),
+    RELATIVE("Constrain to view bounds"),
     ABSOLUTE("Preserve absolute bounds");
 
     public final String description;
