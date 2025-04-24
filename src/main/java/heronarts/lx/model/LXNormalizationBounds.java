@@ -18,10 +18,14 @@
 
 package heronarts.lx.model;
 
+import heronarts.lx.transform.LXMatrix;
+
 /**
  * Defines a normalization space
  */
 public class LXNormalizationBounds {
+
+  public LXMatrix orientation = new LXMatrix();
 
   /**
    * Minimum x value

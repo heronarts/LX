@@ -380,7 +380,7 @@ public class LXPoint {
    * @return Normalized x position of this point in the given bounds, 0-1 if contained
    */
   public float xn(LXNormalizationBounds bounds) {
-    return (bounds.xRange == 0) ? .5f : (this.x - bounds.xMin) / bounds.xRange;
+    return (bounds.xRange == 0) ? .5f : (bounds.orientation.x(this) - bounds.xMin) / bounds.xRange;
   }
 
   /**
@@ -392,7 +392,7 @@ public class LXPoint {
    * @return Normalized y position of this point in the given bounds, 0-1 if contained
    */
   public float yn(LXNormalizationBounds bounds) {
-    return (bounds.yRange == 0) ? .5f : (this.y - bounds.yMin) / bounds.yRange;
+    return (bounds.yRange == 0) ? .5f : (bounds.orientation.y(this) - bounds.yMin) / bounds.yRange;
   }
 
   /**
@@ -404,6 +404,6 @@ public class LXPoint {
    * @return Normalized z position of this point in the given bounds, 0-1 if contained
    */
   public float zn(LXNormalizationBounds bounds) {
-    return (bounds.zRange == 0) ? .5f : (this.z - bounds.zMin) / bounds.zRange;
+    return (bounds.zRange == 0) ? .5f : (bounds.orientation.z(this) - bounds.zMin) / bounds.zRange;
   }
 }

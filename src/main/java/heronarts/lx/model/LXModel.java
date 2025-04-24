@@ -615,6 +615,11 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     }
   }
 
+  void setNormalizationOrientation(LXModel model) {
+    this.normalizationBounds.orientation.setInverse(model.transform);
+    recomputeGeometry();
+  }
+
   /**
    * Returns the model which defines the space in which this model's points are
    * normalized, based upon the xMin/xMax/xRange etc. By default, this is the
@@ -987,33 +992,37 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
     boolean firstPoint = true;
     for (LXPoint p : this.points) {
-      ax += p.x;
-      ay += p.y;
-      az += p.z;
+      final float px = this.normalizationBounds.orientation.x(p);
+      final float py = this.normalizationBounds.orientation.y(p);
+      final float pz = this.normalizationBounds.orientation.z(p);
+
+      ax += px;
+      ay += py;
+      az += pz;
       if (firstPoint) {
-        xMin = xMax = p.x;
-        yMin = yMax = p.y;
-        zMin = zMax = p.z;
+        xMin = xMax = px;
+        yMin = yMax = py;
+        zMin = zMax = pz;
         rMin = rMax = p.r;
         firstPoint = false;
       } else {
-        if (p.x < xMin) {
-          xMin = p.x;
+        if (px < xMin) {
+          xMin = px;
         }
-        if (p.x > xMax) {
-          xMax = p.x;
+        if (px > xMax) {
+          xMax = px;
         }
-        if (p.y < yMin) {
-          yMin = p.y;
+        if (py < yMin) {
+          yMin = py;
         }
-        if (p.y > yMax) {
-          yMax = p.y;
+        if (py > yMax) {
+          yMax = py;
         }
-        if (p.z < zMin) {
-          zMin = p.z;
+        if (pz < zMin) {
+          zMin = pz;
         }
-        if (p.z > zMax) {
-          zMax = p.z;
+        if (pz > zMax) {
+          zMax = pz;
         }
         if (p.r < rMin) {
           rMin = p.r;
