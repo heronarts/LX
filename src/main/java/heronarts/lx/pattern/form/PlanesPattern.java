@@ -224,6 +224,7 @@ public class PlanesPattern extends LXPattern {
     protected Plane(LX lx, int index) {
       super(lx);
       this.index = index;
+
       addParameter("level", this.level);
       addParameter("position", this.position);
       addParameter("width", this.width);
@@ -248,6 +249,11 @@ public class PlanesPattern extends LXPattern {
       addParameter("planeD", this.planeD);
 
       this.active.setValue(index == 0);
+    }
+
+    @Override
+    public String getLabel() {
+      return "P" + (index+1);
     }
 
     @Override

@@ -103,11 +103,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   public String getLabel() {
-    LXComponent component = this.parameter.getParent();
-    if (component != this.clip.bus) {
-      return component.getLabel() + " | " + this.parameter.getLabel();
-    }
-    return this.parameter.getLabel();
+    return this.parameter.getCanonicalLabel(this.clip.bus, " | ", 3);
   }
 
   public boolean shouldRecordParameterChange(LXNormalizedParameter p) {
