@@ -157,6 +157,60 @@ public class LXMatrix {
     return this;
   }
 
+  public LXMatrix invert() {
+    return setInverse(this);
+  }
+
+  public LXMatrix setInverse(LXMatrix that) {
+    final float xx = that.m11;
+    final float xy = that.m12;
+    final float xz = that.m13;
+    final float xw = that.m14;
+    final float yx = that.m21;
+    final float yy = that.m22;
+    final float yz = that.m23;
+    final float yw = that.m24;
+    final float zx = that.m31;
+    final float zy = that.m32;
+    final float zz = that.m33;
+    final float zw = that.m34;
+    final float wx = that.m41;
+    final float wy = that.m42;
+    final float wz = that.m43;
+    final float ww = that.m44;
+
+    float determinant = 0f;
+
+    determinant += xx * (yy*(zz*ww - zw*wz) - yz*(zy*ww - zw*wy) + yw*(zy*wz - zz*wy));
+    determinant -= xy * (yx*(zz*ww - zw*wz) - yz*(zx*ww - zw*wx) + yw*(zx*wz - zz*wx));
+    determinant += xz * (yx*(zy*ww - zw*wy) - yy*(zx*ww - zw*wx) + yw*(zx*wy - zy*wx));
+    determinant -= xw * (yx*(zy*wz - zz*wy) - yy*(zx*wz - zz*wx) + yz*(zx*wy - zy*wx));
+
+    final float inverseDeterminant = 1f / determinant;
+
+    return set(
+      +(yy*(zz*ww - wz*zw) - yz*(zy*ww - wy*zw) + yw*(zy*wz - wy*zz)) * inverseDeterminant,
+      -(xy*(zz*ww - wz*zw) - xz*(zy*ww - wy*zw) + xw*(zy*wz - wy*zz)) * inverseDeterminant,
+      +(xy*(yz*ww - wz*yw) - xz*(yy*ww - wy*yw) + xw*(yy*wz - wy*yz)) * inverseDeterminant,
+      -(xy*(yz*zw - zz*yw) - xz*(yy*zw - zy*yw) + xw*(yy*zz - zy*yz)) * inverseDeterminant,
+
+      -(yx*(zz*ww - wz*zw) - yz*(zx*ww - wx*zw) + yw*(zx*wz - wx*zz)) * inverseDeterminant,
+      +(xx*(zz*ww - wz*zw) - xz*(zx*ww - wx*zw) + xw*(zx*wz - wx*zz)) * inverseDeterminant,
+      -(xx*(yz*ww - wz*yw) - xz*(yx*ww - wx*yw) + xw*(yx*wz - wx*yz)) * inverseDeterminant,
+      +(xx*(yz*zw - zz*yw) - xz*(yx*zw - zx*yw) + xw*(yx*zz - zx*yz)) * inverseDeterminant,
+
+      +(yx*(zy*ww - wy*zw) - yy*(zx*ww - wx*zw) + yw*(zx*wy - wx*zy)) * inverseDeterminant,
+      -(xx*(zy*ww - wy*zw) - xy*(zx*ww - wx*zw) + xw*(zx*wy - wx*zy)) * inverseDeterminant,
+      +(xx*(yy*ww - wy*yw) - xy*(yx*ww - wx*yw) + xw*(yx*wy - wx*yy)) * inverseDeterminant,
+      -(xx*(yy*zw - zy*yw) - xy*(yx*zw - zx*yw) + xw*(yx*zy - zx*yy)) * inverseDeterminant,
+
+      -(yx*(zy*wz - wy*zz) - yy*(zx*wz - wx*zz) + yz*(zx*wy - wx*zy)) * inverseDeterminant,
+      +(xx*(zy*wz - wy*zz) - xy*(zx*wz - wx*zz) + xz*(zx*wy - wx*zy)) * inverseDeterminant,
+      -(xx*(yy*wz - wy*yz) - xy*(yx*wz - wx*yz) + xz*(yx*wy - wx*yy)) * inverseDeterminant,
+      +(xx*(yy*zz - zy*yz) - xy*(yx*zz - zx*yz) + xz*(yx*zy - zx*yy)) * inverseDeterminant
+    );
+  }
+
   public float x() {
     return m14;
   }
@@ -167,6 +221,51 @@ public class LXMatrix {
 
   public float z() {
     return m34;
+  }
+
+  /**
+   * Returns the x value after the given
+   * point is transformed by this matrix.
+   *
+   * @param p Point
+   * @return x value after application of matrix
+   */
+  public float x(LXPoint p) {
+    return
+      m11 * p.x +
+      m12 * p.y +
+      m13 * p.z +
+      m14;
+  }
+
+  /**
+   * Returns the y value after the given
+   * point is transformed by this matrix.
+   *
+   * @param p Point
+   * @return y value after application of matrix
+   */
+  public float y(LXPoint p) {
+    return
+      m21 * p.x +
+      m22 * p.y +
+      m23 * p.z +
+      m24;
+  }
+
+  /**
+   * Returns the z value after the given
+   * point is transformed by this matrix.
+   *
+   * @param p Point
+   * @return z value after application of matrix
+   */
+  public float z(LXPoint p) {
+    return
+      m31 * p.x +
+      m32 * p.y +
+      m33 * p.z +
+      m34;
   }
 
   /**
@@ -379,9 +478,9 @@ public class LXMatrix {
     return this;
   }
 
-  public LXMatrix set(float[] m) {
+  public LXMatrix set(float ... m) {
     if (m.length != 16) {
-      throw new IllegalArgumentException("LXMatrix must have 16 values");
+      throw new IllegalArgumentException("LXMatrix.set() must have 16 values");
     }
     this.m11 = m[0];
     this.m12 = m[1];
