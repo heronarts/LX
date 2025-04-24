@@ -30,8 +30,8 @@ import heronarts.lx.structure.view.LXViewDefinition;
 public class LXView extends LXModel {
 
   public enum Normalization {
-    RELATIVE("Normalize to View"),
-    ABSOLUTE("Preserve Absolute");
+    RELATIVE("Normalize to view bounds"),
+    ABSOLUTE("Preserve absolute bounds");
 
     public final String description;
 
@@ -46,8 +46,8 @@ public class LXView extends LXModel {
   }
 
   public enum Orientation {
-    GLOBAL("Using Global Coords"),
-    GROUP("Using Group Coords");
+    GLOBAL("In absolute coordinate space"),
+    GROUP("In view group coordinate space");
 
     public final String description;
 
