@@ -616,7 +616,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
   }
 
   void setNormalizationOrientation(LXModel model) {
-    this.normalizationBounds.orientation.setInverse(model.transform);
+    this.normalizationBounds.setOrientation(model);
     recomputeGeometry();
   }
 
@@ -992,9 +992,10 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
     boolean firstPoint = true;
     for (LXPoint p : this.points) {
-      final float px = this.normalizationBounds.orientation.x(p);
-      final float py = this.normalizationBounds.orientation.y(p);
-      final float pz = this.normalizationBounds.orientation.z(p);
+      final float px = this.normalizationBounds.px(p);
+      final float py = this.normalizationBounds.py(p);
+      final float pz = this.normalizationBounds.pz(p);
+      final float pr = (float) Math.sqrt(px*px + py*py + pz*pz);
 
       ax += px;
       ay += py;
@@ -1024,29 +1025,35 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
         if (pz > zMax) {
           zMax = pz;
         }
-        if (p.r < rMin) {
-          rMin = p.r;
+        if (pr < rMin) {
+          rMin = pr;
         }
-        if (p.r > rMax) {
-          rMax = p.r;
+        if (pr > rMax) {
+          rMax = pr;
         }
       }
     }
+
     this.ax = ax / Math.max(1, this.points.length);
     this.ay = ay / Math.max(1, this.points.length);
     this.az = az / Math.max(1, this.points.length);
+
     this.xMin = xMin;
     this.xMax = xMax;
     this.xRange = xMax - xMin;
+
     this.yMin = yMin;
     this.yMax = yMax;
     this.yRange = yMax - yMin;
+
     this.zMin = zMin;
     this.zMax = zMax;
     this.zRange = zMax - zMin;
+
     this.rMin = rMin;
     this.rMax = rMax;
     this.rRange = rMax - rMin;
+
     this.cx = xMin + .5f * this.xRange;
     this.cy = yMin + .5f * this.yRange;
     this.cz = zMin + .5f * this.zRange;

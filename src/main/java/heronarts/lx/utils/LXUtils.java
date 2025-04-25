@@ -327,6 +327,16 @@ public class LXUtils {
   }
 
   /**
+   * Round the floating value to 2 decimal places
+   *
+   * @param val Floating point value
+   * @return Value rounded to 2 decimal places
+   */
+  public static float round2f(float val) {
+    return Math.round(val * 1e2) * 1e-2f;
+  }
+
+  /**
    * Returns a floating-point rounded value of the sin function to 8 decimal places.
    * This is often useful because Math.sin(Math.PI) is NOT actually 0.
    *

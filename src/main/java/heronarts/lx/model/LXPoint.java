@@ -64,7 +64,7 @@ public class LXPoint {
   public float r;
 
   /**
-   * Radius of this point from the center of the global model
+   * Radius of this point from the center of the reference model
    */
   public float rc;
 
@@ -364,46 +364,29 @@ public class LXPoint {
    * @param bounds Model to normalize points relative to
    */
   void normalize(LXNormalizationBounds bounds, LXModel model) {
-    this.xn = xn(bounds);
-    this.yn = yn(bounds);
-    this.zn = zn(bounds);
-    this.rn = (model.rMax == 0) ? 0f : this.r / model.rMax;
-    this.rc = LXUtils.distf(this.x, this.y, this.z, bounds.cx, bounds.cy, bounds.cz);
+    final float px = bounds.px(this);
+    final float py = bounds.py(this);
+    final float pz = bounds.pz(this);
+
+    this.xn = (bounds.xRange == 0) ? .5f : (px - bounds.xMin) / bounds.xRange;
+    this.yn = (bounds.yRange == 0) ? .5f : (py - bounds.yMin) / bounds.yRange;
+    this.zn = (bounds.zRange == 0) ? .5f : (pz - bounds.zMin) / bounds.zRange;
+    this.rn = (model.rMax == 0) ? 0f : (float) Math.sqrt(px*px + py*py + pz*pz) / model.rMax;
+    this.rc = LXUtils.distf(px, py, pz, bounds.cx, bounds.cy, bounds.cz);
   }
 
-  /**
-   * Gets the normalized x position of this point relative to the given bounds. If the
-   * bounds has no x-dimension, the returned value is 0.5. The value is not necessarily
-   * constrained in the range 0-1 if this point lies out of the given bounds.
-   *
-   * @param bounds Normalization bounds
-   * @return Normalized x position of this point in the given bounds, 0-1 if contained
-   */
+  @Deprecated
   public float xn(LXNormalizationBounds bounds) {
-    return (bounds.xRange == 0) ? .5f : (bounds.orientation.x(this) - bounds.xMin) / bounds.xRange;
+    return (bounds.xRange == 0) ? .5f : (bounds.px(this) - bounds.xMin) / bounds.xRange;
   }
 
-  /**
-   * Gets the normalized y position of this point relative to the given bounds. If the
-   * bounds has no y-dimension, the returned value is 0.5. The value is not necessarily
-   * constrained in the range 0-1 if this point lies out of the given bounds.
-   *
-   * @param bounds Normalization bounds
-   * @return Normalized y position of this point in the given bounds, 0-1 if contained
-   */
+  @Deprecated
   public float yn(LXNormalizationBounds bounds) {
-    return (bounds.yRange == 0) ? .5f : (bounds.orientation.y(this) - bounds.yMin) / bounds.yRange;
+    return (bounds.yRange == 0) ? .5f : (bounds.py(this) - bounds.yMin) / bounds.yRange;
   }
 
-  /**
-   * Gets the normalized z position of this point relative to the given bounds. If the
-   * bounds has no z-dimension, the returned value is 0.5. The value is not necessarily
-   * constrained in the range 0-1 if this point lies out of the given bounds.
-   *
-   * @param bounds Normalization bounds
-   * @return Normalized z position of this point in the given bounds, 0-1 if contained
-   */
+  @Deprecated
   public float zn(LXNormalizationBounds bounds) {
-    return (bounds.zRange == 0) ? .5f : (bounds.orientation.z(this) - bounds.zMin) / bounds.zRange;
+    return (bounds.zRange == 0) ? .5f : (bounds.pz(this) - bounds.zMin) / bounds.zRange;
   }
 }
