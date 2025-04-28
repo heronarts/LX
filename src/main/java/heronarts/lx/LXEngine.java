@@ -29,6 +29,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.model.LXModel;
+import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -42,6 +43,7 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.snapshot.LXSnapshotEngine;
 import heronarts.lx.structure.LXFixture;
+import heronarts.lx.structure.view.LXViewDefinition;
 
 import java.io.File;
 import java.net.SocketException;
@@ -1213,6 +1215,18 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       Arrays.fill(buffer.render.main, LXColor.BLACK);
       Arrays.fill(buffer.render.cue, LXColor.BLACK);
       Arrays.fill(buffer.render.aux, LXColor.BLACK);
+    }
+
+    // Post-pass for any views with cue enabled
+    for (LXViewDefinition view : this.lx.structure.views.views) {
+      if (view.cueActive.isOn() && (view.getView() != null)) {
+        Arrays.fill(buffer.render.cue, LXColor.BLACK);
+        for (LXPoint p : view.getView().points) {
+          buffer.render.cue[p.index] = LXColor.WHITE;
+        }
+        buffer.render.setCueOn(true);
+        break;
+      }
     }
 
     // Add fixture identification very last

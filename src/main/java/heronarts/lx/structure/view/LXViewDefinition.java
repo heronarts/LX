@@ -65,6 +65,11 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     new DiscreteParameter("Num Fixtures", 0, Integer.MAX_VALUE)
     .setDescription("How many matching fixtures are in the view");
 
+  public final BooleanParameter cueActive =
+    new BooleanParameter("Cue", false)
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Preview the fixtures this view applies to");
+
   private LXView view = null;
 
   private int index = 0;
@@ -77,6 +82,7 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     addParameter("normalization", this.normalization);
     addParameter("orientation", this.orientation);
     addParameter("priority", this.priority);
+    addParameter("cueActive", this.cueActive);
 
     this.modulationColor.addListener(this);
   }
@@ -94,6 +100,15 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
       this.lx.structure.views.viewStateChanged(this);
     } else if (p == this.priority) {
       this.lx.structure.views.viewPriorityChanged(this);
+    } else if (p == this.cueActive) {
+      if (this.cueActive.isOn()) {
+        // Only one at a time! Avoid confusion.
+        for (LXViewDefinition view : this.lx.structure.views.views) {
+          if (view != this) {
+            view.cueActive.setValue(false);
+          }
+        }
+      }
     }
   }
 
