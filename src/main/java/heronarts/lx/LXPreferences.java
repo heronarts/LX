@@ -320,14 +320,19 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
           projectFile = null;
         }
       }
-      // Try a fallback file
-      if ((fallbackProjectFile != null) && fallbackProjectFile.exists()) {
-        projectFile = fallbackProjectFile;
-      }
-      // Fall back to default project file...
+
+      // Nothing found?
       if (projectFile == null) {
-        projectFile = this.lx.getMediaFile(LX.Media.PROJECTS, DEFAULT_PROJECT_FILE);
+        // Try an explicit fallback file
+        if ((fallbackProjectFile != null) && fallbackProjectFile.exists()) {
+          projectFile = fallbackProjectFile;
+        }
+        // Or fall back to default project file...
+        if (projectFile == null) {
+          projectFile = this.lx.getMediaFile(LX.Media.PROJECTS, DEFAULT_PROJECT_FILE);
+        }
       }
+
       if (projectFile.exists()) {
         LX.log("Opening project file: " + projectFile);
         this.lx.openProject(projectFile);
