@@ -19,6 +19,7 @@
 package heronarts.lx.dmx;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -26,6 +27,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.pattern.LXPattern;
 
 @LXComponentName("DMX")
+@LXComponent.Description("Outputs colors from DMX input")
 public class DmxPattern extends LXPattern {
 
   public final DiscreteParameter universe =

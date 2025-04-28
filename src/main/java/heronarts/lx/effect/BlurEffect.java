@@ -20,13 +20,16 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.CORE)
+@LXComponent.Description("Blends the content from prior frames to create blur motion")
 public class BlurEffect extends LXEffect {
 
   public enum Mode {
@@ -87,9 +90,23 @@ public class BlurEffect extends LXEffect {
     }
   }
 
+  private static int decrementColor(int argb) {
+    int r = (argb & LXColor.R_MASK) >> LXColor.R_SHIFT;
+    int g = (argb & LXColor.G_MASK) >> LXColor.G_SHIFT;
+    int b = (argb & LXColor.B_MASK);
+    r = LXUtils.max(0, r-1);
+    g = LXUtils.max(0, g-1);
+    b = LXUtils.max(0, b-1);
+    return
+      (argb & LXColor.ALPHA_MASK) |
+      (r << LXColor.R_SHIFT) |
+      (g << LXColor.G_SHIFT) |
+      b;
+  }
+
   @Override
   public void run(double deltaMs, double amount) {
-    final int blurAlpha = (int) (0x100 * amount * this.level.getValue());
+    final int blurAlpha = (int) (LXColor.BLEND_ALPHA_FULL * amount * this.level.getValue());
     final int[] blurColors = this.blurBuffer.getArray();
 
     final double decayScale = Math.pow(this.decayFactor.getValue(), deltaMs / (1000 * this.decay.getValue()));
@@ -98,9 +115,20 @@ public class BlurEffect extends LXEffect {
     for (LXPoint p : model.points) {
       int i = p.index;
       // Apply exponential decay to the blur
-      blurColors[i] = LXColor.multiply(blurColors[i], decayColor, 0x100);
-      // Add the new blur buffer frame
-      blurColors[i] = LXColor.add(blurColors[i], this.colors[i], 0x100);
+      int pre = blurColors[i];
+      blurColors[i] = LXColor.multiply(blurColors[i], decayColor, LXColor.BLEND_ALPHA_FULL);
+
+      // Prevent blur decay from sticking, integer multiplication rounding errors
+      // can particularly often result in getting stuck on low byte values, e.g. 0x01
+      if (blurColors[i] == pre) {
+        if (pre != LXColor.BLACK) {
+          blurColors[i] = decrementColor(pre);
+        }
+      }
+
+      // Mix into the new blur buffer frame, use lightest so that blur cannot
+      // accumulate brightness beyond what is present in the source material
+      blurColors[i] = LXColor.lightest(blurColors[i], this.colors[i], LXColor.BLEND_ALPHA_FULL);
     }
 
     // If blur value is present, blend the blur value into the color buffer

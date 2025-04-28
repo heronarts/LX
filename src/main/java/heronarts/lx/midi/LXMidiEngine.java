@@ -19,6 +19,7 @@
 package heronarts.lx.midi;
 
 import heronarts.lx.LX;
+import heronarts.lx.LX.InstantiationException;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXMappingEngine;
 import heronarts.lx.LXSerializable;
@@ -27,11 +28,13 @@ import heronarts.lx.command.LXCommand;
 import heronarts.lx.midi.surface.APC40;
 import heronarts.lx.midi.surface.APC40Mk2;
 import heronarts.lx.midi.surface.APCmini;
+import heronarts.lx.midi.surface.APCminiMk2;
 import heronarts.lx.midi.surface.DJM900nxs2;
 import heronarts.lx.midi.surface.DJMA9;
 import heronarts.lx.midi.surface.DJMV10;
 import heronarts.lx.midi.surface.LXMidiSurface;
 import heronarts.lx.midi.surface.MidiFighterTwister;
+import heronarts.lx.midi.template.LXMidiTemplate;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -42,14 +45,20 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiDeviceProvider;
 import uk.co.xfactorylibrarians.coremidi4j.CoreMidiException;
-import uk.co.xfactorylibrarians.coremidi4j.CoreMidiNotification;
-
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -59,12 +68,16 @@ import javax.sound.midi.MidiSystem;
 import javax.sound.midi.MidiUnavailableException;
 import javax.sound.midi.ShortMessage;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.stream.JsonWriter;
 
 public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
+  public static final String TEMPLATE_PATH = "template";
   private static final String COREMIDI4J_HEADER = "CoreMIDI4J - ";
 
   public enum Channel {
@@ -98,9 +111,16 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   }
 
   public interface DeviceListener {
-    public void inputAdded(LXMidiEngine engine, LXMidiInput input);
-    public void outputAdded(LXMidiEngine engine, LXMidiOutput output);
-    public void surfaceAdded(LXMidiEngine engine, LXMidiSurface surface);
+    public default void inputAdded(LXMidiEngine engine, LXMidiInput input) {};
+    public default void outputAdded(LXMidiEngine engine, LXMidiOutput output) {};
+    public default void surfaceAdded(LXMidiEngine engine, LXMidiSurface surface) {};
+    public default void surfaceRemoved(LXMidiEngine engine, LXMidiSurface surface) {};
+  }
+
+  public interface TemplateListener {
+    public void templateAdded(LXMidiEngine engine, LXMidiTemplate template);
+    public void templateRemoved(LXMidiEngine engine, LXMidiTemplate template);
+    public void templateMoved(LXMidiEngine engine, LXMidiTemplate template);
   }
 
   public interface MappingListener {
@@ -110,39 +130,70 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   private final List<LXMidiListener> listeners = new ArrayList<LXMidiListener>();
   private final List<DeviceListener> deviceListeners = new ArrayList<DeviceListener>();
+  private final List<TemplateListener> templateListeners = new ArrayList<TemplateListener>();
   private final List<MappingListener> mappingListeners = new ArrayList<MappingListener>();
 
   private final AtomicBoolean hasInputMessage = new AtomicBoolean(false);
 
-  private final List<LXShortMessage> threadSafeInputQueue =
-    Collections.synchronizedList(new ArrayList<LXShortMessage>());
+  private final List<LXMidiMessage> threadSafeInputQueue =
+    Collections.synchronizedList(new ArrayList<LXMidiMessage>());
 
-  private final List<LXShortMessage> engineThreadInputQueue =
-    new ArrayList<LXShortMessage>();
+  private final List<LXMidiMessage> engineThreadInputQueue =
+    new ArrayList<LXMidiMessage>();
 
   private final List<LXMidiInput> mutableInputs = new CopyOnWriteArrayList<LXMidiInput>();
   private final List<LXMidiOutput> mutableOutputs = new CopyOnWriteArrayList<LXMidiOutput>();
-  private final List<LXMidiSurface> mutableSurfaces = new CopyOnWriteArrayList<LXMidiSurface>();
+  private final List<LXMidiSurface> mutableSurfaces = new ArrayList<LXMidiSurface>();
+  private final List<LXMidiTemplate> mutableTemplates = new ArrayList<LXMidiTemplate>();
 
   public final List<LXMidiInput> inputs = Collections.unmodifiableList(this.mutableInputs);
   public final List<LXMidiOutput> outputs = Collections.unmodifiableList(this.mutableOutputs);
   public final List<LXMidiSurface> surfaces = Collections.unmodifiableList(this.mutableSurfaces);
+  public final List<LXMidiTemplate> templates = Collections.unmodifiableList(this.mutableTemplates);
 
   private final List<LXMidiMapping> mutableMappings = new ArrayList<LXMidiMapping>();
   public final List<LXMidiMapping> mappings = Collections.unmodifiableList(this.mutableMappings);
 
-  private final Map<MidiDevice.Info, LXMidiInput> midiInfoToInput =
-    new HashMap<MidiDevice.Info, LXMidiInput>();
+  private final ConcurrentHashMap<MidiDevice.Info, LXMidiInput> midiInfoToInput =
+    new ConcurrentHashMap<MidiDevice.Info, LXMidiInput>();
 
-  private final Map<MidiDevice.Info, LXMidiOutput> midiInfoToOutput =
-    new HashMap<MidiDevice.Info, LXMidiOutput>();
+  private final ConcurrentHashMap<MidiDevice.Info, LXMidiOutput> midiInfoToOutput =
+    new ConcurrentHashMap<MidiDevice.Info, LXMidiOutput>();
 
-  private final Map<String, Class<? extends LXMidiSurface>> registeredSurfaces =
-    new HashMap<String, Class<? extends LXMidiSurface>>();
+  private final List<Class<? extends LXMidiTemplate>> registeredTemplates =
+    new ArrayList<Class<? extends LXMidiTemplate>>();
+
+  private final Map<String, List<Class<? extends LXMidiSurface>>> registeredSurfaces =
+    new HashMap<String, List<Class<? extends LXMidiSurface>>>();
 
   private class InitializationLock {
+
     private final List<Runnable> whenReady = new ArrayList<Runnable>();
-    private boolean ready = false;
+
+    private volatile boolean ready = false;
+
+    private void whenReady(Runnable runnable) {
+      boolean runNow = false;
+      synchronized (this) {
+        if (this.ready) {
+          runNow = true;
+        } else {
+          this.whenReady.add(runnable);
+        }
+      }
+      if (runNow) {
+        runnable.run();
+      }
+    }
+
+    private void onReady() {
+      synchronized (this) {
+        this.ready = true;
+      }
+      // The whenReady array is all ours now, no one else can add to it
+      this.whenReady.forEach(runnable -> runnable.run());
+      this.whenReady.clear();
+    }
   }
 
   private final InitializationLock initializationLock = new InitializationLock();
@@ -153,47 +204,139 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   public final DiscreteParameter computerKeyboardOctave =
     new DiscreteParameter("Computer MIDI Keyboard Octave", 5, 0, 11)
+    .setFormatter(v -> {
+      int octave = (int) v;
+      int lowNote = octave * 12;
+      int highNote = lowNote + 14;
+      String lowPitch = MidiNote.getPitchString(lowNote);
+      String highPitch = MidiNote.getPitchString(highNote);
+      return lowPitch + " to " + highPitch + " (" + lowNote + "-" + highNote + ")";
+    }, true)
     .setDescription("What octave the MIDI computer keyboard is in");
 
   public final ObjectParameter<Integer> computerKeyboardVelocity =
     new ObjectParameter<Integer>("Computer MIDI Keyboard Velocity", new Integer[] { 1, 20, 40, 60, 80, 100, 127 }, 100)
     .setDescription("What velocity the MIDI computer keyboard uses");
 
+  public final DiscreteParameter computerKeyboardChannel =
+    new DiscreteParameter("Computer MIDI Keyboard Channel", 0, MidiNote.NUM_CHANNELS)
+    .setFormatter(v -> { return "Ch." + (int) (v + 1); }, true)
+    .setDescription("What channel the MIDI computer keyboard uses");
+
   public LXMidiEngine(LX lx) {
     super(lx);
-    this.registeredSurfaces.put(APC40.DEVICE_NAME, APC40.class);
-    this.registeredSurfaces.put(APC40Mk2.DEVICE_NAME, APC40Mk2.class);
-    this.registeredSurfaces.put(APCmini.DEVICE_NAME, APCmini.class);
-    this.registeredSurfaces.put(DJM900nxs2.DEVICE_NAME, DJM900nxs2.class);
-    this.registeredSurfaces.put(DJMA9.DEVICE_NAME, DJMA9.class);
-    this.registeredSurfaces.put(DJMV10.DEVICE_NAME, DJMV10.class);
-    this.registeredSurfaces.put(MidiFighterTwister.DEVICE_NAME, MidiFighterTwister.class);
+    _registerSurface(APC40.class);
+    _registerSurface(APC40Mk2.class);
+    _registerSurface(APCmini.class);
+    _registerSurface(APCminiMk2.class);
+    _registerSurface(DJM900nxs2.class);
+    _registerSurface(DJMA9.class);
+    _registerSurface(DJMV10.class);
+    _registerSurface(MidiFighterTwister.class);
+
+    _registerTemplate(heronarts.lx.midi.template.AkaiMidiMix.class);
+    _registerTemplate(heronarts.lx.midi.template.AkaiMPD218.class);
+    _registerTemplate(heronarts.lx.midi.template.DJTTMidiFighterTwister.class);
+    _registerTemplate(heronarts.lx.midi.template.NovationLaunchkeyMk337.class);
 
     this.computerKeyboardEnabled.setMappable(false);
     this.computerKeyboardOctave.setMappable(false);
     this.computerKeyboardVelocity.setMappable(false);
     this.computerKeyboardVelocity.setWrappable(false);
+    this.computerKeyboardChannel.setMappable(false);
     addParameter("computerKeyboardEnabled", this.computerKeyboardEnabled);
     addParameter("computerKeyboardOctave", this.computerKeyboardOctave);
     addParameter("computerKeyboardVelocity", this.computerKeyboardVelocity);
+    addParameter("computerKeyboardChannel", this.computerKeyboardChannel);
+    addArray(TEMPLATE_PATH, this.templates);
   }
 
+  private void _registerTemplate(Class <? extends LXMidiTemplate> templateClass) {
+    if (this.registeredTemplates.contains(templateClass)) {
+      throw new IllegalStateException("Template class is already registered: " + templateClass.getName());
+    }
+    this.registeredTemplates.add(templateClass);
+  }
+
+  public void registerTemplate(Class <? extends LXMidiTemplate> templateClass) {
+    this.lx.registry.checkRegistration();
+    _registerTemplate(templateClass);
+  }
+
+  public List<Class<? extends LXMidiTemplate>> getRegisteredTemplateClasses() {
+    return Collections.unmodifiableList(this.registeredTemplates);
+  }
+
+  private void _registerSurface(Class<? extends LXMidiSurface> surfaceClass) {
+    _registerSurface(LXMidiSurface.getDeviceName(surfaceClass), surfaceClass);
+  }
+
+  private void _registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
+    List<Class<? extends LXMidiSurface>> surfaces;
+    if (!this.registeredSurfaces.containsKey(deviceName)) {
+      this.registeredSurfaces.put(deviceName, surfaces = new ArrayList<Class<? extends LXMidiSurface>>());
+    } else {
+      surfaces = this.registeredSurfaces.get(deviceName);
+    }
+    if (surfaces.contains(surfaceClass)) {
+      throw new IllegalStateException("Surface class is already registered: " + deviceName + " -> " + surfaceClass.getName());
+    }
+    surfaces.add(surfaceClass);
+  }
+
+  @Deprecated
+  /**
+   * Registers a new MIDI surface implementation with the MIDI engine
+   *
+   * @param deviceName Device name
+   * @param surfaceClass Surface class type
+   * @deprecated Should use registerSurface with no deviceName parameter
+   * @return midi engine
+   */
   public LXMidiEngine registerSurface(String deviceName, Class<? extends LXMidiSurface> surfaceClass) {
     this.lx.registry.checkRegistration();
-    if (this.registeredSurfaces.containsKey(deviceName)) {
-      throw new IllegalStateException("Existing midi device name " + deviceName + " cannot be remapped to " + surfaceClass);
-    }
-    this.registeredSurfaces.put(deviceName, surfaceClass);
+    _registerSurface(deviceName, surfaceClass);
 
     // NOTE: the MIDI initialize() thread has been kicked off at this point. We
     // might not get in until after it has already attempted to initialize MIDI surfaces
     // in which case we need to check again for this newly registered surface
-    whenReady(new Runnable() {
-      public void run() {
-        checkForNewSurfaceType(deviceName);
+    whenReady(() -> { checkForNewSurfaceClass(surfaceClass); });
+    return this;
+  }
+
+  /**
+   * Registers a new MIDI surface implementation with the MIDI engine
+   *
+   * @param surfaceClass MIDI surface class name
+   * @return this
+   */
+  public LXMidiEngine registerSurface(Class<? extends LXMidiSurface> surfaceClass) {
+    this.lx.registry.checkRegistration();
+    _registerSurface(surfaceClass);
+
+    // NOTE: the MIDI initialize() thread has been kicked off at this point. We
+    // might not get in until after it has already attempted to initialize MIDI surfaces
+    // in which case we need to check again for this newly registered surface
+    whenReady(() -> { checkForNewSurfaceClass(surfaceClass); });
+    return this;
+  }
+
+  public List<Class<? extends LXMidiSurface>> getRegisteredSurfaceClasses() {
+    final List<Class<? extends LXMidiSurface>> surfaceClasses = new ArrayList<Class<? extends LXMidiSurface>>();
+    for (List<Class<? extends LXMidiSurface>> surfaceList : this.registeredSurfaces.values()) {
+      for (Class<? extends LXMidiSurface> surfaceClass : surfaceList) {
+        if (!surfaceClasses.contains(surfaceClass)) {
+          surfaceClasses.add(surfaceClass);
+        }
+      }
+    }
+    Collections.sort(surfaceClasses, new Comparator<Class<? extends LXMidiSurface>>() {
+      @Override
+      public int compare(Class<? extends LXMidiSurface> o1, Class<? extends LXMidiSurface> o2) {
+        return LXMidiSurface.getSurfaceName(o1).compareToIgnoreCase(LXMidiSurface.getSurfaceName(o2));
       }
     });
-    return this;
+    return surfaceClasses;
   }
 
   public void initialize() {
@@ -210,6 +353,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         // starting up. On some systems this was blocking for up to 5 seconds, no clue
         // why, perhaps due to weird OS MIDI cacheing or timeouts
 
+        final Map<MidiDevice.Info, MidiDevice> inputMap = new LinkedHashMap<>();
+        final Map<MidiDevice.Info, MidiDevice> outputMap = new LinkedHashMap<>();
+
         try {
           // Use the CoreMidi4J version... which on Mac gets all devices in a sysex-compatible
           // wrapper, on other OS will just give the defaults
@@ -218,14 +364,10 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             try {
               MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
               if (device.getMaxTransmitters() != 0) {
-                LXMidiInput input = new LXMidiInput(LXMidiEngine.this, device);
-                mutableInputs.add(input);
-                midiInfoToInput.put(deviceInfo, input);
+                inputMap.put(deviceInfo, device);
               }
               if (device.getMaxReceivers() != 0) {
-                LXMidiOutput output = new LXMidiOutput(LXMidiEngine.this, device);
-                mutableOutputs.add(output);
-                midiInfoToOutput.put(deviceInfo, output);
+                outputMap.put(deviceInfo, device);
               }
             } catch (MidiUnavailableException mux) {
               error(mux, "MidiUnavailable on MIDI device initialization thread: " + mux.getLocalizedMessage());
@@ -235,47 +377,72 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
           error(x, "Unexpected MIDI error, MIDI unavailable: " + x.getLocalizedMessage());
         }
 
-        // Instantiate any midi surfaces
-        for (LXMidiInput input : inputs) {
-          instantiateSurface(input, false);
-        }
-
-        // Notify any threads blocked on waitUntilReady(), notify them to continue
-        synchronized (initializationLock) {
-          initializationLock.ready = true;
-          initializationLock.notifyAll();
-        }
-
-        // Now, schedule the engine thread to perform any blocked whenReady tasks
-        lx.engine.addTask(() -> {
-          for (Runnable runnable : initializationLock.whenReady) {
-            runnable.run();
-          }
-        });
-
-        // On MacOS - load the MIDI notification listener
-        boolean listening = false;
-        try {
-          if (CoreMidiDeviceProvider.isLibraryLoaded()) {
-            CoreMidiDeviceProvider.addNotificationListener(new CoreMidiNotification() {
-              public void midiSystemUpdated() {
-                synchronized (deviceUpdateThread) {
-                  deviceUpdateThread.notify();
-                }
-              }
-            });
-            listening = true;
-          }
-        } catch (CoreMidiException cmx) {
-          error(cmx, "Could not initialize CoreMidi notification listener: " + cmx.getMessage());
-        }
-
-        // Can't listen? We're not on Mac. Then we'll just have to poll for changes...
-        if (!listening) {
-          deviceUpdateThread.setPolling();
-        }
+        // Once devices have been coordinated, finish initialization on the engine thread
+        lx.engine.addTask(() -> _initialize(inputMap, outputMap));
       }
     }.start();
+  }
+
+  private void _initialize(Map<MidiDevice.Info, MidiDevice> inputMap, Map<MidiDevice.Info, MidiDevice> outputMap) {
+    for (Map.Entry<MidiDevice.Info, MidiDevice> pair : inputMap.entrySet()) {
+      LXMidiInput input = new LXMidiInput(this, pair.getValue());
+      this.midiInfoToInput.put(pair.getKey(), input);
+      this.mutableInputs.add(input);
+    }
+    for (Map.Entry<MidiDevice.Info, MidiDevice> pair : outputMap.entrySet()) {
+      LXMidiOutput output = new LXMidiOutput(this, pair.getValue());
+      this.midiInfoToOutput.put(pair.getKey(), output);
+      this.mutableOutputs.add(output);
+    }
+
+    MidiSelector.updateInputs(this.inputs);
+    MidiSelector.updateOutputs(this.outputs);
+
+    // Restore device settings from file, includes settings for the inputs/outputs
+    // above and will also restore saved MIDI surfaces
+    loadDevices();
+
+    // Instantiate any MIDI surfaces that were NOT in the MIDI file
+    for (LXMidiInput input : this.inputs) {
+      instantiateSurfaces(input, false);
+    }
+
+    // Notify listeners now that *all* I/O + surfaces added
+    for (DeviceListener listener : this.deviceListeners) {
+      for (LXMidiInput input : this.inputs) {
+        listener.inputAdded(this, input);
+      }
+      for (LXMidiOutput output : this.outputs) {
+        listener.outputAdded(this, output);
+      }
+      for (LXMidiSurface surface : this.surfaces) {
+        listener.surfaceAdded(this, surface);
+      }
+    }
+
+    // Perform any blocked whenReady tasks
+    this.initializationLock.onReady();
+
+    // On MacOS - load the MIDI notification listener
+    boolean listening = false;
+    try {
+      if (CoreMidiDeviceProvider.isLibraryLoaded()) {
+        CoreMidiDeviceProvider.addNotificationListener(() -> {
+          synchronized (deviceUpdateThread) {
+            // Kick the device update thread
+            deviceUpdateThread.notify();
+          }
+        });
+        listening = true;
+      }
+    } catch (CoreMidiException cmx) {
+      error(cmx, "Could not initialize CoreMidi notification listener: " + cmx.getMessage());
+    }
+
+    // Can't listen? We're not on Mac. Then we'll just have to poll for changes...
+    if (!listening) {
+      this.deviceUpdateThread.setPolling();
+    }
   }
 
   public void disposeSurfaces() {
@@ -307,7 +474,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   private class MidiDeviceUpdateThread extends Thread {
 
     private boolean polling = false;
-    private boolean setPolling = false;
+    private boolean skipUpdate = false;
 
     private MidiDeviceUpdateThread() {
       super("LXMidiEngine Device Update");
@@ -318,7 +485,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
       // Set this flag to avoid the first check happening immediately...
       // go back to sleep and check after 5 seconds
-      this.setPolling = true;
+      this.skipUpdate = true;
       notify();
     }
 
@@ -332,57 +499,53 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         } catch (InterruptedException ix) {
           break;
         }
-        if (!this.setPolling) {
-          updateMidiDevices();
+        if (!this.skipUpdate) {
+          updateMidiDevices(CoreMidiDeviceProvider.getMidiDeviceInfo());
         }
-        this.setPolling = false;
+        this.skipUpdate = false;
       }
       log("LXMidiEngine Device Update Thread finished.");
     }
   };
 
+  private final List<LXMidiInput> updateInputs = new ArrayList<>();
+  private final List<LXMidiOutput> updateOutputs = new ArrayList<>();
+
   /**
-   * Keep in mind that this runs on a non-engine thread!! We can read the device arrays
-   * because they are using the CopyOnWrite list implementation, but any modifications
-   * that will trigger listeners and parameter changes are submitted as tasks to the engine
-   * thread.
+   * NOTE: this runs on the midi update thread! We do it here because operations opening MIDI devices
+   * are sometimes slow and we don't want to interrupt animation. All modification operations should be punted
+   * over to the engine thread.
    */
-  private void updateMidiDevices() {
+  private void updateMidiDevices(MidiDevice.Info[] midiDeviceInfo) {
     try {
-      // We'll need to check that all are alive, set this flag to false
-      for (LXMidiInput input : this.mutableInputs) {
-        input.keepAlive = false;
-      }
-      for (LXMidiOutput output : this.mutableOutputs) {
-        output.keepAlive = false;
-      }
+      // Take a quick snapshot on update thread of what we were starting with
+      this.updateInputs.clear();
+      this.updateInputs.addAll(this.inputs);
+      this.updateOutputs.clear();
+      this.updateOutputs.addAll(this.outputs);
 
       // Set up a list of devices that need to be checked for midi surfaces... we'll lazy-initialize
-      // this below because this is often empty.
+      // this below because this is almost always going to be empty.
       List<MidiDevice> checkForSurface = null;
 
-      for (MidiDevice.Info deviceInfo : CoreMidiDeviceProvider.getMidiDeviceInfo()) {
+      for (MidiDevice.Info deviceInfo : midiDeviceInfo) {
         // First, check if we know this MidiDevice.Info instance, if it's the exact same instance
         // then we know we've done initialization on this before and don't need further
         // checks...
         LXMidiInput existingInput = this.midiInfoToInput.get(deviceInfo);
         if (existingInput != null) {
-          existingInput.keepAlive = true;
+          this.updateInputs.remove(existingInput);
           if (!existingInput.connected.isOn()) {
             MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
-            lx.engine.addTask(() -> {
-              existingInput.setDevice(device);
-            });
+            this.lx.engine.addTask(() -> existingInput.setDevice(device));
           }
         }
         LXMidiOutput existingOutput = this.midiInfoToOutput.get(deviceInfo);
         if (existingOutput != null) {
-          existingOutput.keepAlive = true;
+          this.updateOutputs.remove(existingOutput);
           if (!existingOutput.connected.isOn()) {
             MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
-            lx.engine.addTask(() -> {
-              existingOutput.setDevice(device);
-            });
+            this.lx.engine.addTask(() -> existingOutput.setDevice(device));
           }
         }
 
@@ -391,19 +554,15 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         if ((existingInput == null) && (existingOutput == null)) {
           try {
             final MidiDevice device = MidiSystem.getMidiDevice(deviceInfo);
-            String deviceName = getDeviceName(deviceInfo);
+            final String deviceName = getDeviceName(deviceInfo);
             if (device.getMaxTransmitters() != 0) {
-              LXMidiInput input = findInput(deviceName);
+              final LXMidiInput input = findDevice(this.updateInputs, deviceName);
               if (input != null) {
-                input.keepAlive = true;
-                lx.engine.addTask(() -> {
-                  input.setDevice(device);
-                });
+                this.updateInputs.remove(input);
+                this.lx.engine.addTask(() -> input.setDevice(device));
               } else {
                 // Add new midi input on the engine thread!
-                lx.engine.addTask(() -> {
-                  addInput(deviceInfo, device);
-                });
+                this.lx.engine.addTask(() -> addInput(deviceInfo, device));
 
                 // Add this to the list of devices that should be checked for control surface
                 if (checkForSurface == null) {
@@ -414,17 +573,13 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
             }
 
             if (device.getMaxReceivers() != 0) {
-              LXMidiOutput output = findOutput(deviceName);
+              final LXMidiOutput output = findDevice(this.updateOutputs, deviceName);
               if (output != null) {
-                output.keepAlive = true;
-                lx.engine.addTask(() -> {
-                  output.setDevice(device);
-                });
+                this.updateOutputs.remove(output);
+                this.lx.engine.addTask(() -> output.setDevice(device));
               } else {
                 // Add new midi output on the engine thread
-                lx.engine.addTask(() -> {
-                  addOutput(deviceInfo, device);
-                });
+                this.lx.engine.addTask(() -> addOutput(deviceInfo, device));
               }
             }
           } catch (MidiUnavailableException mux) {
@@ -437,15 +592,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       // then it means that we've lost something... iterating over all the current
       // midi devices didn't find it, so we'll set its connected flag to false
       // and wait for it to come back later.
-      for (LXMidiInput input : this.mutableInputs) {
-        if (!input.keepAlive) {
-          input.connected.setValue(false);
-        }
+      for (LXMidiInput input : this.updateInputs) {
+        this.lx.engine.addTask(() -> input.connected.setValue(false));
       }
-      for (LXMidiOutput output : this.mutableOutputs) {
-        if (!output.keepAlive) {
-          output.connected.setValue(false);
-        }
+      for (LXMidiOutput output : this.updateOutputs) {
+        this.lx.engine.addTask(() -> output.connected.setValue(false));
       }
 
       // Now, in a last-pass, we've scheduled all new inputs and outputs for addition
@@ -454,7 +605,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
       // of the control surface have been added first.
       if (checkForSurface != null) {
         final List<MidiDevice> checkForSurface2 = checkForSurface;
-        lx.engine.addTask(() -> {
+        this.lx.engine.addTask(() -> {
           for (MidiDevice device : checkForSurface2) {
             checkForNewSurfaceDevice(device);
           }
@@ -470,19 +621,22 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     LXMidiInput input = new LXMidiInput(this, device);
     this.mutableInputs.add(input);
     this.midiInfoToInput.put(deviceInfo, input);
-    JsonObject unremember = null;
+    final String inputName = input.getName();
+    JsonObject settings = null;
     for (JsonObject remembered : this.rememberMidiInputs) {
-      if (remembered.get(LXMidiInput.KEY_NAME).getAsString().equals(input.getName())) {
-        input.load(this.lx, unremember = remembered);
+      if (remembered.get(LXMidiInput.KEY_NAME).getAsString().equals(inputName)) {
+        settings = remembered;
         break;
       }
     }
-    if (unremember != null) {
-      this.rememberMidiInputs.remove(unremember);
+    if (settings != null) {
+      input.load(this.lx, settings);
+      this.rememberMidiInputs.remove(settings);
     }
     for (DeviceListener listener : this.deviceListeners) {
       listener.inputAdded(this, input);
     }
+    MidiSelector.updateInputs(this.inputs);
   }
 
   private void addOutput(MidiDevice.Info deviceInfo, MidiDevice device) {
@@ -492,6 +646,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     for (DeviceListener listener : this.deviceListeners) {
       listener.outputAdded(this, output);
     }
+    MidiSelector.updateOutputs(this.outputs);
   }
 
   public static String getDeviceName(MidiDevice.Info deviceInfo) {
@@ -504,8 +659,9 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
   private void checkForNewSurfaceDevice(MidiDevice device) {
     // Is there already a control surface for this device?
-    for (LXMidiSurface surface : this.mutableSurfaces) {
-      if (surface.input.device == device) {
+    for (LXMidiSurface surface : this.surfaces) {
+      LXMidiInput input = surface.getInput();
+      if ((input != null) && (input.device == device)) {
         return;
       }
     }
@@ -513,77 +669,100 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     attemptMidiSurface(findInput(device));
   }
 
-  private void checkForNewSurfaceType(String deviceName) {
-    // Has it already been made? Then we're good, this isn't actually new...
-    LXMidiSurface surface = findSurface(deviceName);
-    if (surface != null) {
-      return;
+  private void checkForNewSurfaceClass(Class<? extends LXMidiSurface> surfaceClass) {
+    for (LXMidiSurface surface : this.surfaces) {
+      // Bail out if it's already been instantiated
+      if (surface.getClass().equals(surfaceClass)) {
+        return;
+      }
     }
-    // Match every potential input of this surface type...
-    for (LXMidiInput input : this.mutableInputs) {
+    final String deviceName = LXMidiSurface.getDeviceName(surfaceClass);
+    for (LXMidiInput input : this.inputs) {
       if (input.getName().equals(deviceName)) {
-        attemptMidiSurface(input);
+        final LXMidiOutput output = findOutput(input);
+        _addSurface(surfaceClass, input, output, true);
       }
     }
   }
 
   private void attemptMidiSurface(LXMidiInput input) {
-    if (input == null) {
-      return;
-    }
-    LXMidiSurface surface = instantiateSurface(input, true);
-    if (surface == null) {
-      return;
-    }
-    JsonObject unremember = null;
-    for (JsonObject remember : this.rememberMidiSurfaces) {
-      if (remember.get(LXMidiSurface.KEY_NAME).getAsString().equals(surface.getName())) {
-        unremember = remember;
-        surface.load(this.lx, remember);
-        surface.enabled.setValue(true);
-        break;
-      }
-    }
-    if (unremember != null) {
-      this.rememberMidiSurfaces.remove(unremember);
+    if (input != null) {
+      instantiateSurfaces(input, true);
     }
   }
 
-  private LXMidiSurface instantiateSurface(LXMidiInput input, boolean notifyListeners) {
-    Class<? extends LXMidiSurface> surfaceClass = this.registeredSurfaces.get(input.getName());
-    if (surfaceClass == null) {
-      return null;
+  private void instantiateSurfaces(LXMidiInput input, boolean notifyListeners) {
+    // Is there already an instantiated surface for this input? Skip it!
+    for (LXMidiSurface surface : this.surfaces) {
+      if (surface.getInput() == input) {
+        return;
+      }
     }
-    LXMidiSurface surface = null;
-    try {
-      surface = surfaceClass.getConstructor(LX.class, LXMidiInput.class, LXMidiOutput.class).newInstance(this.lx, input, findOutput(input));
+
+    // Get surface classes registered for this input, there may be multiple
+    final List<Class<? extends LXMidiSurface>> surfaceClasses = this.registeredSurfaces.get(input.getName());
+    if (surfaceClasses != null) {
+      final LXMidiOutput output = findOutput(input);
+      surfaceClasses.forEach(surfaceClass ->  _addSurface(surfaceClass, input, output, notifyListeners));
+    }
+  }
+
+  public LXMidiEngine addSurface(LXMidiSurface surface) {
+    this.mutableSurfaces.add(surface);
+    for (DeviceListener listener : this.deviceListeners) {
+      listener.surfaceAdded(this, surface);
+    }
+    return this;
+  }
+
+  public LXMidiEngine removeSurface(LXMidiSurface surface) {
+    if (!this.mutableSurfaces.remove(surface)) {
+      throw new IllegalArgumentException("Cannot remove non-existent MIDI surface: " + surface);
+    }
+    surface.enabled.setValue(false);
+    for (DeviceListener listener : this.deviceListeners) {
+      listener.surfaceRemoved(this, surface);
+    }
+    LX.dispose(surface);
+    return this;
+  }
+
+  private LXMidiSurface _addSurface(Class<? extends LXMidiSurface> surfaceClass, LXMidiInput input, LXMidiOutput output, boolean notifyListeners) {
+    LXMidiSurface surface = instantiateSurface(surfaceClass, input, output);
+    if (surface != null) {
       this.mutableSurfaces.add(surface);
       if (notifyListeners) {
         for (DeviceListener listener : this.deviceListeners) {
           listener.surfaceAdded(this, surface);
         }
       }
-    } catch (Exception x) {
-      error(x, "Could not instantiate midi surface class: " + surfaceClass);
     }
     return surface;
   }
 
   /**
-   * This code blocks the current thread until the MIDI engine is totally ready. This
-   * should only really be called from the engine thread and is currently private because
-   * it is dangerous. It's currently used in save() and nowhere else.
+   * Instantiate a MIDI surface of the given class
+   * @param <T> MIDI surface class type
+   * @param surfaceClass Class
+   * @return Surface instance
    */
-  private void waitUntilReady() {
-    synchronized (this.initializationLock) {
-      while (!this.initializationLock.ready) {
-        try {
-          this.initializationLock.wait();
-        } catch (InterruptedException ix) {
-          error(ix, "MIDI initialization lock was interrupted??");
-        }
-      }
+  public <T extends LXMidiSurface> T instantiateSurface(Class<T> surfaceClass, LXMidiInput input, LXMidiOutput output) {
+    try {
+      return surfaceClass.getConstructor(LX.class, LXMidiInput.class, LXMidiOutput.class).newInstance(this.lx, input, output);
+    } catch (Exception x) {
+      error(x, "Could not instantiate midi surface class: " + surfaceClass);
     }
+    return null;
+  }
+
+  /**
+   * Add an instance of the given midi surface class type
+   *
+   * @param surfaceClass Midi surface class
+   * @return this
+   */
+  public LXMidiSurface addSurface(Class<? extends LXMidiSurface> surfaceClass) {
+    return _addSurface(surfaceClass, null, null, true);
   }
 
   /**
@@ -595,13 +774,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
    * @param runnable Code to run when MIDI engine is ready
    */
   public void whenReady(Runnable runnable) {
-    synchronized (this.initializationLock) {
-      if (this.initializationLock.ready) {
-        runnable.run();
-      } else {
-        this.initializationLock.whenReady.add(runnable);
-      }
-    }
+    this.initializationLock.whenReady(runnable);
   }
 
   public List<LXMidiInput> getInputs() {
@@ -637,14 +810,27 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return null;
   }
 
-  public LXMidiSurface findSurface(String name) {
-    return findSurface(name, 0);
+  public LXMidiSurface findSurface(String deviceName) {
+    return findSurface(deviceName, 0);
   }
 
-  public LXMidiSurface findSurface(String name, int index) {
+  public LXMidiSurface findSurface(String deviceName, int index) {
     int i = 0;
-    for (LXMidiSurface surface : this.mutableSurfaces) {
-      if (surface.getName().equals(name)) {
+    for (LXMidiSurface surface : this.surfaces) {
+      if (surface.getDeviceName().equals(deviceName)) {
+        if (i >= index) {
+          return surface;
+        }
+        ++i;
+      }
+    }
+    return null;
+  }
+
+  public LXMidiSurface findSurfaceClass(String className, int index) {
+    int i = 0;
+    for (LXMidiSurface surface : this.surfaces) {
+      if (surface.getClass().getName().equals(className)) {
         if (i >= index) {
           return surface;
         }
@@ -691,6 +877,10 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return findDevice(this.mutableInputs, name);
   }
 
+  public LXMidiInput findInput(String name, int index) {
+    return findDevice(this.mutableInputs, name, index);
+  }
+
   public LXMidiInput findInput(MidiDevice device) {
     return findDevice(this.mutableInputs, device);
   }
@@ -704,11 +894,11 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return null;
   }
 
-  private <T extends LXMidiDevice> T findDevice(List<T> devices, String name) {
+  private static <T extends LXMidiDevice> T findDevice(List<T> devices, String name) {
     return findDevice(devices, name, 0);
   }
 
-  private <T extends LXMidiDevice> T findDevice(List<T> devices, String name, int index) {
+  private static <T extends LXMidiDevice> T findDevice(List<T> devices, String name, int index) {
     int i = 0;
     for (T device : devices) {
       if (device.getName().equals(name)) {
@@ -755,6 +945,23 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return this;
   }
 
+  public LXMidiEngine addTemplateListener(TemplateListener listener) {
+    Objects.requireNonNull(listener, "May not add null LXMidiEngine.TemplateListener");
+    if (this.templateListeners.contains(listener)) {
+      throw new IllegalStateException("Cannot add duplicate LXMidiEngine.TemplateListener: " + listener);
+    }
+    this.templateListeners.add(listener);
+    return this;
+  }
+
+  public LXMidiEngine removeTemplateListener(TemplateListener listener) {
+    if (!this.templateListeners.contains(listener)) {
+      throw new IllegalStateException("Cannot remove non-registered LXMidiEngine.TemplateListener: " + listener);
+    }
+    this.templateListeners.remove(listener);
+    return this;
+  }
+
   public LXMidiEngine addMappingListener(MappingListener listener) {
     Objects.requireNonNull(listener, "May not add null LXMidiEngine.MappingListener");
     if (this.mappingListeners.contains(listener)) {
@@ -772,7 +979,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     return this;
   }
 
-  void queueInputMessage(LXShortMessage message) {
+  void queueInputMessage(LXMidiMessage message) {
     this.threadSafeInputQueue.add(message);
     this.hasInputMessage.set(true);
   }
@@ -784,25 +991,26 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
     try {
-      String path = parts[index];
+      final String path = parts[index];
+      LXShortMessage oscMidiMessage = null;
       if (path.equals(PATH_NOTE)) {
         int pitch = message.getInt();
         int velocity = message.getInt();
         int channel = message.getInt();
-        dispatch(new MidiNoteOn(channel, pitch, velocity));
-        return true;
-      }
-      if (path.equals(PATH_CC)) {
+        oscMidiMessage = new MidiNoteOn(channel, pitch, velocity);
+      } else if (path.equals(PATH_CC)) {
         int value = message.getInt();
         int cc = message.getInt();
         int channel = message.getInt();
-        dispatch(new MidiControlChange(channel, cc, value));
-        return true;
-      }
-      if (parts[index].equals(PATH_PITCHBEND)) {
+        oscMidiMessage = new MidiControlChange(channel, cc, value);
+      } else if (parts[index].equals(PATH_PITCHBEND)) {
         int msb = message.getInt();
         int channel = message.getInt();
-        dispatch(new MidiPitchBend(channel, msb));
+        oscMidiMessage = new MidiPitchBend(channel, msb).setSource(LXMidiSource.OSC);
+      }
+      if (oscMidiMessage != null) {
+        oscMidiMessage.setSource(LXMidiSource.OSC);
+        dispatch(oscMidiMessage);
         return true;
       }
     } catch (InvalidMidiDataException imdx) {
@@ -942,18 +1150,28 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         this.engineThreadInputQueue.addAll(this.threadSafeInputQueue);
         this.threadSafeInputQueue.clear();
       }
-      for (LXShortMessage message : this.engineThreadInputQueue) {
+      for (LXMidiMessage message : this.engineThreadInputQueue) {
         LXMidiInput input = message.getInput();
         input.dispatch(message);
         if (input.enabled.isOn()) {
-          dispatch(message);
+          _dispatch(message);
         }
       }
     }
   }
 
+  private void _dispatch(LXMidiMessage message) {
+    if (message instanceof LXShortMessage) {
+      dispatch((LXShortMessage) message);
+    } else if (message instanceof LXSysexMessage) {
+      for (LXMidiListener listener : this.listeners) {
+        message.dispatch(listener);
+      }
+    }
+  }
+
   public void dispatch(LXShortMessage message) {
-    LXMidiInput input = message.getInput();
+    final LXMidiInput input = message.getInput();
     if (input != null) {
       if (input.controlEnabled.isOn()) {
         if (lx.engine.mapping.getMode() == LXMappingEngine.Mode.MIDI) {
@@ -988,7 +1206,7 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
 
     if (input == null || input.channelEnabled.isOn()) {
       for (LXAbstractChannel channelBus : this.lx.engine.mixer.channels) {
-        if (channelBus.midiFilter.filter(message)) {
+        if (channelBus.midiSource.matches(message.getSource()) && channelBus.midiFilter.filter(message)) {
           channelBus.midiMessage(message);
         }
       }
@@ -996,21 +1214,71 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }
   }
 
+  public void addTemplate(LXMidiTemplate template) {
+    if (this.templates.contains(template)) {
+      throw new IllegalStateException("Cannot add template twice: " + template);
+    }
+    this.mutableTemplates.add(template);
+    for (TemplateListener listener : this.templateListeners) {
+      listener.templateAdded(this, template);
+    }
+  }
+
+  public void removeTemplate(LXMidiTemplate template) {
+    if (!this.templates.contains(template)) {
+      throw new IllegalStateException("Cannot remove template that does not exist: " + template);
+    }
+    this.mutableTemplates.remove(template);
+    for (TemplateListener listener : this.templateListeners) {
+      listener.templateRemoved(this, template);
+    }
+    LX.dispose(template);
+  }
+
+  public void moveTemplate(LXMidiTemplate template, int index) {
+    if (!this.templates.contains(template)) {
+      throw new IllegalStateException("Cannot move template that does not exist: " + template);
+    }
+    this.mutableTemplates.remove(template);
+    this.mutableTemplates.add(index, template);
+    for (TemplateListener listener : this.templateListeners) {
+      listener.templateMoved(this, template);
+    }
+  }
+
+  private void removeTemplates() {
+    for (int i = this.templates.size() - 1; i >= 0; --i) {
+      removeTemplate(this.templates.get(i));
+    }
+  }
+
+  public void panic() {
+    try {
+      dispatch(new MidiPanic());
+      for (LXMidiTemplate template : this.templates) {
+        template.midiPanicReceived();
+      }
+      lx.pushStatusMessage("Sent a MIDI panic to all devices");
+    } catch (InvalidMidiDataException imdx) {
+      LX.error(imdx, "Failed to generate MIDI panic");
+    }
+  }
+
   private static final String KEY_INPUTS = "inputs";
   private static final String KEY_SURFACES = "surfaces";
-  private static final String KEY_MAPPINGS = "mapping";
 
   private final List<JsonObject> rememberMidiInputs = new ArrayList<JsonObject>();
-  private final List<JsonObject> rememberMidiSurfaces = new ArrayList<JsonObject>();
+  private boolean inLoadDevices = false;
 
-  @Override
-  public void save(LX lx, JsonObject object) {
-    waitUntilReady();
-    super.save(lx, object);
+  public void saveDevices() {
+    if (this.inLoadDevices) {
+      return;
+    }
+
     JsonArray inputs = new JsonArray();
     for (LXMidiInput input : this.mutableInputs) {
       if (input.enabled.isOn()) {
-        inputs.add(LXSerializable.Utils.toObject(lx, input));
+        inputs.add(LXSerializable.Utils.toObject(this.lx, input));
       }
     }
     for (JsonObject remembered : this.rememberMidiInputs) {
@@ -1018,28 +1286,138 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
     }
     JsonArray surfaces = new JsonArray();
     for (LXMidiSurface surface : this.mutableSurfaces) {
-      if (surface.enabled.isOn()) {
-        surfaces.add(LXSerializable.Utils.toObject(lx, surface));
+      if (surface.enabled.isOn() || surface.hasRememberFlag()) {
+        surfaces.add(LXSerializable.Utils.toObject(this.lx, surface, true));
       }
     }
-    for (JsonObject remembered : this.rememberMidiSurfaces) {
-      surfaces.add(remembered);
-    }
 
+    JsonObject object = new JsonObject();
+    object.addProperty(LX.KEY_VERSION, LX.VERSION);
     object.add(KEY_INPUTS, inputs);
     object.add(KEY_SURFACES, surfaces);
+
+    File file = this.lx.getMediaFile(DEVICES_FILE_NAME);
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(object, writer);
+      log("MIDI devices saved to " + file.toString());
+    } catch (IOException iox) {
+      error(iox, "Could not export MIDI device settings to file: " + file.toString());
+    }
+  }
+
+  private void loadDevices() {
+    this.inLoadDevices = true;
+    this.rememberMidiInputs.clear();
+    JsonObject object = loadDevicesFile();
+    if (object != null) {
+      try {
+        _loadDevices(object);
+      } catch (Exception x) {
+        error(x, "Exception in loadDevices");
+      }
+    }
+    this.inLoadDevices = false;
+  }
+
+  private void _loadDevices(JsonObject object) {
+    if (object.has(KEY_INPUTS)) {
+      final Map<String, Integer> inputCount = new HashMap<>();
+      final JsonArray inputs = object.getAsJsonArray(KEY_INPUTS);
+      for (JsonElement element : inputs) {
+        final JsonObject inputObj = element.getAsJsonObject();
+        final String inputName = inputObj.get(LXMidiInput.KEY_NAME).getAsString();
+
+        int count = inputCount.containsKey(inputName) ? inputCount.get(inputName) : 0;
+        LXMidiInput input = findInput(inputName, count);
+        inputCount.put(inputName, ++count);
+
+        if (input != null) {
+          input.load(lx, inputObj);
+        } else {
+          this.rememberMidiInputs.add(inputObj);
+        }
+
+      }
+    }
+    if (object.has(KEY_SURFACES)) {
+      final JsonArray surfaces = object.getAsJsonArray(KEY_SURFACES);
+      for (JsonElement element : surfaces) {
+        JsonObject surfaceObj = element.getAsJsonObject();
+        String surfaceClass = surfaceObj.get(LXMidiSurface.KEY_CLASS).getAsString();
+
+        // We have a MIDI surface remembered from a previous load
+        try {
+          Class<? extends LXMidiSurface> surfaceClazz = this.lx.registry.getClass(surfaceClass).asSubclass(LXMidiSurface.class);
+          LXMidiSurface surface = _addSurface(surfaceClazz, null, null, false);
+          if (surface != null) {
+            surface.load(lx, surfaceObj);
+            if (surface.connected.isOn()) {
+              // Enable it immediately if it's connected
+              surface.enabled.setValue(true);
+            } else {
+              // Otherwise flag that we want to remember it
+              surface.setRememberFlag();
+            }
+          }
+        } catch (Exception x)  {
+          error(x, "Could not restore surface class type: " + surfaceClass);
+        }
+      }
+    }
+  }
+
+  private static final String DEVICES_FILE_NAME = ".lxmidi";
+
+  private JsonObject loadDevicesFile() {
+    File file = this.lx.getMediaFile(DEVICES_FILE_NAME);
+    if (file.exists()) {
+      try (FileReader fr = new FileReader(file)) {
+        return new Gson().fromJson(fr, JsonObject.class);
+      } catch (FileNotFoundException fnfx) {
+        error(fnfx, "MIDI device settings file does not exist");
+      } catch (IOException iox) {
+        error(iox, "Failed to load MIDI device settings");
+      }
+    }
+    return null;
+  }
+
+  private static final String KEY_MAPPINGS = "mapping";
+  private static final String KEY_TEMPLATES = "templates";
+
+  @Override
+  public void save(LX lx, JsonObject object) {
+    super.save(lx, object);
+    object.add(KEY_TEMPLATES, LXSerializable.Utils.toArray(lx, this.templates));
     object.add(KEY_MAPPINGS, LXSerializable.Utils.toArray(lx, this.mutableMappings));
   }
 
   @Override
   public void load(final LX lx, final JsonObject object) {
-    this.rememberMidiInputs.clear();
-    this.rememberMidiSurfaces.clear();
-    this.mutableMappings.clear();
+    removeMappings();
+    removeTemplates();
     super.load(lx, object);
 
-    if (object.has(KEY_MAPPINGS)) {
-      JsonArray mappings = object.getAsJsonArray(KEY_MAPPINGS);
+    if (object.has(KEY_TEMPLATES)) {
+      JsonArray templates = object.getAsJsonArray(KEY_TEMPLATES);
+      for (JsonElement templateElem : templates) {
+        try {
+          JsonObject templateObj = templateElem.getAsJsonObject();
+          LXMidiTemplate template;
+          template = this.lx.instantiateComponent(templateObj.get(KEY_CLASS).getAsString(), LXMidiTemplate.class);
+          template.load(this.lx, templateObj);
+          addTemplate(template);
+        } catch (InstantiationException ix) {
+          error(ix, "Could not create MidiTemplate");
+        }
+      }
+    }
+  }
+
+  public void loadMappings(LX lx, JsonObject obj) {
+    if (obj.has(KEY_MAPPINGS)) {
+      JsonArray mappings = obj.getAsJsonArray(KEY_MAPPINGS);
       for (JsonElement element : mappings) {
         try {
           addMapping(LXMidiMapping.create(this.lx, element.getAsJsonObject()));
@@ -1048,51 +1426,47 @@ public class LXMidiEngine extends LXComponent implements LXOscComponent {
         }
       }
     }
+  }
 
-    // NOTE: this is performed later on the engine thread, after the MIDI engine
-    // is fully initialized, because we need to make sure that we've detected
-    // all the available inputs and control surfaces
-    whenReady(() -> {
-      if (object.has(KEY_INPUTS)) {
-        JsonArray inputs = object.getAsJsonArray(KEY_INPUTS);
-        if (inputs.size() > 0) {
-          for (JsonElement element : inputs) {
-            JsonObject inputObj = element.getAsJsonObject();
-            String inputName = inputObj.get(LXMidiInput.KEY_NAME).getAsString();
-            LXMidiInput input = findInput(inputName);
-            if (input != null) {
-              input.load(lx, inputObj);
-            } else {
-              this.rememberMidiInputs.add(inputObj);
-            }
+  public void removeMappings() {
+    for (int i = this.mappings.size() - 1; i >= 0; --i) {
+      removeMapping(this.mappings.get(i));
+    }
+  }
+
+  public void exportMappings(File file) {
+    final JsonObject obj = new JsonObject();
+    obj.add(KEY_MAPPINGS, LXSerializable.Utils.toArray(this.lx, this.mappings, true));
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+      new GsonBuilder().create().toJson(obj, writer);
+      LX.log("Mappings saved successfully to " + file.toString());
+    } catch (IOException iox) {
+      LX.error(iox, "Could not export MIDI mappings to file: " + file.toString());
+    }
+  }
+
+  public List<LXMidiMapping> importMappings(File file) {
+    removeMappings();
+    final List<LXMidiMapping> imported = new ArrayList<LXMidiMapping>();
+    try (FileReader fr = new FileReader(file)) {
+      JsonObject obj = new Gson().fromJson(fr, JsonObject.class);
+      if (obj.has(KEY_MAPPINGS)) {
+        JsonArray mappingArr = obj.get(KEY_MAPPINGS).getAsJsonArray();
+        for (JsonElement mappingElem : mappingArr) {
+          try {
+            LXMidiMapping mapping = LXMidiMapping.create(this.lx, mappingElem.getAsJsonObject());
+            addMapping(mapping);
+            imported.add(mapping);
+          } catch (Exception x) {
+            error("Invalid mapping in " + file + ": " + mappingElem);
           }
         }
       }
-      if (object.has(KEY_SURFACES)) {
-        JsonArray surfaces = object.getAsJsonArray(KEY_SURFACES);
-        if (surfaces.size() > 0) {
-          Map<String, Integer> surfaceCount = new HashMap<String, Integer>();
-          for (JsonElement element : surfaces) {
-            JsonObject surfaceObj = element.getAsJsonObject();
-            String surfaceName = surfaceObj.get(LXMidiSurface.KEY_NAME).getAsString();
-
-            // NOTE: there may be *multiple* instances of the same surface type. We need
-            // to keep count of these and call findSurface indicating how many we've already
-            // potentially found.
-            int count = surfaceCount.containsKey(surfaceName) ? surfaceCount.get(surfaceName) : 0;
-            LXMidiSurface surface = findSurface(surfaceName, count);
-            surfaceCount.put(surfaceName, count+1);
-
-            if (surface != null) {
-              surface.load(lx, surfaceObj);
-              surface.enabled.setValue(true);
-            } else {
-              this.rememberMidiSurfaces.add(surfaceObj);
-            }
-          }
-        }
-      }
-    });
+    } catch (IOException iox) {
+      LX.error(iox, "Could not import MIDI mappings from file: " + file.toString());
+    }
+    return imported;
   }
 
   private static final String MIDI_LOG_PREFIX = "[MIDI] ";

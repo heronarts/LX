@@ -36,6 +36,7 @@ import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
+import heronarts.lx.output.IndexBuffer;
 import heronarts.lx.output.KinetDatagram;
 import heronarts.lx.output.LXBufferOutput;
 import heronarts.lx.output.LXOutput;
@@ -140,8 +141,14 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Length of the index buffer (# of color index values))
     protected final int length;
 
-    // Total number of single-byte channels (# of individual color output bytes)
-    protected final int numChannels;
+    // Number of output bytes per pixel index
+    protected final int outputStride;
+
+    // Static bytes to prefix the output with
+    protected final byte[] headerBytes;
+
+    // Static bytes to suffix the output with
+    protected final byte[] footerBytes;
 
     private final FunctionalParameter brightness = new FunctionalParameter() {
       @Override
@@ -173,21 +180,37 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     protected Segment(int start, int num, int stride, int repeat, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder) {
-      this.length = num * repeat;
+      this(start, num, stride, repeat, 0, 0, reverse, byteEncoder);
+    }
+
+    protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder) {
+      this(start, num, stride, repeat, padPre, padPost, reverse, byteEncoder, null, null, byteEncoder.getNumBytes());
+    }
+
+    protected Segment(int start, int num, int stride, int repeat, int padPre, int padPost, boolean reverse, LXBufferOutput.ByteEncoder byteEncoder, byte[] headerBytes, byte[] footerBytes, int outputStride) {
+      this.length = num * repeat + padPre + padPost;
       this.indexBuffer = new int[this.length];
+      this.outputStride = outputStride;
       if (reverse) {
         start = start + stride * (num-1);
         stride = -stride;
       }
       int i = 0;
+      for (int p = 0; p < padPre; ++p) {
+        this.indexBuffer[i++] = IndexBuffer.EMPTY_PIXEL;
+      }
       for (int s = 0; s < num; ++s) {
         final int index = start + s * stride;
         for (int r = 0; r < repeat; ++r) {
           this.indexBuffer[i++] = index;
         }
       }
+      for (int p = 0; p < padPost; ++p) {
+        this.indexBuffer[i++] = IndexBuffer.EMPTY_PIXEL;
+      }
       this.byteEncoder = byteEncoder;
-      this.numChannels = this.length * byteEncoder.getNumBytes();
+      this.headerBytes = headerBytes;
+      this.footerBytes = footerBytes;
     }
 
     /**
@@ -199,9 +222,21 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      */
     protected Segment(int[] indexBuffer, LXBufferOutput.ByteEncoder byteEncoder) {
       this.indexBuffer = indexBuffer;
-      this.byteEncoder = byteEncoder;
       this.length = indexBuffer.length;
-      this.numChannels = indexBuffer.length * byteEncoder.getNumBytes();
+      this.byteEncoder = byteEncoder;
+      this.outputStride = byteEncoder.getNumBytes();
+      this.headerBytes = null;
+      this.footerBytes = null;
+    }
+
+    public int getRequiredBytes(int indexLength) {
+      int requiredBytes = indexLength * this.outputStride;
+      if (indexLength > 0) {
+        // When output stride is greater than byte encoder size, we don't need
+        // those last padding bytes
+        requiredBytes -= this.outputStride - this.byteEncoder.getNumBytes();
+      }
+      return requiredBytes;
     }
 
     /**
@@ -214,7 +249,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     protected int[] toIndexBuffer(int start, int len) {
       int[] indices = new int[len];
       for (int i = 0; i < len; ++i) {
-        indices[i] = getPoint(this.indexBuffer[start + i]).index;
+        int localIndex = this.indexBuffer[start + i];
+        indices[i] = (localIndex == IndexBuffer.EMPTY_PIXEL) ? IndexBuffer.EMPTY_PIXEL : getPoint(localIndex).index;
       }
       return indices;
     }
@@ -673,7 +709,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     // Clear output definitions and dispose of direct outputs
     this.outputDefinitions.clear();
     for (LXOutput output : this.outputsDirect) {
-      output.dispose();
+      LX.dispose(output);
     }
     this.mutableOutputsDirect.clear();
 
@@ -828,9 +864,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    */
   protected void computeGeometryMatrix(LXMatrix geometryMatrix) {
     geometryMatrix.translate(this.x.getValuef(), this.y.getValuef(), this.z.getValuef());
-    geometryMatrix.rotateY((float) Math.toRadians(this.yaw.getValue()));
-    geometryMatrix.rotateX((float) Math.toRadians(this.pitch.getValue()));
-    geometryMatrix.rotateZ((float) Math.toRadians(this.roll.getValue()));
+    geometryMatrix.rotateY(Math.toRadians(this.yaw.getValue()));
+    geometryMatrix.rotateX(Math.toRadians(this.pitch.getValue()));
+    geometryMatrix.rotateZ(Math.toRadians(this.roll.getValue()));
     geometryMatrix.scale(this.scale.getValuef());
     for (Transform transform : this.transforms) {
       switch (transform.type) {
@@ -980,7 +1016,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    * @return LXModel instance, or concrete subclass
    */
   protected LXModel constructModel(List<LXPoint> modelPoints, List<? extends LXModel> childModels, List<String> tags) {
-    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), tags);
+    return new LXModel(modelPoints, childModels.toArray(new LXModel[0]), getMetaData(), tags, getModelMeshes());
   }
 
   /**
@@ -1155,6 +1191,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     return modelTags;
   }
 
+  protected List<LXModel.Mesh> getModelMeshes() {
+    return null;
+  }
+
   protected final static Submodel[] NO_SUBMODELS = new Submodel[0];
 
   /**
@@ -1242,10 +1282,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   @Override
   public void dispose() {
     for (LXFixture child : this.children) {
-      child.dispose();
+      LX.dispose(child);
     }
     for (LXOutput output : this.outputsDirect) {
-      output.dispose();
+      LX.dispose(output);
     }
     this.mutableOutputsDirect.clear();
     this.outputDefinitions.clear();
@@ -1255,7 +1295,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   // Flag to avoid unnecessary work while parameters are being loaded... we'll fix
   // everything *after* the parameters are all loaded.
-  private boolean isLoading = false;
+  boolean isLoading = false;
 
   @Override
   public void load(LX lx, JsonObject obj) {

@@ -268,6 +268,12 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   }
 
   @Override
+  public BoundedParameter setFormatter(Formatter formatter) {
+    super.setFormatter(formatter);
+    return this;
+  }
+
+  @Override
   public BoundedParameter setUnits(BoundedParameter.Units units) {
     super.setUnits(units);
     return this;
@@ -293,6 +299,12 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
 
   public BoundedParameter setNormalizationCurve(NormalizationCurve curve) {
     this.curve = curve;
+    return this;
+  }
+
+  @Override
+  public BoundedParameter setOscMode(OscMode oscMode) {
+    super.setOscMode(oscMode);
     return this;
   }
 
@@ -357,7 +369,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
   }
 
   public BoundedParameter incrementValue(double amount, boolean wrap) {
-    double newValue = getValue() + amount;
+    double newValue = getBaseValue() + amount;
     if (wrap) {
       if (newValue > this.range.max) {
         newValue = this.range.min + ((newValue - this.range.max) % this.range.range);
@@ -524,7 +536,7 @@ public class BoundedParameter extends LXListenableNormalizedParameter {
 
   @Override
   public double getValueFromNormalized(double normalized) {
-    return this.range.normalizedToValue(normalized);
+    return this.range.normalizedToValue(normalized, getExponent(), getNormalizationCurve());
   }
 
   /**

@@ -20,6 +20,7 @@ package heronarts.lx.effect.color;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.GradientUtils.BlendFunction;
 import heronarts.lx.color.GradientUtils.BlendMode;
@@ -31,12 +32,14 @@ import heronarts.lx.color.LXPalette;
 import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 
 @LXCategory(LXCategory.COLOR)
+@LXComponent.Description("Dynamically remaps color content")
 public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   private static final float AVG_FACTOR = 1 / (3 * 255f);
@@ -174,6 +177,20 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     new DiscreteParameter("Stops", LXSwatch.MAX_COLORS, 2, LXSwatch.MAX_COLORS + 1)
     .setDescription("How many color stops to use in the palette");
 
+  public final BooleanParameter paletteInvert =
+    new BooleanParameter("Invert", false)
+    .setDescription("Invert the direction of the palette gradient");
+
+  public final CompoundParameter paletteDepth =
+    new CompoundParameter("Depth", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Depth of palette generation");
+
+  public final CompoundParameter amount =
+    new CompoundParameter("Amount", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Depth of colorization");
+
   public ColorizeEffect(LX lx) {
     super(lx);
     addParameter("source", this.source);
@@ -186,9 +203,12 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     addParameter("color2", this.color2);
     addParameter("paletteIndex", this.paletteIndex);
     addParameter("paletteStops", this.paletteStops);
+    addParameter("paletteInvert", this.paletteInvert);
+    addParameter("paletteDepth", this.paletteDepth);
     addParameter("primaryHue", this.linkedHue);
     addParameter("primarySaturation", this.linkedSaturation);
     addParameter("primaryBrightness", this.linkedBrightness);
+    addParameter("amount", this.amount);
   }
 
   @Override
@@ -272,6 +292,10 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
 
   @Override
   public int getGradientColor(float lerp) {
+    lerp *= this.paletteDepth.getValuef();
+    if (this.paletteInvert.isOn()) {
+      lerp = 1 - lerp;
+    }
     return this.colorStops.getColor(lerp, this.blendMode.getEnum().function);
   }
 
@@ -280,13 +304,26 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     setGradientColor();
     setColorStops();
 
+    enabledAmount *= this.amount.getValue();
+    if (enabledAmount == 0) {
+      return;
+    }
+
     final SourceFunction sourceFunction = this.source.getEnum().lerp;
     final BlendFunction blendFunction = this.blendMode.getEnum().function;
+
+    final boolean isPalette = this.colorMode.getEnum() == ColorMode.PALETTE;
+    final boolean lerpInvert = isPalette ? this.paletteInvert.isOn() : false;
+    final float lerpDepth = isPalette ? this.paletteDepth.getValuef() : 1f;
 
     if (enabledAmount < 1) {
       for (LXPoint p : model.points) {
         int i = p.index;
-        int c2 = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
+        float lerp = sourceFunction.getLerpFactor(colors[i]) * lerpDepth;
+        if (lerpInvert) {
+          lerp = 1 - lerp;
+        }
+        int c2 = this.colorStops.getColor(lerp, blendFunction);
         colors[i] = LXColor.lerp(
           colors[i],
           (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK),
@@ -296,7 +333,11 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     } else {
       for (LXPoint p : model.points) {
         int i = p.index;
-        int c2 = this.colorStops.getColor(sourceFunction.getLerpFactor(colors[i]), blendFunction);
+        float lerp = sourceFunction.getLerpFactor(colors[i]) * lerpDepth;
+        if (lerpInvert) {
+          lerp = 1 - lerp;
+        }
+        int c2 = this.colorStops.getColor(lerp, blendFunction);
         colors[i] = (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK);
       }
     }

@@ -32,6 +32,7 @@ import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.FunctionalParameter;
+import heronarts.lx.parameter.IEnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 
@@ -61,6 +62,12 @@ public interface LXSerializable {
    * Static container for utility methods
    */
   public static class Utils {
+
+    private static final String PATH_ENUM_NAME = "name";
+
+    public static String getEnumNamePath(String path) {
+      return path + "/" + PATH_ENUM_NAME;
+    }
 
     public static boolean hasParameter(JsonObject object, String parameter) {
       if (object.has(LXComponent.KEY_PARAMETERS)) {
@@ -102,6 +109,16 @@ public interface LXSerializable {
         obj.addProperty(path, ((StringParameter) parameter).getString());
       } else if (parameter instanceof BooleanParameter) {
         obj.addProperty(path, ((BooleanParameter) parameter).isOn());
+      } else if (parameter instanceof IEnumParameter<?> enumParameter) {
+        // NOTE: backwards compatibility, write enum values by both discrete integer value
+        // but also by declared enum name. For loading the enum name takes priority which
+        // enables reordering of enums, but could break if the declared enum constants change.
+        // Both gives a degree of flexibility.
+        obj.addProperty(path, enumParameter.getBaseValuei());
+        final Enum<?> enumValue = enumParameter.getBaseEnum();
+        if (enumValue != null) {
+          obj.addProperty(getEnumNamePath(path), enumValue.name());
+        }
       } else if (parameter instanceof DiscreteParameter) {
         obj.addProperty(path, ((DiscreteParameter) parameter).getBaseValuei());
       } else if (parameter instanceof ColorParameter) {
@@ -144,6 +161,25 @@ public interface LXSerializable {
             }
           } else if (parameter instanceof BooleanParameter) {
             ((BooleanParameter) parameter).setValue(value.getAsBoolean());
+          } else if (parameter instanceof IEnumParameter<?> enumParameter) {
+            boolean fallbackInt = true;
+            // NOTE: check for the enum name field first and try to load that. It could
+            // be missing if saved by an older version of LX that didn't write enums,
+            // or if the enum values have been changed in code. In those cases fall back
+            // to the basic integer value.
+            String enumNamePath = getEnumNamePath(path);
+            if (obj.has(enumNamePath)) {
+              final JsonElement nameElem = obj.get(enumNamePath);
+              try {
+                enumParameter.setEnum(nameElem.getAsString());
+                fallbackInt = false;
+              } catch (Exception x) {
+                LX.error(x, "Failed to load EnumParameter at path " + path + " by name: " + nameElem);
+              }
+            }
+            if (fallbackInt) {
+              parameter.setValue(value.getAsInt());
+            }
           } else if (parameter instanceof DiscreteParameter) {
             parameter.setValue(value.getAsInt());
           } else if (parameter instanceof ColorParameter) {

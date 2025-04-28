@@ -20,6 +20,7 @@ package heronarts.lx.effect.audio;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.ModelBuffer;
 import heronarts.lx.blend.LXBlend;
@@ -33,6 +34,7 @@ import heronarts.lx.pattern.audio.SoundObjectPattern;
 
 @LXCategory(LXCategory.AUDIO)
 @LXComponentName("Sound Object")
+@LXComponent.Description("Masks content based upon the position of a sound object")
 public class SoundObjectEffect extends LXEffect {
 
   public enum MaskMode {

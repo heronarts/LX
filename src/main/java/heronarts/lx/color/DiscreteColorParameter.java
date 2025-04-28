@@ -43,8 +43,20 @@ public class DiscreteColorParameter extends DiscreteParameter {
     0xffffffff, 0xffcccccc, 0xff999999, 0xfffff8dc, 0xffffebcd, 0xffffdead, 0xffbc8f8f, 0xffdaa520
   };
 
-  public DiscreteColorParameter(String description) {
-    super(description, 0, COLORS.length);
+  public DiscreteColorParameter(String label) {
+    super(label, 0, COLORS.length);
+  }
+
+  @Override
+  public DiscreteColorParameter setDescription(String description) {
+    super.setDescription(description);
+    return this;
+  }
+
+  @Override
+  public DiscreteColorParameter setWrappable(boolean wrappable) {
+    super.setWrappable(wrappable);
+    return this;
   }
 
   public int getColor() {

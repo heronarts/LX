@@ -110,6 +110,10 @@ public class MidiFilterParameter extends AggregateParameter {
    * @return True if this MIDI message passes the filter
    */
   public boolean filter(LXShortMessage message) {
+    if (message instanceof MidiPanic) {
+      return true;
+    }
+
     if (!this.enabled.isOn()) {
       return false;
     }
@@ -155,6 +159,10 @@ public class MidiFilterParameter extends AggregateParameter {
     // The message passed!
     return true;
 
+  }
+
+  public void midiPanic() {
+    Arrays.fill(this.filteredNoteOnCount, (byte) 0);
   }
 
 }

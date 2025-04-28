@@ -25,6 +25,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXView;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
@@ -44,9 +45,30 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     new EnumParameter<LXView.Normalization>("View Normalization", LXView.Normalization.RELATIVE)
     .setDescription("Whether point coordinates are re-normalized relative to the view group, or kept the same as in absolute model");
 
+  public final EnumParameter<LXView.Orientation> orientation =
+    new EnumParameter<LXView.Orientation>("View Orientation", LXView.Orientation.GLOBAL)
+    .setDescription("Whether view points are oriented in global space or relative to the orientation of their matching view group");
+
   public final BooleanParameter priority =
     new BooleanParameter("Priority", true)
     .setDescription("Whether this view is enabled on the priority view knob");
+
+  public final BooleanParameter invalidOrientation =
+    new BooleanParameter("Invalid Orientation", false)
+    .setDescription("Whether the view specifies invalid orientation");
+
+  public final DiscreteParameter numGroups =
+    new DiscreteParameter("Num Groups", 0, Integer.MAX_VALUE)
+    .setDescription("How many matching groups are in the view");
+
+  public final DiscreteParameter numFixtures =
+    new DiscreteParameter("Num Fixtures", 0, Integer.MAX_VALUE)
+    .setDescription("How many matching fixtures are in the view");
+
+  public final BooleanParameter cueActive =
+    new BooleanParameter("Cue", false)
+    .setMode(BooleanParameter.Mode.MOMENTARY)
+    .setDescription("Preview the fixtures this view applies to");
 
   private LXView view = null;
 
@@ -58,14 +80,16 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     addParameter("enabled", this.enabled);
     addParameter("selector", this.selector);
     addParameter("normalization", this.normalization);
+    addParameter("orientation", this.orientation);
     addParameter("priority", this.priority);
+    addParameter("cueActive", this.cueActive);
 
     this.modulationColor.addListener(this);
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    if (p == this.enabled || p == this.selector || p == this.normalization) {
+    if (p == this.enabled || p == this.selector || p == this.normalization || p == this.orientation) {
       rebuild();
       if (p == this.enabled) {
         this.lx.structure.views.viewStateChanged(this);
@@ -76,6 +100,18 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
       this.lx.structure.views.viewStateChanged(this);
     } else if (p == this.priority) {
       this.lx.structure.views.viewPriorityChanged(this);
+    } else if (p == this.cueActive) {
+      if (this.cueActive.isOn()) {
+        // Only one at a time! Avoid confusion.
+        for (LXViewDefinition view : this.lx.structure.views.views) {
+          if (view != this) {
+            view.cueActive.setValue(false);
+          }
+        }
+        this.lx.structure.getModel().cueView = this.view;
+      } else {
+        this.lx.structure.getModel().cueView = null;
+      }
     }
   }
 
@@ -120,12 +156,19 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
     disposeView();
     final String viewSelector = this.selector.getString();
     final LXModel model = this.lx.getModel();
+
     if (model.size > 0 && this.enabled.isOn() && !LXUtils.isEmpty(viewSelector)) {
       this.view = LXView.create(
-        this.lx.getModel(),
+        model,
         viewSelector,
-        this.normalization.getEnum()
+        this.normalization.getEnum(),
+        this.orientation.getEnum(),
+        this
       );
+    } else {
+      this.invalidOrientation.setValue(false);
+      this.numGroups.setValue(0);
+      this.numFixtures.setValue(0);
     }
   }
 

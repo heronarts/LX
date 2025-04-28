@@ -44,9 +44,9 @@ import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.LXParameter.Polarity;
 import heronarts.lx.utils.LXUtils;
 
+@LXMidiSurface.Name("Pioneer DJM-V10")
+@LXMidiSurface.DeviceName("DJM-V10")
 public class DJMV10 extends LXMidiSurface {
-
-  public static final String DEVICE_NAME = "DJM-V10";
 
   public enum MidiChannel {
     CH1(0),

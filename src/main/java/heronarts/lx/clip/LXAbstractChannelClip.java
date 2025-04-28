@@ -32,23 +32,36 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
     super(lx, channel, index, registerListener);
     this.channel = channel;
     this.mutableLanes.add(this.midiNoteLane);
-    channel.fader.addListener(this.parameterRecorder);
-    channel.enabled.addListener(this.parameterRecorder);
-
+    registerParameter(channel.fader);
+    registerParameter(channel.enabled);
     channel.addMidiListener(this);
   }
 
   @Override
+  protected void onStopPlayback() {
+    super.onStopPlayback();
+    this.midiNoteLane.onStopPlayback();
+  }
+
+  @Override
+  protected void onStopRecording() {
+    super.onStopRecording();
+    this.midiNoteLane.onStopRecording();
+  }
+
+  @Override
   public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
-    if (message instanceof MidiNote) {
-      this.midiNoteLane.appendEvent(new MidiNoteClipEvent(this.midiNoteLane, (MidiNote) message));
+    if (message instanceof MidiNote note) {
+      if (isRecording()) {
+        this.midiNoteLane.recordNote(note);
+      }
     }
   }
 
   @Override
   public void dispose() {
-    this.channel.fader.removeListener(this.parameterRecorder);
-    this.channel.enabled.removeListener(this.parameterRecorder);
+    unregisterParameter(this.channel.fader);
+    unregisterParameter(this.channel.enabled);
     this.channel.removeMidiListener(this);
     super.dispose();
   }

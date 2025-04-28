@@ -20,6 +20,7 @@ package heronarts.lx.effect.midi;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.MidiNote;
@@ -36,6 +37,7 @@ import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.MIDI)
+@LXComponent.Description("Gates output levels using MIDI input")
 public class GateEffect extends LXEffect implements LXEffect.Midi {
 
   public enum EnvelopeMode {
@@ -236,9 +238,8 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
       setColors(LXColor.BLACK);
     } else if (level < 100) {
       int mask = LXColor.gray(level);
-      int alpha = 0x100;
       for (LXPoint p : model.points) {
-        colors[p.index] = LXColor.multiply(colors[p.index], mask, alpha);
+        colors[p.index] = LXColor.multiply(colors[p.index], mask, LXColor.BLEND_ALPHA_FULL);
       }
     }
   }
@@ -292,6 +293,14 @@ public class GateEffect extends LXEffect implements LXEffect.Midi {
   public void noteOffReceived(MidiNote note) {
     this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
     if (this.midiLegatoCount == 0) {
+      this.env.engage.setValue(false);
+    }
+  }
+
+  @Override
+  public void midiPanicReceived() {
+    if (this.midiLegatoCount > 0) {
+      this.midiLegatoCount = 0;
       this.env.engage.setValue(false);
     }
   }

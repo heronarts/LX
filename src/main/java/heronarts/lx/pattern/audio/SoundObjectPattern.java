@@ -20,6 +20,7 @@ package heronarts.lx.pattern.audio;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.audio.SoundObject;
 import heronarts.lx.audio.SoundStage;
@@ -35,6 +36,7 @@ import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.AUDIO)
 @LXComponentName("Sound Object")
+@LXComponent.Description("Places an orb of light in the position of a sound object")
 public class SoundObjectPattern extends LXPattern {
 
   public interface ShapeFunction {
@@ -72,7 +74,7 @@ public class SoundObjectPattern extends LXPattern {
 
   public static class Engine {
 
-    public final SoundObject.Selector selector = (SoundObject.Selector)
+    public final SoundObject.Selector selector =
       new SoundObject.Selector("Object")
       .setDescription("Which sound object to render");
 

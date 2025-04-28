@@ -264,10 +264,4 @@ public abstract class LXDatagram extends LXBufferOutput implements LXOutput.Inet
 
   }
 
-  /**
-   * Invoked when the datagram is no longer needed. Typically a no-op, but subclasses
-   * may override if cleanup work is necessary.
-   */
-  @Override
-  public void dispose() {}
 }

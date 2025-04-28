@@ -36,10 +36,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import javax.jmdns.JmDNS;
 import javax.jmdns.ServiceInfo;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.audio.ADM;
 import heronarts.lx.audio.Envelop;
 import heronarts.lx.audio.Reaper;
@@ -51,16 +54,24 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 public class LXOscEngine extends LXComponent {
 
   public final static int DEFAULT_RECEIVE_PORT = 3030;
-  public final static int DEFAULT_TRANSMIT_PORT = 3131;
+  public final static int DEFAULT_TRANSMIT_PORT = 4040;
 
   public final static String DEFAULT_RECEIVE_HOST = "0.0.0.0";
   public final static String DEFAULT_TRANSMIT_HOST = "localhost";
 
   private final static int DEFAULT_MAX_PACKET_SIZE = 8192;
+
+  public interface IOListener {
+    public void inputAdded(LXOscEngine osc, LXOscConnection.Input input);
+    public void inputRemoved(LXOscEngine osc, LXOscConnection.Input input);
+    public void outputAdded(LXOscEngine osc, LXOscConnection.Output output);
+    public void outputRemoved(LXOscEngine osc, LXOscConnection.Output output);
+  }
 
   public enum IOState {
     STOPPED,
@@ -89,9 +100,14 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("The state of the OSC receiver");
 
-  public final DiscreteParameter receivePort =
+  public final TriggerParameter receiveActivity =
+    new TriggerParameter("RX Activity")
+    .setMappable(false)
+    .setDescription("Triggers when OSC data is received");
+
+    public final DiscreteParameter receivePort =
     new DiscreteParameter("RX Port", DEFAULT_RECEIVE_PORT, 1, 65535)
-    .setDescription("UDP port on which the engine listens for OSC message")
+    .setDescription("UDP port on which the engine listens for OSC messages")
     .setMappable(false).setUnits(LXParameter.Units.INTEGER);
 
   public final BooleanParameter transmitActive =
@@ -99,7 +115,7 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("Enables or disables OSC engine output");
 
-  public final StringParameter transmitHost = (StringParameter)
+  public final StringParameter transmitHost =
     new StringParameter("TX Host", DEFAULT_TRANSMIT_HOST)
     .setMappable(false)
     .setDescription("Hostname to which OSC messages are sent");
@@ -114,6 +130,11 @@ public class LXOscEngine extends LXComponent {
     .setMappable(false)
     .setDescription("The state of the OSC transmitter");
 
+  public final TriggerParameter transmitActivity =
+    new TriggerParameter("TX Activity")
+    .setMappable(false)
+    .setDescription("Triggers when OSC data is sent");
+
   public final DiscreteParameter transmitPort =
     new DiscreteParameter("TX Port", DEFAULT_TRANSMIT_PORT, 1, 65535)
     .setDescription("UDP port on which the engine transmits OSC messages")
@@ -121,26 +142,35 @@ public class LXOscEngine extends LXComponent {
     .setUnits(LXParameter.Units.INTEGER);
 
   public final BooleanParameter logInput =
-    new BooleanParameter("Log OSC Input", false)
-    .setDescription("Whether to log all OSC input messages");
+    new BooleanParameter("RX Log", false)
+    .setDescription("Whether to log OSC input messages");
 
   public final BooleanParameter logOutput =
-    new BooleanParameter("Log OSC Output", false)
-    .setDescription("Whether to log all OSC output messages");
+    new BooleanParameter("TX Log", false)
+    .setDescription("Whether to log OSC output messages");
 
   private final List<Receiver> receivers =
     new CopyOnWriteArrayList<Receiver>();
 
   private Receiver engineReceiver;
-  private final EngineListener engineListener = new EngineListener();
+  final EngineListener engineListener = new EngineListener();
 
   private EngineTransmitter engineTransmitter;
+
+  private final List<IOListener> ioListeners =
+    new ArrayList<IOListener>();
 
   private final List<LXOscListener> listeners =
     new ArrayList<LXOscListener>();
 
   private final LXOscQueryServer oscQueryServer;
   private final Zeroconf zeroconf;
+
+  private final List<LXOscConnection.Input> mutableInputs = new ArrayList<LXOscConnection.Input>();
+  public final List<LXOscConnection.Input> inputs = Collections.unmodifiableList(this.mutableInputs);
+
+  private final List<LXOscConnection.Output> mutableOutputs = new ArrayList<LXOscConnection.Output>();
+  public final List<LXOscConnection.Output> outputs = Collections.unmodifiableList(this.mutableOutputs);
 
   private static class Zeroconf {
 
@@ -235,6 +265,31 @@ public class LXOscEngine extends LXComponent {
     addParameter("transmitActive", this.transmitActive);
     addParameter("logInput", this.logInput);
     addParameter("logOutput", this.logOutput);
+
+    // Auxiliary OSC inputs and outputs
+    addArray("inputs", this.inputs);
+    addArray("outputs", this.outputs);
+  }
+
+  public LXOscEngine addIOListener(IOListener listener) {
+    Objects.requireNonNull("May not add null IOListener");
+    if (this.ioListeners.contains(listener)) {
+      throw new IllegalStateException(
+        "Cannot add duplicate LXOscEngine.IOListener: "
+          + listener);
+    }
+    this.ioListeners.add(listener);
+    return this;
+  }
+
+  public LXOscEngine removeIOListener(IOListener listener) {
+    if (!this.ioListeners.contains(listener)) {
+      throw new IllegalStateException(
+        "Cannot remove non-existent LXOscEngine.IOListener: "
+          + listener);
+    }
+    this.ioListeners.remove(listener);
+    return this;
   }
 
   public LXOscEngine addListener(LXOscListener listener) {
@@ -262,12 +317,22 @@ public class LXOscEngine extends LXComponent {
     if (this.engineTransmitter != null) {
       this.engineTransmitter.sendMessage(path, value);
     }
+    for (LXOscConnection.Output output : this.outputs) {
+      if (output.transmitter != null) {
+        output.transmitter.sendMessage(path, value);
+      }
+    }
     return this;
   }
 
   public LXOscEngine sendMessage(String path, float value) {
     if (this.engineTransmitter != null) {
       this.engineTransmitter.sendMessage(path, value);
+    }
+    for (LXOscConnection.Output output : this.outputs) {
+      if (output.transmitter != null) {
+        output.transmitter.sendMessage(path, value);
+      }
     }
     return this;
   }
@@ -276,12 +341,22 @@ public class LXOscEngine extends LXComponent {
     if (this.engineTransmitter != null) {
       this.engineTransmitter.sendMessage(path, value);
     }
+    for (LXOscConnection.Output output : this.outputs) {
+      if (output.transmitter != null) {
+        output.transmitter.sendMessage(path, value);
+      }
+    }
     return this;
   }
 
   public LXOscEngine sendParameter(LXParameter parameter) {
     if (this.engineTransmitter != null) {
       this.engineTransmitter.onParameterChanged(parameter);
+    }
+    for (LXOscConnection.Output output : this.outputs) {
+      if (output.transmitter != null) {
+        output.transmitter.onParameterChanged(parameter);
+      }
     }
     return this;
   }
@@ -311,10 +386,6 @@ public class LXOscEngine extends LXComponent {
     @Override
     public void oscMessage(OscMessage message) {
       try {
-        if (logInput.isOn()) {
-          log("[RX] " + message.toString());
-        }
-
         String raw = message.getAddressPattern().getValue();
         String trim = raw.trim();
         if (trim != raw) {
@@ -354,6 +425,8 @@ public class LXOscEngine extends LXComponent {
     private final ByteBuffer buffer;
     private final DatagramSocket socket;
     protected final DatagramPacket packet;
+    private BooleanParameter log;
+    private TriggerParameter activity;
 
     private Transmitter(InetAddress address, int port, int bufferSize) throws SocketException {
       this.bytes = new byte[bufferSize];
@@ -362,7 +435,23 @@ public class LXOscEngine extends LXComponent {
       this.socket = new DatagramSocket();
     }
 
+    Transmitter setLog(BooleanParameter log) {
+      this.log = log;
+      return this;
+    }
+
+    Transmitter setActivity(TriggerParameter activity) {
+      this.activity = activity;
+      return this;
+    }
+
     public void send(OscPacket packet) throws IOException {
+      if ((this.log != null) && this.log.isOn()) {
+        log("[TX] [" + this.packet.getPort() + "] " + packet.toString());
+      }
+      if (this.activity != null) {
+        this.activity.trigger();
+      }
       this.buffer.rewind();
       packet.serialize(this.buffer);
       this.packet.setLength(this.buffer.position());
@@ -384,9 +473,26 @@ public class LXOscEngine extends LXComponent {
     }
   }
 
-  private class EngineTransmitter extends Transmitter implements LXParameterListener {
-    private EngineTransmitter(InetAddress address, int port, int bufferSize) throws SocketException {
+  class EngineTransmitter extends Transmitter implements LXParameterListener {
+
+    private final BooleanParameter active;
+    private final EnumParameter<IOState> state;
+    private LXOscConnection connection;
+
+    EngineTransmitter(InetAddress address, int port, int bufferSize) throws SocketException {
       super(address, port, bufferSize);
+      this.active = transmitActive;
+      this.state = transmitState;
+      setActivity(transmitActivity);
+      setLog(logOutput);
+    }
+
+    EngineTransmitter(InetAddress address, int port, int bufferSize, LXOscConnection.Output output) throws SocketException {
+      super(address, port, bufferSize);
+      this.active = output.active;
+      this.state = output.state;
+      setActivity(output.activity);
+      setLog(output.log);
     }
 
     private final OscMessage oscMessage = new OscMessage("");
@@ -394,51 +500,72 @@ public class LXOscEngine extends LXComponent {
     private final OscInt oscInt = new OscInt(0);
     private final OscString oscString = new OscString("");
 
+    void setConnection(LXOscConnection connection) {
+      this.connection = connection;
+      setLog(connection.log);
+      setActivity(connection.activity);
+    }
+
     private boolean isActive() {
-      return transmitActive.isOn() && (transmitState.getEnum() == IOState.BOUND);
+      return this.active.isOn() && (this.state.getEnum() == IOState.BOUND);
+    }
+
+    private boolean isAddressFiltered(String oscAddress) {
+      final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
+      return (prefixFilter != null) && !OscMessage.hasPrefix(oscAddress, prefixFilter);
     }
 
     @Override
     public void onParameterChanged(LXParameter parameter) {
-      if (isActive()) {
-        // TODO(mcslee): contemplate accumulating OscMessages into OscBundle
-        // and sending once per engine loop?? Probably a bad tradeoff since
-        // it would require dynamic memory allocations that we can skip here...
-        String address = getOscAddress(parameter);
-        if (address != null) {
-          oscMessage.clearArguments();
-          oscMessage.setAddressPattern(address);
-          if (parameter instanceof BooleanParameter) {
-            oscInt.setValue(((BooleanParameter) parameter).isOn() ? 1 : 0);
-            oscMessage.add(oscInt);
-          } else if (parameter instanceof StringParameter) {
-            oscString.setValue(((StringParameter) parameter).getString());
-            oscMessage.add(oscString);
-          } else if (parameter instanceof ColorParameter) {
-            oscInt.setValue(((ColorParameter) parameter).getBaseColor());
-            oscMessage.add(oscInt);
-          } else if (parameter instanceof DiscreteParameter) {
-            oscInt.setValue(((DiscreteParameter) parameter).getBaseValuei());
-            oscMessage.add(oscInt);
-          } else if (parameter instanceof LXNormalizedParameter) {
-            LXNormalizedParameter normalizedParameter = (LXNormalizedParameter) parameter;
-            if (normalizedParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
-              oscFloat.setValue(normalizedParameter.getBaseValuef());
-            } else {
-              oscFloat.setValue(normalizedParameter.getBaseNormalizedf());
-            }
-            oscMessage.add(oscFloat);
-          } else {
-            oscFloat.setValue(parameter.getBaseValuef());
-            oscMessage.add(oscFloat);
-          }
-          _sendMessage(oscMessage);
-        }
+      // TODO(mcslee): contemplate accumulating OscMessages into OscBundle
+      // and sending once per engine loop?? Maybe a bad tradeoff since
+      // it would require dynamic memory allocations that we can skip here...
+      if (!isActive()) {
+        return;
       }
+
+      // Check parameter has valid OSC address
+      final String address = getOscAddress(parameter);
+      if (address == null) {
+        return;
+      }
+
+      // Apply prefix filter if it exists
+      if (isAddressFiltered(address)) {
+        return;
+      }
+
+      // This checks out, set the osc message values and ship it
+      oscMessage.clearArguments();
+      oscMessage.setAddressPattern(address);
+      if (parameter instanceof BooleanParameter b) {
+        oscInt.setValue(b.isOn() ? 1 : 0);
+        oscMessage.add(oscInt);
+      } else if (parameter instanceof StringParameter string) {
+        oscString.setValue(string.getString());
+        oscMessage.add(oscString);
+      } else if (parameter instanceof ColorParameter color) {
+        oscInt.setValue(color.getBaseColor());
+        oscMessage.add(oscInt);
+      } else if (parameter instanceof DiscreteParameter discrete) {
+        oscInt.setValue(discrete.getBaseValuei());
+        oscMessage.add(oscInt);
+      } else if (parameter instanceof LXNormalizedParameter normalizedParameter) {
+        if (normalizedParameter.getOscMode() == LXNormalizedParameter.OscMode.ABSOLUTE) {
+          oscFloat.setValue(normalizedParameter.getBaseValuef());
+        } else {
+          oscFloat.setValue(normalizedParameter.getBaseNormalizedf());
+        }
+        oscMessage.add(oscFloat);
+      } else {
+        oscFloat.setValue(parameter.getBaseValuef());
+        oscMessage.add(oscFloat);
+      }
+      _sendMessage(oscMessage);
     }
 
     private void sendMessage(String address, int value) {
-      if (isActive()) {
+      if (isActive() && !isAddressFiltered(address)) {
         oscMessage.clearArguments();
         oscMessage.setAddressPattern(address);
         oscInt.setValue(value);
@@ -448,7 +575,7 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void sendMessage(String address, float value) {
-      if (isActive()) {
+      if (isActive() && !isAddressFiltered(address)) {
         oscMessage.clearArguments();
         oscMessage.setAddressPattern(address);
         oscFloat.setValue(value);
@@ -458,7 +585,7 @@ public class LXOscEngine extends LXComponent {
     }
 
     private void sendMessage(String address, String value) {
-      if (isActive()) {
+      if (isActive() && !isAddressFiltered(address)) {
         oscMessage.clearArguments();
         oscMessage.setAddressPattern(address);
         oscString.setValue(value);
@@ -473,9 +600,6 @@ public class LXOscEngine extends LXComponent {
     // OscMessage objects.
     private void _sendMessage(OscMessage message) {
       try {
-        if (logOutput.isOn()) {
-          log("[TX] " + message.toString());
-        }
         send(oscMessage);
       } catch (IOException iox) {
         error(iox, "Failed to transmit message: " + message.getAddressPattern().toString());
@@ -500,7 +624,13 @@ public class LXOscEngine extends LXComponent {
     private final List<OscMessage> engineThreadEventQueue = new ArrayList<OscMessage>();
 
     private final List<LXOscListener> listeners = new ArrayList<LXOscListener>();
-    private final List<LXOscListener> listenerSnapshot = new ArrayList<LXOscListener>();
+    private boolean inListener = false;
+    private final List<LXOscListener> removeListeners = new ArrayList<>();
+    private final List<LXOscListener> addListeners = new ArrayList<>();
+
+    private BooleanParameter log;
+    private TriggerParameter activity;
+    private LXOscConnection connection;
 
     private Receiver(int port, InetAddress address, int bufferSize)
       throws SocketException {
@@ -522,12 +652,30 @@ public class LXOscEngine extends LXComponent {
       this.thread.start();
     }
 
+    void setConnection(LXOscConnection connection) {
+      this.connection = connection;
+      setLog(connection.log);
+      setActivity(connection.activity);
+    }
+
+    Receiver setLog(BooleanParameter log) {
+      this.log = log;
+      return this;
+    }
+
+    Receiver setActivity(TriggerParameter activity) {
+      this.activity = activity;
+      return this;
+    }
+
     public Receiver addListener(LXOscListener listener) {
       Objects.requireNonNull("May not add null LXOscListener");
       if (this.listeners.contains(listener)) {
-        throw new IllegalStateException(
-          "Cannot add duplicate LXOscEngine.Receiver.LXOscListener: "
-            + listener);
+        throw new IllegalStateException("Cannot add duplicate LXOscEngine.Receiver.LXOscListener: " + listener);
+      }
+      if (this.inListener) {
+        this.addListeners.add(listener);
+        return this;
       }
       this.listeners.add(listener);
       return this;
@@ -535,9 +683,11 @@ public class LXOscEngine extends LXComponent {
 
     public Receiver removeListener(LXOscListener listener) {
       if (!this.listeners.contains(listener)) {
-        throw new IllegalStateException(
-          "Cannot remove non-existent LXOscEngine.Receiver.LXOscListener: "
-            + listener);
+        throw new IllegalStateException("Cannot remove non-existent LXOscEngine.Receiver.LXOscListener: " + listener);
+      }
+      if (this.inListener) {
+        this.removeListeners.add(listener);
+        return this;
       }
       this.listeners.remove(listener);
       return this;
@@ -587,31 +737,66 @@ public class LXOscEngine extends LXComponent {
         }
         // TODO(mcslee): do we want to handle NTP timetags?
 
-        // NOTE(mcslee): we iterate this way so that listeners can modify the
-        // listener list
-        this.listenerSnapshot.clear();
-        this.listenerSnapshot.addAll(this.listeners);
+        // NOTE(mcslee): Set a flag that we're in listener dispatch, modifications
+        // to the listener list will be post-processed to avoid ConcurrentModificationException
+        this.inListener = true;
+
+        final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
+
         for (OscMessage message : this.engineThreadEventQueue) {
-          for (LXOscListener listener : this.listenerSnapshot) {
-            try {
-              listener.oscMessage(message);
-            } catch (Exception x) {
-              error(x, "Uncaught exception in OSC listener: " + message.getAddressPattern().getValue());
+          if ((prefixFilter == null) || message.hasPrefix(prefixFilter)) {
+            if ((this.log != null) && this.log.isOn()) {
+              log("[RX] [" + this.port + "] " + message.toString());
+            }
+            if (this.activity != null) {
+              this.activity.trigger();
+            }
+            for (LXOscListener listener : this.listeners) {
+              try {
+                listener.oscMessage(message);
+              } catch (Exception x) {
+                error(x, "Uncaught exception in OSC listener: " + message.getAddressPattern().getValue());
+              }
             }
           }
+        }
+
+        // Post-process listener modifications
+        this.inListener = false;
+        if (!this.removeListeners.isEmpty()) {
+          this.removeListeners.forEach(listener -> removeListener(listener));
+          this.removeListeners.clear();
+        }
+        if (!this.addListeners.isEmpty()) {
+          this.addListeners.forEach(listener -> addListener(listener));
+          this.addListeners.clear();
         }
       }
     }
 
+    private boolean stopped = false;
+
     public void stop() {
-      this.thread.interrupt();
-      this.socket.close();
-      this.listeners.clear();
+      if (!this.stopped) {
+        this.thread.interrupt();
+        this.socket.close();
+        this.listeners.clear();
+
+        // NOTE: it's possible that we'll strand the most recent OSC messages
+        // received here, which won't get picked up when dispatch() is not called
+        // because we've been taken off the receivers list. This is intentional
+        // and acceptable, it's equivalent to the client continuing to send OSC to
+        // us *after* stop() is fully complete, UDP gives no timing guarantees, etc.
+        receivers.remove(this);
+      }
+      this.stopped = true;
     }
   }
 
   @Override
   public void onParameterChanged(LXParameter p) {
+    // TODO: all of this could be cleaned up if the main I/O were ported to use
+    // the LXOscConnection helper class...
     if (p == this.receivePort) {
       if (this.receiveActive.isOn()) {
         startReceiver();
@@ -673,6 +858,8 @@ public class LXOscEngine extends LXComponent {
     try {
       this.receiveState.setValue(IOState.BINDING);
       this.engineReceiver = receiver(port, host);
+      this.engineReceiver.setLog(this.logInput);
+      this.engineReceiver.setActivity(this.receiveActivity);
       this.engineReceiver.addListener(this.engineListener);
       this.unknownReceiveHost.setValue(false);
       this.receiveState.setValue(IOState.BOUND);
@@ -770,13 +957,123 @@ public class LXOscEngine extends LXComponent {
     return new Transmitter(address, port, bufferSize);
   }
 
+  EngineTransmitter transmitter(InetAddress address, int port, LXOscConnection.Output output) throws SocketException {
+    return new EngineTransmitter(address, port, DEFAULT_MAX_PACKET_SIZE, output);
+  }
+
+  public LXOscConnection.Input addInput() {
+    return addInput(new LXOscConnection.Input(lx));
+  }
+
+  public LXOscConnection.Input addInput(LXOscConnection.Input input) {
+    return addInput(input, -1);
+  }
+
+  public LXOscConnection.Input addInput(JsonObject inputObj, int index) {
+    final LXOscConnection.Input input = new LXOscConnection.Input(lx);
+    input.load(lx, inputObj);
+    return addInput(input, index);
+  }
+
+  public LXOscConnection.Input addInput(LXOscConnection.Input input, int index) {
+    if (index < 0) {
+      this.mutableInputs.add(input);
+    } else {
+      this.mutableInputs.add(index, input);
+    }
+    for (IOListener listener : this.ioListeners) {
+      listener.inputAdded(this, input);
+    }
+    return input;
+  }
+
+  public LXOscEngine removeInput(LXOscConnection.Input input) {
+    if (!this.inputs.contains(input)) {
+      throw new IllegalStateException("Cannot remove input not in OSC engine: " + input);
+    }
+    this.mutableInputs.remove(input);
+    for (IOListener listener : this.ioListeners) {
+      listener.inputRemoved(this, input);
+    }
+    LX.dispose(input);
+    return this;
+  }
+
+  public LXOscConnection.Output addOutput() {
+    return addOutput(new LXOscConnection.Output(lx));
+  }
+
+  public LXOscConnection.Output addOutput(LXOscConnection.Output output) {
+    return addOutput(output, -1);
+  }
+
+  public LXOscConnection.Output addOutput(JsonObject outputObj, int index) {
+    final LXOscConnection.Output output= new LXOscConnection.Output(lx);
+    output.load(lx, outputObj);
+    return addOutput(output, index);
+  }
+
+  public LXOscConnection.Output addOutput(LXOscConnection.Output output, int index) {
+    if (index < 0) {
+      this.mutableOutputs.add(output);
+    } else {
+      this.mutableOutputs.add(index, output);
+    }
+    for (IOListener listener : this.ioListeners) {
+      listener.outputAdded(this, output);
+    }
+    return output;
+  }
+
+  public LXOscEngine removeOutput(LXOscConnection.Output output) {
+    if (!this.outputs.contains(output)) {
+      throw new IllegalStateException("Cannot remove output not in OSC engine: " + output);
+    }
+    this.mutableOutputs.remove(output);
+    for (IOListener listener : this.ioListeners) {
+      listener.outputRemoved(this, output);
+    }
+    LX.dispose(output);
+    return this;
+  }
+
   /**
-   * Invoked by the main engine to dispatch all OSC messages on the input queue.
+   * Invoked by the main engine to dispatch OSC messages on the input queue of all the receivers
    */
   public void dispatch() {
     for (Receiver receiver : this.receivers) {
       receiver.dispatch();
     }
+  }
+
+  private void disposeIO() {
+    for (LXOscConnection.Input input : this.inputs) {
+      LX.dispose(input);
+    }
+    this.mutableInputs.clear();
+    for (LXOscConnection.Output output : this.outputs) {
+      LX.dispose(output);
+    }
+    this.mutableOutputs.clear();
+  }
+
+  private void removeIO() {
+    for (int i = this.inputs.size() - 1; i >= 0; --i) {
+      removeInput(this.inputs.get(i));
+    }
+    for (int i = this.outputs.size() - 1; i >= 0; --i) {
+      removeOutput(this.outputs.get(i));
+    }
+  }
+
+  private static final String KEY_INPUTS = "inputs";
+  private static final String KEY_OUTPUTS = "outputs";
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
+    obj.add(KEY_INPUTS, LXSerializable.Utils.toArray(lx, this.inputs));
+    obj.add(KEY_OUTPUTS, LXSerializable.Utils.toArray(lx, this.outputs));
   }
 
   @Override
@@ -785,12 +1082,30 @@ public class LXOscEngine extends LXComponent {
     if (obj.has(LXComponent.KEY_RESET)) {
       this.receiveActive.setValue(false);
       this.transmitActive.setValue(false);
+      this.receivePort.reset();
+      this.transmitPort.reset();
+      this.receiveHost.reset();
+      this.transmitHost.reset();
+    }
+    removeIO();
+    if (obj.has(KEY_INPUTS)) {
+      JsonArray inputArr = obj.get(KEY_INPUTS).getAsJsonArray();
+      for (JsonElement inputElem : inputArr) {
+        addInput(inputElem.getAsJsonObject(), -1);
+      }
+    }
+    if (obj.has(KEY_OUTPUTS)) {
+      JsonArray outputArr = obj.get(KEY_OUTPUTS).getAsJsonArray();
+      for (JsonElement outputElem : outputArr) {
+        addOutput(outputElem.getAsJsonObject(), -1);
+      }
     }
   }
 
   @Override
   public void dispose() {
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranged LXOscEngine.Listener: " + listener));
     this.listeners.clear();
     if (this.engineTransmitter != null) {
       this.engineTransmitter.dispose();
@@ -801,7 +1116,14 @@ public class LXOscEngine extends LXComponent {
     if (this.zeroconf != null) {
       this.zeroconf.dispose();
     }
+
+    // Dispose all inputs and outputs
+    disposeIO();
+
+    // Stop the main engine receiver
     stopReceiver(IOState.STOPPED);
+
+    // Clean up any dangling receivers created via manual API
     for (Receiver receiver : this.receivers) {
       receiver.stop();
     }

@@ -18,10 +18,61 @@
 
 package heronarts.lx.model;
 
+import heronarts.lx.transform.LXMatrix;
+import heronarts.lx.utils.LXUtils;
+
 /**
  * Defines a normalization space
  */
 public class LXNormalizationBounds {
+
+  private LXModel orientationModel = null;
+  private LXMatrix orientationInv = null;
+
+  void setOrientation(LXModel reference) {
+    this.orientationModel = reference;
+    this.orientationInv = new LXMatrix().setInverse(reference.transform);
+  }
+
+  public LXModel getOrientation() {
+    return this.orientationModel;
+  }
+
+  /**
+   * Translates this point into the normalization orientation space, when
+   * re-orientation is needed we use rounding to avoid numerical quantization
+   * errors from floating point arithmetic.
+   *
+   * @param p Point
+   * @return x coordinate of this point in reference space
+   */
+  float px(LXPoint p) {
+    return (this.orientationInv == null) ? p.x : LXUtils.round2f(this.orientationInv.x(p));
+  }
+
+  /**
+   * Translates this point into the normalization orientation space, when
+   * re-orientation is needed we use rounding to avoid numerical quantization
+   * errors from floating point arithmetic.
+   *
+   * @param p Point
+   * @return y coordinate of this point in reference space
+   */
+  float py(LXPoint p) {
+    return (this.orientationInv == null) ? p.y : LXUtils.round2f(this.orientationInv.y(p));
+  }
+
+  /**
+   * Translates this point into the normalization orientation space, when
+   * re-orientation is needed we use rounding to avoid numerical quantization
+   * errors from floating point arithmetic.
+   *
+   * @param p Point
+   * @return z coordinate of this point in reference space
+   */
+  float pz(LXPoint p) {
+    return (this.orientationInv == null) ? p.z : LXUtils.round2f(this.orientationInv.z(p));
+  }
 
   /**
    * Minimum x value

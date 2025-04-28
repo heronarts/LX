@@ -36,7 +36,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameterListener;
 
-public class LXMidiInput extends LXMidiDevice implements LXSerializable {
+public class LXMidiInput extends LXMidiDevice implements LXMidiSource, LXSerializable {
 
   private final List<LXMidiListener> listeners = new ArrayList<LXMidiListener>();
   private boolean isOpen = false;
@@ -47,23 +47,27 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
   public final BooleanParameter channelEnabled =
     new BooleanParameter("Channel", false)
     .setMappable(false)
-    .setDescription("Whether midi events from this device are forwarded to channels");
+    .setDescription("Whether midi events from this input are forwarded to channel and modulator devices");
 
   public final BooleanParameter controlEnabled =
     new BooleanParameter("Control", false)
     .setMappable(false)
-    .setDescription("Whether midi events from this device are used for control mapping");
+    .setDescription("Whether midi events from this input are used for control mapping");
 
   public final BooleanParameter syncEnabled =
     new BooleanParameter("Sync", false)
     .setMappable(false)
-    .setDescription("Whether midi clock signal from this device is used to control tempo");
+    .setDescription("Whether midi clock signal from this input is used to control tempo");
 
   LXMidiInput(LXMidiEngine engine, MidiDevice device) {
     super(engine, device);
 
-    LXParameterListener enabledListener = (p) -> {
+    final LXParameterListener enabledListener = p -> {
+      if (p == this.channelEnabled) {
+        MidiSelector.updateInputs(engine.inputs);
+      }
       this.enabled.setValue(this.channelEnabled.isOn() || this.controlEnabled.isOn() || this.syncEnabled.isOn());
+      engine.saveDevices();
     };
     this.channelEnabled.addListener(enabledListener);
     this.controlEnabled.addListener(enabledListener);
@@ -99,6 +103,10 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
     }
   }
 
+  private boolean inListener = false;
+  private final List<LXMidiListener> addListeners = new ArrayList<>();
+  private final List<LXMidiListener> removeListeners = new ArrayList<>();
+
   /**
    * Registers a listener to this MIDI input
    *
@@ -109,6 +117,10 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
     Objects.requireNonNull(listener, "May not add null LXMidiInput.LXMidiListener");
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannot add duplicate LXMidiInput.LXMidiListener: " + listener);
+    }
+    if (this.inListener) {
+      this.addListeners.add(listener);
+      return this;
     }
     this.listeners.add(listener);
     return this;
@@ -123,6 +135,10 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
   public LXMidiInput removeListener(LXMidiListener listener) {
     if (!this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannot remove non-existent LXMidiInput.LXMidiListener: " + listener);
+    }
+    if (this.inListener) {
+      this.removeListeners.add(listener);
+      return this;
     }
     this.listeners.remove(listener);
     return this;
@@ -207,9 +223,13 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
         }
 
         if (message != null) {
-          message.setInput(LXMidiInput.this);
+          message.setSource(LXMidiInput.this);
           engine.queueInputMessage(message);
         }
+      } else if (midiMessage instanceof SysexMessage) {
+        LXSysexMessage message = new LXSysexMessage((SysexMessage) midiMessage);
+        message.setSource(LXMidiInput.this);
+        engine.queueInputMessage(message);
       }
     }
   }
@@ -219,9 +239,19 @@ public class LXMidiInput extends LXMidiDevice implements LXSerializable {
    *
    * @param message Midi message
    */
-  void dispatch(LXShortMessage message) {
+  void dispatch(LXMidiMessage message) {
+    this.inListener = true;
     for (LXMidiListener listener : this.listeners) {
       message.dispatch(listener);
+    }
+    this.inListener = false;
+    if (!this.removeListeners.isEmpty()) {
+      this.removeListeners.forEach(listener -> removeListener(listener));
+      this.removeListeners.clear();
+    }
+    if (!this.addListeners.isEmpty()) {
+      this.addListeners.forEach(listener -> addListener(listener));
+      this.addListeners.clear();
     }
   }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright 2013- Mark C. Slee, Heron Arts LLC
+ * Copyright 2024- Justin K. Belcher, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -13,35 +13,25 @@
  * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
  * PURPOSE, WITH RESPECT TO THE SOFTWARE.
  *
- * @author Mark C. Slee <mark@heronarts.com>
+ * @author Justin K. Belcher <jkbelcher@gmail.com>
  */
 
 package heronarts.lx.midi;
 
-public abstract class LXAbstractMidiListener implements LXMidiListener {
+/**
+ * Common interface for messages that are passed through the midi input queue
+ */
+public interface LXMidiMessage {
 
-  @Override
-  public void noteOnReceived(MidiNoteOn note) {
+  public LXMidiMessage setSource(LXMidiSource source);
+
+  public LXMidiSource getSource();
+
+  public default LXMidiInput getInput() {
+    LXMidiSource source = getSource();
+    return (source instanceof LXMidiInput) ? (LXMidiInput) source : null;
   }
 
-  @Override
-  public void noteOffReceived(MidiNote note) {
-  }
-
-  @Override
-  public void controlChangeReceived(MidiControlChange cc) {
-  }
-
-  @Override
-  public void programChangeReceived(MidiProgramChange pc) {
-  }
-
-  @Override
-  public void pitchBendReceived(MidiPitchBend pitchBend) {
-  }
-
-  @Override
-  public void aftertouchReceived(MidiAftertouch aftertouch) {
-  }
+  public void dispatch(LXMidiListener listener);
 
 }

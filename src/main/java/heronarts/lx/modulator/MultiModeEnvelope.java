@@ -18,6 +18,8 @@
 
 package heronarts.lx.modulator;
 
+import java.util.Arrays;
+
 import heronarts.lx.LXCategory;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
@@ -200,9 +202,15 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
   }
 
   private int midiLegatoCount = 0;
+  private int[] noteOn = new int[128];
 
   @Override
   public void noteOnReceived(MidiNoteOn note) {
+    // We'll tolerate multiple note-on messages of the same note and
+    // re-trig when another one happens, whilst still obeying legato rules
+    final int pitch = note.getPitch();
+    ++this.noteOn[pitch];
+
     ++this.midiLegatoCount;
     boolean legato = this.midiLegato.isOn();
     if (legato && (this.midiLegatoCount > 1)) {
@@ -243,8 +251,28 @@ public class MultiModeEnvelope extends AHDSREnvelope implements LXOscComponent, 
 
   @Override
   public void noteOffReceived(MidiNote note) {
-    this.midiLegatoCount = Math.max(0, this.midiLegatoCount - 1);
-    if (this.midiLegatoCount == 0) {
+    // Note off for a note kills ALL instances of that note
+    final int pitch = note.getPitch();
+
+    // If the note's already been cleared, ignore this note off
+    if (this.noteOn[pitch] > 0) {
+      this.midiLegatoCount = Math.max(0, this.midiLegatoCount - this.noteOn[pitch]);
+      this.noteOn[pitch] = 0;
+      if (this.midiLegatoCount == 0) {
+        this.engage.setValue(false);
+      }
+    }
+  }
+
+  @Override
+  public void midiPanicReceived() {
+    int total = 0;
+    for (int pitch : this.noteOn) {
+      total += pitch;
+    }
+    Arrays.fill(this.noteOn, 0);
+    if (total > 0 || this.midiLegatoCount > 0) {
+      this.midiLegatoCount = 0;
       this.engage.setValue(false);
     }
   }

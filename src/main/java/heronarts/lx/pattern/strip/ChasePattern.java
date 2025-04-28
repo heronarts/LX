@@ -20,6 +20,7 @@ package heronarts.lx.pattern.strip;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.Tempo;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
@@ -35,6 +36,7 @@ import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.STRIP)
+@LXComponent.Description("Pixel-based chase with dynamic sizing and modulation")
 public class ChasePattern extends LXPattern {
 
   public interface DistanceFunction {
@@ -267,15 +269,16 @@ public class ChasePattern extends LXPattern {
 
   @Override
   protected void run(double deltaMs) {
-    if (this.tempoSync.isOn() ) {
+    if (this.tempoSync.isOn()) {
       this.basis = lx.engine.tempo.getBasis(this.tempoDivision.getEnum());
+      if (this.reverse.isOn()) {
+        this.basis = 1f - basis;
+      }
     } else {
-      this.basis += deltaMs * .001 * this.speed.getValue() * this.speedRange.getValue() * .01;
+      double increment = deltaMs * .001 * this.speed.getValue() * this.speedRange.getValue() * .01;
+      this.basis += increment * (this.reverse.isOn() ? -1 : 1);
     }
-    double basis = (float) (this.basis - Math.floor(this.basis));
-    if (this.reverse.isOn()) {
-      basis = (1f - basis) % 1f;
-    }
+    double basis = (this.basis - Math.floor(this.basis));
 
     // Skew the thing
     final double skew = this.skew.getValue();

@@ -122,14 +122,26 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Aux-B", false)
     .setDescription("Enables aux preview of crossfade group B");
 
+  public final BooleanParameter autoMuteDefault =
+    new BooleanParameter("Auto-Mute Default", false)
+    .setDescription("Whether new channels have Auto-Mute enabled by default");
+
   final ModelBuffer backgroundBlack;
   final ModelBuffer backgroundTransparent;
   private final ModelBuffer blendBufferLeft;
   private final ModelBuffer blendBufferRight;
 
   public final BooleanParameter viewCondensed =
-    new BooleanParameter("Condensed", false)
+    new BooleanParameter("View Condensed", false)
     .setDescription("Whether the mixer view should be condensed");
+
+  public final BooleanParameter viewStacked =
+    new BooleanParameter("View Stacked", false)
+    .setDescription("Whether the mixer view is stacked on the device bin");
+
+  public final BooleanParameter viewDeviceBin =
+    new BooleanParameter("View Device Bin", true)
+    .setDescription("Whether the device bin is shown in stacked view");
 
   public LXMixerEngine(LX lx) {
     super(lx, "Mixer");
@@ -202,7 +214,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("cueB", this.cueB);
     addParameter("auxA", this.auxA);
     addParameter("auxB", this.auxB);
+    addParameter("autoMuteDefault", this.autoMuteDefault);
     addParameter("viewCondensed", this.viewCondensed);
+    addParameter("viewStacked", this.viewStacked);
+    addParameter("viewDeviceBin", this.viewDeviceBin);
   }
 
   @Override
@@ -286,11 +301,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return super.handleOscMessage(message, parts, index);
   }
 
-  private LXBlend[] instantiateBlends(List<Class<? extends LXBlend>> blendTypes) {
+  private LXBlend[] instantiateBlends(List<Class<? extends LXBlend>> blendTypes, LXComponent context) {
     List<LXBlend> blends = new ArrayList<LXBlend>(blendTypes.size());
     for (Class<? extends LXBlend> blend : blendTypes) {
       try {
-        blends.add(this.lx.instantiateBlend(blend));
+        blends.add(this.lx.instantiateBlend(blend).setBlendContext(context));
       } catch (LX.InstantiationException x) {
         this.lx.pushError(x, "Cannot instantiate blend class: " + blend.getName() + ". Check that content files are not missing?");
       }
@@ -298,24 +313,28 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return blends.toArray(new LXBlend[0]);
   }
 
-  public LXBlend[] instantiateChannelBlends() {
-    return instantiateBlends(this.lx.registry.channelBlends);
+  public LXBlend[] instantiateChannelBlends(LXComponent context) {
+    return instantiateBlends(this.lx.registry.channelBlends, context);
   }
 
-  protected LXBlend[] instantiateTransitionBlends() {
-    return instantiateBlends(this.lx.registry.transitionBlends);
+  protected LXBlend[] instantiateTransitionBlends(LXChannel channel) {
+    return instantiateBlends(this.lx.registry.transitionBlends, channel);
   }
 
   protected LXBlend[] instantiateCrossfaderBlends() {
-    return instantiateBlends(this.lx.registry.crossfaderBlends);
+    return instantiateBlends(this.lx.registry.crossfaderBlends, this);
+  }
+
+  private void disposeCrossfaderBlendOptions() {
+    for (LXBlend blend : this.crossfaderBlendMode.getObjects()) {
+      if (blend != null) {
+        LX.dispose(blend);
+      }
+    }
   }
 
   private void updateCrossfaderBlendOptions() {
-    for (LXBlend blend : this.crossfaderBlendMode.getObjects()) {
-      if (blend != null) {
-        blend.dispose();
-      }
-    }
+    disposeCrossfaderBlendOptions();
     this.crossfaderBlendMode.setObjects(instantiateCrossfaderBlends());
     this.activeCrossfaderBlend = this.crossfaderBlendMode.getObject();
     this.activeCrossfaderBlend.onActive();
@@ -710,7 +729,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       getFocusedChannel().selected.setValue(true);
     }
 
-    channel.dispose();
+    LX.dispose(channel);
   }
 
   /**
@@ -1151,7 +1170,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         final int mult = LXColor.gray(100. * fader);
         final int[] output = this.blendStackMain.output;
         for (int i = 0; i < output.length; ++i) {
-          output[i] = LXColor.multiply(output[i], mult, 0x100);
+          output[i] = LXColor.multiply(output[i], mult, LXColor.BLEND_ALPHA_FULL);
         }
       }
     }
@@ -1199,20 +1218,22 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
   @Override
   public void dispose() {
-    List<LXAbstractChannel> toRemove = new ArrayList<LXAbstractChannel>(this.channels);
-    Collections.reverse(toRemove);
-    for (LXAbstractChannel channel : toRemove) {
-      removeChannel(channel);
-    }
-    this.masterBus.dispose();
+    clear();
+    LX.dispose(this.masterBus);
     super.dispose();
+    disposeCrossfaderBlendOptions();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXMixerEngine.Listener: " + listener));
+    this.listeners.clear();
   }
 
+  /**
+   * Removes all channels and clears the master bus
+   */
   public void clear() {
-    // Remove all channels
     for (int i = this.mutableChannels.size() - 1; i >= 0; --i) {
       removeChannel(this.mutableChannels.get(i));
     }
+    this.masterBus.clear();
   }
 
   public void loadChannel(JsonObject channelObj) {

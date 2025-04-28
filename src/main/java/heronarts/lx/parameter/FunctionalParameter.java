@@ -30,6 +30,15 @@ public abstract class FunctionalParameter implements LXParameter {
     public double getValue();
   }
 
+  public static FunctionalParameter create(String label, Interface iface) {
+    return new FunctionalParameter(label) {
+      @Override
+      public double getValue() {
+        return iface.getValue();
+      }
+    };
+  }
+
   public static FunctionalParameter create(Interface iface) {
     return new FunctionalParameter() {
       @Override

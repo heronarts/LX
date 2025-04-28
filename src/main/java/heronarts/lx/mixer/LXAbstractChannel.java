@@ -33,6 +33,8 @@ import heronarts.lx.blend.LXBlend;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiFilterParameter;
+import heronarts.lx.midi.MidiPanic;
+import heronarts.lx.midi.MidiSelector;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -98,6 +100,21 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     .setDescription("Sets whether this channel is on or off");
 
   /**
+   * Whether this channel automatically behaves as if enabled is false
+   * whenever the fader level is at 0.
+   */
+  public final BooleanParameter autoMute =
+    new BooleanParameter("Auto-Mute", false)
+    .setDescription("Whether to disable channel processing if fader is off");
+
+  /**
+   * Read-only parameter, used to monitor when auto-muting is taking place
+   */
+  public final BooleanParameter isAutoMuted =
+    new BooleanParameter("Auto-Muted", false)
+    .setDescription("Set to true by the engine when the channel is auto-disabled");
+
+  /**
    * Crossfade group this channel belongs to
    */
   public final EnumParameter<CrossfadeGroup> crossfadeGroup =
@@ -117,6 +134,9 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   public final BooleanParameter auxActive =
     new BooleanParameter("Aux", false)
     .setDescription("Toggles the channel AUX state, determining whether it is shown in the auxiliary window");
+
+  public final MidiSelector.Source.Channel midiSource =
+    new MidiSelector.Source.Channel("MIDI Source");
 
   public final MidiFilterParameter midiFilter =
     new MidiFilterParameter("MIDI Filter", false)
@@ -189,6 +209,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     this.blendBuffer = new ModelBuffer(lx);
     this.colors = this.blendBuffer.getArray();
 
+    this.autoMute.setValue(lx.engine.mixer.autoMuteDefault.isOn());
+
     this.blendMode = new ObjectParameter<LXBlend>("Blend", new LXBlend[1])
       .setDescription("Specifies the blending function used for the channel fader");
     updateChannelBlendOptions();
@@ -198,6 +220,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     addParameter("aux", this.auxActive);
     addParameter("crossfadeGroup", this.crossfadeGroup);
     addParameter("blendMode", this.blendMode);
+    addParameter("autoMute", this.autoMute);
+    addParameter("midiSource", this.midiSource);
     addParameter("midiFilter", this.midiFilter);
     addLegacyParameter("midiMonitor", this.midiFilter.enabled);
     addLegacyParameter("midiChannel", this.midiFilter.channel);
@@ -221,13 +245,25 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     return this;
   }
 
-  void updateChannelBlendOptions() {
+  public boolean isPlaylist() {
+    return false;
+  }
+
+  public boolean isComposite() {
+    return false;
+  }
+
+  private void disposeChannelBlendOptions() {
     for (LXBlend blend : this.blendMode.getObjects()) {
       if (blend != null) {
-        blend.dispose();
+        LX.dispose(blend);
       }
     }
-    this.blendMode.setObjects(lx.engine.mixer.instantiateChannelBlends());
+  }
+
+  void updateChannelBlendOptions() {
+    disposeChannelBlendOptions();
+    this.blendMode.setObjects(lx.engine.mixer.instantiateChannelBlends(this));
     this.activeBlend = this.blendMode.getObject();
     this.activeBlend.onActive();
   }
@@ -257,7 +293,11 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
           this.lx.engine.mixer.setFocusedChannel(this);
         }
       }
-    } if (p == this.auxActive) {
+    } else if (p == this.autoMute) {
+      if (!this.autoMute.isOn()) {
+        this.isAutoMuted.setValue(false);
+      }
+    } else if (p == this.auxActive) {
       if (this.auxActive.isOn()) {
         this.lx.engine.mixer.auxA.setValue(false);
         this.lx.engine.mixer.auxB.setValue(false);
@@ -291,7 +331,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
    */
   public void midiDispatch(LXShortMessage message) {
     for (LXEffect effect : this.effects) {
-      if (effect.enabled.isOn()) {
+      if ((message instanceof MidiPanic) || effect.enabled.isOn()) {
         effect.midiDispatch(message);
       }
     }
@@ -306,6 +346,10 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     if (!this.enabled.isOn()) {
       return false;
     }
+    // Are we auto-disabled by our fader being at 0? Done.
+    if (this.isAutoMuted.isOn()) {
+      return false;
+    }
     // Are we a group? Cool, we should animate.
     if (this instanceof LXGroup) {
       return true;
@@ -318,6 +362,8 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   @Override
   public void loop(double deltaMs) {
+    this.isAutoMuted.setValue(this.autoMute.isOn() && (this.fader.getValue() == 0));
+
     // Figure out if we need to loop components and modulators etc.
     this.isAnimating = isAnimating();
     super.loop(deltaMs, this.isAnimating);
@@ -365,7 +411,10 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
       this.thread.interrupt();
     }
     super.dispose();
+    disposeChannelBlendOptions();
     this.blendBuffer.dispose();
+    this.midiListeners.forEach(listener -> LX.warning("Stranded LXAbstractChannel.MidiListener: " + listener));
+    this.listeners.forEach(listener -> LX.warning("Stranded LXAbstractChannel.Listener: " + listener));
     this.midiListeners.clear();
     this.listeners.clear();
   }

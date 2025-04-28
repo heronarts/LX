@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.CompoundParameter;
@@ -30,6 +31,7 @@ import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.COLOR)
+@LXComponent.Description("Adjusts the shape of brightness response curves")
 public class DynamicsEffect extends LXEffect {
 
   // These could be bytes but it's a small table and simpler

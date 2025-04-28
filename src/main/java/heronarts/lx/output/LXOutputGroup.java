@@ -39,7 +39,6 @@ public class LXOutputGroup extends LXOutput {
 
   public LXOutputGroup(LX lx, String label) {
     super(lx, label);
-    this.gammaMode.setValue(GammaMode.DIRECT);
   }
 
   /**

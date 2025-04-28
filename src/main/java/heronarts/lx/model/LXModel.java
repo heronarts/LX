@@ -18,6 +18,7 @@
 
 package heronarts.lx.model;
 
+import java.io.File;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -130,6 +131,32 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     }
   }
 
+  public static class Mesh {
+
+    public enum Type {
+      UNIFORM_FILL
+    }
+
+    public final Type type;
+    public final int color;
+    public final List<LXVector> vertices;
+    public final File file;
+
+    public Mesh(Type type, List<LXVector> vertices, int color) {
+      this.type = type;
+      this.vertices = Collections.unmodifiableList(vertices);
+      this.color = color;
+      this.file = null;
+    }
+
+    public Mesh(Type type, File meshFile, int color) {
+      this.type = type;
+      this.vertices = null;
+      this.color = color;
+      this.file = meshFile;
+    }
+  }
+
   /**
    * Listener interface for changes to the location of points in a model
    */
@@ -179,6 +206,12 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
   final List<LXView> derivedViews = new ArrayList<LXView>();
 
   /**
+   * Helper field set to signal to the UI that a view derived from this
+   * model has the CUE flag active. Internal API use only.
+   */
+  public LXView cueView = null;
+
+  /**
    * An ordered list of outputs that should be sent for this model.
    */
   public final List<LXOutput> outputs;
@@ -189,6 +222,8 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * methods to dynamically navigate this model's hierarchy.
    */
   public final List<String> tags;
+
+  public final List<Mesh> meshes;
 
   private LXModel parent;
 
@@ -358,7 +393,22 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, String ... tags) {
-    this(points, children, bounds, null, java.util.Arrays.asList(tags));
+    this(points, children, bounds, true, null, java.util.Arrays.asList(tags));
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds
+   * @param setChildBounds Whether to set child normalization bounds
+   * @param tags Tag identifier for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, boolean setChildBounds, String ... tags) {
+    this(points, children, bounds, setChildBounds, null, java.util.Arrays.asList(tags));
   }
 
   /**
@@ -386,7 +436,22 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String> tags) {
-    this(points, children, null, metaData, tags);
+    this(points, children, null, metaData, tags, null);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   * @param meshes Meshes for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, Map<String, String> metaData, List<String> tags, List<Mesh> meshes) {
+    this(points, children, null, metaData, tags, meshes);
   }
 
   /**
@@ -401,13 +466,62 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, Map<String, String> metaData, List<String> tags) {
+    this(points, children, bounds, metaData, tags, null);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds, if different from the model itself
+   * @param setChildBounds Whether to set child normalization bounds
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, boolean setChildBounds, Map<String, String> metaData, List<String> tags) {
+    this(points, children, bounds, setChildBounds, metaData, tags, null);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds, if different from the model itself
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   * @param meshes UI meshes for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, Map<String, String> metaData, List<String> tags, List<Mesh> meshes) {
+    this(points, children, bounds, true, metaData, tags, meshes);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds, if different from the model itself
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   * @param meshes UI meshes for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, boolean setChildBounds, Map<String, String> metaData, List<String> tags, List<Mesh> meshes) {
     this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
     setNormalizationBounds(bounds != null ? bounds : this);
-    addChildren(this.children = children.clone());
+    addChildren(this.children = children.clone(), setChildBounds);
     this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
+    this.meshes = (meshes == null) ? null : Collections.unmodifiableList(new ArrayList<>(meshes));
 
     Map<String, String> mutableMetadata = new HashMap<String, String>();
     if (metaData != null) {
@@ -426,7 +540,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param children Sub-models
    */
   public LXModel(LXModel[] children) {
-    this(children, (LXNormalizationBounds) null);
+    this(children, null);
   }
 
   /**
@@ -479,6 +593,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
     this.metaData = Collections.unmodifiableMap(new HashMap<String, String>());
+    this.meshes = null;
     recomputeGeometry();
   }
 
@@ -513,6 +628,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>(builder.outputs));
     this.metaData = Collections.unmodifiableMap(new HashMap<String, String>());
+    this.meshes = null;
     recomputeGeometry();
     if (isRoot) {
       reindexPoints();
@@ -552,6 +668,11 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     }
   }
 
+  void setNormalizationOrientation(LXModel model) {
+    this.normalizationBounds.setOrientation(model);
+    recomputeGeometry();
+  }
+
   /**
    * Returns the model which defines the space in which this model's points are
    * normalized, based upon the xMin/xMax/xRange etc. By default, this is the
@@ -574,6 +695,18 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
       root = root.parent;
     }
     return root;
+  }
+
+  /**
+   * Gets the main root model. For basic models, this is the
+   * same as getRoot() - but for a LXView the result may be
+   * different. This method will return the top level master
+   * model in all cases
+   *
+   * @return Top level main root model
+   */
+  public LXModel getMainRoot() {
+    return getRoot();
   }
 
   /**
@@ -652,9 +785,15 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
   }
 
   private void addChildren(LXModel[] children) {
-    for (LXModel child : children) {
-      child.parent = this;
-      child.setNormalizationBounds(this.normalizationBounds);
+    addChildren(children, true);
+  }
+
+  private void addChildren(LXModel[] children, boolean setChildBounds) {
+    if (setChildBounds) {
+      for (LXModel child : children) {
+        child.parent = this;
+        child.setNormalizationBounds(this.normalizationBounds);
+      }
     }
     addSubmodels(children, this.childDict, false);
     addSubmodels(children, this.subDict, true);
@@ -685,8 +824,23 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @return List of direct children by type
    */
   public List<LXModel> children(String tag) {
-    List<LXModel> children = this.childDict.get(tag);
+    final List<LXModel> children = this.childDict.get(tag);
     return (children == null) ? EMPTY_LIST : children;
+  }
+
+  /**
+   * Returns the direct child component of a particular tag and given index. Children are only one-level
+   * deep. If the index is invalid, null is returned
+   *
+   * @param tag Child tag type
+   * @return List of direct children by type
+   */
+  public LXModel child(String tag, int index) {
+    if (index < 0) {
+      throw new IllegalArgumentException("LXModel.child(index) may not be negative: " + index);
+    }
+    final List<LXModel> children = this.childDict.get(tag);
+    return ((children != null) && (children.size() > index)) ? children.get(index) : null;
   }
 
   /**
@@ -697,8 +851,23 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @return List of all descendant submodels
    */
   public List<LXModel> sub(String tag) {
-    List<LXModel> sub = this.subDict.get(tag);
+    final List<LXModel> sub = this.subDict.get(tag);
     return (sub == null) ? EMPTY_LIST : sub;
+  }
+
+  /**
+   * Returns the submodel of the given model with the given index, if it exists
+   *
+   * @param tag Submodel tag
+   * @param index Index of descendant
+   * @return Descendant submodel at the given index, if one exists
+   */
+  public LXModel sub(String tag, int index) {
+    if (index < 0) {
+      throw new IllegalArgumentException("LXModel.sub(index) may not be negative: " + index);
+    }
+    final List<LXModel> sub = this.subDict.get(tag);
+    return ((sub != null) && (sub.size() > index)) ? sub.get(index) : null;
   }
 
   /**
@@ -882,57 +1051,68 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
     boolean firstPoint = true;
     for (LXPoint p : this.points) {
-      ax += p.x;
-      ay += p.y;
-      az += p.z;
+      final float px = this.normalizationBounds.px(p);
+      final float py = this.normalizationBounds.py(p);
+      final float pz = this.normalizationBounds.pz(p);
+      final float pr = (float) Math.sqrt(px*px + py*py + pz*pz);
+
+      ax += px;
+      ay += py;
+      az += pz;
       if (firstPoint) {
-        xMin = xMax = p.x;
-        yMin = yMax = p.y;
-        zMin = zMax = p.z;
+        xMin = xMax = px;
+        yMin = yMax = py;
+        zMin = zMax = pz;
         rMin = rMax = p.r;
         firstPoint = false;
       } else {
-        if (p.x < xMin) {
-          xMin = p.x;
+        if (px < xMin) {
+          xMin = px;
         }
-        if (p.x > xMax) {
-          xMax = p.x;
+        if (px > xMax) {
+          xMax = px;
         }
-        if (p.y < yMin) {
-          yMin = p.y;
+        if (py < yMin) {
+          yMin = py;
         }
-        if (p.y > yMax) {
-          yMax = p.y;
+        if (py > yMax) {
+          yMax = py;
         }
-        if (p.z < zMin) {
-          zMin = p.z;
+        if (pz < zMin) {
+          zMin = pz;
         }
-        if (p.z > zMax) {
-          zMax = p.z;
+        if (pz > zMax) {
+          zMax = pz;
         }
-        if (p.r < rMin) {
-          rMin = p.r;
+        if (pr < rMin) {
+          rMin = pr;
         }
-        if (p.r > rMax) {
-          rMax = p.r;
+        if (pr > rMax) {
+          rMax = pr;
         }
       }
     }
+
     this.ax = ax / Math.max(1, this.points.length);
     this.ay = ay / Math.max(1, this.points.length);
     this.az = az / Math.max(1, this.points.length);
+
     this.xMin = xMin;
     this.xMax = xMax;
     this.xRange = xMax - xMin;
+
     this.yMin = yMin;
     this.yMax = yMax;
     this.yRange = yMax - yMin;
+
     this.zMin = zMin;
     this.zMax = zMax;
     this.zRange = zMax - zMin;
+
     this.rMin = rMin;
     this.rMax = rMax;
     this.rRange = rMax - rMin;
+
     this.cx = xMin + .5f * this.xRange;
     this.cy = yMin + .5f * this.yRange;
     this.cz = zMin + .5f * this.zRange;
@@ -1023,7 +1203,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    */
   public float[] getGeometry(GeometryFunction function) {
     float[] arr = null;
-    LXModel root = getRoot();
+    final LXModel root = getRoot();
     if (root.normalizationBounds == this.normalizationBounds) {
       arr = root.geometryCache.get(function);
     }
@@ -1045,7 +1225,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @return Array of geometry values indexed by LXPoint.index
    */
   public float[] computeGeometry(GeometryFunction function) {
-    return computeGeometry(function, new float[getRoot().size]);
+    return computeGeometry(function, new float[getMainRoot().size]);
   }
 
   private float[] computeGeometry(GeometryFunction function, float[] arr) {

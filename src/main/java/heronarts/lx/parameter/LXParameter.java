@@ -21,6 +21,8 @@ package heronarts.lx.parameter;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.midi.MidiNote;
+
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -91,12 +93,13 @@ public interface LXParameter extends LXPath {
     }
 
     public boolean changed() {
+      boolean changed = false;
       for (Monitor monitor : this.monitors) {
         if (monitor.changed()) {
-          return true;
+          changed = true;
         }
       }
-      return false;
+      return changed;
     }
   }
 
@@ -114,8 +117,45 @@ public interface LXParameter extends LXPath {
     }
   };
 
+  /**
+   * Specification for a formatter that presents a parameter value
+   */
   public interface Formatter {
+    /**
+     * Convert a double parameter value into a presentable String
+     *
+     * @param value Parameter value
+     * @return String for display
+     */
     public String format(double value);
+
+    /**
+     * Creates a Formatter using a DecimalFormat specification
+     *
+     * @param decimalFormat See the Java DecimalFormat class
+     * @return Formatter that uses underlying decimal format
+     */
+    public static Formatter newDecimalFormatter(String decimalFormat) {
+      return newDecimalFormatter(new DecimalFormat(decimalFormat));
+    }
+
+    /**
+     * Creates a Formatter from a given DecimalFormat
+     *
+     * @param decimalFormat DecimalFormat object
+     * @return Formatter that uses the given decimal format
+     */
+    public static Formatter newDecimalFormatter(DecimalFormat decimalFormat) {
+      return new Formatter() {
+        @Override
+        public String format(double value) {
+          return decimalFormat.format(value);
+        }
+      };
+    }
+
+    public static Formatter DECIMAL_MAX_2_PLACES = newDecimalFormatter("#.##");
+
   }
 
   public enum Units implements Formatter {

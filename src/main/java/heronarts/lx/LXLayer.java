@@ -60,6 +60,14 @@ public abstract class LXLayer extends LXLayeredComponent {
   }
 
   /**
+   * Removes this layer from the parent component after all
+   * layer execution is finished.
+   */
+  public void remove() {
+    ((LXLayeredComponent) getParent()).removeLayer(this);
+  }
+
+  /**
    * Run this layer.
    *
    * @param deltaMs Milliseconds elapsed since last frame

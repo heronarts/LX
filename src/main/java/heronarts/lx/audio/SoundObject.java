@@ -390,6 +390,12 @@ public class SoundObject extends LXModulator implements Comparable<SoundObject>,
     }
 
     @Override
+    public Selector setDescription(String description) {
+      super.setDescription(description);
+      return this;
+    }
+
+    @Override
     public void dispose() {
       selectors.remove(this);
       super.dispose();

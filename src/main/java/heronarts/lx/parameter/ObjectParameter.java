@@ -78,6 +78,24 @@ public class ObjectParameter<T> extends DiscreteParameter {
     return this;
   }
 
+  @Override
+  public DiscreteParameter setIncrementMode(IncrementMode incrementMode) {
+    super.setIncrementMode(incrementMode);
+    return this;
+  }
+
+  @Override
+  public ObjectParameter<T> setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
+  @Override
+  public ObjectParameter<T> setWrappable(boolean wrappable) {
+    super.setWrappable(wrappable);
+    return this;
+  }
+
   /**
    * Set a list of objects for the parameter
    *
@@ -98,8 +116,8 @@ public class ObjectParameter<T> extends DiscreteParameter {
   }
 
   @Override
-  public ObjectParameter<T> setRange(int minValue, int maxValue) {
-    if (this.objects!= null && (this.objects.length != maxValue - minValue)) {
+  public ObjectParameter<T> setRange(int minValue, long maxValue) {
+    if (this.objects != null && (this.objects.length != maxValue - minValue)) {
       throw new UnsupportedOperationException("May not call setRange on an ObjectParameter with Object list of different length");
     }
     super.setRange(minValue, maxValue);
@@ -120,6 +138,10 @@ public class ObjectParameter<T> extends DiscreteParameter {
 
   public T[] getObjects() {
     return this.objects;
+  }
+
+  public T getBaseObject() {
+    return getObject();
   }
 
   public T getObject() {

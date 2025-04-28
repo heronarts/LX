@@ -165,6 +165,8 @@ public class LXTriggerModulation extends LXParameterModulation {
   public final BooleanParameter source;
   public final BooleanParameter target;
 
+  private final BooleanParameter triggerSource;
+
   private final boolean sourceMomentary;
   private final boolean targetMomentary;
 
@@ -204,7 +206,9 @@ public class LXTriggerModulation extends LXParameterModulation {
     addParameter("momentaryToggleMode", this.momentaryToggleMode);
     addParameter("toggleMomentaryMode", this.toggleMomentaryMode);
 
-    this.source.addListener(this.sourceListener = p -> {
+    this.triggerSource = this.source.getTriggerSource();
+
+    this.triggerSource.addListener(this.sourceListener = p -> {
       if (!this.enabled.isOn()) {
         return;
       }
@@ -258,7 +262,7 @@ public class LXTriggerModulation extends LXParameterModulation {
 
   @Override
   public void dispose() {
-    this.source.removeListener(this.sourceListener);
+    this.triggerSource.removeListener(this.sourceListener);
     super.dispose();
   }
 }

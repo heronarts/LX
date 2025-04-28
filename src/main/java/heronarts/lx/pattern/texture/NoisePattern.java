@@ -18,7 +18,9 @@
 
 package heronarts.lx.pattern.texture;
 
+import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.GradientUtils;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.modulator.LXModulator;
@@ -31,7 +33,6 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.LX;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 
@@ -39,6 +40,7 @@ import static heronarts.lx.utils.Noise.*;
 import static heronarts.lx.utils.LXUtils.clamp;
 
 @LXCategory(LXCategory.TEXTURE)
+@LXComponent.Description("Dynamic 3D light field based on noise algorithms")
 public class NoisePattern extends LXPattern {
 
   public enum Algorithm {

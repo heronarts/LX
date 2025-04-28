@@ -18,16 +18,26 @@
 
 package heronarts.lx.midi;
 
+import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
 public class MidiNoteOff extends MidiNote {
 
+  MidiNoteOff(byte[] data) {
+    super(data);
+  }
+
   MidiNoteOff(ShortMessage message) {
     super(message, ShortMessage.NOTE_OFF);
+  }
+
+  public MidiNoteOff(int channel, int pitch) throws InvalidMidiDataException {
+    super(ShortMessage.NOTE_OFF, channel, pitch, 0);
   }
 
   @Override
   public String toString() {
     return "MidiNoteOff:" + getChannel() + ":Pitch:" + getPitch() + ":Vel:" + getVelocity();
   }
+
 }

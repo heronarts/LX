@@ -14,7 +14,7 @@
  * PURPOSE, WITH RESPECT TO THE SOFTWARE.
  *
  * @author Mark C. Slee <mark@heronarts.com>
- * @author Justin K. Blecher <jkbelcher@gmail.com>
+ * @author Justin K. Belcher <jkbelcher@gmail.com>
  */
 
 package heronarts.lx.snapshot;
@@ -26,6 +26,7 @@ import java.util.Objects;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -262,7 +263,8 @@ public abstract class LXSnapshot extends LXComponent {
         this.stringValue = null;
         obj.addProperty(KEY_VALUE, this.intValue);
       } else if (parameter instanceof StringParameter) {
-        this.stringValue = obj.get(KEY_VALUE).getAsString();
+        final JsonElement value = obj.get(KEY_VALUE);
+        this.stringValue = (value instanceof JsonNull) ? null : value.getAsString();
         this.intValue = 0;
         this.value = 0;
       } else {
@@ -525,6 +527,8 @@ public abstract class LXSnapshot extends LXComponent {
    */
   private final LXComponent snapshotParameterScope;
 
+  private boolean isInitialized = false;
+
   public final BoundedParameter transitionTimeSecs =
     new BoundedParameter("Transition Time", 1, .1, 180)
     .setDescription("Sets the duration of interpolated transitions between snapshots")
@@ -548,15 +552,23 @@ public abstract class LXSnapshot extends LXComponent {
     return null;
   }
 
+  public final void initialize() {
+    if (!this.isInitialized) {
+      initializeViews();
+      this.isInitialized = true;
+    }
+  }
+
   /**
    * Update this snapshot to reflect the current program state
    */
   public void update() {
     clearViews();
-    initialize();
+    initializeViews();
+    this.isInitialized = true;
   }
 
-  public abstract void initialize();
+  protected abstract void initializeViews();
 
   protected void initializeGlobalBus(LXBus bus) {
     if (bus instanceof LXMasterBus) {
@@ -632,16 +644,16 @@ public abstract class LXSnapshot extends LXComponent {
   protected void addDeviceView(ViewScope scope, LXDeviceComponent device) {
     for (LXParameter p : device.getParameters()) {
       AggregateParameter ap = p.getParentParameter();
-      if (ap != null) {
-        p = ap;
-      }
-      if (device.isSnapshotControl(p)) {
+      LXParameter check = (ap != null) ? ap : p;
+      if (device.isSnapshotControl(check)) {
         addParameterView(scope, p);
       }
     }
-
     for (LXLayer layer : device.getLayers()) {
       addLayeredView(scope, layer);
+    }
+    for (LXComponent child : device.automationChildren.values()) {
+      addDeviceChildView(scope, child);
     }
   }
 
@@ -653,6 +665,14 @@ public abstract class LXSnapshot extends LXComponent {
     }
     for (LXLayer layer : component.getLayers()) {
       addLayeredView(scope, layer);
+    }
+  }
+
+  protected void addDeviceChildView(ViewScope scope, LXComponent component) {
+    for (LXParameter p : component.getParameters()) {
+      if (p != component.label) {
+        addParameterView(scope, p);
+      }
     }
   }
 
@@ -762,7 +782,6 @@ public abstract class LXSnapshot extends LXComponent {
     super.load(lx, obj);
 
     clearViews();
-
     if (obj.has(KEY_VIEWS)) {
       JsonArray viewsArray = obj.getAsJsonArray(KEY_VIEWS);
       for (JsonElement viewElement : viewsArray) {
@@ -773,6 +792,8 @@ public abstract class LXSnapshot extends LXComponent {
         }
       }
     }
+
+    this.isInitialized = true;
   }
 
 }

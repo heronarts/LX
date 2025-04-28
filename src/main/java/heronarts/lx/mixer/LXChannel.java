@@ -27,6 +27,7 @@ import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.MidiPanic;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
@@ -37,6 +38,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
@@ -73,8 +75,10 @@ public class LXChannel extends LXAbstractChannel {
     public default void patternEnabled(LXChannel channel, LXPattern pattern) {}
   }
 
-  private final List<Listener> listeners = new ArrayList<Listener>();
-  private final List<Listener> listenerSnapshot = new ArrayList<Listener>();
+  private final ArrayList<Listener> listeners = new ArrayList<Listener>();
+  private boolean inListener = false;
+  private final List<Listener> addListeners = new ArrayList<>();
+  private final List<Listener> removeListeners = new ArrayList<>();
 
   public enum AutoCycleMode {
     NEXT("Next"),
@@ -179,17 +183,23 @@ public class LXChannel extends LXAbstractChannel {
   private final List<LXPattern> mutablePatterns = new ArrayList<LXPattern>();
   public final List<LXPattern> patterns = Collections.unmodifiableList(mutablePatterns);
 
-  public final MutableParameter controlSurfaceFocusIndex = (MutableParameter)
-    new MutableParameter("SurfaceFocusIndex", 0)
-    .setDescription("Control surface focus index");
-
-  public final MutableParameter controlSurfaceFocusLength = (MutableParameter)
-    new MutableParameter("SurfaceFocusLength", 0)
-    .setDescription("Control surface focus length");
+  /**
+   * A semaphore used to keep count of how many remote control surfaces may be
+   * controlling this channel's patterns. This may be used by UI implementations to indicate
+   * to the user that this component is under remote control.
+   */
+  public final MutableParameter controlSurfaceSemaphore =
+    new MutableParameter("Control-Surfaces", 0)
+    .setDescription("How many control surfaces are controlling this component");
 
   public final TriggerParameter triggerPatternCycle =
-    new TriggerParameter("Trigger Pattern", this::onTriggerPatternCycle)
+    new TriggerParameter("Trigger Pattern Cycle", this::onTriggerPatternCycle)
     .setDescription("Triggers a pattern change on the channel");
+
+  // NB(mcslee): chain parameters in case there are modulation mappings from the trigger cycle parameter!
+  public final QuantizedTriggerParameter launchPatternCycle =
+    new QuantizedTriggerParameter.Launch(lx, "Launch Pattern Cycle", this.triggerPatternCycle::trigger)
+    .setDescription("Launches a pattern change on the channel");
 
   public final BooleanParameter viewPatternLabel =
     new BooleanParameter("View Pattern Label", false)
@@ -250,15 +260,30 @@ public class LXChannel extends LXAbstractChannel {
     addParameter("transitionBlendMode", this.transitionBlendMode);
     addParameter("focusedPattern", this.focusedPattern);
     addParameter("triggerPatternCycle", this.triggerPatternCycle);
+    addParameter("launchPatternCycle", this.launchPatternCycle);
+  }
+
+  @Override
+  public boolean isPlaylist() {
+    return this.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST;
+  }
+
+  @Override
+  public boolean isComposite() {
+    return this.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND;
+  }
+
+  private void disposeTransitionBlendOptions() {
+    for (LXBlend blend : this.transitionBlendMode.getObjects()) {
+      if (blend != null) {
+        LX.dispose(blend);
+      }
+    }
   }
 
   void updateTransitionBlendOptions() {
-    for (LXBlend blend : this.transitionBlendMode.getObjects()) {
-      if (blend != null) {
-        blend.dispose();
-      }
-    }
-    this.transitionBlendMode.setObjects(this.lx.engine.mixer.instantiateTransitionBlends());
+    disposeTransitionBlendOptions();
+    this.transitionBlendMode.setObjects(this.lx.engine.mixer.instantiateTransitionBlends(this));
   }
 
   @Override
@@ -307,9 +332,7 @@ public class LXChannel extends LXAbstractChannel {
   // Invoked by LXPattern when the channel is in blend compositing mode and
   // a new pattern is enabled
   public void onPatternEnabled(LXPattern pattern) {
-    for (Listener listener : this.listeners) {
-      listener.patternEnabled(this, pattern);
-    }
+    this.listeners.forEach(listener -> listener.patternEnabled(this, pattern));
   }
 
   private void onTriggerPatternCycle() {
@@ -333,6 +356,10 @@ public class LXChannel extends LXAbstractChannel {
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException("May not add duplicate LXChannel.Listener: " + listener);
     }
+    if (this.inListener) {
+      this.addListeners.add(listener);
+      return;
+    }
     super.addListener(listener);
     this.listeners.add(listener);
   }
@@ -341,8 +368,23 @@ public class LXChannel extends LXAbstractChannel {
     if (!this.listeners.contains(listener)) {
       throw new IllegalStateException("May not remove non-registered LXChannel.Listener: " + listener);
     }
+    if (this.inListener) {
+      this.removeListeners.add(listener);
+      return;
+    }
     super.removeListener(listener);
     this.listeners.remove(listener);
+  }
+
+  private void _processReentrantListenerChanges() {
+    if (!this.removeListeners.isEmpty()) {
+      this.removeListeners.forEach(listener -> removeListener(listener));
+      this.removeListeners.clear();
+    }
+    if (!this.addListeners.isEmpty()) {
+      this.addListeners.forEach(listener -> addListener(listener));
+      this.addListeners.clear();
+    }
   }
 
   public static final String PATH_PATTERN = "pattern";
@@ -384,22 +426,30 @@ public class LXChannel extends LXAbstractChannel {
 
   @Override
   public void midiDispatch(LXShortMessage message) {
-    switch (this.compositeMode.getEnum()) {
-    case PLAYLIST:
-      final LXPattern activePattern = getActivePattern();
-      activePattern.midiDispatch(message);
-      LXPattern nextPattern = getNextPattern();
-      if (nextPattern != null && nextPattern != activePattern) {
-        nextPattern.midiDispatch(message);
-      }
-      break;
-    case BLEND:
+    if (message instanceof MidiPanic) {
       for (LXPattern pattern : this.patterns) {
-        if (pattern.enabled.isOn()) {
-          pattern.midiDispatch(message);
-        }
+        pattern.midiDispatch(message);
       }
-      break;
+    } else {
+      switch (this.compositeMode.getEnum()) {
+      case PLAYLIST:
+        final LXPattern activePattern = getActivePattern();
+        if (activePattern != null) {
+          activePattern.midiDispatch(message);
+        }
+        LXPattern nextPattern = getNextPattern();
+        if (nextPattern != null && nextPattern != activePattern) {
+          nextPattern.midiDispatch(message);
+        }
+        break;
+      case BLEND:
+        for (LXPattern pattern : this.patterns) {
+          if (pattern.enabled.isOn()) {
+            pattern.midiDispatch(message);
+          }
+        }
+        break;
+      }
     }
     super.midiDispatch(message);
   }
@@ -407,9 +457,7 @@ public class LXChannel extends LXAbstractChannel {
   LXChannel setGroup(LXGroup group) {
     if (this.group != group) {
       this.group = group;
-      for (Listener listener : this.listeners) {
-        listener.groupChanged(this, group);
-      }
+      this.listeners.forEach(listener -> listener.groupChanged(this, group));
     }
     return this;
   }
@@ -519,11 +567,11 @@ public class LXChannel extends LXAbstractChannel {
       this.focusedPattern.bang();
     }
 
-    this.listenerSnapshot.clear();
-    this.listenerSnapshot.addAll(this.listeners);
-    for (Listener listener : this.listenerSnapshot) {
-      listener.patternAdded(this, pattern);
-    }
+    this.inListener = true;
+    this.listeners.forEach(listener -> listener.patternAdded(this, pattern));
+    this.inListener = false;
+    _processReentrantListenerChanges();
+    this.lx.engine.clips.updatePatternGridSize();
 
     // If this was the first pattern, focusedPattern has "changed" going from 0 -> 0
     if (this.mutablePatterns.size() == 1) {
@@ -531,9 +579,7 @@ public class LXChannel extends LXAbstractChannel {
       this.focusedPattern.bang();
       final LXPattern activePattern = getActivePattern();
       activePattern.activate(LXMixerEngine.patternFriendAccess);
-      for (Listener listener : this.listeners) {
-        listener.patternDidChange(this, activePattern);
-      }
+      this.listeners.forEach(listener -> listener.patternDidChange(this, activePattern));
     } else if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
       // We're in blend mode! This pattern is active if it's enabled
       if (pattern.enabled.isOn()) {
@@ -588,20 +634,19 @@ public class LXChannel extends LXAbstractChannel {
       this.focusedPattern.bang();
     }
     this.focusedPattern.setRange(Math.max(1, this.mutablePatterns.size()));
-    this.listenerSnapshot.clear();
-    this.listenerSnapshot.addAll(this.listeners);
-    for (Listener listener : this.listenerSnapshot) {
-      listener.patternRemoved(this, pattern);
-    }
+    this.inListener = true;
+    this.listeners.forEach(listener -> listener.patternRemoved(this, pattern));
+    this.inListener = false;
+    _processReentrantListenerChanges();
+    this.lx.engine.clips.updatePatternGridSize();
+
     if (activateNext && !this.patterns.isEmpty()) {
       LXPattern newActive = getActivePattern();
       newActive.activate(LXMixerEngine.patternFriendAccess);
-      for (Listener listener : this.listeners) {
-        listener.patternDidChange(this, newActive);
-      }
+      this.listeners.forEach(listener -> listener.patternDidChange(this, newActive));
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, newActive.getIndex());
     }
-    pattern.dispose();
+    LX.dispose(pattern);
     return this;
   }
 
@@ -634,32 +679,9 @@ public class LXChannel extends LXAbstractChannel {
     }
     this.activePatternIndex = activePattern.getIndex();
     this.nextPatternIndex = nextPattern.getIndex();
-    for (Listener listener : this.listeners) {
-      listener.patternMoved(this, pattern);
-    }
+    this.listeners.forEach(listener -> listener.patternMoved(this, pattern));
     if (pattern == focusedPattern) {
       this.focusedPattern.setValue(pattern.getIndex());
-    }
-    return this;
-  }
-
-  public LXChannel reloadPattern(LXPattern pattern) {
-    if (!this.patterns.contains(pattern)) {
-      throw new IllegalStateException("Cannot reload pattern not on a channel");
-    }
-    boolean active = (pattern == getActivePattern());
-    boolean focused = (pattern == getFocusedPattern());
-
-    int index = pattern.getIndex();
-    JsonObject patternObj = new JsonObject();
-    pattern.save(getLX(), patternObj);
-    removePattern(pattern);
-    LXPattern newPattern = loadPattern(patternObj, index);
-    if (focused) {
-      this.focusedPattern.setValue(newPattern.getIndex());
-    }
-    if (active) {
-      goPattern(newPattern);
     }
     return this;
   }
@@ -715,6 +737,10 @@ public class LXChannel extends LXAbstractChannel {
     return (this.nextPatternIndex >= 0) ? this.mutablePatterns.get(this.nextPatternIndex) : null;
   }
 
+  public boolean isInTransition() {
+    return this.transition != null;
+  }
+
   /**
    * Activates the previous pattern in this channel's pattern list
    *
@@ -762,13 +788,28 @@ public class LXChannel extends LXAbstractChannel {
   /**
    * Activates the given pattern, which must belong to this channel.
    *
-   * @param pattern Pattern to acivate
+   * @param pattern Pattern to activate
    * @return this
    */
   public final LXChannel goPattern(LXPattern pattern) {
+    return goPattern(pattern, false);
+  }
+
+  /**
+   * Activates the given pattern, which must belong to this channel. Transition
+   * can be optionally skipped
+   *
+   * @param pattern Pattern to activate
+   * @param skipTransition Skip over a transition
+   * @return this
+   */
+  public final LXChannel goPattern(LXPattern pattern, boolean skipTransition) {
     int index = this.patterns.indexOf(pattern);
     if (index >= 0) {
       goPatternIndex(index);
+    }
+    if (skipTransition && (this.transition != null)) {
+      finishTransition();
     }
     return this;
   }
@@ -776,7 +817,7 @@ public class LXChannel extends LXAbstractChannel {
   private final List<LXPattern> randomEligible = new ArrayList<LXPattern>();
 
   /**
-   * Activates a randomly seleted pattern on the channel, from the set of
+   * Activates a randomly selected pattern on the channel, from the set of
    * patterns that have auto cycle enabled.
    *
    * @return this
@@ -810,7 +851,7 @@ public class LXChannel extends LXAbstractChannel {
    * @return this
    */
   public final LXChannel goPatternIndex(int index) {
-    if (this.compositeMode.getEnum() == CompositeMode.BLEND) {
+    if (!isPlaylist()) {
       return this;
     }
     if (index < 0 || index >= this.patterns.size()) {
@@ -867,9 +908,7 @@ public class LXChannel extends LXAbstractChannel {
       return;
     }
     nextPattern.activate(LXMixerEngine.patternFriendAccess);
-    for (Listener listener : this.listeners) {
-      listener.patternWillChange(this, activePattern, nextPattern);
-    }
+    this.listeners.forEach(listener -> listener.patternWillChange(this, activePattern, nextPattern));
     this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, nextPattern.getIndex());
     if (this.transitionEnabled.isOn()) {
       this.transition = this.transitionBlendMode.getObject();
@@ -890,9 +929,7 @@ public class LXChannel extends LXAbstractChannel {
       this.transition = null;
       this.transitionMillis = this.lx.engine.nowMillis;
       LXPattern activePattern = getActivePattern();
-      for (Listener listener : listeners) {
-        listener.patternDidChange(this, activePattern);
-      }
+      this.listeners.forEach(listener -> listener.patternDidChange(this, activePattern));
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, NO_PATTERN_INDEX);
     }
@@ -908,9 +945,7 @@ public class LXChannel extends LXAbstractChannel {
     }
     this.transition = null;
     this.transitionMillis = this.lx.engine.nowMillis;
-    for (Listener listener : listeners) {
-      listener.patternDidChange(this, activePattern);
-    }
+    this.listeners.forEach(listener -> listener.patternDidChange(this, activePattern));
     this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
     this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_NEXT_PATTERN, NO_PATTERN_INDEX);
     if (this.lx.flags.focusActivePattern) {
@@ -933,10 +968,10 @@ public class LXChannel extends LXAbstractChannel {
   public void loop(double deltaMs) {
     long loopStart = System.nanoTime();
 
-    // Delegate to LXChannelBus loop method
+    // Delegate to LXAbstractChannel loop method
     super.loop(deltaMs);
 
-    // LXChannelBus will have figured out if we need to run everything.
+    // LXAbstractChannel will have figured out if we need to run everything.
     // If not, then we're done here and skip the rest.
     if (!this.isAnimating) {
       this.profiler.loopNanos = System.nanoTime() - loopStart;
@@ -1071,17 +1106,17 @@ public class LXChannel extends LXAbstractChannel {
     this.focusedPattern.setValue(0);
 
     for (LXPattern pattern : this.mutablePatterns) {
-      pattern.dispose();
+      LX.dispose(pattern);
     }
     this.mutablePatterns.clear();
     if (this.thread.hasStarted) {
       this.thread.interrupt();
     }
-    this.listeners.clear();
-
     this.renderBuffer.dispose();
-
     super.dispose();
+    disposeTransitionBlendOptions();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXChannel.Listener: " + listener));
+    this.listeners.clear();
   }
 
   @Override
@@ -1145,9 +1180,7 @@ public class LXChannel extends LXAbstractChannel {
     }
     LXPattern activePattern = getActivePattern();
     if (activePattern != null) {
-      for (Listener listener : listeners) {
-        listener.patternDidChange(this, activePattern);
-      }
+      this.listeners.forEach(listener -> listener.patternDidChange(this, activePattern));
       this.lx.engine.osc.sendMessage(getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
     }
 
@@ -1155,7 +1188,7 @@ public class LXChannel extends LXAbstractChannel {
     super.load(lx, obj);
   }
 
-  private LXPattern loadPattern(JsonObject patternObj, int index) {
+  public LXPattern loadPattern(JsonObject patternObj, int index) {
     String patternClass = patternObj.get(KEY_CLASS).getAsString();
     LXPattern pattern;
     try {

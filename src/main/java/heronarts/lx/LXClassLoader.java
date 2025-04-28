@@ -30,7 +30,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -56,9 +55,19 @@ public class LXClassLoader extends URLClassLoader {
 
     private String name;
     private String author = "Unknown Author";
+    private String url = null;
+    private String version = null;
+    private int versionCompare = 0;
+    private String lxVersion = null;
 
     private Throwable error = null;
+    private int numPatterns = 0;
+    private int numEffects = 0;
+    private int numModulators = 0;
+    private int numFixtures = 0;
+    private int numPlugins = 0;
     private int numClasses = 0;
+    private int numFailedClasses = 0;
 
     private Package(File jarFile) {
       this.jarFile = jarFile;
@@ -80,12 +89,59 @@ public class LXClassLoader extends URLClassLoader {
       return this.author;
     }
 
+    public String getURL() {
+      return this.url;
+    }
+
+    public String getVersion() {
+      return this.version;
+    }
+
+    public void setLXVersion(LX lx, String lxVersion) {
+      this.lxVersion = lxVersion;
+      this.versionCompare = LX.compareVersion(LX.VERSION, lxVersion);
+      if (isNewerThanApp()) {
+        String err = "Package " + getName() + " was built for a newer version of Chromatik (" + lxVersion + "). You are running " + LX.VERSION + ". Content in this package may not behave correctly.";
+        lx.pushError(err);
+        LX.error(err);
+      }
+      if (isOutOfDate()) {
+        LX.error("Package " + getName() + " was built for an older version of Chromatik (" + lxVersion + "). You are running " + LX.VERSION + ". Content in this package may not behave correctly.");
+      }
+    }
+
+    public String getLXVersion() {
+      return this.lxVersion;
+    }
+
     private void setError(Throwable error) {
       this.error = error;
     }
 
     public int getNumClasses() {
       return this.numClasses;
+    }
+
+    public int getNumFailedClasses() {
+      return this.numFailedClasses;
+    }
+
+    public int getNumComponents(LXRegistry.ComponentType componentType) {
+      return switch (componentType) {
+      case EFFECT -> this.numEffects;
+      case FIXTURE -> this.numFixtures;
+      case MODULATOR -> this.numModulators;
+      case PATTERN -> this.numPatterns;
+      case PLUGIN -> this.numPlugins;
+      };
+    }
+
+    public boolean isOutOfDate() {
+      return this.versionCompare > 0;
+    }
+
+    public boolean isNewerThanApp() {
+      return this.versionCompare < 0;
     }
 
     public boolean hasError() {
@@ -174,18 +230,8 @@ public class LXClassLoader extends URLClassLoader {
       while (entries.hasMoreElements()) {
         JarEntry entry = entries.nextElement();
         String fileName = entry.getName();
-        if (fileName.equals(PACKAGE_DESCRIPTOR_FILE_NAME)) {
-          try {
-            JsonObject obj = new Gson().fromJson(new InputStreamReader(jarFile.getInputStream(entry)), JsonObject.class);
-            if (obj.has("name")) {
-              pack.name = obj.get("name").getAsString();
-            }
-            if (obj.has("author")) {
-              pack.author = obj.get("author").getAsString();
-            }
-          } catch (Throwable x) {
-            LX.error(x, "Exception reading lx.package contents for: " + jarFile);
-          }
+        if (PACKAGE_DESCRIPTOR_FILE_NAME.equals(fileName)) {
+          loadPackageMetadata(pack, jarFile, entry);
         } else if (fileName.endsWith(".class")) {
           loadClassEntry(pack, jarFile, className(fileName).replaceAll("/", "\\."));
         }
@@ -193,12 +239,50 @@ public class LXClassLoader extends URLClassLoader {
     } catch (IOException iox) {
       LX.error(iox, "IOException unpacking JAR file " + file + " - " + iox.getLocalizedMessage());
       pack.setError(iox);
-    } catch (Exception | Error e) {
+    } catch (Throwable e) {
       LX.error(e, "Unhandled exception loading JAR file " + file + " - " + e.getLocalizedMessage());
       pack.setError(e);
     }
 
+    if (pack.version == null) {
+      LX.error("Package does not contain any version information: " + file.getName());
+    }
     this.lx.registry.addPackage(pack);
+  }
+
+  private void loadPackageMetadata(Package pack, JarFile jarFile, JarEntry jarEntry) {
+    try (InputStreamReader isr = new InputStreamReader(jarFile.getInputStream(jarEntry))) {
+      JsonObject obj = new Gson().fromJson(isr, JsonObject.class);
+      String name = "unknown";
+      String version = "unknown";
+      String lxVersion = "unknown";
+      String buildTimestamp = "";
+      if (obj.has("name")) {
+        name = pack.name = obj.get("name").getAsString();
+      }
+      if (obj.has("author")) {
+        pack.author = obj.get("author").getAsString();
+      }
+      if (obj.has("url")) {
+        pack.url = obj.get("url").getAsString();
+      }
+      if (obj.has("build")) {
+        JsonObject buildObj = obj.get("build").getAsJsonObject();
+        if (buildObj.has("version")) {
+          version = pack.version = buildObj.get("version").getAsString();
+        }
+        if (buildObj.has("lxVersion")) {
+          pack.setLXVersion(this.lx, lxVersion = buildObj.get("lxVersion").getAsString());
+        }
+        if (buildObj.has("buildTimestamp")) {
+          buildTimestamp = " buildTimestamp:" + buildObj.get("buildTimestamp").getAsString();
+        }
+      }
+      LX.log("Package:" + name + " version:" + version + " lxVersion:" + lxVersion + buildTimestamp);
+
+    } catch (Throwable x) {
+      LX.error(x, "Exception reading lx.package contents for: " + jarFile);
+    }
   }
 
   private static String className(String fileName) {
@@ -207,29 +291,43 @@ public class LXClassLoader extends URLClassLoader {
 
   private void loadClassEntry(Package pack, JarFile jarFile, String className) {
     try {
-      // This might be slightly slower, but just let URL loader find it...
+      // This might be slightly slower, but just let URLClassLoader find it...
       // Let's not re-invent the wheel on parsing JAR files and all that.
-      Class<?> clz = loadClass(className, false);
+      final Class<?> clz = loadClass(className, false);
 
-      // TODO(mcslee): there must be some better way of checking this explicitly,
-      // without instantiating the class, but more clear than getSimpleName()
-
-      // Okay, we loaded the class. But can we actually operate on it? Let's try
-      // to get the name of this class to ensure it's not going to bork things
-      // later due to unresolved dependencies that will throw NoClassDefFoundError
-      clz.getSimpleName();
-
-      // Register all public, non-abstract components that we discover
-      int modifiers = clz.getModifiers();
+      // Try to register public non-abstract classes
+      final int modifiers = clz.getModifiers();
       if (Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers)) {
+
+        LXRegistry.ComponentType componentType = this.lx.registry.getInstantiableComponentType(clz);
+        if (componentType != null) {
+          // Okay, we loaded the class. But can we actually operate on it? Let's try
+          // to get the name of this class to ensure it's not going to bork things
+          // later due to unresolved dependencies that could throw an
+          // Error (e.g. NoClassDefFoundError)
+
+          // TODO(mcslee): there must be some better way of checking this explicitly,
+          // without instantiating the class, but more clear than getSimpleName()??
+          clz.getSimpleName();
+          switch (componentType) {
+          case EFFECT -> ++pack.numEffects;
+          case FIXTURE -> ++pack.numFixtures;
+          case MODULATOR -> ++pack.numModulators;
+          case PATTERN -> ++pack.numPatterns;
+          case PLUGIN -> ++pack.numPlugins;
+          }
+
+        }
+
+        // Register all public, non-abstract components that we discover
         ++pack.numClasses;
         this.classes.add(clz);
-        this.lx.registry.addClass(clz);
+        this.lx.registry.addClass(clz, pack);
       }
-
-    } catch (ClassNotFoundException cnfx) {
-      LX.error(cnfx, "Class not actually found, expected in JAR file: " + className + " " + jarFile.getName());
-    } catch (Exception x) {
+    } catch (ClassNotFoundException | NoClassDefFoundError cnfx) {
+      LX.error(cnfx, "Dependency class not found, required by JAR file: " + className + " " + jarFile.getName());
+      ++pack.numFailedClasses;
+    } catch (Throwable x) {
       LX.error(x, "Unhandled exception in class loading: " + className);
     }
   }

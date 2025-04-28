@@ -19,65 +19,49 @@
 package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
-import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Knobs")
+@LXModulator.Device("Knobs")
 @LXCategory(LXCategory.MACRO)
-public class MacroKnobs extends LXModulator implements LXOscComponent {
+public class MacroKnobs extends LXMacroModulator {
 
-  public final CompoundParameter macro1 =
-    new CompoundParameter("K1")
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Macro control parameter");
+  private static CompoundParameter macro(int num) {
+    return new CompoundParameter("K" + num)
+      .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+      .setDescription("Macro control parameter " + num);
+  }
 
-  public final CompoundParameter macro2 =
-    new CompoundParameter("K2")
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Macro control parameter");
+  private static StringParameter label(int num) {
+    return new StringParameter("Label-" + num, "-")
+      .setDescription("Label for knob " + num);
+  }
 
-  public final CompoundParameter macro3 =
-    new CompoundParameter("K3")
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Macro control parameter");
+  public final CompoundParameter macro1 = macro(1);
+  public final CompoundParameter macro2 = macro(2);
+  public final CompoundParameter macro3 = macro(3);
+  public final CompoundParameter macro4 = macro(4);
+  public final CompoundParameter macro5 = macro(5);
+  public final CompoundParameter macro6 = macro(6);
+  public final CompoundParameter macro7 = macro(7);
+  public final CompoundParameter macro8 = macro(8);
 
-  public final CompoundParameter macro4 =
-    new CompoundParameter("K4")
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Macro control parameter");
-
-  public final CompoundParameter macro5 =
-    new CompoundParameter("K5")
-    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
-    .setDescription("Macro control parameter");
-
-  public final StringParameter label1 =
-    new StringParameter("Label-1", "-")
-    .setDescription("Label for knob 1");
-
-  public final StringParameter label2 =
-    new StringParameter("Label-2", "-")
-    .setDescription("Label for knob 2");
-
-  public final StringParameter label3 =
-    new StringParameter("Label-3", "-")
-    .setDescription("Label for knob 3");
-
-  public final StringParameter label4 =
-    new StringParameter("Label-4", "-")
-    .setDescription("Label for knob 4");
-
-  public final StringParameter label5 =
-    new StringParameter("Label-5", "-")
-    .setDescription("Label for knob 5");
+  public final StringParameter label1 = label(1);
+  public final StringParameter label2 = label(2);
+  public final StringParameter label3 = label(3);
+  public final StringParameter label4 = label(4);
+  public final StringParameter label5 = label(5);
+  public final StringParameter label6 = label(6);
+  public final StringParameter label7 = label(7);
+  public final StringParameter label8 = label(8);
 
   public final CompoundParameter[] knobs = {
-    macro1, macro2, macro3, macro4, macro5
+    macro1, macro2, macro3, macro4, macro5, macro6, macro7, macro8
   };
 
   public final StringParameter[] labels = {
-    label1, label2, label3, label4, label5
+    label1, label2, label3, label4, label5, label6, label7, label8
   };
 
   public MacroKnobs() {
@@ -91,11 +75,17 @@ public class MacroKnobs extends LXModulator implements LXOscComponent {
     addParameter("macro3", this.macro3);
     addParameter("macro4", this.macro4);
     addParameter("macro5", this.macro5);
+    addParameter("macro6", this.macro6);
+    addParameter("macro7", this.macro7);
+    addParameter("macro8", this.macro8);
     addParameter("label1", this.label1);
     addParameter("label2", this.label2);
     addParameter("label3", this.label3);
     addParameter("label4", this.label4);
     addParameter("label5", this.label5);
+    addParameter("label6", this.label6);
+    addParameter("label7", this.label7);
+    addParameter("label8", this.label8);
   }
 
   @Override

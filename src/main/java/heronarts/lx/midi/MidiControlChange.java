@@ -53,6 +53,8 @@ public class MidiControlChange extends LXShortMessage {
   public final static int POLY_OFF = 0x7e;
   public final static int POLY_ON = 0x7f;
 
+  public final static int MAX_CC_VALUE = 127;
+
   public MidiControlChange(int channel, int cc, int value) throws InvalidMidiDataException {
     super(ShortMessage.CONTROL_CHANGE, channel, cc, value);
   }
@@ -84,6 +86,6 @@ public class MidiControlChange extends LXShortMessage {
 
   @Override
   public String toString() {
-    return "MidiControlChange:" + getChannel() + ":CC:" + getCC() + ":Value: " + getValue();
+    return "MidiControlChange:" + getChannel() + ":CC:" + getCC() + ":Value:" + getValue();
   }
 }

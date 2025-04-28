@@ -42,9 +42,9 @@ import heronarts.lx.utils.LXUtils;
  *   button state is sent to midi instead of function state.
  *  -Any midi channel is usable, just set this class' midiChannel parameter to match.
  */
+@LXMidiSurface.Name("Pioneer DJM-A9")
+@LXMidiSurface.DeviceName("DJM-A9")
 public class DJMA9 extends LXMidiSurface {
-
-  public static final String DEVICE_NAME = "DJM-A9";
 
   public enum MidiChannel {
     CH1(0),

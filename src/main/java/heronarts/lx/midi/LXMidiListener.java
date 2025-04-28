@@ -32,4 +32,7 @@ public interface LXMidiListener {
 
   public default void aftertouchReceived(MidiAftertouch aftertouch) {}
 
+  public default void midiPanicReceived() {}
+
+  public default void sysexReceived(LXSysexMessage sysex) {}
 }

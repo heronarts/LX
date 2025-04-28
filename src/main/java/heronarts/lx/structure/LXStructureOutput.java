@@ -21,6 +21,7 @@ package heronarts.lx.structure;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import heronarts.lx.LX;
@@ -51,11 +52,12 @@ public class LXStructureOutput extends LXOutput {
     private final LXFixture.Transport transport;
     private final InetAddress address;
     private final int port;
-    private final int universe;
+    private final int universe; // holds data offset for DDP/OPC
     private int priority;
     private boolean sequenceEnabled;
     private final KinetDatagram.Version kinetVersion;
     private float fps = 0f;
+    private final int[] collisionMask;
 
     private final List<IndexBuffer.Segment> segments = new ArrayList<IndexBuffer.Segment>();
 
@@ -68,33 +70,11 @@ public class LXStructureOutput extends LXOutput {
       this.priority = priority;
       this.sequenceEnabled = sequenceEnabled;
       this.kinetVersion = kinetVersion;
-    }
-
-    private boolean checkOverflow() {
-      switch (this.protocol) {
-      case ARTNET:
-      case SACN:
-        if (this.universe >= ArtNetDatagram.MAX_UNIVERSE) {
-          outputErrors.add(this.protocol.toString() + this.address.toString() + " - overflow univ " + this.universe);
-          return false;
-        }
-        return true;
-      case KINET:
-        if (this.universe >= KinetDatagram.MAX_KINET_PORT) {
-          outputErrors.add(this.protocol.toString() + this.address.toString() + " - overflow port" + this.universe);
-          return false;
-        }
-        return true;
-      case DDP:
-      case OPC:
-      default:
-        outputErrors.add(this.protocol.toString() + this.address.toString() + " - data length overflow");
-        return false;
-      }
+      this.collisionMask = new int[(int) Math.ceil(protocol.maxChannels / Integer.SIZE)];
     }
 
     private void segmentCollision(int collisionStart, int collisionEnd) {
-      String err = this.protocol.toString() + this.address.toString() + " - duplicated ";
+      String err = this.protocol.toString() + this.address.toString() + " - collisions in ";
       switch (this.protocol) {
       case ARTNET:
       case SACN:
@@ -108,7 +88,9 @@ public class LXStructureOutput extends LXOutput {
           ((collisionStart == collisionEnd) ? (" channel " + collisionStart) : (" channels " + collisionStart + "-" + collisionEnd));
         break;
       case DDP:
-        err += "data offset " + this.universe;
+        err +=
+          "data offset " + this.universe +
+          ((collisionStart == collisionEnd) ? (" + [" + collisionStart + "]") : (" + [" + collisionStart + "-" + collisionEnd + "]"));
         break;
       case OPC:
         err +=
@@ -122,23 +104,75 @@ public class LXStructureOutput extends LXOutput {
       outputErrors.add(err);
     }
 
-    private void addSegment(LXFixture.Segment segment, int startChannel, int chunkStart, int chunkLength, float fps) {
-      int endChannel = startChannel + segment.numChannels - 1;
-      for (IndexBuffer.Segment existing : this.segments) {
-        // If this one starts before an existing...
-        if (startChannel < existing.startChannel) {
-          // Then check if its end goes over the start, bad news
-          if (endChannel >= existing.startChannel) {
-            segmentCollision(existing.startChannel, LXUtils.min(endChannel, existing.endChannel));
+    private void checkSegmentCollisions(IndexBuffer.Segment segment) {
+      int minCollision = -1, maxCollision = -1;
+      int outputStride = 1;
+      int bytesPerIndex = 1;
+      if (segment.byteEncoder != null) {
+        bytesPerIndex = segment.byteEncoder.getNumBytes();
+        outputStride = segment.outputStride;
+      }
+      if (bytesPerIndex != outputStride) {
+        int indexChannel = segment.startChannel;
+        for (int i = 0; i < segment.indices.length; ++i) {
+          for (int j = 0; j < bytesPerIndex; ++j) {
+            int channel = indexChannel + j;
+            int bucket = channel / Integer.SIZE;
+            int mask = 1 << (channel % Integer.SIZE);
+            if (0 != (this.collisionMask[bucket] & mask)) {
+              if (minCollision < 0) {
+                minCollision = channel;
+              }
+              maxCollision = channel;
+            }
+            this.collisionMask[bucket] |= mask;
           }
-        } else if (startChannel <= existing.endChannel) {
-          // If it's start point is before the end of an exiting one, also bad news
-          segmentCollision(startChannel, LXUtils.min(endChannel, existing.endChannel));
+          indexChannel += outputStride;
+        }
+      } else {
+        final int requiredChannels = segment.getRequiredChannels();
+        for (int channel = segment.startChannel; channel < requiredChannels; ++channel) {
+          int bucket = channel / Integer.SIZE;
+          int mask = 1 << (channel % Integer.SIZE);
+          if (0 != (this.collisionMask[bucket] & mask)) {
+            if (minCollision < 0) {
+              minCollision = channel;
+            }
+            maxCollision = channel;
+          }
+          this.collisionMask[bucket] |= mask;
         }
       }
 
+      if (minCollision >= 0) {
+        segmentCollision(minCollision, maxCollision);
+      }
+    }
+
+    private void addStaticSegment(byte[] staticBytes, int startChannel, float fps) {
+      final IndexBuffer.Segment segment = new IndexBuffer.Segment(staticBytes, startChannel);
+      checkSegmentCollisions(segment);
+      this.segments.add(segment);
+
+      // Reduce packet max FPS to the specified limit, if one exists and a lower limit is not already present
+      if (fps > 0) {
+        if ((this.fps == 0) || (fps < this.fps)) {
+          this.fps = fps;
+        }
+      }
+    }
+
+    private void addDynamicSegment(LXFixture.Segment segment, int startChannel, int chunkStart, int chunkLength, float fps) {
       // Translate the fixture-scoped Segment into global address space
-      this.segments.add(new IndexBuffer.Segment(segment.toIndexBuffer(chunkStart, chunkLength), segment.byteEncoder, startChannel, segment.getBrightness()));
+      final IndexBuffer.Segment indexSegment = new IndexBuffer.Segment(
+        segment.toIndexBuffer(chunkStart, chunkLength),
+        segment.byteEncoder,
+        startChannel,
+        segment.outputStride,
+        segment.getBrightness()
+      );
+      checkSegmentCollisions(indexSegment);
+      this.segments.add(indexSegment);
 
       // Reduce packet max FPS to the specified limit, if one exists and a lower limit is not already present
       if (fps > 0) {
@@ -229,7 +263,7 @@ public class LXStructureOutput extends LXOutput {
   void clear() {
     this.packets.clear();
     for (LXOutput output : this.generatedOutputs) {
-      output.dispose();
+      LX.dispose(output);
     }
     this.generatedOutputs.clear();
     this.outputErrors.clear();
@@ -271,77 +305,177 @@ public class LXStructureOutput extends LXOutput {
 
     // And every output definition for this fixtures
     for (LXFixture.OutputDefinition output : fixture.outputDefinitions) {
-      rebuildFixtureOutput(fixture, output);
+      try {
+        rebuildFixtureOutput(fixture, output);
+      } catch (FixtureOutputException fox) {
+        this.outputErrors.add(fox.getMessage());
+      }
     }
   }
 
-  private void rebuildFixtureOutput(LXFixture fixture, LXFixture.OutputDefinition output) {
-    final LXFixture.Protocol protocol = output.protocol;
-    final LXFixture.Transport transport = output.transport;
-    final InetAddress address = output.address;
-    final int port = output.port;
-    int universe = output.universe;
-    int channel = output.channel;
-    final int priority = output.priority;
-    final boolean sequenceEnabled = output.sequenceEnabled;
-    final KinetDatagram.Version kinetVersion = output.kinetVersion;
-    final float fps = output.fps;
-    boolean overflow = false;
+  private static class FixtureOutputException extends Exception {
+    private static final long serialVersionUID = 1L;
 
-    // Find the starting packet for this output definition
-    Packet packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled, kinetVersion);
-    for (LXFixture.Segment segment : output.segments) {
-      if (overflow) {
-        // Is it okay for this type to overflow?
-        if (!packet.checkOverflow()) {
-          return;
-        }
-        // Roll over to next universe and packet
-        overflow = false;
-        ++universe;
-        channel = 0;
-        packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled, kinetVersion);
+    public FixtureOutputException(String str) {
+      super(str);
+    }
+  }
+
+  private class FixtureOutputState {
+
+    private final LXFixture.OutputDefinition output;
+
+    private int universe;
+    private int channel;
+
+    private Packet packet;
+
+    private FixtureOutputState(LXFixture.OutputDefinition output) throws FixtureOutputException {
+      this.output = output;
+      this.universe = output.universe;
+      this.channel = output.channel;
+      if (this.channel >= output.protocol.maxChannels) {
+        throw new FixtureOutputException(output.protocol.toString() + output.address.toString() + " - invalid channel " + this.channel + " > " + output.protocol.maxChannels);
       }
+      this.packet = _findPacket();
+    }
 
-      int chunkStart = 0;
-      int chunkLength = segment.length;
-      int availableBytes = protocol.maxChannels - channel;
-      if (availableBytes <= 0) {
-        outputErrors.add(protocol.toString() + address.toString() + " - invalid channel " + channel + " > " + protocol.maxChannels);
+    private int availableBytes() {
+      return output.protocol.maxChannels - this.channel;
+    }
+
+    private void checkUniverseOverflow(int overflowChannel, boolean force) throws FixtureOutputException {
+      if (force || (this.channel >= output.protocol.maxChannels)) {
+        // Does this output protocol support universes? And/or are we at the last one?
+        switch (output.protocol) {
+        case ARTNET:
+        case SACN:
+          if (this.universe >= ArtNetDatagram.MAX_UNIVERSE) {
+            throw new FixtureOutputException(output.protocol.toString() + output.address.toString() + " - overflow univ " + this.universe);
+          }
+          break;
+        case KINET:
+          if (this.universe >= KinetDatagram.MAX_KINET_PORT) {
+            throw new FixtureOutputException(output.protocol.toString() + output.address.toString() + " - overflow port" + output.universe);
+          }
+          break;
+        case DDP:
+        case OPC:
+        default:
+          throw new FixtureOutputException(output.protocol.toString() + output.address.toString() + " - data length overflow");
+        }
+
+        // All good made it thru, let's bump up to the next universe
+        ++this.universe;
+        this.channel = overflowChannel;
+        this.packet = _findPacket();
+      }
+    }
+
+    private void addStaticBytes(byte[] staticBytes) throws FixtureOutputException {
+      if (staticBytes == null || staticBytes.length == 0) {
         return;
       }
 
-      // Is there not enough available space? If so, chunk the packet
-      while (availableBytes < chunkLength * segment.byteEncoder.getNumBytes()) {
-        // How many indices can fit into the remaining available bytes?
-        int chunkLimit = availableBytes / segment.byteEncoder.getNumBytes();
+      checkUniverseOverflow(0, false);
+
+      int offset = 0;
+      int remaining = staticBytes.length;
+      int available = availableBytes();
+      while (available < remaining) {
+        _addStaticSegment(Arrays.copyOfRange(staticBytes, offset, offset + available));
+        offset += available;
+        remaining -= available;
+        checkUniverseOverflow(0, false);
+        available = availableBytes();
+      }
+      _addStaticSegment(Arrays.copyOfRange(staticBytes, offset, offset + remaining));
+    }
+
+    private void _addStaticSegment(byte[] staticBytes) {
+      this.packet.addStaticSegment(staticBytes, this.channel, this.output.fps);
+      this.channel += staticBytes.length;
+    }
+
+    private void addDynamicSegment(LXFixture.Segment segment) throws FixtureOutputException {
+      if (segment.length == 0) {
+        return;
+      }
+
+      checkUniverseOverflow(0, false);
+
+      int availableBytes = availableBytes();
+
+      int chunkStart = 0;
+      int chunkLength = segment.length;
+
+      // Is there not enough available space for the entire segment? If so, chunk the packet
+      while (availableBytes < segment.getRequiredBytes(chunkLength)) {
+        // How many indices can fit into the remaining available bytes? Add padding in the
+        // case that stride exceeds bytes, since we don't necessarily need to fit those
+        // padding bytes into this universe
+        int padding = segment.outputStride - segment.byteEncoder.getNumBytes();
+        int chunkLimit = (availableBytes + padding) / segment.outputStride;
+        int overflowChannel = 0;
 
         // It could be 0, e.g. channel = 510 byteOrder RGB, can't fit an RGB pixel so
         // we must overflow...
         if (chunkLimit > 0) {
-          packet.addSegment(segment, channel, chunkStart, chunkLimit, fps);
+          _addDynamicSegment(segment, chunkStart, chunkLimit);
+          // If the output stride walks us *into* the next universe, we
+          // preserve that spacing (e.g. sending a white byte at
+          // channel offset 3 with stride 4, the 2nd universe it lands in
+          // should also start on channel 3)
+          if (this.channel > output.protocol.maxChannels) {
+            overflowChannel = this.channel % output.protocol.maxChannels;
+          }
           chunkStart += chunkLimit;
           chunkLength -= chunkLimit;
         }
 
-        // Is it okay for this type to overflow?
-        if (!packet.checkOverflow()) {
-          return;
-        }
-
-        // Roll over to the next universe and packet
-        ++universe;
-        channel = 0;
-        availableBytes = protocol.maxChannels;
-        packet = findPacket(protocol, transport, address, port, universe, priority, sequenceEnabled, kinetVersion);
+        checkUniverseOverflow(overflowChannel, true);
+        availableBytes = availableBytes();
       }
 
       // Add the final chunk (the whole segment in the common case)
-      packet.addSegment(segment, channel, chunkStart, chunkLength, fps);
-      channel += chunkLength * segment.byteEncoder.getNumBytes();
+      _addDynamicSegment(segment, chunkStart, chunkLength);
+    }
 
-      // Set flag for whether we need to overflow on the next segment
-      overflow = channel >= protocol.maxChannels;
+    private void _addDynamicSegment(LXFixture.Segment segment, int chunkStart, int chunkLength) {
+      this.packet.addDynamicSegment(segment, this.channel, chunkStart, chunkLength, this.output.fps);
+      this.channel += chunkLength * segment.outputStride;
+    }
+
+    private Packet _findPacket() {
+      return findPacket(
+        output.protocol,
+        output.transport,
+        output.address,
+        output.port,
+        this.universe,
+        output.priority,
+        output.sequenceEnabled,
+        output.kinetVersion
+      );
+    }
+
+  }
+
+  private void rebuildFixtureOutput(LXFixture fixture, LXFixture.OutputDefinition output) throws FixtureOutputException {
+    if (output.segments.length == 0) {
+      // Don't waste time here...
+      return;
+    }
+
+    // State object for iterating through packets which may overflow from
+    // one universe to the next
+    final FixtureOutputState state = new FixtureOutputState(output);
+
+    // Iterate over all segments and generate output components
+    for (LXFixture.Segment segment : output.segments) {
+      state.addStaticBytes(segment.headerBytes);
+      state.addDynamicSegment(segment);
+      state.addStaticBytes(segment.footerBytes);
     }
   }
 

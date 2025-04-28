@@ -94,4 +94,8 @@ public class BooleanParameter extends LXListenableNormalizedParameter {
     return this;
   }
 
+  public BooleanParameter getTriggerSource() {
+    return this;
+  }
+
 }

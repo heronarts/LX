@@ -40,8 +40,13 @@ public class StringParameter extends LXListenableParameter {
     return this;
   }
 
+  public StringParameter setMappable(boolean mappable) {
+    super.setMappable(mappable);
+    return this;
+  }
+
   @Override
-  public LXParameter reset() {
+  public StringParameter reset() {
     this.string = this.defaultString;
     super.reset();
     return this;
@@ -49,7 +54,12 @@ public class StringParameter extends LXListenableParameter {
 
   @Override
   public LXParameter reset(double value) {
-    throw new UnsupportedOperationException("StringParamater cannot be reset to a numeric value");
+    throw new UnsupportedOperationException("StringParameter cannot be reset to a numeric value");
+  }
+
+  public StringParameter reset(String string) {
+    this.defaultString = string;
+    return setValue(this.defaultString);
   }
 
   public StringParameter setValue(String string) {

@@ -21,9 +21,9 @@ package heronarts.lx.midi;
 import javax.sound.midi.InvalidMidiDataException;
 import javax.sound.midi.ShortMessage;
 
-public abstract class LXShortMessage extends ShortMessage {
+public abstract class LXShortMessage extends ShortMessage implements LXMidiMessage {
 
-  private LXMidiInput input = null;
+  private LXMidiSource source = LXMidiSource.UNKNOWN;
 
   public static LXShortMessage fromShortMessage(ShortMessage message) {
     switch (message.getCommand()) {
@@ -62,16 +62,24 @@ public abstract class LXShortMessage extends ShortMessage {
     }
   }
 
-  LXShortMessage setInput(LXMidiInput input) {
-    this.input = input;
+  LXShortMessage(byte[] data) {
+    super(data);
+  }
+
+  public LXShortMessage setSource(LXMidiSource source) {
+    this.source = source;
     return this;
   }
 
-  LXMidiInput getInput() {
-    return this.input;
+  public LXMidiSource getSource() {
+    return this.source;
   }
 
-  public void dispatch(LXMidiListener listener) {
+  public final void dispatch(LXMidiListener listener) {
+    if (this instanceof MidiPanic) {
+      listener.midiPanicReceived();
+      return;
+    }
     switch (getCommand()) {
     case ShortMessage.NOTE_ON:
       MidiNoteOn note = (MidiNoteOn) this;

@@ -28,6 +28,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXLayer;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.color.LXColor;
@@ -42,6 +43,7 @@ import heronarts.lx.transform.LXParameterizedMatrix;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.FORM)
+@LXComponent.Description("Renders multiple overlayed planes through the 3D space")
 public class PlanesPattern extends LXPattern {
 
   public final static int MAX_PLANES = 8;
@@ -222,6 +224,7 @@ public class PlanesPattern extends LXPattern {
     protected Plane(LX lx, int index) {
       super(lx);
       this.index = index;
+
       addParameter("level", this.level);
       addParameter("position", this.position);
       addParameter("width", this.width);
@@ -246,6 +249,11 @@ public class PlanesPattern extends LXPattern {
       addParameter("planeD", this.planeD);
 
       this.active.setValue(index == 0);
+    }
+
+    @Override
+    public String getLabel() {
+      return "P" + (index+1);
     }
 
     @Override

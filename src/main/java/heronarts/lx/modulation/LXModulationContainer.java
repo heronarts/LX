@@ -18,6 +18,24 @@
 
 package heronarts.lx.modulation;
 
+import heronarts.lx.parameter.BooleanParameter;
+
+/**
+ * Interface for any component that can own modulators + mappings
+ */
 public interface LXModulationContainer {
+  /**
+   * Get the modulation engine implementation for this component
+   *
+   * @return Modulation engine
+   */
   public LXModulationEngine getModulationEngine();
+
+  /**
+   * Return the parameter used to toggle whether the modulation engine
+   * is expanded in the UI.
+   *
+   * @return Parameter that toggles modulation visibility, or null
+   */
+  public default BooleanParameter getModulationExpanded() { return null; }
 }

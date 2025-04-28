@@ -25,16 +25,33 @@ import java.util.List;
 import java.util.Map;
 
 import heronarts.lx.LX;
+import heronarts.lx.structure.view.LXViewDefinition;
 
 public class LXView extends LXModel {
 
   public enum Normalization {
-    RELATIVE("Normalize to View"),
-    ABSOLUTE("Preserve Absolute");
+    RELATIVE("Constrain to view bounds"),
+    ABSOLUTE("Preserve absolute bounds");
 
     public final String description;
 
     private Normalization(String description) {
+      this.description = description;
+    }
+
+    @Override
+    public String toString() {
+      return this.description;
+    }
+  }
+
+  public enum Orientation {
+    GLOBAL("In absolute coordinate space"),
+    GROUP("In view group coordinate space");
+
+    public final String description;
+
+    private Orientation(String description) {
       this.description = description;
     }
 
@@ -65,10 +82,27 @@ public class LXView extends LXModel {
    * @param model Model Parent model to create view of
    * @param viewSelector View selection string
    * @param normalization What normalization mode to use for this view
+   * @param orientation Which orientation mode to use for this view
    * @return A view of the model that selects the elements in the selector string
    */
-  public static LXView create(final LXModel model, String viewSelector, Normalization normalization) {
+  public static LXView create(final LXModel model, String viewSelector, Normalization normalization, Orientation orientation) {
+    return create(model, viewSelector, normalization, orientation, null);
+  }
+
+  /**
+   * Constructs a view of the given model object
+   *
+   * @param model Model Parent model to create view of
+   * @param viewSelector View selection string
+   * @param normalization What normalization mode to use for this view
+   * @param orientation Which orientation mode to use for this view
+   * @param viewDefinition View definition to pass feedback to
+   * @return A view of the model that selects the elements in the selector string
+   */
+  public static LXView create(final LXModel model, String viewSelector, Normalization normalization, Orientation orientation, LXViewDefinition viewDefinition) {
     ParseState state = new ParseState(model);
+
+    boolean invalidOrientation = false;
 
     // Split at top-level by groups, separated by ;
     for (String groupSelector : viewSelector.trim().split(GROUP_SEPARATOR)) {
@@ -85,9 +119,11 @@ public class LXView extends LXModel {
     final LXView[] views = new LXView[state.groups.size()];
     final List<LXPoint> allPoints = new ArrayList<LXPoint>();
     int g = 0;
+    int numFixtures = 0;
     for (List<LXModel> group : state.groups) {
       List<LXPoint> groupPoints = new ArrayList<LXPoint>();
       LXModel[] groupChildren = new LXModel[group.size()];
+      numFixtures += group.size();
       int c = 0;
       for (LXModel sub : group) {
         // Replicate all the points from each group submodel
@@ -103,12 +139,25 @@ public class LXView extends LXModel {
         // Clone the submodel of this group
         groupChildren[c++] = cloneModel(clonedPoints, sub);
       }
-      views[g++] = new LXView(model, normalization, clonedPoints, groupPoints, groupChildren);
+
+      // Check for valid orientation settings
+      if ((normalization == Normalization.RELATIVE) &&
+          (orientation == Orientation.GROUP) &&
+          (groupChildren.length != 1)) {
+        invalidOrientation = true;
+      }
+      views[g++] = new LXView(model, normalization, orientation, clonedPoints, groupPoints, groupChildren, viewSelector);
+    }
+
+    if (viewDefinition != null) {
+      viewDefinition.numGroups.setValue(views.length);
+      viewDefinition.numFixtures.setValue(numFixtures);
+      viewDefinition.invalidOrientation.setValue(invalidOrientation);
     }
 
     if (views.length == 0) {
       // Empty view!
-      return new LXView(model, normalization, clonedPoints, new ArrayList<LXPoint>(), new LXModel[0]);
+      return new Empty(model, clonedPoints, allPoints, views, viewSelector);
     } else if (views.length == 1) {
       // Just a single view, that'll do it!
       return views[0];
@@ -116,7 +165,7 @@ public class LXView extends LXModel {
       // Return a container-view with the group views as children, holding all of the points. We set
       // the normalization mode to absolute here no matter what, as this container view shouldn't do any
       // re-normalization
-      return new LXView(model, Normalization.ABSOLUTE, clonedPoints, allPoints, views);
+      return new Container(model, clonedPoints, allPoints, views, viewSelector);
     }
 
   }
@@ -399,7 +448,9 @@ public class LXView extends LXModel {
       children[i] = cloneModel(clonedPoints, model.children[i]);
     }
 
-    return new LXModel(points, children, model.getNormalizationBounds(), model.metaData, model.tags);
+    LXModel clone = new LXModel(points, children, model.getNormalizationBounds(), model.metaData, model.tags, model.meshes);
+    clone.transform.set(model.transform);
+    return clone;
   }
 
   private final LXModel model;
@@ -408,25 +459,75 @@ public class LXView extends LXModel {
 
   final Map<Integer, LXPoint> clonedPoints;
 
+  final String allTags(List<String> tags) {
+    String tag = "";
+    for (String t : tags) {
+      tag += t + " ";
+    }
+    return tag;
+  }
+
+  public static class Empty extends LXView {
+    private Empty(LXModel model, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXView[] views, String viewSelector) {
+      super(model, Normalization.ABSOLUTE, Orientation.GLOBAL, clonedPoints, points, views, viewSelector);
+    }
+  }
+
+  public static class Container extends LXView {
+    private Container(LXModel model, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXView[] views, String viewSelector) {
+      super(model, Normalization.ABSOLUTE, Orientation.GLOBAL, false, clonedPoints, points, views, viewSelector);
+    }
+  }
+
   /**
    * Constructs a view of the given model
    *
    * @param model Parent model that view is of
    * @param normalization Normalization mode
+   * @param orientation Orientation mode
    * @param clonedPoints Map of points cloned from parent model into this view
    * @param points Points in this view
    * @param children Child models
+   * @param viewSelector View selector
    */
-  private LXView(LXModel model, Normalization normalization, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children) {
-    super(points, children, (normalization == Normalization.ABSOLUTE) ? model.getNormalizationBounds() : null, LXModel.Tag.VIEW);
+  private LXView(LXModel model, Normalization normalization, Orientation orientation, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children, String viewSelector) {
+    this(model, normalization, orientation, true, clonedPoints, points, children, viewSelector);
+  }
+
+  /**
+   * Constructs a view of the given model
+   *
+   * @param model Parent model that view is of
+   * @param normalization Normalization mode
+   * @param orientation Orientation mode
+   * @param setChildBounds Whether to apply normalization bounds to children
+   * @param clonedPoints Map of points cloned from parent model into this view
+   * @param points Points in this view
+   * @param children Child models
+   * @param viewSelector View selector
+   */
+  private LXView(LXModel model, Normalization normalization, Orientation orientation, boolean setChildBounds, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children, String viewSelector) {
+    super(points, children, (normalization == Normalization.ABSOLUTE) ? model.getNormalizationBounds() : null, setChildBounds, LXModel.Tag.VIEW);
     this.model = model;
     this.normalization = normalization;
-
     this.clonedPoints = java.util.Collections.unmodifiableMap(clonedPoints);
     model.derivedViews.add(this);
+
     if (normalization == Normalization.RELATIVE) {
+      if (orientation == Orientation.GROUP) {
+        if (children.length == 1) {
+          setNormalizationOrientation(children[0]);
+        } else {
+          LX.error("LXView.Orientation.SELF requires groups with a single fixture: \"" + viewSelector + "\" matches " + children.length + " fixtures");
+        }
+      }
       normalizePoints();
     }
+  }
+
+  @Override
+  public LXModel getMainRoot() {
+    return this.model.getMainRoot();
   }
 
   @Override

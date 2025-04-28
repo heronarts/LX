@@ -88,12 +88,12 @@ public class GridFixture extends LXBasicFixture {
   }
 
   public final DiscreteParameter numRows =
-    new DiscreteParameter("Rows", 10, 1, 257)
+    new DiscreteParameter("Rows", 10, 1, 1025)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of rows in the grid");
 
   public final DiscreteParameter numColumns =
-    new DiscreteParameter("Columns", 10, 1, 257)
+    new DiscreteParameter("Columns", 10, 1, 1025)
     .setUnits(LXParameter.Units.INTEGER)
     .setDescription("Number of columns in the grid");
 
@@ -164,7 +164,9 @@ public class GridFixture extends LXBasicFixture {
 
     for (int r = 0; r < numRows; ++r) {
       metaData.put("rowIndex", String.valueOf(r));
-      submodels[i++] = new Submodel(r * numColumns, numColumns, 1, metaData, rowTags);
+      submodels[i] = new Submodel(r * numColumns, numColumns, 1, metaData, rowTags);
+      submodels[i].transform.translate(0, r * this.rowSpacing.getValuef(), 0);
+      ++i;
     }
 
     metaData.clear();
@@ -172,7 +174,9 @@ public class GridFixture extends LXBasicFixture {
     metaData.put("spacing", String.valueOf(this.rowSpacing.getValue()));
     for (int c = 0; c < numColumns; ++c) {
       metaData.put("columnIndex", String.valueOf(c));
-      submodels[i++] = new Submodel(c, numRows, numColumns, metaData, columnTags);
+      submodels[i] = new Submodel(c, numRows, numColumns, metaData, columnTags);
+      submodels[i].transform.translate(c * this.columnSpacing.getValuef(), 0, 0);
+      ++i;
     }
 
     return submodels;

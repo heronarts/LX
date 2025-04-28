@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -47,6 +46,7 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.ObjectParameter;
+import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -54,7 +54,7 @@ import heronarts.lx.utils.LXUtils;
  * A pattern is the core object that the animation engine uses to generate
  * colors for all the points.
  */
-public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent {
+public abstract class LXPattern extends LXDeviceComponent implements LXComponent.Renamable, LXOscComponent, LXEffect.Container {
 
   /**
    * Placeholder pattern for when a class is missing
@@ -150,8 +150,13 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     .setDescription("Whether the pattern is eligible for playlist cycling or compositing");
 
   public final TriggerParameter recall =
-    new TriggerParameter("Recall", () -> { getChannel().goPattern(this); })
+    new TriggerParameter("Recall", () -> getChannel().goPattern(this))
     .setDescription("Recalls this pattern to become active on the channel");
+
+  public final QuantizedTriggerParameter launch =
+    new QuantizedTriggerParameter.Launch(lx, "Launch", this.recall::trigger)
+    .onSchedule(this::_launchScheduled)
+    .setDescription("Launches this pattern to become active on the channel");
 
   public final ObjectParameter<LXBlend> compositeMode =
     new ObjectParameter<LXBlend>("Composite Blend", new LXBlend[1])
@@ -178,11 +183,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
     final LXChannel channel = getChannel();
-    if ((channel != null) && (channel.compositeMode.getEnum() == LXChannel.CompositeMode.BLEND)) {
-      if (isEnabled) {
-        channel.onPatternEnabled(this);
-      }
-      if (!channel.compositeDampingEnabled.isOn()) {
+    if (channel != null) {
+      channel.onPatternEnabled(this);
+      if (channel.isComposite() && !channel.compositeDampingEnabled.isOn()) {
         if (isEnabled) {
           _activate();
         } else {
@@ -224,6 +227,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     addParameter("enabled", this.enabled);
 
     addParameter("recall", this.recall);
+    addParameter("launch", this.launch);
     addParameter("compositeMode", this.compositeMode);
     addParameter("compositeLevel", this.compositeLevel);
     addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
@@ -239,6 +243,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   @Override
   public boolean isSnapshotControl(LXParameter parameter) {
     return !(
+      parameter == this.launch ||
       parameter == this.recall ||
       parameter == this.enabled ||
       parameter == this.hasCustomCycleTime ||
@@ -250,6 +255,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   public boolean isHiddenControl(LXParameter parameter) {
     return
       parameter == this.recall ||
+      parameter == this.launch ||
       parameter == this.compositeMode ||
       parameter == this.compositeLevel ||
       parameter == this.enabled ||
@@ -263,13 +269,17 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return LXChannel.PATH_PATTERN + "/" + (this.index + 1);
   }
 
-  public void updateCompositeBlendOptions() {
+  private void disposeCompositeBlendOptions() {
     for (LXBlend blend : this.compositeMode.getObjects()) {
       if (blend != null) {
-        blend.dispose();
+        LX.dispose(blend);
       }
     }
-    this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends());
+  }
+
+  public void updateCompositeBlendOptions() {
+    disposeCompositeBlendOptions();
+    this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends(this));
     this.activeCompositeBlend = this.compositeMode.getObject();
     this.activeCompositeBlend.onActive();
   }
@@ -280,6 +290,14 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   public int getIndex() {
     return this.index;
+  }
+
+  private void _launchScheduled() {
+    for (LXPattern pattern : getChannel().patterns) {
+      if (pattern != this) {
+        pattern.launch.cancel();
+      }
+    }
   }
 
   /**
@@ -424,10 +442,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this.compositeDampingLevel;
   }
 
-  public final LXPattern addEffect(LXEffect effect) {
-    return addEffect(effect, -1);
-  }
-
+  @Override
   public final LXPattern addEffect(LXEffect effect, int index) {
     if (index > this.mutableEffects.size()) {
       throw new IllegalArgumentException("Illegal effect index: " + index);
@@ -444,6 +459,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this;
   }
 
+  @Override
   public final LXPattern removeEffect(LXEffect effect) {
     int index = this.mutableEffects.indexOf(effect);
     if (index >= 0) {
@@ -456,20 +472,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       for (Listener listener : this.listeners) {
         listener.effectRemoved(this, effect);
       }
-      effect.dispose();
+      LX.dispose(effect);
     }
-    return this;
-  }
-
-  public LXPattern reloadEffect(LXEffect effect) {
-    if (!this.effects.contains(effect)) {
-      throw new IllegalStateException("Cannot reload effect not on a pattern");
-    }
-    int index = effect.getIndex();
-    JsonObject effectObj = new JsonObject();
-    effect.save(getLX(), effectObj);
-    removeEffect(effect);
-    loadEffect(effectObj, index);
     return this;
   }
 
@@ -480,6 +484,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     }
   }
 
+  @Override
   public LXPattern moveEffect(LXEffect effect, int index) {
     if (index < 0 || index >= this.mutableEffects.size()) {
       throw new IllegalArgumentException("Cannot move effect to invalid index: " + index);
@@ -496,21 +501,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this;
   }
 
+  @Override
   public final List<LXEffect> getEffects() {
     return this.effects;
-  }
-
-  public LXEffect getEffect(int i) {
-    return this.effects.get(i);
-  }
-
-  public LXEffect getEffect(String label) {
-    for (LXEffect effect : this.effects) {
-      if (effect.getLabel().equals(label)) {
-        return effect;
-      }
-    }
-    return null;
   }
 
   public static final String PATH_EFFECT = "effect";
@@ -544,7 +537,10 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.runMs += deltaMs;
     this.run(deltaMs);
     this.profiler.runNanos = System.nanoTime() - runStart;
+  }
 
+  @Override
+  protected final void applyEffects(double deltaMs) {
     long effectStart = System.nanoTime();
     if (!this.mutableEffects.isEmpty()) {
       for (LXEffect effect : this.mutableEffects) {
@@ -657,31 +653,14 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
     // Add the effects
     if (obj.has(KEY_EFFECTS)) {
-      JsonArray effectsArray = obj.getAsJsonArray(KEY_EFFECTS);
-      for (JsonElement effectElement : effectsArray) {
-        JsonObject effectObj = (JsonObject) effectElement;
-        loadEffect(effectObj, -1);
+      for (JsonElement effectElement : obj.getAsJsonArray(KEY_EFFECTS)) {
+        loadEffect(this.lx, (JsonObject) effectElement, -1);
       }
     }
 
     super.load(lx, obj);
 
     this.compositeDampingLevel = this.enabled.isOn() ? 1 : 0;
-  }
-
-  private LXEffect loadEffect(JsonObject effectObj, int index) {
-    String effectClass = effectObj.get("class").getAsString();
-    LXEffect effect;
-    try {
-      effect = this.lx.instantiateEffect(effectClass);
-    } catch (LX.InstantiationException x) {
-      LX.error("Using placeholder class for missing effect: " + effectClass);
-      effect = new LXEffect.Placeholder(this.lx, x);
-      this.lx.pushError(x, effectClass + " could not be loaded. " + x.getMessage());
-    }
-    effect.load(this.lx, effectObj);
-    addEffect(effect, index);
-    return effect;
   }
 
   @Override
@@ -691,6 +670,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.enabled.removeListener(this.onEnabled);
     this.compositeMode.removeListener(this.onCompositeMode);
     super.dispose();
+    disposeCompositeBlendOptions();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXPattern.Listener: " + listener));
+    this.listeners.clear();
   }
 
 }

@@ -70,7 +70,7 @@ public class LXDmxEngine extends LXComponent {
     .setMappable(false)
     .setUnits(LXParameter.Units.INTEGER);
 
-  public final TriggerParameter artNetActivity = (TriggerParameter)
+  public final TriggerParameter artNetActivity =
     new TriggerParameter("Art-Net Activity")
     .setMappable(false)
     .setDescription("Triggers when art-net input is received");

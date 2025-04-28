@@ -64,7 +64,7 @@ public class LXPoint {
   public float r;
 
   /**
-   * Radius of this point from the center of the global model
+   * Radius of this point from the center of the reference model
    */
   public float rc;
 
@@ -364,10 +364,29 @@ public class LXPoint {
    * @param bounds Model to normalize points relative to
    */
   void normalize(LXNormalizationBounds bounds, LXModel model) {
-    this.xn = (bounds.xRange == 0) ? .5f : (this.x - bounds.xMin) / bounds.xRange;
-    this.yn = (bounds.yRange == 0) ? .5f : (this.y - bounds.yMin) / bounds.yRange;
-    this.zn = (bounds.zRange == 0) ? .5f : (this.z - bounds.zMin) / bounds.zRange;
-    this.rn = (model.rMax == 0) ? 0f : this.r / model.rMax;
-    this.rc = LXUtils.distf(this.x, this.y, this.z, bounds.cx, bounds.cy, bounds.cz);
+    final float px = bounds.px(this);
+    final float py = bounds.py(this);
+    final float pz = bounds.pz(this);
+
+    this.xn = (bounds.xRange == 0) ? .5f : (px - bounds.xMin) / bounds.xRange;
+    this.yn = (bounds.yRange == 0) ? .5f : (py - bounds.yMin) / bounds.yRange;
+    this.zn = (bounds.zRange == 0) ? .5f : (pz - bounds.zMin) / bounds.zRange;
+    this.rn = (model.rMax == 0) ? 0f : (float) Math.sqrt(px*px + py*py + pz*pz) / model.rMax;
+    this.rc = LXUtils.distf(px, py, pz, bounds.cx, bounds.cy, bounds.cz);
+  }
+
+  @Deprecated
+  public float xn(LXNormalizationBounds bounds) {
+    return (bounds.xRange == 0) ? .5f : (bounds.px(this) - bounds.xMin) / bounds.xRange;
+  }
+
+  @Deprecated
+  public float yn(LXNormalizationBounds bounds) {
+    return (bounds.yRange == 0) ? .5f : (bounds.py(this) - bounds.yMin) / bounds.yRange;
+  }
+
+  @Deprecated
+  public float zn(LXNormalizationBounds bounds) {
+    return (bounds.zRange == 0) ? .5f : (bounds.pz(this) - bounds.zMin) / bounds.zRange;
   }
 }

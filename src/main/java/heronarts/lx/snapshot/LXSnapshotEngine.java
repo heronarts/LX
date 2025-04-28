@@ -14,7 +14,7 @@
  * PURPOSE, WITH RESPECT TO THE SOFTWARE.
  *
  * @author Mark C. Slee <mark@heronarts.com>
- * @author Justin K. Blecher <jkbelcher@gmail.com>
+ * @author Justin K. Belcher <jkbelcher@gmail.com>
  */
 
 package heronarts.lx.snapshot;
@@ -374,7 +374,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       this.autoCycleCursor.decrement();
     }
     this.autoCycleCursor.setRange(NO_SNAPSHOT_INDEX, this.snapshots.size());
-    snapshot.dispose();
+    LX.dispose(snapshot);
     return this;
   }
 
@@ -737,6 +737,13 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
         view.getSnapshot().removeView(view);
       }
     }
+  }
+
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXSnapshotEngine.Listener: " + listener));
+    this.listeners.clear();
   }
 
   private static final String KEY_SNAPSHOTS = "snapshots";

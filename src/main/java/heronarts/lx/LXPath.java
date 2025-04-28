@@ -112,6 +112,8 @@ public interface LXPath {
     return getCanonicalLabel(null);
   }
 
+  static final String DEFAULT_SEPARATOR = " \u2022 ";
+
   /**
    * Returns the canonical user-facing label of this component. The label
    * is different from the path, it's a human-readable name that takes
@@ -121,10 +123,48 @@ public interface LXPath {
    * @return Canonical label for this component
    */
   public default String getCanonicalLabel(LXComponent root) {
+    return getCanonicalLabel(root, DEFAULT_SEPARATOR);
+  }
+
+  public default String getCanonicalLabel(LXComponent root, String separator) {
     String label = getLabel();
     LXComponent parent = getParent();
     while ((parent != null) && (parent != root) && !(parent instanceof LXEngine)) {
-      label = parent.getLabel() + " \u2022 " + label;
+      label = parent.getLabel() + separator + label;
+      parent = parent.getParent();
+    }
+    return label;
+  }
+
+  /**
+   * Returns the canonical user-facing label of this component. The label
+   * is different from the path, it's a human-readable name that takes
+   * into account how the user may have re-labeled components.
+   *
+   * @param root Root object to get label relative to
+   * @param limit Maximum number of label components to include
+   * @return Canonical label for this component
+   */
+  public default String getCanonicalLabel(LXComponent root, int limit) {
+    return getCanonicalLabel(root, DEFAULT_SEPARATOR, limit);
+  }
+
+  /**
+   * Returns the canonical user-facing label of this component. The label
+   * is different from the path, it's a human-readable name that takes
+   * into account how the user may have re-labeled components.
+   *
+   * @param root Root object to get label relative to
+   * @param separator Separator
+   * @param limit Maximum number of label components to include
+   * @return Canonical label for this component
+   */
+  public default String getCanonicalLabel(LXComponent root, String separator, int limit) {
+    String label = getLabel();
+    LXComponent parent = getParent();
+    int count = 1;
+    while ((parent != null) && (parent != root) && !(parent instanceof LXEngine) && (count++ < limit)) {
+      label = parent.getLabel() + separator + label;
       parent = parent.getParent();
     }
     return label;

@@ -442,7 +442,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       for (Listener l : this.listeners) {
         l.fixtureRemoved(fixture);
       }
-      fixture.dispose();
+      LX.dispose(fixture);
     }
     fixtureRemoved();
     return this;
@@ -463,7 +463,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       for (Listener l : this.listeners) {
         l.fixtureRemoved(fixture);
       }
-      fixture.dispose();
+      LX.dispose(fixture);
     }
     fixtureRemoved();
     return this;
@@ -480,7 +480,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     for (Listener l : this.listeners) {
       l.fixtureRemoved(fixture);
     }
-    fixture.dispose();
+    LX.dispose(fixture);
     fixtureRemoved();
     return this;
   }
@@ -495,7 +495,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       for (Listener l : this.listeners) {
         l.fixtureRemoved(fixture);
       }
-      fixture.dispose();
+      LX.dispose(fixture);
     }
 
     fixtureRemoved();
@@ -806,8 +806,10 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       if (this.syncModelFile.isOn()) {
         if (loadModelFile == null) {
           LX.error("Project specifies external model sync, but no file name was found");
+          this.syncModelFile.setValue(false);
         } else if (!loadModelFile.exists()) {
           LX.error("Referenced external model file does not exist: " + loadModelFile.toURI());
+          this.syncModelFile.setValue(false);
         } else {
           importModel(loadModelFile, true);
         }
@@ -964,5 +966,12 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       LX.error(iox, "Could not import views from file: " + file.toString());
     }
     return null;
+  }
+
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXStructure.Listener: " + listener));
+    this.listeners.clear();
   }
 }

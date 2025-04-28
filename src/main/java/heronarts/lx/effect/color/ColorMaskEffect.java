@@ -20,6 +20,7 @@ package heronarts.lx.effect.color;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXComponentName;
 import heronarts.lx.blend.LXBlend;
 import heronarts.lx.color.LXColor;
@@ -31,9 +32,10 @@ import heronarts.lx.parameter.EnumParameter;
 
 @LXCategory(LXCategory.COLOR)
 @LXComponentName("Color Mask")
+@LXComponent.Description("Masks existing content against a distinct color")
 public class ColorMaskEffect extends LXEffect {
 
-  public enum Mode {
+  public static enum Mode {
     MULTIPLY("Multiply", LXColor::multiply),
     ADD("Add", LXColor::add),
     SUBTRACT("Subtract", LXColor::subtract),

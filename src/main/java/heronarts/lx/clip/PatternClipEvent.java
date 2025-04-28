@@ -3,23 +3,44 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.pattern.LXPattern;
 
-public class PatternClipEvent extends LXClipEvent {
+public class PatternClipEvent extends LXClipEvent<PatternClipEvent> {
 
-  public final LXPattern pattern;
-  public final LXChannel channel;
+  private final PatternClipLane lane;
+  private LXPattern pattern;
 
-  PatternClipEvent(LXClipLane lane, LXChannel channel, LXPattern pattern) {
+  public PatternClipEvent(PatternClipLane lane, Cursor cursor, int patternIndex) {
+    this(lane, lane.channel.patterns.get(patternIndex));
+    setCursor(cursor);
+  }
+
+  PatternClipEvent(PatternClipLane lane, LXPattern pattern) {
     super(lane, pattern);
+    this.lane = lane;
     this.pattern = pattern;
-    this.channel = channel;
+  }
+
+  PatternClipEvent(PatternClipLane lane, Cursor cursor, LXPattern pattern) {
+    this(lane, pattern);
+    setCursor(cursor);
+  }
+
+  public LXPattern getPattern() {
+    return this.pattern;
+  }
+
+  public PatternClipEvent setPattern(LXPattern pattern) {
+    if (this.pattern != pattern) {
+      this.pattern = pattern;
+      this.lane.onChange.bang();
+    }
+    return this;
   }
 
   @Override
   public void execute() {
-    this.channel.goPattern(this.pattern);
+    this.lane.playPatternEvent(this);
   }
 
   protected static final String KEY_PATTERN_INDEX = "patternIndex";

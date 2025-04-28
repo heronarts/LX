@@ -92,6 +92,10 @@ public class LXUtils {
     return value < min ? min : (value > max ? max : value);
   }
 
+  public static long clampl(long value, long min, long max) {
+    return value < min ? min : (value > max ? max : value);
+  }
+
   public static double constrain(double value, double min, double max) {
     return value < min ? min : (value > max ? max : value);
   }
@@ -101,6 +105,10 @@ public class LXUtils {
   }
 
   public static int constrain(int value, int min, int max) {
+    return value < min ? min : (value > max ? max : value);
+  }
+
+  public static long constrainl(long value, long min, long max) {
     return value < min ? min : (value > max ? max : value);
   }
 
@@ -194,6 +202,42 @@ public class LXUtils {
   }
 
   /**
+   * Returns true if value is between [min, max] inclusive
+   *
+   * @param val Value
+   * @param min Min value
+   * @param max Max value
+   * @return True if contained in range
+   */
+  public static boolean inRange(int val, int min, int max) {
+    return (val >= min) && (val <= max);
+  }
+
+  /**
+   * Returns true if value is between [min, max] inclusive
+   *
+   * @param val Value
+   * @param min Min value
+   * @param max Max value
+   * @return True if contained in range
+   */
+  public static boolean inRange(float val, float min, float max) {
+    return (val >= min) && (val <= max);
+  }
+
+  /**
+   * Returns true if value is between [min, max] inclusive
+   *
+   * @param val Value
+   * @param min Min value
+   * @param max Max value
+   * @return True if contained in range
+   */
+  public static boolean inRange(double val, double min, double max) {
+    return (val >= min) && (val <= max);
+  }
+
+  /**
    * Inverse linear interpolation, normalizes a value relative to bounds
    *
    * @param amt Interpolated value
@@ -280,6 +324,16 @@ public class LXUtils {
     } else {
       return Math.min(v1 - v2, v2 + modulus - v1);
     }
+  }
+
+  /**
+   * Round the floating value to 2 decimal places
+   *
+   * @param val Floating point value
+   * @return Value rounded to 2 decimal places
+   */
+  public static float round2f(float val) {
+    return Math.round(val * 1e2) * 1e-2f;
   }
 
   /**

@@ -92,7 +92,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
       .setUnits(LXParameter.Units.MILLISECONDS_RAW);
   };
 
-  private final static float PEAK_HOLD = 250;
+  private final static double PEAK_HOLD_MS = 250;
 
   protected float attackGain;
   protected float releaseGain;
@@ -104,7 +104,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
   private float rmsPeak = 0;
   private double dbPeak = 0;
   private double normalizedPeak = 0;
-  private long peakMillis = 0;
+  private double peakMillis = 0;
 
   /**
    * Default constructor, creates a meter with unity gain and 72dB dynamic range
@@ -204,8 +204,8 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
       this.peakMillis = 0;
     } else {
       this.peakMillis += deltaMs;
-      if (this.peakMillis > PEAK_HOLD) {
-        double peakReleaseTime = Math.min(deltaMs, this.peakMillis - PEAK_HOLD);
+      if (this.peakMillis > PEAK_HOLD_MS) {
+        double peakReleaseTime = Math.min(deltaMs, this.peakMillis - PEAK_HOLD_MS);
         float releaseGain = (float) Math.exp(-peakReleaseTime / releaseValue);
         this.rmsPeak *= releaseGain;
       }
