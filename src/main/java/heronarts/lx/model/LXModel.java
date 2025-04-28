@@ -206,6 +206,12 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
   final List<LXView> derivedViews = new ArrayList<LXView>();
 
   /**
+   * Helper field set to signal to the UI that a view derived from this
+   * model has the CUE flag active. Internal API use only.
+   */
+  public LXView cueView = null;
+
+  /**
    * An ordered list of outputs that should be sent for this model.
    */
   public final List<LXOutput> outputs;
@@ -387,7 +393,22 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param tags Tag identifier for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, String ... tags) {
-    this(points, children, bounds, null, java.util.Arrays.asList(tags));
+    this(points, children, bounds, true, null, java.util.Arrays.asList(tags));
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds
+   * @param setChildBounds Whether to set child normalization bounds
+   * @param tags Tag identifier for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, boolean setChildBounds, String ... tags) {
+    this(points, children, bounds, setChildBounds, null, java.util.Arrays.asList(tags));
   }
 
   /**
@@ -456,15 +477,47 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
    * @param points Points in this model
    * @param children Pre-built direct submodel child array
    * @param bounds Normalization bounds, if different from the model itself
+   * @param setChildBounds Whether to set child normalization bounds
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, boolean setChildBounds, Map<String, String> metaData, List<String> tags) {
+    this(points, children, bounds, setChildBounds, metaData, tags, null);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds, if different from the model itself
    * @param metaData Metadata map
    * @param tags Tag identifier for this model
    * @param meshes UI meshes for this model
    */
   public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, Map<String, String> metaData, List<String> tags, List<Mesh> meshes) {
+    this(points, children, bounds, true, metaData, tags, meshes);
+  }
+
+  /**
+   * Constructs a model with a given set of points and pre-constructed submodels. In this case, points
+   * from the submodels are not added to the points array, they are assumed to already be contained by
+   * the points list.
+   *
+   * @param points Points in this model
+   * @param children Pre-built direct submodel child array
+   * @param bounds Normalization bounds, if different from the model itself
+   * @param metaData Metadata map
+   * @param tags Tag identifier for this model
+   * @param meshes UI meshes for this model
+   */
+  public LXModel(List<LXPoint> points, LXModel[] children, LXNormalizationBounds bounds, boolean setChildBounds, Map<String, String> metaData, List<String> tags, List<Mesh> meshes) {
     this.tags = validateTags(tags);
     this.pointList = Collections.unmodifiableList(new ArrayList<LXPoint>(points));
     setNormalizationBounds(bounds != null ? bounds : this);
-    addChildren(this.children = children.clone());
+    addChildren(this.children = children.clone(), setChildBounds);
     this.points = this.pointList.toArray(new LXPoint[0]);
     this.size = this.points.length;
     this.outputs = Collections.unmodifiableList(new ArrayList<LXOutput>());
@@ -732,9 +785,15 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
   }
 
   private void addChildren(LXModel[] children) {
-    for (LXModel child : children) {
-      child.parent = this;
-      child.setNormalizationBounds(this.normalizationBounds);
+    addChildren(children, true);
+  }
+
+  private void addChildren(LXModel[] children, boolean setChildBounds) {
+    if (setChildBounds) {
+      for (LXModel child : children) {
+        child.parent = this;
+        child.setNormalizationBounds(this.normalizationBounds);
+      }
     }
     addSubmodels(children, this.childDict, false);
     addSubmodels(children, this.subDict, true);

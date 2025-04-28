@@ -157,7 +157,7 @@ public class LXView extends LXModel {
 
     if (views.length == 0) {
       // Empty view!
-      return new LXView(model, Normalization.ABSOLUTE, Orientation.GLOBAL, clonedPoints, new ArrayList<LXPoint>(), new LXModel[0], viewSelector);
+      return new Empty(model, clonedPoints, allPoints, views, viewSelector);
     } else if (views.length == 1) {
       // Just a single view, that'll do it!
       return views[0];
@@ -165,7 +165,7 @@ public class LXView extends LXModel {
       // Return a container-view with the group views as children, holding all of the points. We set
       // the normalization mode to absolute here no matter what, as this container view shouldn't do any
       // re-normalization
-      return new LXView(model, Normalization.ABSOLUTE, Orientation.GLOBAL, clonedPoints, allPoints, views, viewSelector);
+      return new Container(model, clonedPoints, allPoints, views, viewSelector);
     }
 
   }
@@ -467,6 +467,18 @@ public class LXView extends LXModel {
     return tag;
   }
 
+  public static class Empty extends LXView {
+    private Empty(LXModel model, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXView[] views, String viewSelector) {
+      super(model, Normalization.ABSOLUTE, Orientation.GLOBAL, clonedPoints, points, views, viewSelector);
+    }
+  }
+
+  public static class Container extends LXView {
+    private Container(LXModel model, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXView[] views, String viewSelector) {
+      super(model, Normalization.ABSOLUTE, Orientation.GLOBAL, false, clonedPoints, points, views, viewSelector);
+    }
+  }
+
   /**
    * Constructs a view of the given model
    *
@@ -479,7 +491,23 @@ public class LXView extends LXModel {
    * @param viewSelector View selector
    */
   private LXView(LXModel model, Normalization normalization, Orientation orientation, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children, String viewSelector) {
-    super(points, children, (normalization == Normalization.ABSOLUTE) ? model.getNormalizationBounds() : null, LXModel.Tag.VIEW);
+    this(model, normalization, orientation, true, clonedPoints, points, children, viewSelector);
+  }
+
+  /**
+   * Constructs a view of the given model
+   *
+   * @param model Parent model that view is of
+   * @param normalization Normalization mode
+   * @param orientation Orientation mode
+   * @param setChildBounds Whether to apply normalization bounds to children
+   * @param clonedPoints Map of points cloned from parent model into this view
+   * @param points Points in this view
+   * @param children Child models
+   * @param viewSelector View selector
+   */
+  private LXView(LXModel model, Normalization normalization, Orientation orientation, boolean setChildBounds, Map<Integer, LXPoint> clonedPoints, List<LXPoint> points, LXModel[] children, String viewSelector) {
+    super(points, children, (normalization == Normalization.ABSOLUTE) ? model.getNormalizationBounds() : null, setChildBounds, LXModel.Tag.VIEW);
     this.model = model;
     this.normalization = normalization;
     this.clonedPoints = java.util.Collections.unmodifiableMap(clonedPoints);

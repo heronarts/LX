@@ -108,6 +108,9 @@ public class LXViewDefinition extends LXComponent implements LXComponent.Renamab
             view.cueActive.setValue(false);
           }
         }
+        this.lx.structure.getModel().cueView = this.view;
+      } else {
+        this.lx.structure.getModel().cueView = null;
       }
     }
   }

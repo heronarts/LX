@@ -26,10 +26,16 @@ import heronarts.lx.utils.LXUtils;
  */
 public class LXNormalizationBounds {
 
-  private LXMatrix orientation = null;
+  private LXModel orientationModel = null;
+  private LXMatrix orientationInv = null;
 
   void setOrientation(LXModel reference) {
-    this.orientation = new LXMatrix().setInverse(reference.transform);
+    this.orientationModel = reference;
+    this.orientationInv = new LXMatrix().setInverse(reference.transform);
+  }
+
+  public LXModel getOrientation() {
+    return this.orientationModel;
   }
 
   /**
@@ -41,7 +47,7 @@ public class LXNormalizationBounds {
    * @return x coordinate of this point in reference space
    */
   float px(LXPoint p) {
-    return (this.orientation == null) ? p.x : LXUtils.round2f(this.orientation.x(p));
+    return (this.orientationInv == null) ? p.x : LXUtils.round2f(this.orientationInv.x(p));
   }
 
   /**
@@ -53,7 +59,7 @@ public class LXNormalizationBounds {
    * @return y coordinate of this point in reference space
    */
   float py(LXPoint p) {
-    return (this.orientation == null) ? p.y : LXUtils.round2f(this.orientation.y(p));
+    return (this.orientationInv == null) ? p.y : LXUtils.round2f(this.orientationInv.y(p));
   }
 
   /**
@@ -65,7 +71,7 @@ public class LXNormalizationBounds {
    * @return z coordinate of this point in reference space
    */
   float pz(LXPoint p) {
-    return (this.orientation == null) ? p.z : LXUtils.round2f(this.orientation.z(p));
+    return (this.orientationInv == null) ? p.z : LXUtils.round2f(this.orientationInv.z(p));
   }
 
   /**
