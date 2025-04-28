@@ -301,6 +301,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   }
 
   public void loadInitialProject(File overrideProjectFile) {
+    loadInitialProject(overrideProjectFile, null);
+  }
+
+  public void loadInitialProject(File overrideProjectFile, File fallbackProjectFile) {
     try {
       File projectFile = null;
       if (overrideProjectFile != null) {
@@ -315,6 +319,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
           LX.error("Last saved project file no longer exists: " + this.projectFileName);
           projectFile = null;
         }
+      }
+      // Try a fallback file
+      if ((fallbackProjectFile != null) && fallbackProjectFile.exists()) {
+        projectFile = fallbackProjectFile;
       }
       // Fall back to default project file...
       if (projectFile == null) {
