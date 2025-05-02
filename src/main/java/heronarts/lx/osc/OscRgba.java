@@ -22,4 +22,19 @@ public class OscRgba extends OscInt {
   public OscRgba(int rgba) {
     super(rgba);
   }
+
+  public OscRgba setARGB(int argb) {
+    setValue(
+      (argb << 8) |
+      ((argb >>> 24) & 0xff)
+    );
+    return this;
+  }
+
+  public int toARGB() {
+    int rgba = getValue();
+    return
+      ((rgba & 0xff) << 24) |
+      (rgba >>> 8);
+  }
 }

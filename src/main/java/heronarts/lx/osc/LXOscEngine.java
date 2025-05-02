@@ -404,7 +404,7 @@ public class LXOscEngine extends LXComponent {
           throw new OscException();
         }
       } catch (Exception x) {
-        error("Failed to handle OSC message: " + message.getAddressPattern().getValue());
+        error("Failed to handle OSC message: " + message);
       }
 
       // Dispatch to custom listeners
@@ -498,6 +498,7 @@ public class LXOscEngine extends LXComponent {
     private final OscMessage oscMessage = new OscMessage("");
     private final OscFloat oscFloat = new OscFloat(0);
     private final OscInt oscInt = new OscInt(0);
+    private final OscRgba oscRgba = new OscRgba(0);
     private final OscString oscString = new OscString("");
 
     void setConnection(LXOscConnection connection) {
@@ -545,8 +546,8 @@ public class LXOscEngine extends LXComponent {
         oscString.setValue(string.getString());
         oscMessage.add(oscString);
       } else if (parameter instanceof ColorParameter color) {
-        oscInt.setValue(color.getBaseColor());
-        oscMessage.add(oscInt);
+        oscRgba.setARGB(color.getBaseColor());
+        oscMessage.add(oscRgba);
       } else if (parameter instanceof DiscreteParameter discrete) {
         oscInt.setValue(discrete.getBaseValuei());
         oscMessage.add(oscInt);
