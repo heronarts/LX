@@ -12,7 +12,6 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.URISyntaxException;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 
@@ -30,9 +29,18 @@ public class LXOscQueryServer {
     this.lx = lx;
   }
 
+  @Deprecated
   public void bind(int port) {
+    try {
+      bind(InetAddress.getByName("0.0.0.0"), port);
+    } catch (Exception x) {
+      LXOscEngine.error(x, "Could not bind OscQuery server to loopback address");
+    }
+  }
+
+  public void bind(InetAddress addr, int port) {
     unbind();
-    this.thread = new ServerThread(port);
+    this.thread = new ServerThread(addr, port);
   }
 
   public void unbind() {
@@ -47,9 +55,11 @@ public class LXOscQueryServer {
 
     private ServerSocket serverSocket = null;
     private boolean closing = false;
+    private final InetAddress addr;
     private final int port;
 
-    private ServerThread(int port) {
+    private ServerThread(InetAddress addr, int port) {
+      this.addr = addr;
       this.port = port;
       try {
         this.serverSocket = new ServerSocket();
@@ -64,10 +74,10 @@ public class LXOscQueryServer {
     @Override
     public void run() {
       try {
-        LXOscEngine.log("Binding LXOscQueryServer on port " + this.port);
-        this.serverSocket.bind(new InetSocketAddress(InetAddress.getLocalHost(), this.port));
+        LXOscEngine.log("Binding LXOscQueryServer on " + this.addr + " port " + this.port);
+        this.serverSocket.bind(new InetSocketAddress(this.addr, this.port));
         while (!isInterrupted()) {
-          Socket socket = serverSocket.accept();
+          Socket socket = this.serverSocket.accept();
           handleClient(socket);
         }
       } catch (IOException iox) {
@@ -82,6 +92,7 @@ public class LXOscQueryServer {
 
     public void dispose() {
       if (this.serverSocket != null) {
+        final InetAddress address = this.serverSocket.getInetAddress();
         try {
           this.closing = true;
           this.serverSocket.close();
@@ -90,7 +101,7 @@ public class LXOscQueryServer {
         } finally {
           this.serverSocket = null;
         }
-        LXOscEngine.log("Closed LXOscQueryServer on port " + this.port);
+        LXOscEngine.log("Closed LXOscQueryServer on " + address + " port " + this.port);
       }
     }
 
