@@ -34,7 +34,7 @@ public class LXOscQueryServer {
     try {
       bind(InetAddress.getByName("0.0.0.0"), port);
     } catch (Exception x) {
-      LXOscEngine.error(x, "Could not bind OscQuery server to loopback address");
+      LXOscEngine.error(x, "Could not bind OscQuery server to wildcard address");
     }
   }
 
