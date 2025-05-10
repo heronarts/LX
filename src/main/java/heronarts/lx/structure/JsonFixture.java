@@ -987,7 +987,10 @@ public class JsonFixture extends LXFixture {
     deg(f -> { return (float) Math.toDegrees(f); }),
     rad(f -> { return (float) Math.toRadians(f); }),
     abs(f -> { return Math.abs(f); }),
-    sqrt(f -> { return (float) Math.sqrt(f); });
+    sqrt(f -> { return (float) Math.sqrt(f); }),
+    floor(f -> { return (float) Math.floor(f); }),
+    ceil(f -> { return (float) Math.ceil(f); }),
+    round(f -> { return Math.round(f); });
 
     private interface Compute {
       public float compute(float f);
