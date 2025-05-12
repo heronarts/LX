@@ -426,6 +426,7 @@ public class LXChannel extends LXAbstractChannel {
 
   @Override
   public void midiDispatch(LXShortMessage message) {
+    super.midiDispatch(message);
     if (message instanceof MidiPanic) {
       for (LXPattern pattern : this.patterns) {
         pattern.midiDispatch(message);
@@ -451,7 +452,6 @@ public class LXChannel extends LXAbstractChannel {
         break;
       }
     }
-    super.midiDispatch(message);
   }
 
   LXChannel setGroup(LXGroup group) {

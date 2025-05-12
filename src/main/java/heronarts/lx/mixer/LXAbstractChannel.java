@@ -330,6 +330,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
    * @param message Message
    */
   public void midiDispatch(LXShortMessage message) {
+    getModulationEngine().midiDispatch(message);
     for (LXEffect effect : this.effects) {
       if ((message instanceof MidiPanic) || effect.enabled.isOn()) {
         effect.midiDispatch(message);
