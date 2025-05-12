@@ -693,7 +693,16 @@ public class LX {
     // Dispose of the old model after notifying listeners of model change
     if (oldModel != null) {
       oldModel.dispose();
+      oldModel = null;
     }
+
+    // NOTE(mcslee): decent chance that there's memory to be reclaimed after
+    // this operation, with the old model being retired. There may be stale references
+    // to the previous model hanging around in LXModelComponent objects or the UI
+    // rendering, but this hint helps get us more aggressively reclaiming those, and as
+    // model re-generation is not a real-time animation feature, this is a good time to
+    // prioritize taking time for GC that won't interrupt normal smooth operation
+    System.gc();
 
     return this;
   }

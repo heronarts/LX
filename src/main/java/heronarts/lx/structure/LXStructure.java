@@ -625,10 +625,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       this.output.clear();
     }
 
-    // NOTE(mcslee): good chance that there's memory to be reclaimed after
-    // this operation
-    System.gc();
-
     return this;
   }
 
