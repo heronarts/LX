@@ -187,6 +187,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_MESH = "mesh";
   private static final String KEY_MESHES = "meshes";
   private static final String KEY_MESH_COLOR = "color";
+  private static final String KEY_MESH_TEXTURE = "texture";
   private static final String KEY_MESH_FILE = "file";
   private static final String KEY_MESH_VERTICES = "vertices";
   private static final String KEY_MESH_RECT_WIDTH = "width";
@@ -195,6 +196,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_MESH_RECT_AXIS = "axis";
 
   private static final String MESH_TYPE_UNIFORM_FILL = "uniformFill";
+  private static final String MESH_TYPE_TEXTURE_2D = "texture2d";
 
   private static final String LABEL_PLACEHOLDER = "UNKNOWN";
 
@@ -2661,6 +2663,8 @@ public class JsonFixture extends LXFixture {
     String meshTypeStr = meshObj.get(KEY_TYPE).getAsString();
     if (MESH_TYPE_UNIFORM_FILL.equals(meshTypeStr)) {
       meshType = LXModel.Mesh.Type.UNIFORM_FILL;
+    } else if (MESH_TYPE_TEXTURE_2D.equals(meshTypeStr)) {
+      meshType = LXModel.Mesh.Type.TEXTURE_2D;
     }
     if (meshType == null) {
       addWarning("Unknown mesh type: " + meshTypeStr);
@@ -2676,6 +2680,10 @@ public class JsonFixture extends LXFixture {
         meshColor = meshColorElem.getAsInt();
       }
     }
+    File meshTexture = null;
+    if (meshObj.has(KEY_MESH_TEXTURE)) {
+      meshTexture = getMeshFile(meshObj.get(KEY_MESH_TEXTURE).getAsString());
+    }
 
     if (meshObj.has(KEY_MESH_VERTICES) && meshObj.has(KEY_MESH_FILE)) {
       addWarning("UI mesh may not specify both " + KEY_MESH_VERTICES + " and " + KEY_MESH_FILE);
@@ -2688,7 +2696,7 @@ public class JsonFixture extends LXFixture {
     }
 
     if (meshObj.has(KEY_MESH_VERTICES)) {
-      List<LXVector> vertices = new ArrayList<>();
+      LXModel.Mesh.VertexList vertices = new LXModel.Mesh.VertexList();
       JsonArray verticesArr = meshObj.get(KEY_MESH_VERTICES).getAsJsonArray();
       for (JsonElement vertexElem : verticesArr) {
         JsonObject vertexObj = vertexElem.getAsJsonObject();
@@ -2722,7 +2730,7 @@ public class JsonFixture extends LXFixture {
         return;
       }
 
-      this.mutableMeshes.add(new LXModel.Mesh(meshType, vertices, meshColor));
+      this.mutableMeshes.add(new LXModel.Mesh(meshType, vertices, meshColor, meshTexture));
     } else if (meshObj.has(KEY_MESH_FILE)) {
       final String meshFileStr = meshObj.get(KEY_MESH_FILE).getAsString();
       final File meshFile = getMeshFile(meshFileStr);
@@ -2751,8 +2759,11 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private void loadUIVertex(JsonObject vertexObj, List<LXVector> vertices) {
-    LXVector vertex = loadVector(vertexObj, "Mesh vertex must contain one of x/y/z");
+  private void loadUIVertex(JsonObject vertexObj, LXModel.Mesh.VertexList vertices) {
+    LXVector vector = loadVector(vertexObj, "Mesh vertex must specify at least one of x/y/z");
+    final float u = loadFloat(vertexObj, "u", true);
+    final float v = loadFloat(vertexObj, "v", true);
+
     MeshVertexType vertexType = MeshVertexType.VERTEX;
     if (vertexObj.has(KEY_TYPE)) {
       String typeStr = vertexObj.get(KEY_TYPE).getAsString();
@@ -2763,9 +2774,9 @@ public class JsonFixture extends LXFixture {
       }
     }
     switch (vertexType) {
-      case VERTEX -> vertices.add(vertex);
-      case RECT -> loadUIVertexRect(vertexObj, vertex, vertices);
-      case CUBOID -> loadUIVertexCuboid(vertexObj, vertex, vertices);
+      case VERTEX -> vertices.add(new LXModel.Mesh.Vertex(vector.x, vector.y, vector.z, u, v));
+      case RECT -> loadUIVertexRect(vertexObj, vector, vertices);
+      case CUBOID -> loadUIVertexCuboid(vertexObj, vector, vertices);
     };
   }
 
@@ -2788,7 +2799,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private void loadUIVertexRect(JsonObject vertexObj, LXVector vertex, List<LXVector> vertices) {
+  private void loadUIVertexRect(JsonObject vertexObj, LXVector vertex, LXModel.Mesh.VertexList vertices) {
     final float width = loadFloat(vertexObj, KEY_MESH_RECT_WIDTH, true);
     final float height = loadFloat(vertexObj, KEY_MESH_RECT_HEIGHT, true);
     if ((width == 0) || (height == 0)) {
@@ -2808,7 +2819,7 @@ public class JsonFixture extends LXFixture {
     _loadUIVertexRect(vertices, vertex, width, height, rectAxis);
   }
 
-  private void _loadUIVertexRect(List<LXVector> vertices, LXVector vertex, float width, float height, MeshRectAxis rectAxis) {
+  private void _loadUIVertexRect(LXModel.Mesh.VertexList vertices, LXVector vertex, float width, float height, MeshRectAxis rectAxis) {
     switch (rectAxis) {
       case XY -> {
         vertices.add(vertex);
@@ -2861,7 +2872,7 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private void loadUIVertexCuboid(JsonObject vertexObj, LXVector vertex, List<LXVector> vertices) {
+  private void loadUIVertexCuboid(JsonObject vertexObj, LXVector vertex, LXModel.Mesh.VertexList vertices) {
     final float width = loadFloat(vertexObj, KEY_MESH_RECT_WIDTH, true);
     final float height = loadFloat(vertexObj, KEY_MESH_RECT_HEIGHT, true);
     final float depth = loadFloat(vertexObj, KEY_MESH_RECT_DEPTH, true);

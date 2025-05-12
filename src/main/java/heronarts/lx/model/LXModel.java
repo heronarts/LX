@@ -133,20 +133,58 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
   public static class Mesh {
 
+    public static class VertexList extends ArrayList<Vertex> {
+
+      private static final long serialVersionUID = -7531624784884017587L;
+
+      public void add(LXVector vector) {
+        add(new Vertex(vector.x, vector.y, vector.z));
+      }
+
+    }
+
+    public static class Vertex {
+      public final float x;
+      public final float y;
+      public final float z;
+
+      public final float u;
+      public final float v;
+
+      public Vertex(float x, float y, float z) {
+        this(x, y, z, 0, 0);
+      }
+
+      public Vertex(float x, float y, float z, float u, float v) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.u = u;
+        this.v = v;
+      }
+    }
+
     public enum Type {
-      UNIFORM_FILL
+      UNIFORM_FILL,
+      TEXTURE_2D
     }
 
     public final Type type;
     public final int color;
-    public final List<LXVector> vertices;
+    public final List<Vertex> vertices;
     public final File file;
+    public final File texture;
 
-    public Mesh(Type type, List<LXVector> vertices, int color) {
+    public Mesh(Type type, List<Vertex> vertices, int color) {
+      this(type, vertices, color, null);
+    }
+
+    public Mesh(Type type, List<Vertex> vertices, int color, File texture) {
       this.type = type;
       this.vertices = Collections.unmodifiableList(vertices);
       this.color = color;
       this.file = null;
+      this.texture = texture;
     }
 
     public Mesh(Type type, File meshFile, int color) {
@@ -154,6 +192,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
       this.vertices = null;
       this.color = color;
       this.file = meshFile;
+      this.texture = null;
     }
   }
 
