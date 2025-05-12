@@ -32,9 +32,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -756,6 +754,10 @@ public class LXRegistry implements LXSerializable {
   }
 
   public void uninstallPackage(LXClassLoader.Package pack) {
+    uninstallPackage(pack, true);
+  }
+
+  public void uninstallPackage(LXClassLoader.Package pack, boolean reload) {
     File destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName(), true);
     try {
       if (destinationFile.exists()) {
@@ -765,10 +767,30 @@ public class LXRegistry implements LXSerializable {
         destinationFile = lx.getMediaFile(LX.Media.DELETED, pack.jarFile.getName() + "-" + suffix, true);
       }
       Files.move(pack.jarFile.toPath(), destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-      reloadContent();
+      if (reload) {
+        reloadContent();
+      }
     } catch (IOException iox) {
       this.lx.pushError(iox, "Could not remove package file " + pack.jarFile.getName());
     }
+  }
+
+  /**
+   * Find a package that matches the package name in the given file
+   *
+   * @param file Package file
+   * @return Existing package which matches, or null if none exists
+   */
+  public LXClassLoader.Package findPackage(File file) {
+    final String packageName = this.classLoader.loadPackageName(file);
+    if (packageName != null) {
+      for (LXClassLoader.Package pkg : this.packages) {
+        if (packageName.equals(pkg.getName())) {
+          return pkg;
+        }
+      }
+    }
+    return null;
   }
 
   public enum ComponentType {
@@ -796,19 +818,7 @@ public class LXRegistry implements LXSerializable {
     return null;
   }
 
-  private final Map<String, LXClassLoader.Package> duplicates = new HashMap<String, LXClassLoader.Package>();
-
   protected void addClass(Class<?> clz, LXClassLoader.Package pack) {
-    final String className = clz.getName();
-    final LXClassLoader.Package duplicate = duplicates.get(className);
-    if (duplicate != null) {
-      String thisFile = lx.getMediaPath(LX.Media.PACKAGES, pack.jarFile);
-      String originalFile = lx.getMediaPath(LX.Media.PACKAGES, duplicate.jarFile);
-      LX.error("Ignoring duplicate class: " + className + " in " + thisFile + " + " + originalFile);
-      return;
-    }
-    this.duplicates.put(className, pack);
-
     if (LXPattern.class.isAssignableFrom(clz)) {
       addPattern(clz.asSubclass(LXPattern.class));
     }
@@ -827,8 +837,6 @@ public class LXRegistry implements LXSerializable {
   }
 
   protected void removeClass(Class<?> clz) {
-    this.duplicates.remove(clz.getName());
-
     if (LXPattern.class.isAssignableFrom(clz)) {
       removePattern(clz.asSubclass(LXPattern.class));
     }

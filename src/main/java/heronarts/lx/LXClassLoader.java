@@ -27,7 +27,9 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import com.google.gson.Gson;
@@ -220,6 +222,8 @@ public class LXClassLoader extends URLClassLoader {
       this.lx.registry.removeClass(clz);
     }
     this.classes.clear();
+    this.duplicates.clear();
+    this.hasDuplicateClasses = false;
   }
 
   private void loadJarFile(File file) {
@@ -248,6 +252,22 @@ public class LXClassLoader extends URLClassLoader {
       LX.error("Package does not contain any version information: " + file.getName());
     }
     this.lx.registry.addPackage(pack);
+  }
+
+  String loadPackageName(File file) {
+    try (JarFile jarFile = new JarFile(file);) {
+      JarEntry entry = jarFile.getJarEntry(PACKAGE_DESCRIPTOR_FILE_NAME);
+      if (entry != null) {
+        InputStreamReader isr = new InputStreamReader(jarFile.getInputStream(entry));
+        JsonObject obj = new Gson().fromJson(isr, JsonObject.class);
+        if (obj.has("name")) {
+          return obj.get("name").getAsString();
+        }
+      }
+    } catch (Throwable x) {
+      LX.error(x, "Couldn't find package name in content JAR: " + file.getName());
+    }
+    return null;
   }
 
   private void loadPackageMetadata(Package pack, JarFile jarFile, JarEntry jarEntry) {
@@ -320,9 +340,7 @@ public class LXClassLoader extends URLClassLoader {
         }
 
         // Register all public, non-abstract components that we discover
-        ++pack.numClasses;
-        this.classes.add(clz);
-        this.lx.registry.addClass(clz, pack);
+        registerClass(clz, pack);
       }
     } catch (ClassNotFoundException | NoClassDefFoundError cnfx) {
       LX.error(cnfx, "Dependency class not found, required by JAR file: " + className + " " + jarFile.getName());
@@ -330,6 +348,32 @@ public class LXClassLoader extends URLClassLoader {
     } catch (Throwable x) {
       LX.error(x, "Unhandled exception in class loading: " + className);
     }
+  }
+
+  private final Map<String, LXClassLoader.Package> duplicates = new HashMap<String, LXClassLoader.Package>();
+  boolean hasDuplicateClasses = false;
+
+  public boolean hasDuplicateClasses() {
+    return this.hasDuplicateClasses;
+  }
+
+  private void registerClass(Class<?> clz, Package pack) {
+    // Same qualified class name in multiple packages is gonna be painful! Don't do it.
+    final String className = clz.getName();
+    final LXClassLoader.Package duplicate = duplicates.get(className);
+    if (duplicate != null) {
+      this.hasDuplicateClasses = true;
+      String thisFile = lx.getMediaPath(LX.Media.PACKAGES, pack.jarFile);
+      String originalFile = lx.getMediaPath(LX.Media.PACKAGES, duplicate.jarFile);
+      LX.error("Ignoring duplicate class: " + className + " in " + thisFile + " + " + originalFile);
+      return;
+    }
+
+    // Register it
+    ++pack.numClasses;
+    this.duplicates.put(className, pack);
+    this.classes.add(clz);
+    this.lx.registry.addClass(clz, pack);
   }
 
 }
