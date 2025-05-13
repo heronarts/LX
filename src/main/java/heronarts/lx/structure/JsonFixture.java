@@ -795,7 +795,7 @@ public class JsonFixture extends LXFixture {
 
       if (loadParameters) {
         loadLabel(obj);
-        loadTags(this, obj, true, true, false);
+        loadTags(this, obj, true, false);
         loadParameters(obj);
         this.parametersReloaded.bang();
       }
@@ -1477,10 +1477,10 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private void loadTags(LXFixture fixture, JsonObject obj, boolean required, boolean includeParent, boolean replaceVariables) {
-    List<String> validTags = _loadTags(obj, required, replaceVariables, this);
+  private void loadTags(LXFixture fixture, JsonObject obj, boolean includeParent, boolean replaceVariables) {
+    List<String> validTags = _loadTags(obj, replaceVariables, this);
     if (includeParent) {
-      for (String tag : _loadTags(this.jsonParameterValues, false, true, this.jsonParameterContext)) {
+      for (String tag : _loadTags(this.jsonParameterValues, true, this.jsonParameterContext)) {
         if (validTags.contains(tag)) {
           addWarning("Parent JSON fixture redundantly specifies tag: " + tag);
         } else {
@@ -1491,7 +1491,7 @@ public class JsonFixture extends LXFixture {
     fixture.setTags(validTags);
   }
 
-  private List<String> _loadTags(JsonObject obj, boolean required, boolean replaceVariables, JsonFixture variableContext) {
+  private List<String> _loadTags(JsonObject obj, boolean replaceVariables, JsonFixture variableContext) {
     warnDuplicateKeys(obj, KEY_MODEL_KEY, KEY_MODEL_KEYS, KEY_TAG, KEY_TAGS);
     String keyTags = obj.has(KEY_TAGS) ? KEY_TAGS : KEY_MODEL_KEYS;
     String keyTag = obj.has(KEY_TAG) ? KEY_TAG : KEY_MODEL_KEY;
@@ -1535,8 +1535,6 @@ public class JsonFixture extends LXFixture {
           validTags.add(tag);
         }
       }
-    } else if (required) {
-      addWarning("Fixture definition must specify one of " + KEY_TAG + "/" + KEY_TAGS);
     }
 
     return validTags;
@@ -2169,7 +2167,7 @@ public class JsonFixture extends LXFixture {
 
       // Load tags for non-JSON child types
       if (type != ChildType.JSON) {
-        loadTags(child, childObj, false, false, true);
+        loadTags(child, childObj, false, true);
       }
 
       // Load meta-data fields for the child
