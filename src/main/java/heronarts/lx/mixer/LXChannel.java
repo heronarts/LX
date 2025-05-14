@@ -320,6 +320,9 @@ public class LXChannel extends LXAbstractChannel {
           if ((pattern != activePattern) && (pattern.getCompositeDampingLevel() > 0)) {
             pattern.deactivate(LXMixerEngine.patternFriendAccess);
           }
+          // Clear any cue state
+          pattern.cueActive.setValue(false);
+          pattern.auxActive.setValue(false);
         }
         // The active pattern was not enabled? It is now!
         if ((activePattern != null) && !activePattern.enabled.isOn()) {
@@ -998,20 +1001,35 @@ public class LXChannel extends LXAbstractChannel {
       for (LXPattern pattern : this.patterns) {
         pattern.updateCompositeDamping(deltaMs, dampingEnabled, dampingTimeSecs);
         final double patternDamping = pattern.getCompositeDampingLevel();
-        if (patternDamping == 0) {
-          continue;
+        final boolean patternRender = (patternDamping > 0);
+        final boolean patternCueActive = pattern.cueActive.isOn();
+        final boolean patternAuxActive = pattern.auxActive.isOn();
+
+        if (patternRender || patternCueActive || patternAuxActive) {
+
+          // Generate the pattern output
+          final LXModel patternView = pattern.getModelView();
+          pattern.setBuffer(this.renderBuffer);
+          pattern.setModel(patternView);
+          pattern.loop(deltaMs);
+
+          if (patternRender) {
+            pattern.compositeMode.getObject().blend(
+              this.colors,
+              pattern.getColors(),
+              patternDamping * pattern.compositeLevel.getValue(),
+              this.colors,
+              patternView
+            );
+          }
+
+          if (patternCueActive) {
+            this.lx.engine.mixer.blendCue(pattern.getColors(), patternView);
+          }
+          if (patternAuxActive) {
+            this.lx.engine.mixer.blendAux(pattern.getColors(), patternView);
+          }
         }
-        final LXModel patternView = pattern.getModelView();
-        pattern.setBuffer(this.renderBuffer);
-        pattern.setModel(patternView);
-        pattern.loop(deltaMs);
-        pattern.compositeMode.getObject().blend(
-          this.colors,
-          pattern.getColors(),
-          patternDamping * pattern.compositeLevel.getValue(),
-          this.colors,
-          patternView
-        );
       }
 
     } else {

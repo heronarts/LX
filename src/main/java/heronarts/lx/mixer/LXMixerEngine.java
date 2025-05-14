@@ -975,6 +975,26 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private final BlendStack blendStackAux = new BlendStack();
   private final BlendStack blendStackLeft = new BlendStack();
   private final BlendStack blendStackRight = new BlendStack();
+  private boolean _blendCueCalled = false;
+  private boolean _blendAuxCalled = false;
+
+  void blendCue(int[] cueColors, LXModel cueView) {
+    // NOTE: could be channel multithreaded! If not, there'll never be
+    // contention on this lock.
+    synchronized (this.blendStackCue) {
+      this.blendStackCue.blend(this.addBlend, cueColors, 1, cueView);
+      this._blendCueCalled = true;
+    }
+  }
+
+  void blendAux(int[] auxColors, LXModel auxView) {
+    // NOTE: could be channel multithreaded! If not, there'll never be
+    // contention on this lock.
+    synchronized (this.blendStackAux) {
+      this.blendStackAux.blend(this.addBlend, auxColors, 1, auxView);
+      this._blendAuxCalled = true;
+    }
+  }
 
   public void loop(LXEngine.Frame render, double deltaMs) {
     long channelStart = System.nanoTime();
@@ -992,6 +1012,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     boolean rightBusActive = crossfadeValue > 0.;
     boolean cueBusActive = false;
     boolean auxBusActive = false;
+    this._blendCueCalled = false;
+    this._blendAuxCalled = false;
 
     final boolean isChannelMultithreaded = this.lx.engine.isChannelMultithreaded.isOn();
     final boolean isPerformanceMode = this.lx.engine.performanceMode.isOn();
@@ -1026,11 +1048,22 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
           channel.thread.signal.workDone = false;
         }
       }
+
+      // Confirm whether any channel blended cue content
+      synchronized (this.blendStackCue) {
+        cueBusActive = this._blendCueCalled;
+      }
+      synchronized (this.blendStackAux) {
+        auxBusActive = this._blendAuxCalled;
+      }
+
     } else {
       // We are not in super-threaded mode, just loop all the channels
       for (LXAbstractChannel channel : this.channels) {
         channel.loop(deltaMs);
       }
+      cueBusActive = this._blendCueCalled;
+      auxBusActive = this._blendAuxCalled;
     }
     // Step 1b: Run the master channel (it may have clips on it)
     this.masterBus.loop(deltaMs);
