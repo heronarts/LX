@@ -649,7 +649,7 @@ public class LXRegistry implements LXSerializable {
       while (entries.hasMoreElements()) {
         final JarEntry entry = entries.nextElement();
         final String fileName = entry.getName();
-        if (fileName.startsWith("fixtures/")) {
+        if (fileName.startsWith("fixtures/") && !entry.isDirectory()) {
           copyPackageMedia(packageDir, LX.Media.FIXTURES, jarFile, entry);
         } else if (fileName.startsWith("models/") && fileName.endsWith(".lxm")) {
           copyPackageMedia(packageDir, LX.Media.MODELS, jarFile, entry);
