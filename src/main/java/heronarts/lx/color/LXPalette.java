@@ -635,6 +635,9 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
           return swatch.handleOscMessage(message, parts, index+2);
         }
       }
+    } else if (path.equals("color")) {
+      parts[index] = "primary";
+      return this.swatch.colors.get(0).handleOscMessage(message, parts, index);
     }
     return super.handleOscMessage(message, parts, index);
   }
