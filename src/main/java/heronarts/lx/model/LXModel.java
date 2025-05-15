@@ -138,7 +138,11 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
       private static final long serialVersionUID = -7531624784884017587L;
 
       public void add(LXVector vector) {
-        add(new Vertex(vector.x, vector.y, vector.z));
+        add(vector, 0, 0);
+      }
+
+      public void add(LXVector vector, float u, float v) {
+        add(new Vertex(vector.x, vector.y, vector.z, u, v));
       }
 
     }

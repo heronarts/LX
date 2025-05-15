@@ -2820,52 +2820,52 @@ public class JsonFixture extends LXFixture {
   private void _loadUIVertexRect(LXModel.Mesh.VertexList vertices, LXVector vertex, float width, float height, MeshRectAxis rectAxis) {
     switch (rectAxis) {
       case XY -> {
-        vertices.add(vertex);
-        vertices.add(vertex.copy().add(width, 0));
-        vertices.add(vertex.copy().add(0, height));
-        vertices.add(vertex.copy().add(0, height));
-        vertices.add(vertex.copy().add(width, 0));
-        vertices.add(vertex.copy().add(width, height));
+        vertices.add(vertex, 0, 1);
+        vertices.add(vertex.copy().add(width, 0), 1, 1);
+        vertices.add(vertex.copy().add(0, height), 0, 0);
+        vertices.add(vertex.copy().add(0, height), 0, 0);
+        vertices.add(vertex.copy().add(width, 0), 1, 1);
+        vertices.add(vertex.copy().add(width, height), 1, 0);
       }
       case XZ -> {
-        vertices.add(vertex);
-        vertices.add(vertex.copy().add(width, 0, 0));
-        vertices.add(vertex.copy().add(0, 0, height));
-        vertices.add(vertex.copy().add(0, 0, height));
-        vertices.add(vertex.copy().add(width, 0, 0));
-        vertices.add(vertex.copy().add(width, 0, height));
+        vertices.add(vertex, 0, 1);
+        vertices.add(vertex.copy().add(width, 0, 0), 1, 1);
+        vertices.add(vertex.copy().add(0, 0, height), 0, 0);
+        vertices.add(vertex.copy().add(0, 0, height), 0, 0);
+        vertices.add(vertex.copy().add(width, 0, 0), 1, 1);
+        vertices.add(vertex.copy().add(width, 0, height), 1, 0);
       }
       case YX -> {
-        vertices.add(vertex);
-        vertices.add(vertex.copy().add(0, width, 0));
-        vertices.add(vertex.copy().add(height, 0, 0));
-        vertices.add(vertex.copy().add(height, 0, 0));
-        vertices.add(vertex.copy().add(0, width, 0));
-        vertices.add(vertex.copy().add(height, width, 0));
+        vertices.add(vertex, 0, 1);
+        vertices.add(vertex.copy().add(0, width, 0), 1, 1);
+        vertices.add(vertex.copy().add(height, 0, 0), 0, 0);
+        vertices.add(vertex.copy().add(height, 0, 0), 0, 0);
+        vertices.add(vertex.copy().add(0, width, 0), 1, 1);
+        vertices.add(vertex.copy().add(height, width, 0), 1, 0);
       }
       case YZ -> {
-        vertices.add(vertex);
-        vertices.add(vertex.copy().add(0, width, 0));
-        vertices.add(vertex.copy().add(0, 0, height));
-        vertices.add(vertex.copy().add(0, 0, height));
-        vertices.add(vertex.copy().add(0, width, 0));
-        vertices.add(vertex.copy().add(0, width, height));
+        vertices.add(vertex, 0, 1);
+        vertices.add(vertex.copy().add(0, width, 0), 1, 1);
+        vertices.add(vertex.copy().add(0, 0, height), 0, 0);
+        vertices.add(vertex.copy().add(0, 0, height), 0, 0);
+        vertices.add(vertex.copy().add(0, width, 0), 1, 1);
+        vertices.add(vertex.copy().add(0, width, height), 1, 0);
       }
       case ZX -> {
-        vertices.add(vertex);
-        vertices.add(vertex.copy().add(0, 0, width));
-        vertices.add(vertex.copy().add(height, 0, 0));
-        vertices.add(vertex.copy().add(height, 0, 0));
-        vertices.add(vertex.copy().add(0, 0, width));
-        vertices.add(vertex.copy().add(height, 0, width));
+        vertices.add(vertex, 0, 1);
+        vertices.add(vertex.copy().add(0, 0, width), 1, 1);
+        vertices.add(vertex.copy().add(height, 0, 0), 0, 0);
+        vertices.add(vertex.copy().add(height, 0, 0), 0, 0);
+        vertices.add(vertex.copy().add(0, 0, width), 1, 1);
+        vertices.add(vertex.copy().add(height, 0, width), 1, 0);
       }
       case ZY -> {
-        vertices.add(vertex);
-        vertices.add(vertex.copy().add(0, 0, width));
-        vertices.add(vertex.copy().add(0, height, 0));
-        vertices.add(vertex.copy().add(0, height, 0));
-        vertices.add(vertex.copy().add(0, 0, width));
-        vertices.add(vertex.copy().add(0, height, width));
+        vertices.add(vertex, 0, 1);
+        vertices.add(vertex.copy().add(0, 0, width), 1, 1);
+        vertices.add(vertex.copy().add(0, height, 0), 0, 0);
+        vertices.add(vertex.copy().add(0, height, 0), 0, 0);
+        vertices.add(vertex.copy().add(0, 0, width), 1, 1);
+        vertices.add(vertex.copy().add(0, height, width), 1, 0);
       }
     }
   }
