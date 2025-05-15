@@ -25,7 +25,7 @@ public abstract class LXMacroModulator extends LXModulator implements LXOscCompo
 
   public final BooleanParameter showEight =
     new BooleanParameter("Show Eight")
-    .setDescription("Eight controls mode");
+    .setDescription("Whether the Macro shows 5 or 8 controls");
 
   protected LXMacroModulator(String label) {
     super(label);

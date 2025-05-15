@@ -22,6 +22,7 @@ import heronarts.lx.LXCategory;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Switches")
@@ -57,6 +58,10 @@ public class MacroSwitches extends LXMacroModulator implements LXTriggerSource, 
   public final StringParameter label7 = label(7);
   public final StringParameter label8 = label(8);
 
+  public final BooleanParameter exclusive =
+    new BooleanParameter("Exclusive", false)
+    .setDescription("Determines whether only one switch may be active at a time");
+
   public final BooleanParameter[] switches = {
     macro1, macro2, macro3, macro4, macro5, macro6, macro7, macro8
   };
@@ -88,7 +93,32 @@ public class MacroSwitches extends LXMacroModulator implements LXTriggerSource, 
     addParameter("label6", this.label6);
     addParameter("label7", this.label7);
     addParameter("label8", this.label8);
+    addParameter("exclusive", this.exclusive);
     setMappingSource(false);
+  }
+
+  private BooleanParameter getSwitch(LXParameter p) {
+    for (BooleanParameter s : this.switches) {
+      if (s == p) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (this.exclusive.isOn()) {
+      final BooleanParameter s = getSwitch(p);
+      if ((s != null) && s.isOn()) {
+        for (BooleanParameter other : this.switches) {
+          if (other != s) {
+            other.setValue(false);
+          }
+        }
+      }
+    }
   }
 
   @Override
