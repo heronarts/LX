@@ -195,8 +195,17 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_MESH_RECT_DEPTH = "depth";
   private static final String KEY_MESH_RECT_AXIS = "axis";
 
+  private static final String KEY_MESH_LIGHTING = "lighting";
+  private static final String KEY_MESH_LIGHTING_COLOR = "color";
+  private static final String KEY_MESH_LIGHTING_DIRECTION = "direction";
+  private static final String KEY_MESH_LIGHTING_AMBIENT = "ambient";
+  private static final String KEY_MESH_LIGHTING_DIFFUSE = "diffuse";
+  private static final String KEY_MESH_LIGHTING_SPECULAR = "specular";
+  private static final String KEY_MESH_LIGHTING_SHININESS = "shininess";
+
   private static final String MESH_TYPE_UNIFORM_FILL = "uniformFill";
   private static final String MESH_TYPE_TEXTURE_2D = "texture2d";
+  private static final String MESH_TYPE_PHONG = "phong";
 
   private static final String LABEL_PLACEHOLDER = "UNKNOWN";
 
@@ -1241,6 +1250,15 @@ public class JsonFixture extends LXFixture {
       addWarning(warning);
     }
     return 0;
+  }
+
+  private int loadColor(JsonObject obj, String key) {
+    JsonPrimitive colorElem = obj.get(key).getAsJsonPrimitive();
+    if (colorElem.isString() && colorElem.getAsString().toLowerCase().startsWith("0x")) {
+      return Integer.parseUnsignedInt(colorElem.getAsString().substring(2), 16);
+    } else {
+      return colorElem.getAsInt();
+    }
   }
 
   private LXVector loadVector(JsonObject obj, String warning) {
@@ -2663,6 +2681,8 @@ public class JsonFixture extends LXFixture {
       meshType = LXModel.Mesh.Type.UNIFORM_FILL;
     } else if (MESH_TYPE_TEXTURE_2D.equals(meshTypeStr)) {
       meshType = LXModel.Mesh.Type.TEXTURE_2D;
+    } else if (MESH_TYPE_PHONG.equals(meshTypeStr)) {
+      meshType = LXModel.Mesh.Type.PHONG;
     }
     if (meshType == null) {
       addWarning("Unknown mesh type: " + meshTypeStr);
@@ -2671,13 +2691,32 @@ public class JsonFixture extends LXFixture {
 
     int meshColor = 0xffffffff;
     if (meshObj.has(KEY_MESH_COLOR)) {
-      JsonPrimitive meshColorElem = meshObj.get(KEY_MESH_COLOR).getAsJsonPrimitive();
-      if (meshColorElem.isString() && meshColorElem.getAsString().toLowerCase().startsWith("0x")) {
-        meshColor = Integer.parseUnsignedInt(meshColorElem.getAsString().substring(2), 16);
-      } else {
-        meshColor = meshColorElem.getAsInt();
+      meshColor = loadColor(meshObj, KEY_MESH_COLOR);
+    }
+
+    LXModel.Mesh.Lighting meshLighting = LXModel.Mesh.Lighting.DEFAULT;
+    int meshLightColor = 0xffffffff;
+    LXModel.Mesh.Vertex meshLightDirection = new LXModel.Mesh.Vertex(0, 0, 1);
+    if (meshObj.has(KEY_MESH_LIGHTING)) {
+      final JsonObject meshLightingObj = meshObj.get(KEY_MESH_LIGHTING).getAsJsonObject();
+      meshLighting = new LXModel.Mesh.Lighting(
+        loadFloat(meshLightingObj, KEY_MESH_LIGHTING_AMBIENT, true),
+        loadFloat(meshLightingObj, KEY_MESH_LIGHTING_DIFFUSE, true),
+        loadFloat(meshLightingObj, KEY_MESH_LIGHTING_SPECULAR, true),
+        loadFloat(meshLightingObj, KEY_MESH_LIGHTING_SHININESS, true)
+      );
+      if (meshLightingObj.has(KEY_MESH_LIGHTING_COLOR)) {
+        meshLightColor = loadColor(meshLightingObj, KEY_MESH_LIGHTING_COLOR);
+      }
+      if (meshLightingObj.has(KEY_MESH_LIGHTING_DIRECTION)) {
+        JsonObject meshLightingDirectionObj = meshLightingObj.get(KEY_MESH_LIGHTING_DIRECTION).getAsJsonObject();
+        float x = loadFloat(meshLightingDirectionObj, KEY_X, true);
+        float y = loadFloat(meshLightingDirectionObj, KEY_Y, true);
+        float z = loadFloat(meshLightingDirectionObj, KEY_Z, true);
+        meshLightDirection = new LXModel.Mesh.Vertex(x, y, z);
       }
     }
+
     File meshTexture = null;
     if (meshObj.has(KEY_MESH_TEXTURE)) {
       meshTexture = getMeshFile(meshObj.get(KEY_MESH_TEXTURE).getAsString());
@@ -2692,6 +2731,8 @@ public class JsonFixture extends LXFixture {
       addWarning("UI mesh must specify " + KEY_MESH_VERTICES + " or " + KEY_MESH_FILE);
       return;
     }
+
+    LXModel.Mesh mesh = null;
 
     if (meshObj.has(KEY_MESH_VERTICES)) {
       LXModel.Mesh.VertexList vertices = new LXModel.Mesh.VertexList();
@@ -2727,17 +2768,22 @@ public class JsonFixture extends LXFixture {
         addWarning("UI mesh object must specify non-empty " + KEY_MESH_VERTICES);
         return;
       }
-
-      this.mutableMeshes.add(new LXModel.Mesh(meshType, vertices, meshColor, meshTexture));
+      mesh = new LXModel.Mesh(meshType, vertices, meshColor, meshTexture);
     } else if (meshObj.has(KEY_MESH_FILE)) {
       final String meshFileStr = meshObj.get(KEY_MESH_FILE).getAsString();
       final File meshFile = getMeshFile(meshFileStr);
       if (!meshFile.exists()) {
         addWarning("Cannot find UI mesh file: " + meshFileStr);
-        return;
       } else {
-        this.mutableMeshes.add(new LXModel.Mesh(meshType, meshFile, meshColor));
+        mesh = new LXModel.Mesh(meshType, meshFile, meshColor);
       }
+    }
+
+    if (mesh != null) {
+      mesh.setLighting(meshLighting);
+      mesh.setLightColor(meshLightColor);
+      mesh.setLightDirection(meshLightDirection);
+      this.mutableMeshes.add(mesh);
     }
   }
 

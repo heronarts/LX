@@ -133,6 +133,23 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
 
   public static class Mesh {
 
+    public static class Lighting {
+
+      public static final Lighting DEFAULT = new Lighting(1, 0, 0, 0);
+
+      public final float ambient;
+      public final float diffuse;
+      public final float specular;
+      public final float shininess;
+
+      public Lighting(float ambient, float diffuse, float specular, float shininess) {
+        this.ambient = ambient;
+        this.diffuse = diffuse;
+        this.specular = specular;
+        this.shininess = shininess;
+      }
+    }
+
     public static class VertexList extends ArrayList<Vertex> {
 
       private static final long serialVersionUID = -7531624784884017587L;
@@ -166,11 +183,39 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
         this.u = u;
         this.v = v;
       }
+
+      @Override
+      public String toString() {
+        return String.format("[%f,%f,%f]", this.x, this.y, this.z);
+      }
+
+      public static Vertex normal(Vertex a, Vertex b, Vertex c) {
+        float v1x = b.x - a.x;
+        float v1y = b.y - a.y;
+        float v1z = b.z - a.z;
+        float v2x = c.x - a.x;
+        float v2y = c.y - a.y;
+        float v2z = c.z - a.z;
+        return new Vertex(
+          v1y * v2z - v1z * v2y,
+          v1z * v2x - v1x * v2z,
+          v1x * v2y - v1y * v2x
+        );
+      }
+
+      public Vertex cross(Vertex v1, Vertex v2) {
+        return new Vertex(
+          v1.y * v2.z - v1.z * v2.y,
+          v1.z * v2.x - v1.x * v2.z,
+          v1.x * v2.y - v1.y * v2.x
+        );
+      }
     }
 
     public enum Type {
       UNIFORM_FILL,
-      TEXTURE_2D
+      TEXTURE_2D,
+      PHONG
     }
 
     public final Type type;
@@ -178,6 +223,9 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     public final List<Vertex> vertices;
     public final File file;
     public final File texture;
+    public int lightColor = 0xffffffff;
+    public Lighting lighting = Lighting.DEFAULT;
+    public Vertex lightDirection = new Vertex(0, 0, 1);
 
     public Mesh(Type type, List<Vertex> vertices, int color) {
       this(type, vertices, color, null);
@@ -197,6 +245,21 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
       this.color = color;
       this.file = meshFile;
       this.texture = null;
+    }
+
+    public Mesh setLightColor(int lightColor) {
+      this.lightColor = lightColor;
+      return this;
+    }
+
+    public Mesh setLighting(Lighting lighting) {
+      this.lighting = lighting;
+      return this;
+    }
+
+    public Mesh setLightDirection(Vertex lightDirection) {
+      this.lightDirection = lightDirection;
+      return this;
     }
   }
 
