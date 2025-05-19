@@ -126,6 +126,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Auto-Mute Default", false)
     .setDescription("Whether new channels have Auto-Mute enabled by default");
 
+  public final BooleanParameter autoMutePatternDefault =
+    new BooleanParameter("Auto-Mute Pattern Default", false)
+    .setDescription("Whether new rack patterns have Auto-Mute enabled by default");
+
   final ModelBuffer backgroundBlack;
   final ModelBuffer backgroundTransparent;
   private final ModelBuffer blendBufferLeft;
@@ -215,6 +219,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     addParameter("auxA", this.auxA);
     addParameter("auxB", this.auxB);
     addParameter("autoMuteDefault", this.autoMuteDefault);
+    addParameter("autoMutePatternDefault", this.autoMutePatternDefault);
     addParameter("viewCondensed", this.viewCondensed);
     addParameter("viewStacked", this.viewStacked);
     addParameter("viewDeviceBin", this.viewDeviceBin);

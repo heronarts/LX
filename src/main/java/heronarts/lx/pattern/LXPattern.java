@@ -172,6 +172,25 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     new BooleanParameter("Custom Cycle", false)
     .setDescription("When enabled, this pattern uses its own custom duration rather than the default cycle time");
 
+  /**
+   * Custom time for this pattern to cycle
+   */
+  public final BoundedParameter customCycleTimeSecs =
+    new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
+    .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
+    .setUnits(LXParameter.Units.SECONDS);
+
+  public final BooleanParameter autoMute =
+    new BooleanParameter("Auto-Mute", false)
+    .setDescription("Whether to disable pattern processing in composite mode if fader is off");
+
+  /**
+   * Read-only parameter, used to monitor when auto-muting is taking place
+   */
+  public final BooleanParameter isAutoMuted =
+    new BooleanParameter("Auto-Muted", false)
+    .setDescription("Set to true by the engine when the channel is auto-disabled");
+
   public final BooleanParameter cueActive =
     new BooleanParameter("Cue", false)
     .setMode(BooleanParameter.Mode.MOMENTARY)
@@ -181,14 +200,6 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     new BooleanParameter("Aux", false)
     .setMode(BooleanParameter.Mode.MOMENTARY)
     .setDescription("Toggles the pattern AUX state, determining whether it is shown in the preview window");
-
-  /**
-   * Custom time for this pattern to cycle
-   */
-  public final BoundedParameter customCycleTimeSecs =
-    new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
-    .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
-    .setUnits(LXParameter.Units.SECONDS);
 
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
@@ -209,6 +220,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.activeCompositeBlend.onInactive();
     this.activeCompositeBlend = this.compositeMode.getObject();
     this.activeCompositeBlend.onActive();
+  };
+
+  private final LXParameterListener onAutoMute = p -> {
+    if (!this.autoMute.isOn()) {
+      this.isAutoMuted.setValue(false);
+    }
   };
 
   private final LXParameterListener onCue = p -> {
@@ -250,6 +267,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     super(lx);
     this.label.setDescription("The name of this pattern");
 
+    this.autoMute.setValue(lx.engine.mixer.autoMutePatternDefault.isOn());
+
     addArray("effect", this.effects);
 
     // NOTE: this used to be internal, but it's not anymore...
@@ -262,11 +281,13 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     addParameter("compositeLevel", this.compositeLevel);
     addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
     addParameter("customCycleTimeSecs", this.customCycleTimeSecs);
+    addParameter("autoMute", this.autoMute);
     addParameter("cueActive", this.cueActive);
     addParameter("auxActive", this.auxActive);
 
     updateCompositeBlendOptions();
     this.compositeMode.addListener(this.onCompositeMode);
+    this.autoMute.addListener(this.onAutoMute);
 
     this.enabled.addListener(this.onEnabled);
 
@@ -282,6 +303,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       parameter == this.enabled ||
       parameter == this.hasCustomCycleTime ||
       parameter == this.customCycleTimeSecs ||
+      parameter == this.autoMute ||
       parameter == this.cueActive ||
       parameter == this.auxActive
     ) && super.isSnapshotControl(parameter);
@@ -297,6 +319,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
       parameter == this.enabled ||
       parameter == this.hasCustomCycleTime ||
       parameter == this.customCycleTimeSecs ||
+      parameter == this.autoMute ||
       parameter == this.cueActive ||
       parameter == this.auxActive ||
       super.isHiddenControl(parameter);
@@ -708,6 +731,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.cueActive.removeListener(this.onCue);
     this.auxActive.removeListener(this.onAux);
     this.enabled.removeListener(this.onEnabled);
+    this.autoMute.removeListener(this.onAutoMute);
     this.compositeMode.removeListener(this.onCompositeMode);
     super.dispose();
     disposeCompositeBlendOptions();

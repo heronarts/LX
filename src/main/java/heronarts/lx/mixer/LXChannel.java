@@ -317,6 +317,7 @@ public class LXChannel extends LXAbstractChannel {
       } else {
         // Inactivate all but the active pattern
         for (LXPattern pattern : this.patterns) {
+          pattern.isAutoMuted.setValue(false);
           if ((pattern != activePattern) && (pattern.getCompositeDampingLevel() > 0)) {
             pattern.deactivate(LXMixerEngine.patternFriendAccess);
           }
@@ -1001,7 +1002,13 @@ public class LXChannel extends LXAbstractChannel {
       for (LXPattern pattern : this.patterns) {
         pattern.updateCompositeDamping(deltaMs, dampingEnabled, dampingTimeSecs);
         final double patternDamping = pattern.getCompositeDampingLevel();
-        final boolean patternRender = (patternDamping > 0);
+
+        final boolean isAutoMuted =
+          pattern.autoMute.isOn() &&
+          (pattern.compositeLevel.getValue() == 0);
+        pattern.isAutoMuted.setValue(isAutoMuted);
+
+        final boolean patternRender = !isAutoMuted && (patternDamping > 0);
         final boolean patternCueActive = pattern.cueActive.isOn();
         final boolean patternAuxActive = pattern.auxActive.isOn();
 
