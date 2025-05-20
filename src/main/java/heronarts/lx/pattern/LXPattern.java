@@ -204,7 +204,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
-    final LXPatternEngine engine = getPatternEngine();
+    final LXPatternEngine engine = getEngine();
     if (engine != null) {
       engine.onPatternEnabled(this);
       if (engine.isComposite() && !engine.compositeDampingEnabled.isOn()) {
@@ -388,11 +388,11 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private LXPatternEngine patternEngine;
 
-  public final LXPatternEngine getPatternEngine() {
+  public final LXPatternEngine getEngine() {
     return this.patternEngine;
   }
 
-  public final LXPattern setPatternEngine(LXPatternEngine patternEngine) {
+  public final LXPattern setEngine(LXPatternEngine patternEngine) {
     setParent(patternEngine.component);
     this.patternEngine = patternEngine;
     return this;

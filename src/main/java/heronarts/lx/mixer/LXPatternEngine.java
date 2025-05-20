@@ -19,6 +19,7 @@
 package heronarts.lx.mixer;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXBuffer;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.ModelBuffer;
@@ -212,6 +213,10 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
 
   public final LXParameter.Collection parameters =
     new LXParameter.Collection();
+
+  public LXPatternEngine(LX lx, LXComponent component) {
+    this(lx, component, new LXPattern[0]);
+  }
 
   public LXPatternEngine(LX lx, LXComponent component, LXPattern[] patterns) {
     if (!(component instanceof Container)) {
@@ -494,7 +499,7 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     if (index > this.mutablePatterns.size()) {
       throw new IllegalArgumentException("Invalid pattern index: " + index);
     }
-    pattern.setPatternEngine(this);
+    pattern.setEngine(this);
 
     // Make sure focused pattern doesn't change
     final LXPattern focusedPattern = getFocusedPattern();
@@ -938,7 +943,7 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     }
   }
 
-  public void loop(ModelBuffer blendBuffer, LXModel modelView, double deltaMs) {
+  public void loop(LXBuffer blendBuffer, LXModel modelView, double deltaMs) {
     // Initialize buffer colors
     int[] colors = blendBuffer.getArray();
 

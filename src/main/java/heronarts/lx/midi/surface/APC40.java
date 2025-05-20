@@ -335,7 +335,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     void onDeviceOnOff() {
       if (this.device instanceof LXPattern) {
         final LXPattern pattern = (LXPattern) this.device;
-        final LXPatternEngine engine = pattern.getPatternEngine();
+        final LXPatternEngine engine = pattern.getEngine();
         if (engine.compositeMode.getEnum() == LXPatternEngine.CompositeMode.BLEND) {
           pattern.enabled.toggle();
         } else {

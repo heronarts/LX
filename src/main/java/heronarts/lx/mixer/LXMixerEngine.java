@@ -1124,7 +1124,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
           break;
         }
 
-        if (blendStack != null && channel.enabled.isOn()) {
+        if ((blendStack != null) && channel.enabled.isOn()) {
           double alpha = channel.fader.getValue();
           if (alpha > 0) {
             blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha, channel.getModelView());
