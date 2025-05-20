@@ -617,7 +617,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       this.channel = channel;
       if (channel instanceof LXChannel c) {
         c.addListener(this);
-        c.compositeMode.addListener(this.onCompositeModeChanged);
+        c.patternEngine.compositeMode.addListener(this.onCompositeModeChanged);
       } else {
         channel.addListener(this);
       }
@@ -629,7 +629,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       channel.stopClips.pending.addListener(this);
       channel.hasRunningClip.addListener(this);
       if (channel instanceof LXChannel c) {
-        c.focusedPattern.addListener(this);
+        c.patternEngine.focusedPattern.addListener(this);
         c.patterns.forEach(pattern -> this.patternListeners.put(pattern, new PatternListener(pattern)));
       }
       for (LXClip clip : this.channel.clips) {
@@ -666,9 +666,8 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       } else if (p == this.channel.stopClips.pending || p == this.channel.hasRunningClip) {
         sendChannelButton(index, this.channel);
       }
-      if (this.channel instanceof LXChannel) {
-        LXChannel c = (LXChannel) this.channel;
-        if (p == c.focusedPattern) {
+      if (this.channel instanceof LXChannel c) {
+        if (p == c.patternEngine.focusedPattern) {
           sendChannelPatterns(index, c);
         }
       }
@@ -677,7 +676,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
     public void dispose() {
       if (this.channel instanceof LXChannel c) {
         c.removeListener(this);
-        c.compositeMode.removeListener(this.onCompositeModeChanged);
+        c.patternEngine.compositeMode.removeListener(this.onCompositeModeChanged);
       } else {
         this.channel.removeListener(this);
       }
@@ -690,7 +689,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
       this.channel.hasRunningClip.removeListener(this);
       if (this.channel instanceof LXChannel) {
         LXChannel c = (LXChannel) this.channel;
-        c.focusedPattern.removeListener(this);
+        c.patternEngine.focusedPattern.removeListener(this);
       }
       this.patternListeners.values().forEach(patternListener -> patternListener.dispose());
       this.patternListeners.clear();
@@ -933,7 +932,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
 
       final int baseIndex = this.mixerSurface.getGridPatternOffset();
       final int endIndex = channel.patterns.size() - baseIndex;
-      final int focusedIndex = (channel.patterns.size() == 0) ? -1 : channel.focusedPattern.getValuei() - baseIndex;
+      final int focusedIndex = (channel.patterns.size() == 0) ? -1 : channel.patternEngine.focusedPattern.getValuei() - baseIndex;
 
       final int activeIndex = channel.getActivePatternIndex() - baseIndex;
       final int nextIndex = channel.getNextPatternIndex() - baseIndex;
@@ -1252,7 +1251,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
           if (channel instanceof LXChannel c) {
             int target = index + mixerSurface.getGridPatternOffset();
             if (target < c.patterns.size()) {
-              c.focusedPattern.setValue(target);
+              c.patternEngine.focusedPattern.setValue(target);
               if (!this.shiftOn) {
                 if (channel.isPlaylist()) {
                   c.getPattern(target).launch.trigger();
@@ -1340,8 +1339,8 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
         } else if (pitch == NOTE.SELECT_UP) {
           if (isGridModeParameters()) {
             LXBus bus = this.lx.engine.mixer.getFocusedChannel();
-            if (bus instanceof LXChannel) {
-              ((LXChannel) bus).focusedPattern.decrement(1, false);
+            if (bus instanceof LXChannel channel) {
+              channel.patternEngine.focusedPattern.decrement(1, false);
             }
           } else {
             this.mixerSurface.decrementGridOffset();
@@ -1349,8 +1348,8 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
         } else if (pitch == NOTE.SELECT_DOWN) {
           if (isGridModeParameters()) {
             LXBus bus = this.lx.engine.mixer.getFocusedChannel();
-            if (bus instanceof LXChannel) {
-              ((LXChannel) bus).focusedPattern.increment(1, false);
+            if (bus instanceof LXChannel channel) {
+              channel.patternEngine.focusedPattern.increment(1, false);
             }
           } else {
             this.mixerSurface.incrementGridOffset();
@@ -1387,7 +1386,7 @@ public abstract class APCminiSurface extends LXMidiSurface implements LXMidiSurf
           case CLIP_STOP:
             if (isGridModePatterns()) {
               if (channel.isPlaylist()) {
-                ((LXChannel) channel).launchPatternCycle.trigger();
+                ((LXChannel) channel).patternEngine.launchPatternCycle.trigger();
               }
             } else if (isGridModeClips()) {
               channel.stopClips.trigger();

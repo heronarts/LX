@@ -130,8 +130,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Auto-Mute Pattern Default", false)
     .setDescription("Whether new rack patterns have Auto-Mute enabled by default");
 
-  final ModelBuffer backgroundBlack;
-  final ModelBuffer backgroundTransparent;
+  public final ModelBuffer backgroundBlack;
+  public final ModelBuffer backgroundTransparent;
   private final ModelBuffer blendBufferLeft;
   private final ModelBuffer blendBufferRight;
 
@@ -322,8 +322,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return instantiateBlends(this.lx.registry.channelBlends, context);
   }
 
-  protected LXBlend[] instantiateTransitionBlends(LXChannel channel) {
-    return instantiateBlends(this.lx.registry.transitionBlends, channel);
+  public LXBlend[] instantiateTransitionBlends(LXComponent component) {
+    return instantiateBlends(this.lx.registry.transitionBlends, component);
   }
 
   protected LXBlend[] instantiateCrossfaderBlends() {
@@ -983,7 +983,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private boolean _blendCueCalled = false;
   private boolean _blendAuxCalled = false;
 
-  void blendCue(int[] cueColors, LXModel cueView) {
+  public void blendCue(int[] cueColors, LXModel cueView) {
     // NOTE: could be channel multithreaded! If not, there'll never be
     // contention on this lock.
     synchronized (this.blendStackCue) {
@@ -992,7 +992,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
   }
 
-  void blendAux(int[] auxColors, LXModel auxView) {
+  public void blendAux(int[] auxColors, LXModel auxView) {
     // NOTE: could be channel multithreaded! If not, there'll never be
     // contention on this lock.
     synchronized (this.blendStackAux) {

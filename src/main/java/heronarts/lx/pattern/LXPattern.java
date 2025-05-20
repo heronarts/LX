@@ -37,6 +37,7 @@ import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMixerEngine;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
@@ -203,10 +204,10 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
-    final LXChannel channel = getChannel();
-    if (channel != null) {
-      channel.onPatternEnabled(this);
-      if (channel.isComposite() && !channel.compositeDampingEnabled.isOn()) {
+    final LXPatternEngine engine = getPatternEngine();
+    if (engine != null) {
+      engine.onPatternEnabled(this);
+      if (engine.isComposite() && !engine.compositeDampingEnabled.isOn()) {
         if (isEnabled) {
           _activate();
         } else {
@@ -327,7 +328,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   @Override
   public String getPath() {
-    return LXChannel.PATH_PATTERN + "/" + (this.index + 1);
+    return LXPatternEngine.PATH_PATTERN + "/" + (this.index + 1);
   }
 
   private void disposeCompositeBlendOptions() {
@@ -367,6 +368,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    *
    * @return Channel pattern is loaded onto
    */
+  // TODO(rack): deprecate this and clean references
   public final LXChannel getChannel() {
     return (LXChannel) getParent();
   }
@@ -378,8 +380,21 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * @param channel Channel pattern is loaded onto
    * @return this
    */
+  @Deprecated
   public final LXPattern setChannel(LXChannel channel) {
     setParent(channel);
+    return this;
+  }
+
+  private LXPatternEngine patternEngine;
+
+  public final LXPatternEngine getPatternEngine() {
+    return this.patternEngine;
+  }
+
+  public final LXPattern setPatternEngine(LXPatternEngine patternEngine) {
+    setParent(patternEngine.component);
+    this.patternEngine = patternEngine;
     return this;
   }
 

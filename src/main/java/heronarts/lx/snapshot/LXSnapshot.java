@@ -42,6 +42,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMasterBus;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -586,18 +587,16 @@ public abstract class LXSnapshot extends LXComponent {
       addParameterView(ViewScope.MIXER, channel.crossfadeGroup);
     }
 
-    if (bus instanceof LXChannel) {
-      addParameterView(ViewScope.PATTERNS, ((LXChannel) bus).compositeMode);
+    if (bus instanceof LXChannel channel) {
+      addParameterView(ViewScope.PATTERNS, channel.patternEngine.compositeMode);
     }
 
     initializeClipBus(bus);
   }
 
   protected void initializeClipBus(LXBus bus) {
-
-    if (bus instanceof LXChannel) {
-      final LXChannel channel = (LXChannel) bus;
-      if (channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
+    if (bus instanceof LXChannel channel) {
+      if (channel.patternEngine.compositeMode.getEnum() == LXPatternEngine.CompositeMode.PLAYLIST) {
         // Only need to add settings for the active pattern
         LXPattern pattern = channel.getActivePattern();
         if (pattern != null) {

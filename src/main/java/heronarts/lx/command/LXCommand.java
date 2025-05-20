@@ -57,6 +57,7 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.modulation.LXCompoundModulation;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
@@ -833,12 +834,12 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         LXChannel channel = this.channel.get();
-        LXPattern pattern = channel.loadPattern(this.patternObj, this.patternIndex);
+        LXPattern pattern = channel.patternEngine.loadPattern(this.patternObj, this.patternIndex);
         if (this.isActive) {
           channel.goPattern(pattern, true);
         }
         if (this.isFocused) {
-          channel.focusedPattern.setValue(pattern.getIndex());
+          channel.patternEngine.focusedPattern.setValue(pattern.getIndex());
         }
         super.undo(lx);
       }
@@ -935,14 +936,14 @@ public abstract class LXCommand {
 
     public static class PatternCycle extends LXCommand {
 
-      private final ComponentReference<LXChannel> channel;
+      private final ComponentReference<LXComponent> component;
       private final ComponentReference<LXPattern> prevPattern;
       private ComponentReference<LXPattern> targetPattern;
 
-      public PatternCycle(LXChannel channel) {
-        this.channel = new ComponentReference<LXChannel>(channel);
-        if (channel.isPlaylist() && !channel.isInTransition()) {
-          final LXPattern prev = channel.getActivePattern();
+      public PatternCycle(LXPatternEngine patternEngine) {
+        this.component = new ComponentReference<LXComponent>(patternEngine.component);
+        if (patternEngine.isPlaylist() && !patternEngine.isInTransition()) {
+          final LXPattern prev = patternEngine.getActivePattern();
           this.prevPattern = (prev != null) ? new ComponentReference<LXPattern>(prev) : null;
         } else {
           this.prevPattern = null;
@@ -959,21 +960,25 @@ public abstract class LXCommand {
         return (this.prevPattern == null);
       }
 
+      private LXPatternEngine getPatternEngine() {
+        return ((LXPatternEngine.Container) this.component.get()).getPatternEngine();
+      }
+
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        final LXChannel channel = this.channel.get();
+        final LXPatternEngine engine = getPatternEngine();
         if (this.targetPattern == null) {
-          channel.triggerPatternCycle.trigger();
-          this.targetPattern = new ComponentReference<LXPattern>(channel.getTargetPattern());
+          engine.triggerPatternCycle.trigger();
+          this.targetPattern = new ComponentReference<LXPattern>(engine.getTargetPattern());
         } else {
-          this.channel.get().goPattern(this.targetPattern.get());
+          engine.goPattern(this.targetPattern.get());
         }
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         if (this.prevPattern != null) {
-          this.channel.get().goPattern(this.prevPattern.get());
+          getPatternEngine().goPattern(this.prevPattern.get());
         }
       }
     }

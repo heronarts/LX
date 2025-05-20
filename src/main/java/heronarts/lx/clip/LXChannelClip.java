@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.pattern.LXPattern;
 
 public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Listener {
@@ -81,7 +82,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
 
   @Override
   protected void onStartRecording(boolean isOverdub) {
-    if (this.channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
+    if (this.channel.patternEngine.compositeMode.getEnum() == LXPatternEngine.CompositeMode.PLAYLIST) {
       LXPattern targetPattern = this.channel.getTargetPattern();
       if (targetPattern != null) {
         // If we're overdubbing - only record a pattern event at the start of recording if the present

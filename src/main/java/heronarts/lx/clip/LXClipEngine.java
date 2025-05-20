@@ -593,7 +593,7 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     for (LXAbstractChannel bus : this.lx.engine.mixer.channels) {
       if (bus instanceof LXChannel channel) {
         if (channel.isPlaylist()) {
-          channel.triggerPatternCycle.trigger();
+          channel.patternEngine.triggerPatternCycle.trigger();
         }
       }
     }
