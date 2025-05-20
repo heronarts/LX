@@ -1067,6 +1067,13 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
   }
 
   public void dispose() {
+    // Remove parameter listeners
+    for (LXParameter parameter : this.parameters.values()) {
+      if (parameter instanceof LXListenableParameter listenable) {
+        listenable.removeListener(this);
+      }
+    }
+
     // Clear pattern state before disposing of patterns
     this.activePatternIndex = this.nextPatternIndex = NO_PATTERN_INDEX;
     this.focusedPattern.setValue(0);
