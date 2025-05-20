@@ -191,12 +191,14 @@ public class LXChannel extends LXAbstractChannel implements LXPatternEngine.Cont
       listeners.forEach(listener -> listener.patternAdded(LXChannel.this, pattern));
       inListener = false;
       _processReentrantListenerChanges();
+      lx.engine.clips.updatePatternGridSize();
     }
     public void patternRemoved(LXPatternEngine engine, LXPattern pattern) {
       inListener = true;
       listeners.forEach(listener -> listener.patternRemoved(LXChannel.this, pattern));
       inListener = false;
       _processReentrantListenerChanges();
+      lx.engine.clips.updatePatternGridSize();
     }
     public void patternMoved(LXPatternEngine engine, LXPattern pattern) {
       inListener = true;

@@ -542,9 +542,6 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     this.inListener = false;
     _processReentrantListenerChanges();
 
-    // TODO(rack): move this
-    this.lx.engine.clips.updatePatternGridSize();
-
     // If this was the first pattern, focusedPattern has "changed" going from 0 -> 0
     if (this.mutablePatterns.size() == 1) {
       this.activePatternIndex = this.nextPatternIndex = 0;
@@ -612,9 +609,6 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     this.listeners.forEach(listener -> listener.patternRemoved(this, pattern));
     this.inListener = false;
     _processReentrantListenerChanges();
-
-    // TODO(rack): flag for pattern grid
-    this.lx.engine.clips.updatePatternGridSize();
 
     if (activateNext && !this.patterns.isEmpty()) {
       LXPattern newActive = getActivePattern();
