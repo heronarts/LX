@@ -1073,10 +1073,13 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       parent = parent.getParent();
     }
 
-    // The global midi, modulation, and snapshot engines need to know we're gone
+    // The global midi, modulation, snapshot, remote control engines need to know we're gone
     this.lx.engine.midi.removeMappings(this);
     this.lx.engine.modulation.removeModulations(this);
     this.lx.engine.snapshots.removeSnapshotViews(this);
+    if (isDescendant(this.lx.engine.mixer)) {
+      this.lx.engine.mixer.removeRemoteControls(this);
+    }
 
     // Remove all of the parameters
     for (LXParameter parameter : new ArrayList<LXParameter>(this.parameters.values())) {

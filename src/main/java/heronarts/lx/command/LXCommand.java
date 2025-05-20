@@ -219,6 +219,7 @@ public abstract class LXCommand {
     private final List<Snapshots.RemoveView> removeSnapshotViews = new ArrayList<Snapshots.RemoveView>();
     private final List<Clip.RemoveParameterLane> removeClipLanes = new ArrayList<>();
     private final List<Clip.Event.Pattern.RemoveReferences> removePatternClipEvents = new ArrayList<>();
+    private final List<Device.SetRemoteControls> removeRemoteControls = new ArrayList<>();
 
     private void _removeModulations(LXModulationEngine modulation, LXComponent component) {
       List<LXCompoundModulation> compounds = modulation.findModulations(component, modulation.modulations);
@@ -261,6 +262,33 @@ public abstract class LXCommand {
       }
     }
 
+    protected void removeRemoteControls(LXComponent component) {
+      _removeRemoteControls(component.getParent(), component);
+    }
+
+    private void _removeRemoteControls(LXComponent container, LXComponent component) {
+      if ((container == null) || (container instanceof LXBus)) {
+        return;
+      }
+      if (container instanceof LXDeviceComponent device) {
+        final LXListenableNormalizedParameter[] customRemoteControls = device.getCustomRemoteControls();
+        if (customRemoteControls != null) {
+          boolean removed = false;
+          for (LXListenableNormalizedParameter parameter : customRemoteControls) {
+            if (parameter.isDescendant(component)) {
+              removed = true;
+              break;
+            }
+          }
+          if (removed) {
+            // NOTE: only gonna undo() this, don't need actual changes
+            this.removeRemoteControls.add(new Device.SetRemoteControls(device, null));
+          }
+        }
+      }
+      _removeRemoteControls(container.getParent(), component);
+    }
+
     protected void removeClipLanes(LXBus bus, LXComponent component) {
       for (LXClip clip : bus.clips) {
         if (clip != null) {
@@ -297,9 +325,10 @@ public abstract class LXCommand {
         parent = parent.getParent();
       }
 
-      // Also top level mappings and snapshot views
+      // Also top level mappings, snapshot views, remote controls
       removeMidiMappings(component.getLX().engine.midi, component);
       removeSnapshotViews(component.getLX().engine.snapshots, component);
+      removeRemoteControls(component);
 
       // Type-specific removals
       switch (component) {
@@ -331,6 +360,9 @@ public abstract class LXCommand {
       }
       for (Snapshots.RemoveView view : this.removeSnapshotViews) {
         view.undo(lx);
+      }
+      for (Device.SetRemoteControls controls : this.removeRemoteControls) {
+        controls.undo(lx);
       }
       for (Clip.RemoveParameterLane lane : this.removeClipLanes) {
         lane.undo(lx);

@@ -27,6 +27,7 @@ import heronarts.lx.LXCategory;
 import heronarts.lx.LXComponent;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.osc.OscMessage;
+import heronarts.lx.parameter.LXParameter;
 
 @LXCategory(LXCategory.OTHER)
 @LXComponent.Name("Pattern Rack")
@@ -40,8 +41,21 @@ public class PatternRack extends LXPattern implements LXPatternEngine.Container 
     super(lx);
     this.label.setValue("Rack");
     this.patternEngine = new LXPatternEngine(lx, this);
-    this.patterns = this.patternEngine.patterns;
+    addArray("pattern", this.patterns = this.patternEngine.patterns);
     addParameters(this.patternEngine.parameters);
+  }
+
+  @Override
+  public boolean isSnapshotControl(LXParameter parameter) {
+    return !(this.patternEngine.parameters.containsValue(parameter)) &&
+      super.isSnapshotControl(parameter);
+  }
+
+  @Override
+  public boolean isHiddenControl(LXParameter parameter) {
+    return
+      super.isHiddenControl(parameter) ||
+      this.patternEngine.parameters.containsValue(parameter);
   }
 
   @Override

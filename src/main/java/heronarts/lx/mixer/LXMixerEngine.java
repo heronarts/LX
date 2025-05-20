@@ -30,6 +30,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXEngine;
 import heronarts.lx.LXRegistry;
 import heronarts.lx.LXSerializable;
@@ -46,6 +47,7 @@ import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.pattern.LXPattern;
@@ -1216,6 +1218,35 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Mark the cue active state of the buffer
     render.setCueOn(cueBusActive);
     render.setAuxOn(auxBusActive);
+  }
+
+  public void removeRemoteControls(LXComponent component) {
+    _removeRemoteControls(component.getParent(), component);
+  }
+
+  private void _removeRemoteControls(LXComponent container, LXComponent component) {
+    if ((container == null) || (container instanceof LXBus)) {
+      return;
+    }
+    if (container instanceof LXDeviceComponent device) {
+      final LXListenableNormalizedParameter[] customRemoteControls = device.getCustomRemoteControls();
+      if (customRemoteControls != null) {
+        LXListenableNormalizedParameter[] newRemoteControls = null;
+        int i = 0;
+        for (LXListenableNormalizedParameter parameter : customRemoteControls) {
+          if ((parameter != null) && parameter.isDescendant(component)) {
+            if (newRemoteControls == null) {
+              newRemoteControls = customRemoteControls.clone();
+            }
+            newRemoteControls[i] = null;
+          }
+          ++i;
+        }
+        if (newRemoteControls != null) {
+          device.setCustomRemoteControls(newRemoteControls);
+        }
+      }
+    }
   }
 
   private static final String KEY_CHANNELS = "channels";
