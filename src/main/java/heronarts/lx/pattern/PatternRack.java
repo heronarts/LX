@@ -18,6 +18,8 @@
 
 package heronarts.lx.pattern;
 
+import java.util.List;
+
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -32,12 +34,14 @@ public class PatternRack extends LXPattern implements LXPatternEngine.Container 
 
   public final LXPatternEngine patternEngine;
   private final LXPatternEngine.Listener delegate = new LXPatternEngine.Listener() {};
+  public final List<LXPattern> patterns;
 
   public PatternRack(LX lx) {
     super(lx);
     this.label.setValue("Rack");
     this.patternEngine = new LXPatternEngine(lx, this);
-    addParameters(patternEngine.parameters);
+    this.patterns = this.patternEngine.patterns;
+    addParameters(this.patternEngine.parameters);
   }
 
   @Override

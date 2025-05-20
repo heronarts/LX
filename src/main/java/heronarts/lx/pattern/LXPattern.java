@@ -743,6 +743,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
+
+    // Legacy support < 1.1.1 - write compositeMode
+    if (!(this instanceof PatternRack)) {
+      LXSerializable.Utils.saveParameter(this.compositeBlend, obj.getAsJsonObject(KEY_PARAMETERS), "compositeMode");
+    }
+
     obj.add(KEY_EFFECTS, LXSerializable.Utils.toArray(lx, this.mutableEffects));
   }
 
@@ -762,7 +768,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     // Legacy support for pre-pattern rack "compositeBlend" was "compositeMode", but we don't
     // want to use the normal LegacyParameter path for this
     if (obj.has(KEY_PARAMETERS)) {
-      JsonObject params = obj.get(KEY_PARAMETERS).getAsJsonObject();
+      JsonObject params = obj.getAsJsonObject(KEY_PARAMETERS);
       if (!params.has("compositeBlend") && params.has("compositeMode")) {
         LXSerializable.Utils.loadParameter(this.compositeBlend, params, "compositeMode");
       }
