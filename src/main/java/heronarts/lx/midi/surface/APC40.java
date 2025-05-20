@@ -232,12 +232,12 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
     }
 
     private boolean isPatternEnabled(LXPattern pattern) {
-      switch (pattern.getChannel().patternEngine.compositeMode.getEnum()) {
+      switch (pattern.getEngine().compositeMode.getEnum()) {
       case BLEND:
         return pattern.enabled.isOn();
       default:
       case PLAYLIST:
-        return pattern == pattern.getChannel().getTargetPattern();
+        return pattern == pattern.getEngine().getTargetPattern();
       }
     }
 
@@ -339,7 +339,7 @@ public class APC40 extends LXMidiSurface implements LXMidiSurface.Bidirectional 
         if (engine.compositeMode.getEnum() == LXPatternEngine.CompositeMode.BLEND) {
           pattern.enabled.toggle();
         } else {
-          pattern.getChannel().goPatternIndex(pattern.getIndex());
+          pattern.getEngine().goPatternIndex(pattern.getIndex());
         }
         sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isPatternEnabled(pattern)));
       } else if (this.device instanceof LXEffect) {

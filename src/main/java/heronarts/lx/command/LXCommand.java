@@ -275,7 +275,7 @@ public abstract class LXCommand {
     }
 
     protected void removePatternClipEvents(LXPattern pattern) {
-      for (LXClip clip : pattern.getChannel().clips) {
+      for (LXClip clip : pattern.getMixerChannel().clips) {
         if (clip != null) {
           if (clip instanceof LXChannelClip channelClip) {
             List<Integer> eventIndices = channelClip.patternLane.findEventIndices(pattern);
@@ -304,14 +304,14 @@ public abstract class LXCommand {
       // Type-specific removals
       switch (component) {
         case LXPattern pattern -> {
-          removeClipLanes(pattern.getChannel(), pattern);
+          removeClipLanes(pattern.getMixerChannel(), pattern);
           removePatternClipEvents(pattern);
         }
         case LXEffect effect -> {
           if (effect.isBusEffect()) {
             removeClipLanes(effect.getBus(), effect);
           } else if (effect.isPatternEffect()) {
-            removeClipLanes(effect.getPattern().getChannel(), effect);
+            removeClipLanes(effect.getPattern().getMixerChannel(), effect);
           }
         }
         default -> {}
@@ -747,25 +747,41 @@ public abstract class LXCommand {
 
     public static class AddPattern extends LXCommand {
 
-      private final ComponentReference<LXChannel> channel;
+      private final ComponentReference<LXComponent> component;
       private final Class<? extends LXPattern> patternClass;
       private ComponentReference<LXPattern> pattern = null;
       private JsonObject patternObj;
       private int patternIndex;
 
-      public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass) {
-        this(channel, patternClass, null);
+      public AddPattern(LXPatternEngine.Container container, Class<? extends LXPattern> patternClass) {
+        this(container.getPatternEngine(), patternClass);
       }
 
-      public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
-        this(channel, patternClass, patternObject, -1);
+      public AddPattern(LXPatternEngine engine, Class<? extends LXPattern> patternClass) {
+        this(engine, patternClass, null);
       }
 
-      public AddPattern(LXChannel channel, Class<? extends LXPattern> patternClass, JsonObject patternObject, int patternIndex) {
-        this.channel = new ComponentReference<LXChannel>(channel);
+      public AddPattern(LXPatternEngine.Container container, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
+        this(container.getPatternEngine(), patternClass, patternObject);
+      }
+
+      public AddPattern(LXPatternEngine engine, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
+        this(engine, patternClass, patternObject, -1);
+      }
+
+      public AddPattern(LXPatternEngine.Container container, Class<? extends LXPattern> patternClass, JsonObject patternObject, int patternIndex) {
+        this(container.getPatternEngine(), patternClass, patternObject, patternIndex);
+      }
+
+      public AddPattern(LXPatternEngine engine, Class<? extends LXPattern> patternClass, JsonObject patternObject, int patternIndex) {
+        this.component = new ComponentReference<LXComponent>(engine.component);
         this.patternClass = patternClass;
         this.patternObj = patternObject;
         this.patternIndex = patternIndex;
+      }
+
+      private LXPatternEngine getPatternEngine() {
+        return ((LXPatternEngine.Container) this.component.get()).getPatternEngine();
       }
 
       @Override
@@ -782,7 +798,7 @@ public abstract class LXCommand {
           }
           // New pattern, we need to store its ID for future redo operations...
           this.patternObj = LXSerializable.Utils.toObject(instance);
-          this.channel.get().addPattern(instance, this.patternIndex);
+          getPatternEngine().addPattern(instance, this.patternIndex);
           this.pattern = new ComponentReference<LXPattern>(instance);
         } catch (LX.InstantiationException x) {
           throw new InvalidCommandException(x);
@@ -794,31 +810,35 @@ public abstract class LXCommand {
         if (this.pattern == null) {
           throw new IllegalStateException("Pattern was not successfully added, cannot undo");
         }
-        this.channel.get().removePattern(this.pattern.get());
+        getPatternEngine().removePattern(this.pattern.get());
       }
 
     }
 
     public static class RemovePattern extends RemoveComponent {
 
-      private final ComponentReference<LXChannel> channel;
+      private final ComponentReference<LXComponent> component;
       private final ComponentReference<LXPattern> pattern;
       private final JsonObject patternObj;
       private final int patternIndex;
       private final boolean isActive;
       private final boolean isFocused;
 
-      public RemovePattern(LXChannel channel, LXPattern pattern) {
+      public RemovePattern(LXPatternEngine.Container container, LXPattern pattern) {
+        this(container.getPatternEngine(), pattern);
+      }
+
+      public RemovePattern(LXPatternEngine engine, LXPattern pattern) {
         super(pattern);
-        if (!channel.patterns.contains(pattern)) {
-          throw new IllegalArgumentException("Cannot remove pattern not present on channel: " + pattern + " !! " + channel);
+        if (!engine.patterns.contains(pattern)) {
+          throw new IllegalArgumentException("Cannot remove pattern not present in engine: " + pattern + " !! " + engine.component);
         }
-        this.channel = new ComponentReference<LXChannel>(channel);
+        this.component = new ComponentReference<LXComponent>(engine.component);
         this.pattern = new ComponentReference<LXPattern>(pattern);
         this.patternObj = LXSerializable.Utils.toObject(pattern);
         this.patternIndex = pattern.getIndex();
-        this.isActive = channel.getActivePattern() == pattern;
-        this.isFocused = channel.getFocusedPattern() == pattern;
+        this.isActive = engine.getActivePattern() == pattern;
+        this.isFocused = engine.getFocusedPattern() == pattern;
       }
 
       @Override
@@ -826,28 +846,37 @@ public abstract class LXCommand {
         return "Delete Pattern";
       }
 
+      private LXPatternEngine getPatternEngine() {
+        return ((LXPatternEngine.Container) this.component.get()).getPatternEngine();
+      }
+
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        this.channel.get().removePattern(this.pattern.get());
+        getPatternEngine().removePattern(this.pattern.get());
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        LXChannel channel = this.channel.get();
-        LXPattern pattern = channel.patternEngine.loadPattern(this.patternObj, this.patternIndex);
+        LXPatternEngine engine = getPatternEngine();
+        LXPattern pattern = engine.loadPattern(this.patternObj, this.patternIndex);
         if (this.isActive) {
-          channel.goPattern(pattern, true);
+          engine.goPattern(pattern, true);
         }
         if (this.isFocused) {
-          channel.patternEngine.focusedPattern.setValue(pattern.getIndex());
+          engine.focusedPattern.setValue(pattern.getIndex());
         }
         super.undo(lx);
       }
     }
 
     public static class ReloadPattern extends RemovePattern {
-      public ReloadPattern(LXChannel channel, LXPattern pattern) {
-        super(channel, pattern);
+
+      public ReloadPattern(LXPatternEngine.Container container, LXPattern pattern) {
+        this(container.getPatternEngine(), pattern);
+      }
+
+      public ReloadPattern(LXPatternEngine engine, LXPattern pattern) {
+        super(engine, pattern);
       }
 
       @Override
@@ -878,13 +907,17 @@ public abstract class LXCommand {
 
     public static class MovePattern extends LXCommand {
 
-      private final ComponentReference<LXChannel> channel;
+      private final ComponentReference<LXComponent> component;
       private final ComponentReference<LXPattern> pattern;
       private final int fromIndex;
       private final int toIndex;
 
-      public MovePattern(LXChannel channel, LXPattern pattern, int toIndex) {
-        this.channel = new ComponentReference<LXChannel>(channel);
+      public MovePattern(LXPatternEngine.Container container, LXPattern pattern, int toIndex) {
+        this(container.getPatternEngine(), pattern, toIndex);
+      }
+
+      public MovePattern(LXPatternEngine engine, LXPattern pattern, int toIndex) {
+        this.component = new ComponentReference<LXComponent>(engine.component);
         this.pattern = new ComponentReference<LXPattern>(pattern);
         this.fromIndex = pattern.getIndex();
         this.toIndex = toIndex;
@@ -895,26 +928,34 @@ public abstract class LXCommand {
         return "Move Pattern";
       }
 
+      private LXPatternEngine getPatternEngine() {
+        return ((LXPatternEngine.Container) this.component.get()).getPatternEngine();
+      }
+
       @Override
       public void perform(LX lx) {
-        this.channel.get().movePattern(this.pattern.get(), this.toIndex);
+        getPatternEngine().movePattern(this.pattern.get(), this.toIndex);
       }
 
       @Override
       public void undo(LX lx) {
-        this.channel.get().movePattern(this.pattern.get(), this.fromIndex);
+        getPatternEngine().movePattern(this.pattern.get(), this.fromIndex);
       }
     }
 
     public static class GoPattern extends LXCommand {
 
-      private final ComponentReference<LXChannel> channel;
+      private final ComponentReference<LXComponent> component;
       private final ComponentReference<LXPattern> prevPattern;
       private final ComponentReference<LXPattern> nextPattern;
 
-      public GoPattern(LXChannel channel, LXPattern nextPattern) {
-        this.channel = new ComponentReference<LXChannel>(channel);
-        this.prevPattern = new ComponentReference<LXPattern>(channel.getActivePattern());
+      public GoPattern(LXPatternEngine.Container container, LXPattern nextPattern) {
+        this(container.getPatternEngine(), nextPattern);
+      }
+
+      public GoPattern(LXPatternEngine engine, LXPattern nextPattern) {
+        this.component = new ComponentReference<LXComponent>(engine.component);
+        this.prevPattern = new ComponentReference<LXPattern>(engine.getActivePattern());
         this.nextPattern = new ComponentReference<LXPattern>(nextPattern);
       }
 
@@ -923,14 +964,18 @@ public abstract class LXCommand {
         return "Change Pattern";
       }
 
+      private LXPatternEngine getPatternEngine() {
+        return ((LXPatternEngine.Container) this.component.get()).getPatternEngine();
+      }
+
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        this.channel.get().goPattern(this.nextPattern.get());
+        getPatternEngine().goPattern(this.nextPattern.get());
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        this.channel.get().goPattern(this.prevPattern.get());
+        getPatternEngine().goPattern(this.prevPattern.get());
       }
     }
 
@@ -3761,9 +3806,9 @@ public abstract class LXCommand {
               PatternClipEvent event = lane.events.get(this.eventIndex);
               LXPattern pattern = event.getPattern();
               int index = pattern.getIndex();
-              int newIndex = LXUtils.constrain(index + increment, 0, pattern.getChannel().patterns.size() - 1);
+              int newIndex = LXUtils.constrain(index + increment, 0, pattern.getEngine().patterns.size() - 1);
               if (newIndex != index) {
-                event.setPattern(pattern.getChannel().patterns.get(newIndex));
+                event.setPattern(pattern.getEngine().patterns.get(newIndex));
               }
             } catch (Exception x) {
               throw new InvalidCommandException(x);
@@ -3776,7 +3821,7 @@ public abstract class LXCommand {
             PatternClipLane lane = this.clipLane.get();
             try {
               PatternClipEvent event = lane.events.get(this.eventIndex);
-              event.setPattern(event.getPattern().getChannel().patterns.get(this.fromPatternIndex));
+              event.setPattern(event.getPattern().getEngine().patterns.get(this.fromPatternIndex));
             } catch (Exception x) {
               throw new InvalidCommandException(x);
             }
@@ -3832,7 +3877,7 @@ public abstract class LXCommand {
             try {
               PatternClipEvent clipEvent = clipLane.events.get(this.eventIndex);
               clipLane.moveEvent(clipEvent, cursor);
-              clipEvent.setPattern(clipEvent.getPattern().getChannel().patterns.get(patternIndex));
+              clipEvent.setPattern(clipEvent.getPattern().getEngine().patterns.get(patternIndex));
             } catch (Exception x) {
               throw new InvalidCommandException(x);
             }

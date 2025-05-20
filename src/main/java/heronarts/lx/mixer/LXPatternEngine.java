@@ -36,6 +36,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.parameter.QuantizedTriggerParameter;
 import heronarts.lx.parameter.TriggerParameter;
@@ -190,6 +191,9 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     new BooleanParameter("View Pattern Label", false)
     .setDescription("Whether to show the active pattern as channel label");
 
+  // Listenable parameter for when number of patterns changes
+  public final MutableParameter numPatternsChanged = new MutableParameter();
+
   /**
    * This is a local buffer used to render a secondary pattern
    */
@@ -257,11 +261,13 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     addParameter("focusedPattern", this.focusedPattern);
     addParameter("triggerPatternCycle", this.triggerPatternCycle);
     addParameter("launchPatternCycle", this.launchPatternCycle);
+
+    this.autoCycleEnabled.addListener(this);
+    this.compositeMode.addListener(this);
   }
 
   private void addParameter(String path, LXListenableParameter parameter) {
     this.parameters.add(path, parameter);
-    parameter.addListener(this);
   }
 
   public boolean isPlaylist() {
@@ -541,6 +547,7 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     this.listeners.forEach(listener -> listener.patternAdded(this, pattern));
     this.inListener = false;
     _processReentrantListenerChanges();
+    this.numPatternsChanged.bang();
 
     // If this was the first pattern, focusedPattern has "changed" going from 0 -> 0
     if (this.mutablePatterns.size() == 1) {
@@ -609,6 +616,7 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     this.listeners.forEach(listener -> listener.patternRemoved(this, pattern));
     this.inListener = false;
     _processReentrantListenerChanges();
+    this.numPatternsChanged.bang();
 
     if (activateNext && !this.patterns.isEmpty()) {
       LXPattern newActive = getActivePattern();
@@ -977,7 +985,7 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
           pattern.loop(deltaMs);
 
           if (patternRender) {
-            pattern.compositeMode.getObject().blend(
+            pattern.compositeBlend.getObject().blend(
               colors,
               pattern.getColors(),
               patternDamping * pattern.compositeLevel.getValue(),
@@ -1066,12 +1074,10 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
   }
 
   public void dispose() {
-    // Remove parameter listeners
-    for (LXParameter parameter : this.parameters.values()) {
-      if (parameter instanceof LXListenableParameter listenable) {
-        listenable.removeListener(this);
-      }
-    }
+    this.autoCycleEnabled.removeListener(this);
+    this.compositeMode.removeListener(this);
+
+    clearPatterns();
 
     // Clear pattern state before disposing of patterns
     this.activePatternIndex = this.nextPatternIndex = NO_PATTERN_INDEX;
@@ -1101,10 +1107,12 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     clearPatterns();
 
     // Add patterns
-    JsonArray patternsArray = obj.getAsJsonArray(KEY_PATTERNS);
-    for (JsonElement patternElement : patternsArray) {
-      JsonObject patternObj = (JsonObject) patternElement;
-      loadPattern(patternObj, -1);
+    if (obj.has(KEY_PATTERNS)) {
+      JsonArray patternsArray = obj.getAsJsonArray(KEY_PATTERNS);
+      for (JsonElement patternElement : patternsArray) {
+        JsonObject patternObj = (JsonObject) patternElement;
+        loadPattern(patternObj, -1);
+      }
     }
 
     // Set the active index instantly, do not transition!

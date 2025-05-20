@@ -18,10 +18,13 @@
 
 package heronarts.lx.pattern;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LXComponent;
 import heronarts.lx.mixer.LXPatternEngine;
+import heronarts.lx.osc.OscMessage;
 
 @LXCategory(LXCategory.OTHER)
 @LXComponent.Name("Pattern Rack")
@@ -32,7 +35,9 @@ public class PatternRack extends LXPattern implements LXPatternEngine.Container 
 
   public PatternRack(LX lx) {
     super(lx);
+    this.label.setValue("Rack");
     this.patternEngine = new LXPatternEngine(lx, this);
+    addParameters(patternEngine.parameters);
   }
 
   @Override
@@ -49,6 +54,32 @@ public class PatternRack extends LXPattern implements LXPatternEngine.Container 
   @Override
   public LXPatternEngine.Listener getPatternEngineDelegate() {
     return this.delegate;
+  }
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    if (this.patternEngine.handleOscMessage(message, parts, index)) {
+      return true;
+    }
+    return super.handleOscMessage(message, parts, index);
+  }
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
+    this.patternEngine.save(lx, obj);
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    this.patternEngine.load(lx, obj);
+    super.load(lx, obj);
+  }
+
+  @Override
+  public void dispose() {
+    this.patternEngine.dispose();
+    super.dispose();
   }
 
 }

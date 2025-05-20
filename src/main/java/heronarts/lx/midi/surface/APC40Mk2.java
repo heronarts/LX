@@ -396,12 +396,12 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     private boolean isPatternEnabled(LXPattern pattern) {
-      switch (pattern.getChannel().patternEngine.compositeMode.getEnum()) {
+      switch (pattern.getEngine().compositeMode.getEnum()) {
       case BLEND:
         return pattern.enabled.isOn();
       default:
       case PLAYLIST:
-        return pattern == pattern.getChannel().getTargetPattern();
+        return pattern == pattern.getEngine().getTargetPattern();
       }
     }
 
@@ -529,17 +529,15 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     }
 
     private void onDeviceOnOff() {
-      if (this.device instanceof LXPattern) {
-        final LXPattern pattern = (LXPattern) this.device;
-        final LXChannel channel = pattern.getChannel();
-        if (channel.patternEngine.compositeMode.getEnum() == LXPatternEngine.CompositeMode.BLEND) {
+      if (this.device instanceof LXPattern pattern) {
+        final LXPatternEngine engine = pattern.getEngine();
+        if (engine.compositeMode.getEnum() == LXPatternEngine.CompositeMode.BLEND) {
           pattern.enabled.toggle();
         } else {
-          pattern.getChannel().goPatternIndex(pattern.getIndex());
+          engine.goPatternIndex(pattern.getIndex());
         }
         sendNoteOn(0, DEVICE_ON_OFF, LED_ON(isPatternEnabled(pattern)));
-      } else if (this.device instanceof LXEffect) {
-        LXEffect effect = (LXEffect) this.device;
+      } else if (this.device instanceof LXEffect effect) {
         if (!effect.locked.isOn()) {
           effect.enabled.toggle();
         }
