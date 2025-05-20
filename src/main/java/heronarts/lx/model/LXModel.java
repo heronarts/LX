@@ -226,6 +226,7 @@ public class LXModel extends LXNormalizationBounds implements LXSerializable {
     public int lightColor = 0xffffffff;
     public Lighting lighting = Lighting.DEFAULT;
     public Vertex lightDirection = new Vertex(0, 0, 1);
+    public boolean invertNormals = false;
 
     public Mesh(Type type, List<Vertex> vertices, int color) {
       this(type, vertices, color, null);

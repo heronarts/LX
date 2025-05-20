@@ -190,6 +190,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_MESH_TEXTURE = "texture";
   private static final String KEY_MESH_FILE = "file";
   private static final String KEY_MESH_VERTICES = "vertices";
+  private static final String KEY_MESH_INVERT_NORMALS = "invertNormals";
   private static final String KEY_MESH_RECT_WIDTH = "width";
   private static final String KEY_MESH_RECT_HEIGHT = "height";
   private static final String KEY_MESH_RECT_DEPTH = "depth";
@@ -2783,6 +2784,7 @@ public class JsonFixture extends LXFixture {
       mesh.setLighting(meshLighting);
       mesh.setLightColor(meshLightColor);
       mesh.setLightDirection(meshLightDirection);
+      mesh.invertNormals = loadBoolean(meshObj, KEY_MESH_INVERT_NORMALS, true, "Mesh must specify valid boolean for " + KEY_MESH_INVERT_NORMALS);
       this.mutableMeshes.add(mesh);
     }
   }
