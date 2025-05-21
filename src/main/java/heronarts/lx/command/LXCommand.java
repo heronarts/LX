@@ -217,7 +217,7 @@ public abstract class LXCommand {
     private final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
     private final List<Midi.RemoveMapping> removeMidiMappings = new ArrayList<Midi.RemoveMapping>();
     private final List<Snapshots.RemoveView> removeSnapshotViews = new ArrayList<Snapshots.RemoveView>();
-    private final List<Clip.RemoveParameterLane> removeClipLanes = new ArrayList<>();
+    private final List<Clip.RemoveClipLane> removeClipLanes = new ArrayList<>();
     private final List<Clip.Event.Pattern.RemoveReferences> removePatternClipEvents = new ArrayList<>();
     private final List<Device.SetRemoteControls> removeRemoteControls = new ArrayList<>();
 
@@ -292,10 +292,10 @@ public abstract class LXCommand {
     protected void removeClipLanes(LXBus bus, LXComponent component) {
       for (LXClip clip : bus.clips) {
         if (clip != null) {
-          List<ParameterClipLane> lanes = clip.findClipLanes(component);
+          List<LXClipLane<?>> lanes = clip.findClipLanes(component);
           if (lanes != null) {
-            for (ParameterClipLane lane : lanes) {
-              this.removeClipLanes.add(new Clip.RemoveParameterLane(lane));
+            for (LXClipLane<?> lane : lanes) {
+              this.removeClipLanes.add(new Clip.RemoveClipLane(lane));
             }
           }
         }
@@ -374,7 +374,7 @@ public abstract class LXCommand {
       for (Device.SetRemoteControls controls : this.removeRemoteControls) {
         controls.undo(lx);
       }
-      for (Clip.RemoveParameterLane lane : this.removeClipLanes) {
+      for (Clip.RemoveClipLane lane : this.removeClipLanes) {
         lane.undo(lx);
       }
       for (Clip.Event.Pattern.RemoveReferences patternReferences : this.removePatternClipEvents) {
@@ -3270,14 +3270,14 @@ public abstract class LXCommand {
       }
     }
 
-    public static class RemoveParameterLane extends RemoveComponent {
+    public static class RemoveClipLane extends RemoveComponent {
 
       private final ComponentReference<LXClip> clip;
-      private final ComponentReference<ParameterClipLane> parameterLane;
+      private final ComponentReference<LXClipLane<?>> parameterLane;
       private final int laneIndex;
       private final JsonObject laneObj;
 
-      public RemoveParameterLane(ParameterClipLane parameterLane) {
+      public RemoveClipLane(LXClipLane<?> parameterLane) {
         super(parameterLane);
         this.clip = new ComponentReference<>(parameterLane.clip);
         this.parameterLane = new ComponentReference<>(parameterLane);
@@ -3292,13 +3292,13 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        final ParameterClipLane clipLane = this.parameterLane.get();
-        clipLane.clip.removeParameterLane(clipLane);
+        final LXClipLane<?> clipLane = this.parameterLane.get();
+        clipLane.clip.removeClipLane(clipLane);
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        ParameterClipLane lane = this.clip.get().addParameterLane(lx, this.laneObj, this.laneIndex);
+        final LXClipLane<?> lane = this.clip.get().loadLane(lx, this.laneObj, this.laneIndex);
         if (lane != null) {
           super.undo(lx);
         }

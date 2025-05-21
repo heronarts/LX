@@ -40,6 +40,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
+import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
@@ -631,6 +632,18 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   public LXClip removeParameterLane(ParameterClipLane lane) {
+    return removeClipLane(lane);
+  }
+
+  public LXClip removeClipLane(LXClipLane<?> lane) {
+    if (lane instanceof MidiNoteClipLane) {
+      throw new IllegalArgumentException("May not remove the MidiNoteClipLane");
+    }
+    if (lane instanceof PatternClipLane patternLane) {
+      if (patternLane.engine.component instanceof LXChannel) {
+        throw new IllegalArgumentException("May not remove master LXChannelClip PatternClipLane");
+      }
+    }
     return _removeLane(lane);
   }
 
@@ -1207,16 +1220,27 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
-  public List<ParameterClipLane> findClipLanes(LXComponent component) {
-    List<ParameterClipLane> removedLanes = null;
+  public List<LXClipLane<?>> findClipLanes(LXComponent component) {
+    List<LXClipLane<?>> removedLanes = null;
     for (LXClipLane<?> lane : this.mutableLanes) {
-      if (lane instanceof ParameterClipLane parameterLane) {
-        if (parameterLane.parameter.isDescendant(component)) {
-          if (removedLanes == null) {
-            removedLanes = new ArrayList<>();
+      switch (lane) {
+        case ParameterClipLane parameterLane -> {
+          if (parameterLane.parameter.isDescendant(component)) {
+            if (removedLanes == null) {
+              removedLanes = new ArrayList<>();
+            }
+            removedLanes.add(parameterLane);
           }
-          removedLanes.add(parameterLane);
         }
+        case PatternClipLane patternLane -> {
+          if (patternLane.engine.component == component) {
+            if (removedLanes == null) {
+              removedLanes = new ArrayList<>();
+            }
+            removedLanes.add(patternLane);
+          }
+        }
+        default -> {}
       }
     }
     return removedLanes;
@@ -1649,9 +1673,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (obj.has(KEY_LANES)) {
       JsonArray lanesArr = obj.get(KEY_LANES).getAsJsonArray();
       for (JsonElement laneElement : lanesArr) {
-        JsonObject laneObj = laneElement.getAsJsonObject();
-        String laneType = laneObj.get(LXClipLane.KEY_LANE_TYPE).getAsString();
-        loadLane(lx, laneType, laneObj);
+        loadLane(lx, laneElement.getAsJsonObject(), -1);
       }
     }
   }
@@ -1684,12 +1706,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return lane;
   }
 
-  protected void loadLane(LX lx, String laneType, JsonObject laneObj) {
+  protected String getLaneType(JsonObject laneObj) {
+    return laneObj.get(LXClipLane.KEY_LANE_TYPE).getAsString();
+  }
+
+  public LXClipLane<?> loadLane(LX lx, JsonObject laneObj, int index) {
+    final String laneType = getLaneType(laneObj);
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
-      addParameterLane(lx, laneObj, -1);
-    } else {
-      LX.error("Cannot load unknown clip lane type: " + laneType);
+      return addParameterLane(lx, laneObj, index);
     }
+    LX.error("Cannot load unknown clip lane type: " + laneType);
+    return null;
   }
 
   @Override

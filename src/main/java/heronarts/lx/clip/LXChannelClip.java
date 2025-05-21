@@ -195,20 +195,23 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   }
 
   @Override
-  protected void loadLane(LX lx, String laneType, JsonObject laneObj) {
-    if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PATTERN)) {
-      if (laneObj.has(PatternClipLane.KEY_RACK)) {
-        // Rack pattern lane
-        addRackPatternLane(lx, laneObj, -1);
-      } else {
-        // Main pattern lane
-        this.patternLane.load(lx, laneObj);
+  public LXClipLane<?> loadLane(LX lx, JsonObject laneObj, int index) {
+    switch (getLaneType(laneObj)) {
+      case LXClipLane.VALUE_LANE_TYPE_PATTERN -> {
+        if (laneObj.has(PatternClipLane.KEY_RACK)) {
+          return addRackPatternLane(lx, laneObj, index);
+        } else {
+          this.patternLane.load(lx, laneObj);
+          return this.patternLane;
+        }
       }
-    } else if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE)) {
-      this.midiNoteLane.load(lx, laneObj);
-    } else {
-      super.loadLane(lx, laneType, laneObj);
+      case LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE -> {
+        this.midiNoteLane.load(lx, laneObj);
+        return this.midiNoteLane;
+      }
+      default -> {
+        return super.loadLane(lx, laneObj, index);
+      }
     }
   }
-
 }
