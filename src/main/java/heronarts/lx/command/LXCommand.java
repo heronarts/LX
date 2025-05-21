@@ -306,12 +306,22 @@ public abstract class LXCommand {
       for (LXClip clip : pattern.getMixerChannel().clips) {
         if (clip != null) {
           if (clip instanceof LXChannelClip channelClip) {
-            List<Integer> eventIndices = channelClip.patternLane.findEventIndices(pattern);
-            if (eventIndices != null) {
-              this.removePatternClipEvents.add(new Clip.Event.Pattern.RemoveReferences(channelClip.patternLane, eventIndices));
+            for (LXClipLane<?> clipLane : channelClip.lanes) {
+              if (clipLane instanceof PatternClipLane patternLane) {
+                if (pattern.getEngine() == patternLane.engine) {
+                  removePatternClipLaneEvents(patternLane, pattern);
+                }
+              }
             }
           }
         }
+      }
+    }
+
+    protected void removePatternClipLaneEvents(PatternClipLane lane, LXPattern pattern) {
+      List<Integer> eventIndices = lane.findEventIndices(pattern);
+      if (eventIndices != null) {
+        this.removePatternClipEvents.add(new Clip.Event.Pattern.RemoveReferences(lane, eventIndices));
       }
     }
 

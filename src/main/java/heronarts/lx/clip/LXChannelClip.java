@@ -90,6 +90,10 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
       for (LXPattern rackPattern : rack.patterns) {
         unregisterPattern(rackPattern);
       }
+      PatternClipLane lane = getPatternLane(rack.patternEngine, false);
+      if (lane != null) {
+        removePatternLane(lane);
+      }
       rack.patternEngine.removeListener(this.rackPatternListener);
     }
     unregisterComponent(pattern);
@@ -113,6 +117,12 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     }
     if (create) {
       PatternClipLane lane = new PatternClipLane(this, engine);
+      if (engine.isPlaylist()) {
+        LXPattern targetPattern = engine.getTargetPattern();
+        if (targetPattern != null) {
+          lane.insertEvent(new PatternClipEvent(lane, Cursor.ZERO, targetPattern));
+        }
+      }
       if (index < 0) {
         this.mutableLanes.add(lane);
       } else {
