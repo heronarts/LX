@@ -25,13 +25,15 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.LXComponent;
+import heronarts.lx.midi.LXShortMessage;
+import heronarts.lx.midi.MidiPanic;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.LXParameter;
 
 @LXCategory(LXCategory.OTHER)
 @LXComponent.Name("Pattern Rack")
-public class PatternRack extends LXPattern implements LXPatternEngine.Container {
+public class PatternRack extends LXPattern implements LXPatternEngine.Container, LXPattern.Midi {
 
   public final LXPatternEngine patternEngine;
   private final LXPatternEngine.Listener delegate = new LXPatternEngine.Listener() {};
@@ -72,6 +74,16 @@ public class PatternRack extends LXPattern implements LXPatternEngine.Container 
   @Override
   public LXPatternEngine.Listener getPatternEngineDelegate() {
     return this.delegate;
+  }
+
+  @Override
+  public void midiDispatch(LXShortMessage message) {
+    super.midiDispatch(message);
+    if (message instanceof MidiPanic) {
+      this.patternEngine.midiDispatch(message);
+    } else if (this.midiFilter.filter(message)) {
+      this.patternEngine.midiDispatch(message);
+    }
   }
 
   @Override
