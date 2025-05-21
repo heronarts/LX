@@ -61,9 +61,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     public default void clipLaneMoved(LXClip clip, LXClipLane<?> lane, int index) {}
     public default void parameterLaneAdded(LXClip clip, ParameterClipLane lane) {}
     public default void parameterLaneRemoved(LXClip clip, ParameterClipLane lane) {}
+    public default void patternLaneAdded(LXClip clip, PatternClipLane lane) {}
+    public default void patternLaneRemoved(LXClip clip, PatternClipLane lane) {}
   }
 
-  private final List<Listener> listeners = new ArrayList<Listener>();
+  final List<Listener> listeners = new ArrayList<Listener>();
 
   /**
    * Current playback/recording cursor for the clip
@@ -596,9 +598,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private ParameterClipLane getParameterLane(LXNormalizedParameter parameter, boolean create, int index) {
     for (LXClipLane<?> lane : this.lanes) {
-      if (lane instanceof ParameterClipLane) {
-        if (((ParameterClipLane) lane).parameter == parameter) {
-          return (ParameterClipLane) lane;
+      if (lane instanceof ParameterClipLane parameterLane) {
+        if (parameterLane.parameter == parameter) {
+          return parameterLane;
         }
       }
     }
@@ -617,13 +619,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return null;
   }
 
-  private LXClip _removeLane(LXClipLane<?> lane) {
+  LXClip _removeLane(LXClipLane<?> lane) {
     this.mutableLanes.remove(lane);
-    if (lane instanceof ParameterClipLane) {
-      for (Listener listener : this.listeners) {
-        listener.parameterLaneRemoved(this, (ParameterClipLane) lane);
-      }
-    }
+    switch (lane) {
+    case ParameterClipLane parameterLane -> this.listeners.forEach(l -> l.parameterLaneRemoved(this, parameterLane));
+    case PatternClipLane patternLane -> this.listeners.forEach(l -> l.patternLaneRemoved(this, patternLane));
+    default -> {}
+    };
     LX.dispose(lane);
     return this;
   }
@@ -1147,12 +1149,22 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     p.removeListener(this.parameterRecorder);
   }
 
-  /**
-   * Be explicit storing these in a tree, we need to ensure we unregister everything
-   * correctly in the case that the children or layers of a component are modified
-   * between the time we register and unregister.
-   */
+  // Be explicit storing these in a tree, we need to ensure we unregister everything
+  // correctly in the case that the children or layers of a component are modified
+  // between the time we register and unregister.
   private final Map<LXComponent, List<LXComponent>> registeredChildren = new HashMap<>();
+
+  // Same for params, be explicit about what we listened to.
+  private final Map<LXComponent, List<LXListenableNormalizedParameter>> registeredParameters = new HashMap<>();
+
+  private List<LXListenableNormalizedParameter> _registeredParameters(LXComponent component) {
+    List<LXListenableNormalizedParameter> list = this.registeredParameters.get(component);
+    if (list == null) {
+      list = new ArrayList<>();
+      this.registeredParameters.put(component, list);
+    }
+    return list;
+  }
 
   private List<LXComponent> _registeredChildren(LXComponent component) {
     List<LXComponent> list = this.registeredChildren.get(component);
@@ -1163,10 +1175,21 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return list;
   }
 
+  private boolean isEligibleParameter(LXComponent component, LXListenableNormalizedParameter parameter) {
+    if (component instanceof LXDeviceComponent device) {
+      return device.isClipAutomationControl(parameter);
+    }
+    return true;
+  }
+
   protected void registerComponent(LXComponent component) {
+    final List<LXListenableNormalizedParameter> registeredParameters = _registeredParameters(component);
     for (LXParameter p : component.getParameters()) {
-      if (p instanceof LXListenableNormalizedParameter) {
-        registerParameter((LXListenableNormalizedParameter) p);
+      if (p instanceof LXListenableNormalizedParameter listenable) {
+        if (isEligibleParameter(component, listenable)) {
+          registeredParameters.add(listenable);
+          registerParameter(listenable);
+        }
       }
     }
     final List<LXComponent> registeredChildren = _registeredChildren(component);
@@ -1200,15 +1223,18 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   protected void unregisterComponent(LXComponent component) {
-    for (LXParameter p : component.getParameters()) {
-      if (p instanceof LXListenableNormalizedParameter) {
-        unregisterParameter((LXListenableNormalizedParameter) p);
-        ParameterClipLane lane = getParameterLane((LXNormalizedParameter) p, false);
+    final List<LXListenableNormalizedParameter> registeredParameters =
+      this.registeredParameters.remove(component);
+    if (registeredParameters != null) {
+      for (LXListenableNormalizedParameter parameter : registeredParameters) {
+        unregisterParameter(parameter);
+        ParameterClipLane lane = getParameterLane(parameter, false);
         if (lane != null) {
-          _removeLane(lane);
+          removeParameterLane(lane);
         }
       }
     }
+
     final List<LXComponent> registeredChildren = this.registeredChildren.remove(component);
     if (registeredChildren != null) {
       registeredChildren.forEach(child -> unregisterComponent(child));
@@ -1661,6 +1687,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   protected void loadLane(LX lx, String laneType, JsonObject laneObj) {
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
       addParameterLane(lx, laneObj, -1);
+    } else {
+      LX.error("Cannot load unknown clip lane type: " + laneType);
     }
   }
 

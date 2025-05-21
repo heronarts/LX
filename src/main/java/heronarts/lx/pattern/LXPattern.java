@@ -299,11 +299,24 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   @Override
+  public boolean isClipAutomationControl(LXParameter parameter) {
+    return !(
+      parameter == this.recall ||
+      parameter == this.launch ||
+      parameter == this.compositeBlend ||
+      parameter == this.hasCustomCycleTime ||
+      parameter == this.customCycleTimeSecs ||
+      parameter == this.autoMute ||
+      parameter == this.cueActive ||
+      parameter == this.auxActive
+    ) && super.isClipAutomationControl(parameter);
+  }
+
+  @Override
   public boolean isSnapshotControl(LXParameter parameter) {
     return !(
-      parameter == this.launch ||
       parameter == this.recall ||
-      parameter == this.enabled ||
+      parameter == this.launch ||
       parameter == this.hasCustomCycleTime ||
       parameter == this.customCycleTimeSecs ||
       parameter == this.autoMute ||

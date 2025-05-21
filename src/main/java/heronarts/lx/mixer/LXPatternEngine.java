@@ -887,7 +887,10 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     }
     nextPattern.activate(LXMixerEngine.patternFriendAccess);
     this.container.getPatternEngineDelegate().patternWillChange(this, activePattern, nextPattern);
+    this.inListener = true;
     this.listeners.forEach(listener -> listener.patternWillChange(this, activePattern, nextPattern));
+    this.inListener = false;
+    _processReentrantListenerChanges();
     this.lx.engine.osc.sendMessage(this.component.getOscAddress() + "/" + PATH_NEXT_PATTERN, nextPattern.getIndex());
     if (this.transitionEnabled.isOn()) {
       this.transition = this.transitionBlendMode.getObject();

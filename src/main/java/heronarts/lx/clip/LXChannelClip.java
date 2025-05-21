@@ -21,10 +21,12 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXPath;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.PatternRack;
 
 public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Listener {
 
@@ -55,20 +57,90 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     public void effectMoved(LXPattern pattern, LXEffect effect) {}
   };
 
+  private final LXPatternEngine.Listener rackPatternListener = new LXPatternEngine.Listener() {
+    public void patternAdded(LXPatternEngine engine, LXPattern pattern) {
+      registerPattern(pattern);
+    }
+    public void patternRemoved(LXPatternEngine engine, LXPattern pattern) {
+      unregisterPattern(pattern);
+    }
+    public void patternWillChange(LXPatternEngine engine, LXPattern pattern, LXPattern nextPattern) {
+      if (isRecording()) {
+        getPatternLane(engine, true).recordPatternEvent(nextPattern);
+      }
+    }
+  };
+
   protected void registerPattern(LXPattern pattern) {
     registerComponent(pattern);
     for (LXEffect effect : pattern.effects) {
       registerComponent(effect);
     }
     pattern.addListener(this.patternEffectListener);
+    if (pattern instanceof PatternRack rack) {
+      for (LXPattern rackPattern : rack.patterns) {
+        registerPattern(rackPattern);
+      }
+      rack.patternEngine.addListener(this.rackPatternListener);
+    }
   }
 
   protected void unregisterPattern(LXPattern pattern) {
+    if (pattern instanceof PatternRack rack) {
+      for (LXPattern rackPattern : rack.patterns) {
+        unregisterPattern(rackPattern);
+      }
+      rack.patternEngine.removeListener(this.rackPatternListener);
+    }
     unregisterComponent(pattern);
     for (LXEffect effect : pattern.effects) {
       unregisterComponent(effect);
     }
     pattern.removeListener(this.patternEffectListener);
+  }
+
+  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create) {
+    return getPatternLane(engine, create, -1);
+  }
+
+  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create, int index) {
+    for (LXClipLane<?> lane : this.lanes) {
+      if (lane instanceof PatternClipLane patternLane) {
+        if (patternLane.engine == engine) {
+          return patternLane;
+        }
+      }
+    }
+    if (create) {
+      PatternClipLane lane = new PatternClipLane(this, engine);
+      if (index < 0) {
+        this.mutableLanes.add(lane);
+      } else {
+        this.mutableLanes.add(index, lane);
+      }
+      for (Listener listener : this.listeners) {
+        listener.patternLaneAdded(this, lane);
+      }
+      return lane;
+    }
+    return null;
+  }
+
+  public LXChannelClip removePatternLane(PatternClipLane lane) {
+    _removeLane(lane);
+    return this;
+  }
+
+  private PatternClipLane addRackPatternLane(LX lx, JsonObject laneObj, int index) {
+    final String rackPath = laneObj.get(PatternClipLane.KEY_RACK).getAsString();
+    final PatternRack rack = (PatternRack) LXPath.get(this.bus, rackPath);
+    if (rack == null) {
+      LX.error("No PatternRack found for saved patternclip lane on bus " + this.bus + " at path: " + rackPath);
+      return null;
+    }
+    final PatternClipLane lane = getPatternLane(rack.patternEngine, true, index);
+    lane.load(lx, laneObj);
+    return lane;
   }
 
   @Override
@@ -115,7 +187,13 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   @Override
   protected void loadLane(LX lx, String laneType, JsonObject laneObj) {
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PATTERN)) {
-      this.patternLane.load(lx, laneObj);
+      if (laneObj.has(PatternClipLane.KEY_RACK)) {
+        // Rack pattern lane
+        addRackPatternLane(lx, laneObj, -1);
+      } else {
+        // Main pattern lane
+        this.patternLane.load(lx, laneObj);
+      }
     } else if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE)) {
       this.midiNoteLane.load(lx, laneObj);
     } else {

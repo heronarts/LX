@@ -11,7 +11,7 @@ public class PatternClipEvent extends LXClipEvent<PatternClipEvent> {
   private LXPattern pattern;
 
   public PatternClipEvent(PatternClipLane lane, Cursor cursor, int patternIndex) {
-    this(lane, lane.channel.patterns.get(patternIndex));
+    this(lane, lane.engine.patterns.get(patternIndex));
     setCursor(cursor);
   }
 

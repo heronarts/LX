@@ -48,6 +48,12 @@ public class PatternRack extends LXPattern implements LXPatternEngine.Container,
   }
 
   @Override
+  public boolean isClipAutomationControl(LXParameter parameter) {
+    return !(this.patternEngine.parameters.containsValue(parameter)) &&
+      super.isClipAutomationControl(parameter);
+  }
+
+  @Override
   public boolean isSnapshotControl(LXParameter parameter) {
     return !(this.patternEngine.parameters.containsValue(parameter)) &&
       super.isSnapshotControl(parameter);
