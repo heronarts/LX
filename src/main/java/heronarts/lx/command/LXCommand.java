@@ -275,7 +275,7 @@ public abstract class LXCommand {
         if (customRemoteControls != null) {
           boolean removed = false;
           for (LXListenableNormalizedParameter parameter : customRemoteControls) {
-            if (parameter.isDescendant(component)) {
+            if ((parameter != null) && parameter.isDescendant(component)) {
               removed = true;
               break;
             }
