@@ -42,6 +42,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMasterBus;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -50,6 +51,7 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -94,7 +96,12 @@ public abstract class LXSnapshot extends LXComponent {
     /**
      * The pattern which is active on a channel
      */
-    ACTIVE_PATTERN
+    ACTIVE_PATTERN,
+
+    /**
+     * The pattern which is active on a rack
+     */
+    RACK_PATTERN
   };
 
   /**
@@ -520,6 +527,66 @@ public abstract class LXSnapshot extends LXComponent {
   }
 
   /**
+   * View for which pattern is active on a rack. Painfully redundant with ActivePatternView
+   * but easier to keep stored data format clear for backwards compatibility with a dedicated
+   * type here.
+   */
+  public class RackPatternView extends View {
+
+    private final PatternRack rack;
+    private final LXPattern pattern;
+
+    private RackPatternView(PatternRack rack) {
+      super(ViewScope.PATTERNS, ViewType.RACK_PATTERN);
+      this.rack = rack;
+      this.pattern = rack.patternEngine.getActivePattern();
+    }
+
+    private RackPatternView(LX lx, JsonObject obj) {
+      super(lx, obj);
+      final String rackPath = obj.get(KEY_RACK_PATH).getAsString();
+      if (isClipSnapshot()) {
+        this.rack = (PatternRack) LXPath.get(getClipChannel(), rackPath);
+      } else {
+        this.rack = (PatternRack) LXPath.get(lx, rackPath);
+      }
+      if (this.rack == null) {
+        throw new IllegalStateException("Cannot restore RackPatternView for non-existent rack: " + rackPath);
+      }
+      final int patternIndex = obj.get(KEY_ACTIVE_PATTERN_INDEX).getAsInt();
+      this.pattern = this.rack.patterns.get(patternIndex);
+      if (this.pattern == null) {
+        throw new IllegalStateException("Cannot restore RackPatternView for missing pattern index: " + rackPath + "/pattern/" + patternIndex);
+      }
+    }
+
+    @Override
+    public LXCommand getCommand() {
+      return new LXCommand.Channel.GoPattern(this.rack, this.pattern);
+    }
+
+    @Override
+    protected boolean isDependentOf(LXComponent component) {
+      return component.contains(this.pattern);
+    }
+
+    @Override
+    protected void recall() {
+      this.rack.patternEngine.goPattern(this.pattern);
+    }
+
+    private static final String KEY_RACK_PATH = "rackPath";
+    private static final String KEY_ACTIVE_PATTERN_INDEX = "activePatternIndex";
+
+    @Override
+    public void save(LX lx, JsonObject obj) {
+      super.save(lx, obj);
+      obj.addProperty(KEY_RACK_PATH, this.rack.getCanonicalPath(snapshotParameterScope));
+      obj.addProperty(KEY_ACTIVE_PATTERN_INDEX, this.pattern.getIndex());
+    }
+  }
+
+  /**
    * Scope that parameters are serialized within, or null. For global snapshots
    * this is null since the snapshot can refer to anything, but clip snapshots
    * are scoped to the bus that they live on and only refer to parameters within
@@ -586,18 +653,16 @@ public abstract class LXSnapshot extends LXComponent {
       addParameterView(ViewScope.MIXER, channel.crossfadeGroup);
     }
 
-    if (bus instanceof LXChannel) {
-      addParameterView(ViewScope.PATTERNS, ((LXChannel) bus).compositeMode);
+    if (bus instanceof LXChannel channel) {
+      addParameterView(ViewScope.PATTERNS, channel.patternEngine.compositeMode);
     }
 
     initializeClipBus(bus);
   }
 
   protected void initializeClipBus(LXBus bus) {
-
-    if (bus instanceof LXChannel) {
-      final LXChannel channel = (LXChannel) bus;
-      if (channel.compositeMode.getEnum() == LXChannel.CompositeMode.PLAYLIST) {
+    if (bus instanceof LXChannel channel) {
+      if (channel.patternEngine.compositeMode.getEnum() == LXPatternEngine.CompositeMode.PLAYLIST) {
         // Only need to add settings for the active pattern
         LXPattern pattern = channel.getActivePattern();
         if (pattern != null) {
@@ -636,6 +701,29 @@ public abstract class LXSnapshot extends LXComponent {
 
   protected void addPatternView(LXPattern pattern) {
     addDeviceView(ViewScope.PATTERNS, pattern);
+    if (pattern instanceof PatternRack rack) {
+      switch (rack.patternEngine.compositeMode.getEnum()) {
+        case PLAYLIST -> {
+          LXPattern activePattern = rack.patternEngine.getActivePattern();
+          if (activePattern != null) {
+            addView(new RackPatternView(rack));
+            addPatternView(activePattern);
+          }
+        }
+        case BLEND ->{
+          for (LXPattern rackPattern : rack.patterns) {
+            if (rackPattern.enabled.isOn()) {
+              // Store all settings for any pattern that is active, explicitly including enabled state
+              addParameterView(ViewScope.PATTERNS, rackPattern.enabled);
+              addPatternView(pattern);
+            } else {
+              // Just store enabled (disabled) state for a pattern that's off
+              addParameterView(ViewScope.PATTERNS, pattern.enabled);
+            }
+          }
+        }
+      }
+    }
     for (LXEffect effect : pattern.effects) {
       addEffectView(effect);
     }
@@ -691,19 +779,14 @@ public abstract class LXSnapshot extends LXComponent {
    * @return The new view object
    */
   public View addView(JsonObject viewObj) {
-    ViewType type = ViewType.valueOf(viewObj.get(View.KEY_TYPE).getAsString());
-    View view = null;
-    switch (type) {
-    case PARAMETER:
-      view = new ParameterView(getLX(), viewObj);
-      break;
-    case ACTIVE_PATTERN:
-      view = new ActivePatternView(getLX(), viewObj);
-      break;
-    case CHANNEL_FADER:
-      view = new ChannelFaderView(getLX(), viewObj);
-      break;
-    }
+    final ViewType type = ViewType.valueOf(viewObj.get(View.KEY_TYPE).getAsString());
+    final View view = switch (type) {
+    case PARAMETER -> new ParameterView(getLX(), viewObj);
+    case ACTIVE_PATTERN -> new ActivePatternView(getLX(), viewObj);
+    case RACK_PATTERN -> new RackPatternView(getLX(), viewObj);
+    case CHANNEL_FADER -> new ChannelFaderView(getLX(), viewObj);
+    default -> null;
+    };
     if (view == null) {
       LX.error("Invalid serialized LXSnapshot.View type: " + viewObj.get(View.KEY_TYPE).getAsString());
     } else {

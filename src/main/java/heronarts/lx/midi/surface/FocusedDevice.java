@@ -179,10 +179,9 @@ public class FocusedDevice {
       unregisterBus();
       this.bus = bus;
       if (bus != null) {
-        if (bus instanceof LXChannel) {
-          LXChannel channel = (LXChannel) bus;
+        if (bus instanceof LXChannel channel) {
           channel.addListener(this.channelListener);
-          addListener(channel.focusedPattern, p -> {
+          addListener(channel.patternEngine.focusedPattern, p -> {
             // Switch to focused pattern unless focus was on
             // a bus effect
             if (!isBusEffect(this.device)) {
@@ -199,10 +198,9 @@ public class FocusedDevice {
 
   private void unregisterBus() {
     if (this.bus != null) {
-      if (this.bus instanceof LXChannel) {
-        LXChannel channel = (LXChannel) bus;
+      if (this.bus instanceof LXChannel channel) {
         channel.removeListener(this.channelListener);
-        removeListener(channel.focusedPattern);
+        removeListener(channel.patternEngine.focusedPattern);
       } else {
         this.bus.removeListener(this.channelListener);
       }

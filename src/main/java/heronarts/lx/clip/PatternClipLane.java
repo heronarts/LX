@@ -24,21 +24,33 @@ import java.util.List;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.mixer.LXChannel;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.utils.LXUtils;
 
-public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXChannel.Listener {
+public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXPatternEngine.Listener {
 
-  public final LXChannel channel;
+  public final LXPatternEngine engine;
 
   PatternClipLane(LXClip clip) {
-    super(clip);
-    this.channel = (LXChannel) clip.bus;
-    this.channel.addListener(this);
+    this(clip, ((LXChannel) clip.bus).patternEngine);
   }
 
-  public void patternRemoved(LXChannel channel, LXPattern pattern) {
+  PatternClipLane(LXClip clip, PatternRack rack) {
+    this(clip, rack.patternEngine);
+  }
+
+  PatternClipLane(LXClip clip, LXPatternEngine engine) {
+    super(clip);
+    this.engine = engine;
+    this.engine.addListener(this);
+  }
+
+  @Override
+  public void patternRemoved(LXPatternEngine channel, LXPattern pattern) {
     boolean changed = false;
     for (int i = 0; i < this.mutableEvents.size(); ++i) {
       PatternClipEvent event = this.mutableEvents.get(i);
@@ -61,7 +73,7 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
 
   private void triggerPattern(LXPattern pattern) {
     this.internalTrigger = true;
-    this.channel.goPattern(pattern);
+    this.engine.goPattern(pattern);
     this.internalTrigger = false;
   }
 
@@ -104,7 +116,14 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
 
   @Override
   public String getLabel() {
-    return "Pattern";
+    String label = "Pattern";
+    LXComponent component = this.engine.component;
+    int count = 1;
+    while ((component instanceof PatternRack rack) && (count++ < 3)) {
+      label = rack.getLabel() + " | " + label;
+      component = component.getParent();
+    }
+    return label;
   }
 
   private LXPattern getPatternBeforeCursor(Cursor to) {
@@ -125,7 +144,7 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
 
   private void triggerPatternAtCursor(Cursor to) {
     LXPattern pattern = getPatternAtCursor(to);
-    if ((pattern != null) && (this.channel.getTargetPattern() != pattern)) {
+    if ((pattern != null) && (this.engine.getTargetPattern() != pattern)) {
       triggerPattern(pattern);
     }
   }
@@ -200,20 +219,30 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXC
     }
   }
 
+  public static final String KEY_RACK = "rack";
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
+    if (this.engine.component instanceof PatternRack rack) {
+      obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.bus));
+    }
+  }
+
   @Override
   protected PatternClipEvent loadEvent(LX lx, JsonObject eventObj) {
-    final int numPatterns = this.channel.patterns.size();
+    final int numPatterns = this.engine.patterns.size();
     final int patternIndex = eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt();
     if (!LXUtils.inRange(patternIndex, 0, numPatterns - 1)) {
       LX.error("Invalid pattern index found in PatternClipLane.loadEvent on channel with " + numPatterns + " patterns: " + eventObj);
       return null;
     }
-    return new PatternClipEvent(this, this.channel.patterns.get(patternIndex));
+    return new PatternClipEvent(this, this.engine.patterns.get(patternIndex));
   }
 
   @Override
   public void dispose() {
-    this.channel.removeListener(this);
+    this.engine.removeListener(this);
     super.dispose();
   }
 

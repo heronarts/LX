@@ -37,6 +37,7 @@ import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMixerEngine;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.LXOscEngine;
 import heronarts.lx.osc.OscMessage;
@@ -150,7 +151,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     .setDescription("Whether the pattern is eligible for playlist cycling or compositing");
 
   public final TriggerParameter recall =
-    new TriggerParameter("Recall", () -> getChannel().goPattern(this))
+    new TriggerParameter("Recall", () -> getEngine().goPattern(this))
     .setDescription("Recalls this pattern to become active on the channel");
 
   public final QuantizedTriggerParameter launch =
@@ -158,7 +159,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     .onSchedule(this::_launchScheduled)
     .setDescription("Launches this pattern to become active on the channel");
 
-  public final ObjectParameter<LXBlend> compositeMode =
+  public final ObjectParameter<LXBlend> compositeBlend =
     new ObjectParameter<LXBlend>("Composite Blend", new LXBlend[1])
     .setDescription("Specifies the blending function used for blending of patterns on the channel");
 
@@ -203,10 +204,10 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private final LXParameterListener onEnabled = p -> {
     final boolean isEnabled = this.enabled.isOn();
-    final LXChannel channel = getChannel();
-    if (channel != null) {
-      channel.onPatternEnabled(this);
-      if (channel.isComposite() && !channel.compositeDampingEnabled.isOn()) {
+    final LXPatternEngine engine = getEngine();
+    if (engine != null) {
+      engine.onPatternEnabled(this);
+      if (engine.isComposite() && !engine.compositeDampingEnabled.isOn()) {
         if (isEnabled) {
           _activate();
         } else {
@@ -216,9 +217,9 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     }
   };
 
-  private final LXParameterListener onCompositeMode = p -> {
+  private final LXParameterListener onCompositeBlend = p -> {
     this.activeCompositeBlend.onInactive();
-    this.activeCompositeBlend = this.compositeMode.getObject();
+    this.activeCompositeBlend = this.compositeBlend.getObject();
     this.activeCompositeBlend.onActive();
   };
 
@@ -230,7 +231,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private final LXParameterListener onCue = p -> {
     if (this.cueActive.isOn()) {
-      for (LXPattern pattern : getChannel().patterns) {
+      for (LXPattern pattern : getEngine().patterns) {
         if (pattern != this) {
           pattern.cueActive.setValue(false);
         }
@@ -240,7 +241,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private final LXParameterListener onAux = p -> {
     if (this.auxActive.isOn()) {
-      for (LXPattern pattern : getChannel().patterns) {
+      for (LXPattern pattern : getEngine().patterns) {
         if (pattern != this) {
           pattern.auxActive.setValue(false);
         }
@@ -258,6 +259,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     public long runNanos = 0;
     public long effectNanos = 0;
   }
+
+  private LXPatternEngine patternEngine;
 
   protected final List<LXEffect> mutableEffects = new ArrayList<LXEffect>();
 
@@ -277,7 +280,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
     addParameter("recall", this.recall);
     addParameter("launch", this.launch);
-    addParameter("compositeMode", this.compositeMode);
+    addParameter("compositeBlend", this.compositeBlend);
     addParameter("compositeLevel", this.compositeLevel);
     addParameter("hasCustomCycleTime", this.hasCustomCycleTime);
     addParameter("customCycleTimeSecs", this.customCycleTimeSecs);
@@ -286,7 +289,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     addParameter("auxActive", this.auxActive);
 
     updateCompositeBlendOptions();
-    this.compositeMode.addListener(this.onCompositeMode);
+    this.compositeBlend.addListener(this.onCompositeBlend);
     this.autoMute.addListener(this.onAutoMute);
 
     this.enabled.addListener(this.onEnabled);
@@ -296,11 +299,24 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   @Override
+  public boolean isClipAutomationControl(LXParameter parameter) {
+    return !(
+      parameter == this.recall ||
+      parameter == this.launch ||
+      parameter == this.compositeBlend ||
+      parameter == this.hasCustomCycleTime ||
+      parameter == this.customCycleTimeSecs ||
+      parameter == this.autoMute ||
+      parameter == this.cueActive ||
+      parameter == this.auxActive
+    ) && super.isClipAutomationControl(parameter);
+  }
+
+  @Override
   public boolean isSnapshotControl(LXParameter parameter) {
     return !(
-      parameter == this.launch ||
       parameter == this.recall ||
-      parameter == this.enabled ||
+      parameter == this.launch ||
       parameter == this.hasCustomCycleTime ||
       parameter == this.customCycleTimeSecs ||
       parameter == this.autoMute ||
@@ -314,7 +330,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return
       parameter == this.recall ||
       parameter == this.launch ||
-      parameter == this.compositeMode ||
+      parameter == this.compositeBlend ||
       parameter == this.compositeLevel ||
       parameter == this.enabled ||
       parameter == this.hasCustomCycleTime ||
@@ -327,11 +343,11 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   @Override
   public String getPath() {
-    return LXChannel.PATH_PATTERN + "/" + (this.index + 1);
+    return LXPatternEngine.PATH_PATTERN + "/" + (this.index + 1);
   }
 
   private void disposeCompositeBlendOptions() {
-    for (LXBlend blend : this.compositeMode.getObjects()) {
+    for (LXBlend blend : this.compositeBlend.getObjects()) {
       if (blend != null) {
         LX.dispose(blend);
       }
@@ -340,8 +356,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   public void updateCompositeBlendOptions() {
     disposeCompositeBlendOptions();
-    this.compositeMode.setObjects(this.lx.engine.mixer.instantiateChannelBlends(this));
-    this.activeCompositeBlend = this.compositeMode.getObject();
+    this.compositeBlend.setObjects(this.lx.engine.mixer.instantiateChannelBlends(this));
+    this.activeCompositeBlend = this.compositeBlend.getObject();
     this.activeCompositeBlend.onActive();
   }
 
@@ -354,7 +370,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   private void _launchScheduled() {
-    for (LXPattern pattern : getChannel().patterns) {
+    for (LXPattern pattern : getEngine().patterns) {
       if (pattern != this) {
         pattern.launch.cancel();
       }
@@ -366,9 +382,23 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * not yet loaded onto any channel.
    *
    * @return Channel pattern is loaded onto
+   * @deprecated Patterns can now be on an LXChannel or in a PatternRack - this method is unreliable
+   *             use getEngine() to get the LXPatternEngine or getMixerChannel() to find the channel the pattern is on
    */
+  @Deprecated
   public final LXChannel getChannel() {
     return (LXChannel) getParent();
+  }
+
+  public final LXChannel getMixerChannel() {
+    LXComponent parent = getParent();
+    while (parent != null) {
+      if (parent instanceof LXChannel channel) {
+        return channel;
+      }
+      parent = parent.getParent();
+    }
+    return null;
   }
 
   /**
@@ -377,9 +407,30 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    *
    * @param channel Channel pattern is loaded onto
    * @return this
+   * @deprecated
    */
+  @Deprecated
   public final LXPattern setChannel(LXChannel channel) {
     setParent(channel);
+    return this;
+  }
+
+  /**
+   * Gets the pattern engine that this pattern belongs to
+   *
+   * @return Pattern engine
+   */
+  public final LXPatternEngine getEngine() {
+    return this.patternEngine;
+  }
+
+  /**
+   * Called by the engine when pattern is created. This may only be
+   * called once, by the engine. Do not call directly.
+   */
+  public final LXPattern setEngine(LXPatternEngine patternEngine) {
+    setParent(patternEngine.component);
+    this.patternEngine = patternEngine;
     return this;
   }
 
@@ -705,6 +756,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
+
+    // Legacy support < 1.1.1 - write compositeMode
+    if (!(this instanceof PatternRack)) {
+      LXSerializable.Utils.saveParameter(this.compositeBlend, obj.getAsJsonObject(KEY_PARAMETERS), "compositeMode");
+    }
+
     obj.add(KEY_EFFECTS, LXSerializable.Utils.toArray(lx, this.mutableEffects));
   }
 
@@ -721,6 +778,15 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
     super.load(lx, obj);
 
+    // Legacy support for pre-pattern rack "compositeBlend" was "compositeMode", but we don't
+    // want to use the normal LegacyParameter path for this
+    if (obj.has(KEY_PARAMETERS)) {
+      JsonObject params = obj.getAsJsonObject(KEY_PARAMETERS);
+      if (!params.has("compositeBlend") && params.has("compositeMode")) {
+        LXSerializable.Utils.loadParameter(this.compositeBlend, params, "compositeMode");
+      }
+    }
+
     this.compositeDampingLevel = this.enabled.isOn() ? 1 : 0;
   }
 
@@ -732,7 +798,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.auxActive.removeListener(this.onAux);
     this.enabled.removeListener(this.onEnabled);
     this.autoMute.removeListener(this.onAutoMute);
-    this.compositeMode.removeListener(this.onCompositeMode);
+    this.compositeBlend.removeListener(this.onCompositeBlend);
     super.dispose();
     disposeCompositeBlendOptions();
     this.listeners.forEach(listener -> LX.warning("Stranded LXPattern.Listener: " + listener));

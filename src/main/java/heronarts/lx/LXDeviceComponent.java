@@ -256,6 +256,21 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
   }
 
   /**
+   * Returns whether this parameter is recorded in clip automation
+   *
+   * @param parameter Parameter
+   * @return true if this can be included in clip automation
+   */
+  public boolean isClipAutomationControl(LXParameter parameter) {
+    return !(
+      (parameter == this.label) ||
+      (parameter == this.midiFilter) ||
+      (parameter == this.view) ||
+      (parameter == this.viewPriority)
+    );
+  }
+
+  /**
    * Returns whether this parameter is stored along with snapshots
    *
    * @param parameter Parameter
@@ -267,7 +282,6 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
       (parameter == this.midiFilter) ||
       (parameter == this.viewPriority)
     );
-
   }
 
   /**

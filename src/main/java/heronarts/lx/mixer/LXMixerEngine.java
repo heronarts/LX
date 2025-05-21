@@ -30,6 +30,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXEngine;
 import heronarts.lx.LXRegistry;
 import heronarts.lx.LXSerializable;
@@ -46,6 +47,7 @@ import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.pattern.LXPattern;
@@ -130,8 +132,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     new BooleanParameter("Auto-Mute Pattern Default", false)
     .setDescription("Whether new rack patterns have Auto-Mute enabled by default");
 
-  final ModelBuffer backgroundBlack;
-  final ModelBuffer backgroundTransparent;
+  public final ModelBuffer backgroundBlack;
+  public final ModelBuffer backgroundTransparent;
   private final ModelBuffer blendBufferLeft;
   private final ModelBuffer blendBufferRight;
 
@@ -322,8 +324,8 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     return instantiateBlends(this.lx.registry.channelBlends, context);
   }
 
-  protected LXBlend[] instantiateTransitionBlends(LXChannel channel) {
-    return instantiateBlends(this.lx.registry.transitionBlends, channel);
+  public LXBlend[] instantiateTransitionBlends(LXComponent component) {
+    return instantiateBlends(this.lx.registry.transitionBlends, component);
   }
 
   protected LXBlend[] instantiateCrossfaderBlends() {
@@ -983,7 +985,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private boolean _blendCueCalled = false;
   private boolean _blendAuxCalled = false;
 
-  void blendCue(int[] cueColors, LXModel cueView) {
+  public void blendCue(int[] cueColors, LXModel cueView) {
     // NOTE: could be channel multithreaded! If not, there'll never be
     // contention on this lock.
     synchronized (this.blendStackCue) {
@@ -992,7 +994,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
   }
 
-  void blendAux(int[] auxColors, LXModel auxView) {
+  public void blendAux(int[] auxColors, LXModel auxView) {
     // NOTE: could be channel multithreaded! If not, there'll never be
     // contention on this lock.
     synchronized (this.blendStackAux) {
@@ -1124,7 +1126,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
           break;
         }
 
-        if (blendStack != null && channel.enabled.isOn()) {
+        if ((blendStack != null) && channel.enabled.isOn()) {
           double alpha = channel.fader.getValue();
           if (alpha > 0) {
             blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha, channel.getModelView());
@@ -1216,6 +1218,35 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Mark the cue active state of the buffer
     render.setCueOn(cueBusActive);
     render.setAuxOn(auxBusActive);
+  }
+
+  public void removeRemoteControls(LXComponent component) {
+    _removeRemoteControls(component.getParent(), component);
+  }
+
+  private void _removeRemoteControls(LXComponent container, LXComponent component) {
+    if ((container == null) || (container instanceof LXBus)) {
+      return;
+    }
+    if (container instanceof LXDeviceComponent device) {
+      final LXListenableNormalizedParameter[] customRemoteControls = device.getCustomRemoteControls();
+      if (customRemoteControls != null) {
+        LXListenableNormalizedParameter[] newRemoteControls = null;
+        int i = 0;
+        for (LXListenableNormalizedParameter parameter : customRemoteControls) {
+          if ((parameter != null) && parameter.isDescendant(component)) {
+            if (newRemoteControls == null) {
+              newRemoteControls = customRemoteControls.clone();
+            }
+            newRemoteControls[i] = null;
+          }
+          ++i;
+        }
+        if (newRemoteControls != null) {
+          device.setCustomRemoteControls(newRemoteControls);
+        }
+      }
+    }
   }
 
   private static final String KEY_CHANNELS = "channels";
