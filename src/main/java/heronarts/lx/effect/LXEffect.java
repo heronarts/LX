@@ -28,7 +28,6 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.mixer.LXBus;
-import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -36,7 +35,6 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.pattern.LXPattern;
-import heronarts.lx.structure.view.LXViewDefinition;
 
 /**
  * Class to represent an effect that may be applied to the color array. Effects
@@ -239,18 +237,6 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
     this.enabledDampingAttack.setValue(dampingTimeEnabledMs);
     this.enabledDampingRelease.setValue(dampingTimeDisabledMs);
     return this;
-  }
-
-  @Override
-  public LXModel getModelView() {
-    LXViewDefinition view = this.view.getObject();
-    if (view != null) {
-      return view.getModelView();
-    }
-    if (isPatternEffect()) {
-      return getPattern().getModelView();
-    }
-    return super.getModelView();
   }
 
   @Override

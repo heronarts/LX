@@ -51,6 +51,7 @@ import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
+import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.view.LXViewDefinition;
 import heronarts.lx.structure.view.LXViewEngine;
 
@@ -199,18 +200,17 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     return name;
   }
 
-  public LXModel getModelView() {
+  public final LXModel getModelView() {
     LXViewDefinition view = this.view.getObject();
     if (view != null) {
       return view.getModelView();
     }
-    LXComponent parent = getParent();
-    if (parent instanceof LXAbstractChannel) {
-      return ((LXAbstractChannel) parent).getModelView();
-    } else if (parent instanceof LXMasterBus) {
-      return lx.model;
-    }
-    return getModel();
+    return switch (getParent()) {
+      case LXMasterBus master -> lx.model;
+      case LXAbstractChannel bus -> bus.getModelView();
+      case LXPattern pattern -> pattern.getModelView();
+      default -> getModel();
+    };
   }
 
   private void validateRemoteControls(LXListenableNormalizedParameter ... remoteControls) {
