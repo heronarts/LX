@@ -357,7 +357,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   public final BoundedParameter roll =
     new BoundedParameter("Roll", 0, -360, 360)
-    .setDescription("Rotation of the fixture about its normal vector")
+    .setDescription("Rotation of the fixture about the forward vector")
     .setUnits(LXParameter.Units.DEGREES);
 
   public final BoundedParameter scale =
