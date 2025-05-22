@@ -177,7 +177,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
    * Custom time for this pattern to cycle
    */
   public final BoundedParameter customCycleTimeSecs =
-    new BoundedParameter("Cycle Time", 60, .1, 60*60*4)
+    new BoundedParameter("Custom Cycle Time", 60, .1, 60*60*4)
     .setDescription("Sets the number of seconds after which the channel cycles to the next pattern")
     .setUnits(LXParameter.Units.SECONDS);
 
