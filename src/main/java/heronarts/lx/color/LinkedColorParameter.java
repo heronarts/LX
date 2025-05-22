@@ -43,7 +43,7 @@ public class LinkedColorParameter extends ColorParameter {
     new EnumParameter<Mode>("Mode", Mode.STATIC)
     .setDescription("Whether to use a custom color or a fixed palette swatch index");
 
-  public final LXPalette.IndexSelector index = new LXPalette.IndexSelector("Index");
+  public final LXPalette.IndexSelector index = new LXPalette.IndexSelector("Palette Index");
 
   public LinkedColorParameter(String label) {
     this(label, 0xff000000);
