@@ -87,7 +87,7 @@ public abstract class MidiSelector<T extends LXMidiTerminal> extends AggregatePa
     .setDescription("Name of the MIDI device");
 
   public final DiscreteParameter index =
-    new DiscreteParameter("Index", 0, 128)
+    new DiscreteParameter("MIDI Device Index", 0, 128)
     .setDescription("Index of the MIDI device, if there are multiple by the same name");
 
   public final ObjectParameter<T> terminal;

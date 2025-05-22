@@ -161,7 +161,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
 
     addParameter("midiFilter", this.midiFilter);
     addParameter("view", this.view = lx.structure.views.newViewSelector("View", "Model view selector for this device"));
-    addParameter("viewPriority", this.viewPriority = lx.structure.views.newViewSelectorPriority("View", "Priority model view selector for this device"));
+    addParameter("viewPriority", this.viewPriority = lx.structure.views.newViewSelectorPriority("View*", "Priority model view selector for this device"));
 
     this.view.addListener(this.viewListener = p -> {
       LXViewDefinition view = this.view.getObject();
