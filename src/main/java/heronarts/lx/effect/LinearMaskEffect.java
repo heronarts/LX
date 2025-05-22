@@ -20,7 +20,7 @@ package heronarts.lx.effect;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
-import heronarts.lx.LXComponentName;
+import heronarts.lx.LXComponent;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.model.LXPoint;
 import heronarts.lx.parameter.BooleanParameter;
@@ -32,7 +32,8 @@ import heronarts.lx.transform.LXParameterizedMatrix;
 import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.CORE)
-@LXComponentName("Linear Mask")
+@LXComponent.Name("Linear Mask")
+@LXComponent.Description("Masks content by a brightness gradient with linear falloff")
 public class LinearMaskEffect extends LXEffect {
 
   public interface PositionFunction {
