@@ -88,6 +88,7 @@ public class ArcFixture extends LXBasicFixture {
       for (LXPoint p : this.points) {
         transform.translateY(-radius);
         p.set(transform);
+        p.setNormal(-transform.m12, -transform.m22, -transform.m32);
         transform.translateY(radius);
         transform.rotateZ(rotation);
       }
@@ -95,6 +96,7 @@ public class ArcFixture extends LXBasicFixture {
     case ORIGIN:
       for (LXPoint p : this.points) {
         p.set(transform);
+        p.setNormal(-transform.m12, -transform.m22, -transform.m32);
         transform.translateY(radius);
         transform.rotateZ(rotation);
         transform.translateY(-radius);

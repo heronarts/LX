@@ -198,11 +198,15 @@ public class GridFixture extends LXBasicFixture {
     int numColumns = this.numColumns.getValuei();
     float rowSpacing = this.rowSpacing.getValuef();
     float columnSpacing = this.columnSpacing.getValuef();
+
     int pi = 0;
     for (int r = 0; r < numRows; ++r) {
       transform.push();
       for (int c = 0; c < numColumns; ++c) {
-        points.get(pi++).set(transform);
+        final LXPoint p = points.get(pi++);
+        p.set(transform);
+        // TODO(normals): may need inv/transpose if matrix isn't orthonormal w/ uniform scale...
+        p.setNormal(-matrix.m13, -matrix.m23, -matrix.m33);
         transform.translateX(columnSpacing);
       }
       transform.pop();

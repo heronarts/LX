@@ -211,6 +211,20 @@ public class LXMatrix {
     );
   }
 
+  public LXMatrix transpose() {
+    return setTranspose(this);
+  }
+
+  public LXMatrix setTranspose(LXMatrix that) {
+    set(
+      that.m11, that.m21, that.m31, that.m41,
+      that.m12, that.m22, that.m32, that.m42,
+      that.m13, that.m23, that.m33, that.m43,
+      that.m14, that.m24, that.m34, that.m44
+    );
+    return this;
+  }
+
   public float x() {
     return m14;
   }

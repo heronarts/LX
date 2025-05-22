@@ -38,11 +38,14 @@ public class PointListFixture extends LXBasicFixture {
 
   @Override
   protected void computePointGeometry(LXMatrix transform, List<LXPoint> points) {
+
     int i = 0;
     for (LXPoint p : points) {
       LXVector c = this.coordinates.get(i++);
       transform.translate(c.x, c.y, c.z);
       p.set(transform);
+      // TODO(normals): may need inv/transpose if matrix isn't orthonormal w/ uniform scale...
+      p.setNormal(-transform.m13, -transform.m23, -transform.m33);
       transform.translate(-c.x, -c.y, -c.z);
     }
   }

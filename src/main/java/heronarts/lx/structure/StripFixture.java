@@ -55,6 +55,9 @@ public class StripFixture extends LXBasicFixture {
     float spacing = this.spacing.getValuef();
     for (LXPoint p : points) {
       p.set(transform);
+      // TODO(normals): may need inv/transpose if matrix isn't orthonormal w/
+      // uniform scale...
+      p.setNormal(-transform.m13, -transform.m23, -transform.m33);
       transform.translateX(spacing);
     }
   }

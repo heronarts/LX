@@ -35,8 +35,14 @@ public class PointFixture extends LXBasicFixture {
 
   @Override
   protected void computePointGeometry(LXMatrix transform, List<LXPoint> points) {
+    // TODO(normals): may need inv/transpose if matrix isn't orthonormal w/ uniform scale...
+    final float xnormal = -transform.m13;
+    final float ynormal = -transform.m23;
+    final float znormal = -transform.m33;
+
     for (LXPoint p : points) {
       p.set(transform);
+      p.setNormal(xnormal, ynormal, znormal);
     }
   }
 

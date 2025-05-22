@@ -130,6 +130,21 @@ public class LXPoint {
   public float rcn = 0;
 
   /**
+   * Normal vector x in direction this light points (optional)
+   */
+  public float xnormal;
+
+  /**
+   * Normal vector y in direction this light points (optional)
+   */
+  public float ynormal;
+
+  /**
+   * Normal vector z in direction this light points (optional)
+   */
+  public float znormal;
+
+  /**
    * Index of this point into color buffer
    */
   public int index;
@@ -294,6 +309,10 @@ public class LXPoint {
     this.rc = that.rc;
     this.rcn = that.rcn;
 
+    this.xnormal = that.xnormal;
+    this.ynormal = that.ynormal;
+    this.znormal = that.znormal;
+
     return this;
   }
 
@@ -346,16 +365,43 @@ public class LXPoint {
   }
 
   /**
+   * Set the normal vector values for this point
+   *
+   * @param xnormal X normal vector component
+   * @param ynormal Y normal vector component
+   * @param znormal Z normal vector component
+   * @return this
+   */
+  public LXPoint setNormal(float xnormal, float ynormal, float znormal) {
+    this.xnormal = xnormal;
+    this.ynormal = ynormal;
+    this.znormal = znormal;
+    return this;
+  }
+
+  /**
    * Multiplies the points coordinates by the given transformation matrix
    *
    * @param matrix Transformation matrix
    * @return This point, with updated coordinates
    */
   public LXPoint multiply(LXMatrix matrix) {
-    float x2 = matrix.m11 * this.x + matrix.m12 * this.y + matrix.m13 * this.z + matrix.m14;
-    float y2 = matrix.m21 * this.x + matrix.m22 * this.y + matrix.m23 * this.z + matrix.m24;
-    float z2 = matrix.m31 * this.x + matrix.m32 * this.y + matrix.m33 * this.z + matrix.m34;
-    return set(x2, y2, z2);
+    set(
+      matrix.m11 * this.x + matrix.m12 * this.y + matrix.m13 * this.z + matrix.m14,
+      matrix.m21 * this.x + matrix.m22 * this.y + matrix.m23 * this.z + matrix.m24,
+      matrix.m31 * this.x + matrix.m32 * this.y + matrix.m33 * this.z + matrix.m34
+    );
+
+    // TODO(normals): update LXPoint normalx/y/z more reliable here?
+    // Is it ever used in such a way that we need a proper inv/transpose normal matrix?
+    // There aren't callers to this function in core LX as of May 2025...
+    setNormal(
+      this.xnormal * matrix.m11 + this.ynormal * matrix.m12 + this.znormal * matrix.m13,
+      this.xnormal * matrix.m21 + this.ynormal * matrix.m22 + this.znormal * matrix.m23,
+      this.xnormal * matrix.m31 + this.ynormal * matrix.m32 + this.znormal * matrix.m33
+    );
+
+    return this;
   }
 
   /**

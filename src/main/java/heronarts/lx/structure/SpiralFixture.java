@@ -72,6 +72,8 @@ public class SpiralFixture extends LXBasicFixture {
     for (LXPoint p : this.points) {
       transform.translateY(-radius);
       p.set(transform);
+      // TODO(normals): may need inv/transpose if matrix isn't orthonormal w/ uniform scale...
+      p.setNormal(-transform.m12, -transform.m22, -transform.m32);
       transform.translateY(radius);
       transform.rotateZ(rotation);
       transform.translateZ(translate);
