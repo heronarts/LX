@@ -224,6 +224,11 @@ public class LXClassLoader extends URLClassLoader {
     this.classes.clear();
     this.duplicates.clear();
     this.hasDuplicateClasses = false;
+    try {
+      close();
+    } catch (IOException iox) {
+      LX.error(iox, "Could not close LXClassLoader");
+    }
   }
 
   private void loadJarFile(File file) {

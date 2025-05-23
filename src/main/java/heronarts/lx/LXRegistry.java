@@ -557,8 +557,14 @@ public class LXRegistry implements LXSerializable {
   }
 
   public void reloadContent() {
+    reloadContent(true);
+  }
+
+  private void reloadContent(boolean disposeClassLoader) {
     LX.log("Reloading custom content folders");
-    this.classLoader.dispose();
+    if (disposeClassLoader) {
+      this.classLoader.dispose();
+    }
     this.mutablePackages.clear();
     this.mutablePlugins.clear();
 
@@ -617,10 +623,14 @@ public class LXRegistry implements LXSerializable {
       return false;
     }
     try {
+      // Close the classloader first, otherwise on Windows it may hold handles to
+      // destinationFile and bork the Files.copy() call
+      this.classLoader.dispose();
       Files.copy(file.toPath(), destinationFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
       installPackageMedia(destinationFile);
-      reloadContent();
+      reloadContent(false);
     } catch (Throwable x) {
+      LX.error(x, "Error installing package file " + file.getName() + ": " + x.getLocalizedMessage());
       this.lx.pushError(x, "Error installing package file " + file.getName() + ": " + x.getLocalizedMessage());
       return false;
     }
@@ -772,6 +782,7 @@ public class LXRegistry implements LXSerializable {
         reloadContent();
       }
     } catch (IOException iox) {
+      LX.error(iox, "Could not remove package file " + pack.jarFile.getName());
       this.lx.pushError(iox, "Could not remove package file " + pack.jarFile.getName());
     }
   }
