@@ -155,7 +155,7 @@ public interface LXParameter extends LXPath {
     }
 
     public static final Formatter DECIMAL_MAX_2_PLACES = newDecimalFormatter("#.##");
-    public static final Formatter DECIMAL_MAX_8_PLACES = newDecimalFormatter("#.########");
+    public static final Formatter DECIMAL_2_TO_8_PLACES = newDecimalFormatter("0.00######");
 
   }
 

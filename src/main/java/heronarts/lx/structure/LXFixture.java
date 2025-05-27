@@ -335,17 +335,17 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   public final BoundedParameter x =
     new BoundedParameter("X", 0, -POSITION_RANGE, POSITION_RANGE)
-    .setFormatter(LXParameter.Formatter.DECIMAL_MAX_8_PLACES)
+    .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
     .setDescription("Base X position of the fixture in space");
 
   public final BoundedParameter y =
     new BoundedParameter("Y", 0, -POSITION_RANGE, POSITION_RANGE)
-    .setFormatter(LXParameter.Formatter.DECIMAL_MAX_8_PLACES)
+    .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
     .setDescription("Base Y position of the fixture in space");
 
   public final BoundedParameter z =
     new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
-    .setFormatter(LXParameter.Formatter.DECIMAL_MAX_8_PLACES)
+    .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
     .setDescription("Base Z position of the fixture in space");
 
   public final BoundedParameter yaw =

@@ -482,7 +482,7 @@ public class JsonFixture extends LXFixture {
     private ParameterDefinition(String name, String label, String description, float value, float defaultFloat, float minFloat, float maxFloat) {
       this(name, label, description, ParameterType.FLOAT,
         (BoundedParameter) new BoundedParameter(label, defaultFloat, minFloat, maxFloat)
-        .setFormatter(LXParameter.Formatter.DECIMAL_MAX_8_PLACES)
+        .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
         .setValue(value)
       );
     }
