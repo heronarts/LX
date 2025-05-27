@@ -154,7 +154,8 @@ public interface LXParameter extends LXPath {
       };
     }
 
-    public static Formatter DECIMAL_MAX_2_PLACES = newDecimalFormatter("#.##");
+    public static final Formatter DECIMAL_MAX_2_PLACES = newDecimalFormatter("#.##");
+    public static final Formatter DECIMAL_MAX_8_PLACES = newDecimalFormatter("#.########");
 
   }
 
@@ -218,7 +219,7 @@ public interface LXParameter extends LXPath {
       case MIDI_NOTE:
         return MidiNote.getPitchString((int) value);
       case DEGREES:
-        return String.format("%d\u00B0", (int) value);
+        return String.format("%d\u00B0", (int) Math.round(value));
       case CLOCK:
         return String.format("%02d", (int) value);
       default:
