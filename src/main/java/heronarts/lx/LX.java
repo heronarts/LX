@@ -508,7 +508,7 @@ public class LX {
     this.registry.initializePlugins();
   }
 
-  protected void fail(Throwable x) {
+  public void fail(Throwable x) {
     String logLocation = "the console output.";
     if (LX.EXPLICIT_LOG_FILE != null) {
       logLocation = LX.EXPLICIT_LOG_FILE.getAbsolutePath();
