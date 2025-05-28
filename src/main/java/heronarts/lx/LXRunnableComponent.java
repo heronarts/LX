@@ -37,6 +37,10 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
     new TriggerParameter("Trigger", this::_trigger)
     .setDescription("Resets the cycle and starts running");
 
+  public final TriggerParameter reset =
+    new TriggerParameter("Reset", this::_reset)
+    .setDescription("Resets to initial state");
+
   protected LXRunnableComponent() {
     this(null, null);
   }
@@ -53,6 +57,7 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
     super(lx, label);
     addParameter("running", this.running);
     addParameter("trigger", this.trigger);
+    addParameter("reset", this.reset);
   }
 
   @Override
@@ -120,14 +125,18 @@ public abstract class LXRunnableComponent extends LXComponent implements LXLoopT
     return this;
   }
 
+  private final void _reset() {
+    stop();
+    onReset();
+  }
+
   /**
    * Resets the runnable to its default condition and stops it.
    *
    * @return this
    */
   public final LXRunnableComponent reset() {
-    stop();
-    onReset();
+    this.reset.trigger();
     return this;
   }
 
