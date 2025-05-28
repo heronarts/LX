@@ -37,6 +37,7 @@ import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 @LXCategory(LXCategory.COLOR)
 @LXComponent.Description("Dynamically remaps color content")
@@ -112,6 +113,25 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
       return this.label;
     }
   };
+
+  public enum FilterMode {
+    LEAVE("Leave", LXColor.BLACK),
+    BLACK("Black", LXColor.BLACK),
+    CLEAR("Clear", LXColor.CLEAR);
+
+    public final String label;
+    public final int color;
+
+    private FilterMode(String label, int color) {
+      this.label = label;
+      this.color = color;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
 
   public final EnumParameter<SourceMode> source =
     new EnumParameter<SourceMode>("Source", SourceMode.BRIGHTNESS)
@@ -191,6 +211,15 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Depth of colorization");
 
+  public final CompoundParameter filterThreshold =
+    new CompoundParameter("Filter Threshold", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setDescription("Threshold at which to apply colorization");
+
+  public final EnumParameter<FilterMode> filterMode =
+    new EnumParameter<FilterMode>("Filter Mode", FilterMode.LEAVE)
+    .setDescription("How to treat colors beneath filter threshold");
+
   public ColorizeEffect(LX lx) {
     super(lx);
     addParameter("source", this.source);
@@ -209,6 +238,8 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     addParameter("primarySaturation", this.linkedSaturation);
     addParameter("primaryBrightness", this.linkedBrightness);
     addParameter("amount", this.amount);
+    addParameter("filterThreshold", this.filterThreshold);
+    addParameter("filterMode", this.filterMode);
   }
 
   @Override
@@ -316,29 +347,73 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
     final boolean lerpInvert = isPalette ? this.paletteInvert.isOn() : false;
     final float lerpDepth = isPalette ? this.paletteDepth.getValuef() : 1f;
 
+    final float filterThreshold = this.filterThreshold.getValuef();
+    final FilterMode filterMode = this.filterMode.getEnum();
+
     if (enabledAmount < 1) {
+      final int enabledMask = LXColor.blendMask(enabledAmount);
       for (LXPoint p : model.points) {
         int i = p.index;
-        float lerp = sourceFunction.getLerpFactor(colors[i]) * lerpDepth;
-        if (lerpInvert) {
-          lerp = 1 - lerp;
+        int c2 = LXColor.CLEAR;
+        float lerp = sourceFunction.getLerpFactor(colors[i]);
+        if (lerp < filterThreshold) {
+          switch (filterMode) {
+            case LEAVE -> {
+              continue;
+            }
+            case BLACK -> {
+              colors[i] = LXColor.lerp(
+                colors[i],
+                (colors[i] & LXColor.ALPHA_MASK) | (LXColor.BLACK & LXColor.RGB_MASK),
+                enabledMask
+              );
+            }
+            case CLEAR -> {
+              int alpha = LXUtils.lerpi(
+                (colors[i] & LXColor.ALPHA_MASK) >>> LXColor.ALPHA_SHIFT,
+                0,
+                (float) enabledAmount
+              );
+              colors[i] =
+                (alpha << LXColor.ALPHA_SHIFT) |
+                (colors[i] & LXColor.RGB_MASK);
+            }
+          }
+        } else {
+          if (filterThreshold < 1) {
+            lerp = LXUtils.ilerpf(lerp, filterThreshold, 1);
+          }
+          lerp *= lerpDepth;
+          if (lerpInvert) {
+            lerp = 1 - lerp;
+          }
+          c2 = this.colorStops.getColor(lerp, blendFunction);
+          colors[i] = LXColor.lerp(
+            colors[i],
+            (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK),
+            enabledMask
+          );
         }
-        int c2 = this.colorStops.getColor(lerp, blendFunction);
-        colors[i] = LXColor.lerp(
-          colors[i],
-          (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK),
-          enabledAmount
-        );
       }
     } else {
       for (LXPoint p : model.points) {
         int i = p.index;
-        float lerp = sourceFunction.getLerpFactor(colors[i]) * lerpDepth;
-        if (lerpInvert) {
-          lerp = 1 - lerp;
+        float lerp = sourceFunction.getLerpFactor(colors[i]);
+        if (lerp < filterThreshold) {
+          if (filterMode == FilterMode.LEAVE) {
+            continue;
+          }
+          colors[i] = filterMode.color;
+        } else {
+          if (filterThreshold < 1) {
+            lerp = LXUtils.ilerpf(lerp, filterThreshold, 1);
+          }
+          lerp *= lerpDepth;
+          if (lerpInvert) {
+            lerp = 1 - lerp;
+          }
+          colors[i]= this.colorStops.getColor(lerp, blendFunction);
         }
-        int c2 = this.colorStops.getColor(lerp, blendFunction);
-        colors[i] = (colors[i] & LXColor.ALPHA_MASK) | (c2 & LXColor.RGB_MASK);
       }
     }
   }
