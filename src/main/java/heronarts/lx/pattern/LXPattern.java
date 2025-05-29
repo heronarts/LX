@@ -151,7 +151,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     .setDescription("Whether the pattern is eligible for playlist cycling or compositing");
 
   public final TriggerParameter recall =
-    new TriggerParameter("Recall", () -> getEngine().goPattern(this))
+    new TriggerParameter("Recall", this::_recall)
     .setDescription("Recalls this pattern to become active on the channel");
 
   public final QuantizedTriggerParameter launch =
@@ -231,9 +231,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private final LXParameterListener onCue = p -> {
     if (this.cueActive.isOn()) {
-      for (LXPattern pattern : getEngine().patterns) {
-        if (pattern != this) {
-          pattern.cueActive.setValue(false);
+      final LXPatternEngine engine = getEngine();
+      if (engine != null) {
+        for (LXPattern pattern : engine.patterns) {
+          if (pattern != this) {
+            pattern.cueActive.setValue(false);
+          }
         }
       }
     }
@@ -241,9 +244,12 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   private final LXParameterListener onAux = p -> {
     if (this.auxActive.isOn()) {
-      for (LXPattern pattern : getEngine().patterns) {
-        if (pattern != this) {
-          pattern.auxActive.setValue(false);
+      final LXPatternEngine engine = getEngine();
+      if (engine != null) {
+        for (LXPattern pattern : engine.patterns) {
+          if (pattern != this) {
+            pattern.auxActive.setValue(false);
+          }
         }
       }
     }
@@ -369,10 +375,20 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     return this.index;
   }
 
+  private void _recall() {
+    final LXPatternEngine engine = getEngine();
+    if (engine != null) {
+      engine.goPattern(this);
+    }
+  }
+
   private void _launchScheduled() {
-    for (LXPattern pattern : getEngine().patterns) {
-      if (pattern != this) {
-        pattern.launch.cancel();
+    final LXPatternEngine engine = getEngine();
+    if (engine != null) {
+      for (LXPattern pattern : engine.patterns) {
+        if (pattern != this) {
+          pattern.launch.cancel();
+        }
       }
     }
   }
