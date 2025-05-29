@@ -1011,14 +1011,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
   }
 
-  private static final boolean MULTITHREADED_COMPOSITOR = true;
   private static final int NUM_COMPOSITOR_THREADS = 12;
   private static final int MIN_COMPOSITOR_CHUNK = 2048;
 
-  private final ExecutorService compositor = !MULTITHREADED_COMPOSITOR ? null :
-    Executors.newFixedThreadPool(NUM_COMPOSITOR_THREADS);
-
   private final List<Future<?>> compositorFutures = new ArrayList<>();
+  private ExecutorService compositor = null;
 
   public void loop(LXEngine.Frame render, double deltaMs) {
     final long channelStart = System.nanoTime();
@@ -1122,8 +1119,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
     final boolean useMultithreadedCompositor =
       this.lx.engine.isCompositorMultithreaded.isOn() &&
-      (this.blendStackMain.destination.length > MIN_COMPOSITOR_CHUNK) &&
-      MULTITHREADED_COMPOSITOR;
+      (this.blendStackMain.destination.length > MIN_COMPOSITOR_CHUNK);
 
     for (LXAbstractChannel channel : this.channels) {
       // Only blend channels not in a group, group channels were composited above
@@ -1154,6 +1150,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
 
     if (useMultithreadedCompositor) {
+      if (this.compositor == null) {
+        this.compositor = Executors.newFixedThreadPool(NUM_COMPOSITOR_THREADS);
+      }
+
       // The multithreaded compositor breaks the whole array into N chunks,
       // and each of N thread works its way through all the channels processing
       // just a portion of the points in parallel. This relies upon the fact
@@ -1363,6 +1363,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     disposeCrossfaderBlendOptions();
     this.listeners.forEach(listener -> LX.warning("Stranded LXMixerEngine.Listener: " + listener));
     this.listeners.clear();
+    if (this.compositor != null) {
+      this.compositor.shutdownNow();
+    }
   }
 
   /**
