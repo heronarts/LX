@@ -32,7 +32,7 @@ import heronarts.lx.parameter.ObjectParameter;
 @LXCategory(LXCategory.CORE)
 @LXModulator.Global("LFO")
 @LXModulator.Device("LFO")
-public class VariableLFO extends LXVariablePeriodModulator implements LXWaveshape, LXOscComponent {
+public class VariableLFO extends LXVariablePeriodModulator implements LXWaveshape, LXOscComponent, LXModulator.ResetButton {
 
   /**
    * Parameter of {@link LXWaveshape} objects that select the wave shape used by this LFO.

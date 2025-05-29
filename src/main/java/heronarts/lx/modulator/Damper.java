@@ -128,7 +128,9 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXTrig
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
     if (p == this.toggle) {
-      start();
+      if (!this.inReset) {
+        start();
+      }
     } else if (p == this.engageTimerOut) {
       if (this.engageTimerOut.isOn()) {
         this.triggerEngage.setValue(true);
@@ -148,6 +150,20 @@ public class Damper extends LXModulator implements LXNormalizedParameter, LXTrig
         start();
       }
     }
+  }
+
+  private boolean inReset = false;
+
+  @Override
+  public void onReset() {
+    super.onReset();
+    updateValue(this.basis = 0);
+
+    // Set toggle to false and suppress start()
+    final boolean wasInReset = this.inReset;
+    this.inReset = true;
+    this.toggle.setValue(false);
+    this.inReset = wasInReset;
   }
 
   private final Calendar calendar = Calendar.getInstance();

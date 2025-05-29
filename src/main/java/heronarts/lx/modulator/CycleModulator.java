@@ -66,6 +66,12 @@ public class CycleModulator extends LXModulator implements LXNormalizedParameter
   }
 
   @Override
+  public void onReset() {
+    super.onReset();
+    updateValue(this.basis = 0);
+  }
+
+  @Override
   public void onParameterChanged(LXParameter p) {
     if (p == this.speedPolarity) {
       if (this.speedPolarity.getEnum() == LXParameter.Polarity.UNIPOLAR) {
