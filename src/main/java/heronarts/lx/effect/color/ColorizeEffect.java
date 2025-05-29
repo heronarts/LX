@@ -46,7 +46,7 @@ public class ColorizeEffect extends LXEffect implements GradientFunction {
   private static final float AVG_FACTOR = 1 / (3 * 255f);
   private static final float INV_255 = 1 / 255f;
 
-  private interface SourceFunction {
+  public interface SourceFunction {
     public float getLerpFactor(int argb);
   }
 
