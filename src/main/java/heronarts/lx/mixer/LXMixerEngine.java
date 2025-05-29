@@ -994,21 +994,13 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   private boolean _blendAuxCalled = false;
 
   public void blendCue(int[] cueColors, LXModel cueView) {
-    // NOTE: could be channel multithreaded! If not, there'll never be
-    // contention on this lock.
-    synchronized (this.blendStackCue) {
-      this.blendStackCue.blend(this.addBlend, cueColors, 1, cueView);
-      this._blendCueCalled = true;
-    }
+    this.blendStackCue.blend(this.addBlend, cueColors, 1, cueView);
+    this._blendCueCalled = true;
   }
 
   public void blendAux(int[] auxColors, LXModel auxView) {
-    // NOTE: could be channel multithreaded! If not, there'll never be
-    // contention on this lock.
-    synchronized (this.blendStackAux) {
-      this.blendStackAux.blend(this.addBlend, auxColors, 1, auxView);
-      this._blendAuxCalled = true;
-    }
+    this.blendStackAux.blend(this.addBlend, auxColors, 1, auxView);
+    this._blendAuxCalled = true;
   }
 
   private static final int NUM_COMPOSITOR_THREADS = 12;
@@ -1037,56 +1029,15 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     this._blendCueCalled = false;
     this._blendAuxCalled = false;
 
-    final boolean isChannelMultithreaded = this.lx.engine.isChannelMultithreaded.isOn();
     final boolean isPerformanceMode = this.lx.engine.performanceMode.isOn();
 
     // Step 1a: Loop all of the channels
-    if (isChannelMultithreaded) {
-      // If we are in super-threaded mode, run the channels on their own threads!
-      for (LXAbstractChannel channel : this.channels) {
-        synchronized (channel.thread) {
-          channel.thread.signal.workDone = false;
-          channel.thread.deltaMs = deltaMs;
-          channel.thread.workReady = true;
-          channel.thread.notify();
-          if (!channel.thread.hasStarted) {
-            channel.thread.hasStarted = true;
-            channel.thread.start();
-          }
-        }
-      }
-
-      // Wait for all the channel threads to finish
-      for (LXAbstractChannel channel : this.mutableChannels) {
-        synchronized (channel.thread.signal) {
-          while (!channel.thread.signal.workDone) {
-            try {
-              channel.thread.signal.wait();
-            } catch (InterruptedException ix) {
-              Thread.currentThread().interrupt();
-              break;
-            }
-          }
-          channel.thread.signal.workDone = false;
-        }
-      }
-
-      // Confirm whether any channel blended cue content
-      synchronized (this.blendStackCue) {
-        cueBusActive = this._blendCueCalled;
-      }
-      synchronized (this.blendStackAux) {
-        auxBusActive = this._blendAuxCalled;
-      }
-
-    } else {
-      // We are not in super-threaded mode, just loop all the channels
-      for (LXAbstractChannel channel : this.channels) {
-        channel.loop(deltaMs);
-      }
-      cueBusActive = this._blendCueCalled;
-      auxBusActive = this._blendAuxCalled;
+    for (LXAbstractChannel channel : this.channels) {
+      channel.loop(deltaMs);
     }
+    cueBusActive = this._blendCueCalled;
+    auxBusActive = this._blendAuxCalled;
+
     // Step 1b: Run the master channel (it may have clips on it)
     this.masterBus.loop(deltaMs);
     this.lx.engine.profiler.channelNanos = System.nanoTime() - channelStart;

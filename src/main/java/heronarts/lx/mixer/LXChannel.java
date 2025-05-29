@@ -478,9 +478,6 @@ public class LXChannel extends LXAbstractChannel implements LXPatternEngine.Cont
   public void dispose() {
     disposeClips();
     this.patternEngine.dispose();
-    if (this.thread.hasStarted) {
-      this.thread.interrupt();
-    }
     super.dispose();
     this.listeners.forEach(listener -> LX.warning("Stranded LXChannel.Listener: " + listener));
     this.listeners.clear();

@@ -157,51 +157,6 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
    */
   public final LXViewEngine.Selector view;
 
-  final ChannelThread thread = new ChannelThread();
-
-  private static int channelThreadCount = 1;
-
-  class ChannelThread extends Thread {
-
-    ChannelThread() {
-      super("LXChannel thread #" + channelThreadCount++);
-    }
-
-    boolean hasStarted = false;
-    boolean workReady = true;
-    double deltaMs;
-
-    class Signal {
-      boolean workDone = false;
-    }
-
-    Signal signal = new Signal();
-
-    @Override
-    public void run() {
-      LX.log("LXEngine Channel thread started [" + getLabel() + "]");
-      while (!isInterrupted()) {
-        synchronized (this) {
-          try {
-            while (!this.workReady) {
-              wait();
-            }
-          } catch (InterruptedException ix) {
-            // Channel is finished
-            break;
-          }
-          this.workReady = false;
-        }
-        loop(this.deltaMs);
-        synchronized (this.signal) {
-          this.signal.workDone = true;
-          this.signal.notify();
-        }
-      }
-      LX.log("LXEngine Channel thread finished [" + getLabel() + "]");
-    }
-  };
-
   protected LXAbstractChannel(LX lx, int index, String label) {
     super(lx, label);
     this.index = index;
@@ -408,9 +363,6 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   @Override
   public void dispose() {
-    synchronized (this.thread) {
-      this.thread.interrupt();
-    }
     super.dispose();
     disposeChannelBlendOptions();
     this.blendBuffer.dispose();

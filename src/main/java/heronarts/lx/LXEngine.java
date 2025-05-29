@@ -336,11 +336,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     .setMappable(false)
     .setDescription("Whether the engine and UI are on separate threads");
 
-  public final BooleanParameter isChannelMultithreaded =
-    new BooleanParameter("Channel Threaded", false)
-    .setMappable(false)
-    .setDescription("Whether the engine is multi-threaded per channel");
-
   public final BooleanParameter isCompositorMultithreaded =
     new BooleanParameter("Compositor Threaded", false)
     .setMappable(false)
@@ -441,7 +436,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
     addParameter("compositorMultithreaded", this.isCompositorMultithreaded);
-    addParameter("channelMultithreaded", this.isChannelMultithreaded);
     addParameter("networkMultithreaded", this.isNetworkMultithreaded);
     addParameter("framesPerSecond", this.framesPerSecond);
     addParameter("speed", this.speed);
@@ -1478,7 +1472,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // These need to be explicitly enabled per-project
     this.isCompositorMultithreaded.setValue(false);
-    this.isChannelMultithreaded.setValue(false);
     this.isNetworkMultithreaded.setValue(false);
 
     // Disable output by default, project must explicitly re-open
