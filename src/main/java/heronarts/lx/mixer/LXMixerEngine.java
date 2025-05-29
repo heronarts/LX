@@ -23,6 +23,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -965,6 +968,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       this.destination = this.output;
     }
 
+    void blend(LXBlend blend, int[] src, double alpha, int start, int num) {
+      blend.blend(this.destination, src, alpha, this.output, start, num);
+      this.destination = this.output;
+    }
+
     void transition(LXBlend blend, int[] src, double lerp, LXModel model) {
       blend.lerp(this.destination, src, lerp, this.output, model);
       this.destination = this.output;
@@ -1003,8 +1011,17 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
   }
 
+  private static final boolean MULTITHREADED_COMPOSITOR = true;
+  private static final int NUM_COMPOSITOR_THREADS = 12;
+  private static final int MIN_COMPOSITOR_CHUNK = 2048;
+
+  private final ExecutorService compositor = !MULTITHREADED_COMPOSITOR ? null :
+    Executors.newFixedThreadPool(NUM_COMPOSITOR_THREADS);
+
+  private final List<Future<?>> compositorFutures = new ArrayList<>();
+
   public void loop(LXEngine.Frame render, double deltaMs) {
-    long channelStart = System.nanoTime();
+    final long channelStart = System.nanoTime();
 
     // Initialize blend stacks
     this.blendStackMain.initialize(this.backgroundBlack.getArray(), render.getMain());
@@ -1013,10 +1030,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     this.blendStackLeft.initialize(this.backgroundBlack.getArray(), this.blendBufferLeft.getArray());
     this.blendStackRight.initialize(this.backgroundBlack.getArray(), this.blendBufferRight.getArray());
 
-    double crossfadeValue = this.crossfader.getValue();
+    final double crossfadeValue = this.crossfader.getValue();
 
-    boolean leftBusActive = crossfadeValue < 1.;
-    boolean rightBusActive = crossfadeValue > 0.;
+    final boolean leftBusActive = crossfadeValue < 1.;
+    final boolean rightBusActive = crossfadeValue > 0.;
+
     boolean cueBusActive = false;
     boolean auxBusActive = false;
     this._blendCueCalled = false;
@@ -1076,10 +1094,12 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     this.masterBus.loop(deltaMs);
     this.lx.engine.profiler.channelNanos = System.nanoTime() - channelStart;
 
+    final long channelCompositeStart = System.nanoTime();
+
     // Step 2: composite any group channels
     for (LXAbstractChannel channel : this.channels) {
-      if (channel instanceof LXGroup && channel.isAnimating) {
-        ((LXGroup) channel).afterLoop(deltaMs);
+      if (channel.isAnimating && channel instanceof LXGroup group) {
+        group.afterLoop(deltaMs);
       }
     }
 
@@ -1096,44 +1116,96 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
 
     // Step 3: blend the channel buffers down
-    boolean blendLeft = leftBusActive || this.cueA.isOn() || (isPerformanceMode && this.auxA.isOn());
-    boolean blendRight = rightBusActive || this.cueB.isOn() || (isPerformanceMode && this.auxB.isOn());
+    final boolean blendLeft = leftBusActive || this.cueA.isOn() || (isPerformanceMode && this.auxA.isOn());
+    final boolean blendRight = rightBusActive || this.cueB.isOn() || (isPerformanceMode && this.auxB.isOn());
     boolean leftExists = false, rightExists = false;
+
+    final boolean useMultithreadedCompositor =
+      this.lx.engine.isCompositorMultithreaded.isOn() &&
+      (this.blendStackMain.destination.length > MIN_COMPOSITOR_CHUNK) &&
+      MULTITHREADED_COMPOSITOR;
+
     for (LXAbstractChannel channel : this.channels) {
-      long blendStart = System.nanoTime();
-
-      // Is this a group sub-channel? Those don't blend, they are already composited
-      // into their group
-      boolean isSubChannel = channel.getGroup() != null;
-
-      // Blend into the output buffer
-      if (!isSubChannel) {
-        BlendStack blendStack = null;
-
-        // Which output group is this channel mapped to
-        switch (channel.crossfadeGroup.getEnum()) {
-        case A:
+      // Only blend channels not in a group, group channels were composited above
+      if (!channel.isInGroup()) {
+        final long blendStart = System.nanoTime();
+        final LXAbstractChannel.CrossfadeGroup crossfadeGroup = channel.crossfadeGroup.getEnum();
+        final BlendStack blendStack = switch (crossfadeGroup) {
+          case A -> blendLeft ? this.blendStackLeft : null;
+          case B -> blendRight ? this.blendStackRight : null;
+          case BYPASS -> this.blendStackMain;
+        };
+        if (crossfadeGroup == LXAbstractChannel.CrossfadeGroup.A) {
           leftExists = true;
-          blendStack = blendLeft ? this.blendStackLeft : null;
-          break;
-        case B:
-          rightExists = true;
-          blendStack = blendRight ? this.blendStackRight : null;
-          break;
-        default:
-        case BYPASS:
-          blendStack = blendStackMain;
-          break;
         }
-
-        if ((blendStack != null) && channel.enabled.isOn()) {
-          double alpha = channel.fader.getValue();
-          if (alpha > 0) {
-            blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha, channel.getModelView());
+        if (crossfadeGroup == LXAbstractChannel.CrossfadeGroup.B) {
+          rightExists = true;
+        }
+        if (!useMultithreadedCompositor) {
+          if ((blendStack != null) && channel.enabled.isOn()) {
+            final double alpha = channel.fader.getValue();
+            if (alpha > 0) {
+              blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha, channel.getModelView());
+            }
           }
         }
+        ((LXAbstractChannel.Profiler) channel.profiler).blendNanos = System.nanoTime() - blendStart;
       }
+    }
 
+    if (useMultithreadedCompositor) {
+      // The multithreaded compositor breaks the whole array into N chunks,
+      // and each of N thread works its way through all the channels processing
+      // just a portion of the points in parallel. This relies upon the fact
+      // that blending is always per-pixel, e.g. the blending of colors[i] does
+      // not depend upon the value of colors[j]
+      this.compositorFutures.clear();
+      final int bufferSize = this.blendStackMain.destination.length;
+
+      // Threads have coordination overhead, not worth breaking up into parts that are too small
+      final int chunkSize = LXUtils.max(MIN_COMPOSITOR_CHUNK, (bufferSize / NUM_COMPOSITOR_THREADS));
+
+      for (int i = 0; i < NUM_COMPOSITOR_THREADS; ++i) {
+        final int start = i * chunkSize;
+        final int num = LXUtils.min(chunkSize, bufferSize - start);
+        if (num > 0) {
+          this.compositorFutures.add(this.compositor.submit(() -> {
+            for (LXAbstractChannel channel : this.channels) {
+              final double alpha = channel.fader.getValue();
+              if (!channel.isInGroup() && channel.enabled.isOn() && (alpha > 0)) {
+                final LXAbstractChannel.CrossfadeGroup crossfadeGroup = channel.crossfadeGroup.getEnum();
+                final BlendStack blendStack = switch (crossfadeGroup) {
+                  case A -> blendLeft ? this.blendStackLeft : null;
+                  case B -> blendRight ? this.blendStackRight : null;
+                  case BYPASS -> this.blendStackMain;
+                };
+                if (blendStack != null) {
+                  blendStack.blend(channel.blendMode.getObject(), channel.getColors(), alpha, start, num);
+                }
+              }
+            }
+          }));
+        }
+      }
+      this.compositorFutures.forEach(future -> {
+        try {
+          future.get();
+        } catch (InterruptedException x) {
+          Thread.currentThread().interrupt();
+        } catch (Throwable x) {
+          LX.error(x, "Exception resolving multi-threaded compositor future");
+        }
+      });
+      this.compositorFutures.clear();
+    }
+
+    lx.engine.profiler.channelCompositeNanos = System.nanoTime() - channelCompositeStart;
+    // LX.log("Composite: " + (lx.engine.profiler.channelCompositeNanos/1000) + "us" + (useMultithreadedCompositor ? " MT" : ""));
+
+    // Step 4: blend any CUE/AUX content
+
+    // Individual CUE/AUX channels
+    for (LXAbstractChannel channel : this.channels) {
       // Blend into the cue buffer, always a direct add blend for any type of channel
       if (channel.cueActive.isOn()) {
         cueBusActive = true;
@@ -1145,11 +1217,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         auxBusActive = true;
         this.blendStackAux.blend(this.addBlend, channel.getColors(), 1, channel.getModelView());
       }
-
-      ((LXAbstractChannel.Profiler) channel.profiler).blendNanos = System.nanoTime() - blendStart;
     }
 
-    // Check if the crossfade group buses are cued
+    // Crossfade group CUE
     if (this.cueA.isOn()) {
       this.blendStackCue.copyFrom(this.blendStackLeft);
       cueBusActive = true;
@@ -1158,7 +1228,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       cueBusActive = true;
     }
 
-    // Crossfade groups can be aux-cued in performance mode
+    // Crossfade group AUX
     if (isPerformanceMode) {
       if (this.auxA.isOn()) {
         this.blendStackAux.copyFrom(this.blendStackLeft);
@@ -1169,7 +1239,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       }
     }
 
-    // Step 4: now we have three output buses that need mixing... the left/right crossfade
+    // Step 5: now we have three output buses that need mixing... the left/right crossfade
     // groups plus the main buffer. We figure out which of them are active and blend appropriately
     // Note that the A+B crossfade groups are additively mixed AFTER the main buffer
     final boolean leftContent = leftBusActive && leftExists;
@@ -1178,10 +1248,10 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
 
     if (leftContent && rightContent) {
       // There are left and right channels assigned!
-      LXBlend blend = this.crossfaderBlendMode.getObject();
-      blendStackLeft.transition(blend, blendStackRight.destination, crossfadeValue, model);
+      final LXBlend blend = this.crossfaderBlendMode.getObject();
+      this.blendStackLeft.transition(blend, this.blendStackRight.destination, crossfadeValue, model);
       // Add the crossfaded groups to the main buffer
-      this.blendStackMain.blend(this.addBlend, blendStackLeft, 1., model);
+      this.blendStackMain.blend(this.addBlend, this.blendStackLeft, 1., model);
     } else if (leftContent) {
       // Add the left group to the main buffer
       this.blendStackMain.blend(this.addBlend, this.blendStackLeft, Math.min(1, 2. * (1-crossfadeValue)), model);
@@ -1190,7 +1260,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       this.blendStackMain.blend(this.addBlend, this.blendStackRight, Math.min(1, 2. * crossfadeValue), model);
     }
 
-    // Step 5: Time to apply master FX to the main blended output
+    // Step 6: Time to apply master FX to the main blended output
     long effectStart = System.nanoTime();
     for (LXEffect effect : this.masterBus.getEffects()) {
       effect.setBuffer(render);
@@ -1199,9 +1269,9 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
     ((LXBus.Profiler) this.masterBus.profiler).effectNanos = System.nanoTime() - effectStart;
 
-    // Step 6: If the master fader is POST-visualizer/output, apply global scaling now
+    // Step 7: If the master fader is POST-visualizer/output, apply global scaling now
     if (this.masterBus.previewMode.getEnum() == LXMasterBus.PreviewMode.POST) {
-      double fader = this.masterBus.fader.getValue();
+      final double fader = this.masterBus.fader.getValue();
       if (fader == 0) {
         // Don't multiply if it's just zero!
         Arrays.fill(this.blendStackMain.output, LXColor.BLACK);

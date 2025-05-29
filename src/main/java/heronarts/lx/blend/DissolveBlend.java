@@ -44,4 +44,14 @@ public class DissolveBlend extends LXBlend {
       output[i] = LXColor.add(LXColor.add(LXColor.CLEAR, dst[i], dstAlpha), src[i], srcAlpha);
     }
   }
+
+  @Override
+  public void blend(int[] dst, int[] src, double alpha, int[] output, int start, int num) {
+    // Multiply the src alpha only by half!
+    final int srcAlpha = (int) (alpha * LXColor.BLEND_ALPHA_HALF);
+    final int dstAlpha = LXColor.BLEND_ALPHA_FULL - srcAlpha;
+    for (int i = start; i < start + num; ++i) {
+      output[i] = LXColor.add(LXColor.add(LXColor.CLEAR, dst[i], dstAlpha), src[i], srcAlpha);
+    }
+  }
 }

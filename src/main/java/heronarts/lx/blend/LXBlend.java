@@ -65,6 +65,14 @@ public abstract class LXBlend extends LXModulatorComponent {
         output[p.index] = this.function.apply(dst[p.index], src[p.index], alphaMask);
       }
     }
+
+    @Override
+    public void blend(int[] dst, int[] src, double alpha, int[] output, int start, int num) {
+      int alphaMask = (int) (alpha * LXColor.BLEND_ALPHA_FULL);
+      for (int i = start; i < start+num; ++i) {
+        output[i] = this.function.apply(dst[i], src[i], alphaMask);
+      }
+    }
   }
 
   private String name;
@@ -130,6 +138,18 @@ public abstract class LXBlend extends LXModulatorComponent {
    * @param model A model which indicates the set of points to blend
    */
   public abstract void blend(int[] dst, int[] src, double alpha, int[] output, LXModel model);
+
+  /**
+   * Blends the src buffer onto the destination buffer at the specified alpha amount.
+   *
+   * @param dst Destination buffer (lower layer)
+   * @param src Source buffer (top layer)
+   * @param alpha Alpha blend, from 0-1
+   * @param output Output buffer, which may be the same as src or dst
+   * @param start Starting index to blend
+   * @param num Number of pixels to blend
+   */
+  public abstract void blend(int[] dst, int[] src, double alpha, int[] output, int start, int num);
 
   /**
    * Transitions from one buffer to another. By default, this is used by first

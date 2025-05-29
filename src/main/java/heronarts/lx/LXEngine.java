@@ -212,6 +212,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public class Profiler {
     public long runNanos = 0;
     public long channelNanos = 0;
+    public long channelCompositeNanos = 0;
     public long inputNanos = 0;
     public long midiNanos = 0;
     public long oscNanos = 0;
@@ -340,6 +341,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     .setMappable(false)
     .setDescription("Whether the engine is multi-threaded per channel");
 
+  public final BooleanParameter isCompositorMultithreaded =
+    new BooleanParameter("Compositor Threaded", false)
+    .setMappable(false)
+    .setDescription("Whether the compositing engine is multi-threaded");
+
   public final BooleanParameter isNetworkMultithreaded =
     new BooleanParameter("Network Threaded", false)
     .setMappable(false)
@@ -434,6 +440,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
     // Register parameters
     addParameter("multithreaded", this.isMultithreaded);
+    addParameter("compositorMultithreaded", this.isCompositorMultithreaded);
     addParameter("channelMultithreaded", this.isChannelMultithreaded);
     addParameter("networkMultithreaded", this.isNetworkMultithreaded);
     addParameter("framesPerSecond", this.framesPerSecond);
@@ -1468,6 +1475,11 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public void load(LX lx, JsonObject obj) {
     // TODO(mcslee): remove loop tasks that other things might have added? maybe
     // need to separate application-owned loop tasks from project-specific ones...
+
+    // These need to be explicitly enabled per-project
+    this.isCompositorMultithreaded.setValue(false);
+    this.isChannelMultithreaded.setValue(false);
+    this.isNetworkMultithreaded.setValue(false);
 
     // Disable output by default, project must explicitly re-open
     this.output.enabled.setValue(false);

@@ -120,6 +120,7 @@ public class LXGroup extends LXAbstractChannel {
 
     // Blend all channels that are enabled.
     for (LXChannel channel : this.channels) {
+      final long blendStart = System.nanoTime();
       if (channel.enabled.isOn()) {
         channel.blendMode.getObject().blend(
           this.colors,
@@ -129,6 +130,7 @@ public class LXGroup extends LXAbstractChannel {
           channel.getModelView()
         );
       }
+      ((LXAbstractChannel.Profiler) channel.profiler).blendNanos = System.nanoTime() - blendStart;
     }
     ((LXGroup.Profiler) this.profiler).compositeNanos = System.nanoTime() - compositeStart;
 
