@@ -392,6 +392,14 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     new StringParameter("Tags", "")
     .setDescription("Tags to be applied to the fixture in model");
 
+  public final BooleanParameter hasCustomPointSize =
+    new BooleanParameter("Custom Point Size", false)
+    .setDescription("Whether to use a custom point size in the UI");
+
+  public final BoundedParameter pointSize =
+    new BoundedParameter("Point Size", 5, 0.10, 100000)
+    .setDescription("Size of fixture points in the UI");
+
   final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
 
   protected final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
@@ -466,6 +474,8 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     addGeometryParameter("pitch", this.pitch);
     addGeometryParameter("roll", this.roll);
     addGeometryParameter("scale", this.scale);
+    addGeometryParameter("hasCustomPointSize", this.hasCustomPointSize);
+    addGeometryParameter("pointSize", this.pointSize);
 
     // Output parameters
     addParameter("selected", this.selected);
@@ -808,6 +818,16 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     this.transforms.add(transform);
   }
 
+  private float getPointSize() {
+    if (this.hasCustomPointSize.isOn()) {
+      return this.pointSize.getValuef();
+    }
+    if (this.container instanceof LXFixture fixture) {
+      return fixture.getPointSize();
+    }
+    return LXPoint.DEFAULT_POINT_SIZE;
+  }
+
   /**
    * Invoked when this fixture has been loaded or added to some container. Will
    * rebuild the points and the metrics, and notify container of the change to
@@ -815,7 +835,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
    */
   protected final void regenerate() {
     // We may have a totally new size, blow out the points array and rebuild
-    int numPoints = size();
+    final int numPoints = size();
     this.mutablePoints.clear();
     for (int i = 0; i < numPoints; ++i) {
       LXPoint p = constructPoint(i);
@@ -913,6 +933,13 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
   private final LXMatrix _computePointGeometryMatrix = new LXMatrix();
 
   private void regeneratePointGeometry() {
+    // Set default point size on all points
+    final float pointSize = getPointSize();
+    for (LXPoint p : this.points) {
+      p.size = pointSize;
+    }
+
+    // Generate point geometry
     this._computePointGeometryMatrix.set(this.geometryMatrix);
     computePointGeometry(this._computePointGeometryMatrix, this.points);
 

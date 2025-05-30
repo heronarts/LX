@@ -41,6 +41,8 @@ import heronarts.lx.utils.LXUtils;
  */
 public class LXPoint {
 
+  public static final float DEFAULT_POINT_SIZE = 0;
+
   private static int counter = 0;
 
   /**
@@ -143,6 +145,11 @@ public class LXPoint {
    * Normal vector z in direction this light points (optional)
    */
   public float znormal;
+
+  /**
+   * Custom size of this point in the UI (defaults to DEFAULT_POINT_SIZE)
+   */
+  public float size = DEFAULT_POINT_SIZE;
 
   /**
    * Index of this point into color buffer
@@ -312,6 +319,8 @@ public class LXPoint {
     this.xnormal = that.xnormal;
     this.ynormal = that.ynormal;
     this.znormal = that.znormal;
+
+    this.size = that.size;
 
     return this;
   }

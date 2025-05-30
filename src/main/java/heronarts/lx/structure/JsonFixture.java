@@ -97,6 +97,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_SCALE_Y = "scaleY";
   private static final String KEY_SCALE_Z = "scaleZ";
   private static final String KEY_SCALE = "scale";
+  private static final String KEY_POINT_SIZE = "pointSize";
   private static final String KEY_DIRECTION = "direction";
   private static final String KEY_NORMAL = "normal";
   private static final String KEY_END = "end";
@@ -1337,6 +1338,10 @@ public class JsonFixture extends LXFixture {
     }
     if (obj.has(KEY_SCALE)) {
       fixture.scale.setValue(loadFloat(obj, KEY_SCALE, true));
+    }
+    if (obj.has(KEY_POINT_SIZE)) {
+      fixture.hasCustomPointSize.setValue(true);
+      fixture.pointSize.setValue(loadFloat(obj, KEY_POINT_SIZE, true));
     }
   }
 
