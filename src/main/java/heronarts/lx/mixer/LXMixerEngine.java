@@ -1142,6 +1142,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         try {
           future.get();
         } catch (InterruptedException x) {
+          LX.log("LXMixerEngine interrupted waiting for compositor future");
           Thread.currentThread().interrupt();
         } catch (Throwable x) {
           LX.error(x, "Exception resolving multi-threaded compositor future");
