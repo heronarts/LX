@@ -173,7 +173,6 @@ public class LX {
      * Sometimes we need to know if we are P4LX, but we don't want LX library to have
      * any dependency upon P4LX.
      */
-    public boolean isP4LX = false;
     public boolean immutableModel = false;
     public boolean focusChannelOnCue = false;
     public boolean focusActivePattern = false;
@@ -1019,7 +1018,7 @@ public class LX {
         } catch (IOException iox) {
           LX.error(iox, "Could not auto-save project to output file: " + autosave.toString());
         }
-      }).start();
+      }, "LX Auto-Save Write Thread").start();
     }
   }
 

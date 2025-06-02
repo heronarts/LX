@@ -51,6 +51,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -331,11 +332,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   private final DoubleBuffer buffer;
 
-  public final BooleanParameter isMultithreaded =
-    new BooleanParameter("Threaded", false)
-    .setMappable(false)
-    .setDescription("Whether the engine and UI are on separate threads");
-
   public final BooleanParameter isCompositorMultithreaded =
     new BooleanParameter("Compositor Threaded", false)
     .setMappable(false)
@@ -434,7 +430,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     LX.initProfiler.log("Engine: Osc");
 
     // Register parameters
-    addParameter("multithreaded", this.isMultithreaded);
     addParameter("compositorMultithreaded", this.isCompositorMultithreaded);
     addParameter("networkMultithreaded", this.isNetworkMultithreaded);
     addParameter("framesPerSecond", this.framesPerSecond);
@@ -512,121 +507,60 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     return this;
   }
 
+  private boolean running = false;
+
   /**
    * Starts the engine thread.
    */
   public void start() {
-    if (this.lx.flags.isP4LX) {
-      throw new IllegalStateException("LXEngine start() may not be used from P4LX, call setThreaded() instead");
+    if (this.running) {
+      throw new IllegalStateException("Cannot call LXEngine.start() when already running");
     }
-    this.isMultithreaded.setValue(true);
-    _setThreaded(true);
+
+    this.running = true;
+
+    // Synchronize the two buffers, flip so that the engine thread doesn't start
+    // rendering over the top of the buffer that the UI thread might be currently
+    // working on drawing. (NB: this is probably not needed since P4LX deprecation)
+    this.buffer.sync();
+    this.buffer.flip();
+
+    if (this.lx.flags.threadMode == ThreadMode.SCHEDULED_EXECUTOR_SERVICE) {
+      this.engineExecutorService.start();
+    } else {
+      this.engineThread = new EngineThread();
+      this.engineThread.start();
+    }
+
   }
 
   /**
    * Stops the engine thread.
    */
   public void stop() {
-    if (this.lx.flags.isP4LX) {
-      throw new IllegalStateException("LXEngine stop() may not be used from P4LX, call setThreaded() instead");
+    if (!this.running) {
+      throw new IllegalStateException("Cannot call LXEngine.stop() when not running");
     }
-    this.isMultithreaded.setValue(false);
-    _setThreaded(false);
-  }
-
-  /**
-   * Returns whether the engine is actively threaded
-   *
-   * @return Whether engine is threaded
-   */
-  public boolean isThreaded() {
-    return (this.engineThread != null);
-  }
-
-  /**
-   * Sets the engine to threaded or non-threaded mode. Should only be called
-   * from the Processing animation thread.
-   *
-   * @param threaded Whether engine should run on its own thread
-   * @return this
-   */
-  public LXEngine setThreaded(boolean threaded) {
-    if (!this.lx.flags.isP4LX) {
-      throw new IllegalStateException("LXEngine.setThreaded() should not be used outside P4LX, call start() / stop() instead");
+    if (Thread.currentThread() == this.engineThread) {
+      throw new IllegalStateException("Cannot call LXEngine.stop() thread from the engine thread");
     }
-    this.isMultithreaded.setValue(threaded);
-    return this;
-  }
-
-  /**
-   * Utility method to shut down and join the engine thread, only when specifically in P4 mode.
-   *
-   * @return this
-   */
-  public LXEngine onP4DidDispose() {
-    if (!this.lx.flags.isP4LX) {
-      throw new IllegalStateException("LXEngine.onP4DidDispose() should only be called from Processing dispose() method");
-    }
-    if (isThreaded()) {
-      _setThreaded(false);
-    }
-    return this;
-  }
-
-  /**
-   * Utility method for P4LX mode, invoked from the Processing draw thread to give
-   * a chance to change the threading state before the draw loop.
-   */
-  public void beforeP4LXDraw() {
-    if (isThreaded() != this.isMultithreaded.isOn()) {
-      _setThreaded(this.isMultithreaded.isOn());
-
-      // Clear out any lingering key/mouse events on the queue
-      if (!this.isMultithreaded.isOn()) {
-        processInputEvents();
-      }
-    }
-  }
-
-  private synchronized void _setThreaded(boolean threaded) {
-    if (threaded == isThreaded()) {
-      throw new IllegalStateException("Cannot set thread state to current state: " + threaded);
-    }
-    if (!threaded) {
-      if (Thread.currentThread() == this.engineThread) {
-        throw new IllegalStateException("Cannot call to stop engine thread from itself");
-      }
-      if (this.lx.flags.threadMode == ThreadMode.SCHEDULED_EXECUTOR_SERVICE) {
-        this.engineExecutorService.stop();
-      } else {
-        // Tell the engine thread to stop
-        this.engineThread.interrupt();
-      }
-
-      try {
-        // Wait for it to finish
-        this.engineThread.join();
-      } catch (InterruptedException ix) {
-        throw new IllegalThreadStateException("Interrupted waiting to join LXEngine thread");
-      }
-
-      // Clear off the engine thread
-      this.engineThread = null;
-
+    if (this.lx.flags.threadMode == ThreadMode.SCHEDULED_EXECUTOR_SERVICE) {
+      this.engineExecutorService.stop();
     } else {
-      // Synchronize the two buffers, flip so that the engine thread doesn't start
-      // rendering over the top of the buffer that the UI thread might be currently
-      // working on drawing.
-      this.buffer.sync();
-      this.buffer.flip();
-
-      if (this.lx.flags.threadMode == ThreadMode.SCHEDULED_EXECUTOR_SERVICE) {
-        this.engineExecutorService.start();
-      } else {
-        this.engineThread = new EngineThread();
-        this.engineThread.start();
-      }
+      // Tell the engine thread to stop
+      this.engineThread.interrupt();
     }
+
+    try {
+      // Wait for it to finish
+      this.engineThread.join();
+    } catch (InterruptedException ix) {
+      throw new IllegalThreadStateException("Interrupted waiting to join LXEngine thread");
+    }
+
+    // Clear off the engine thread
+    this.engineThread = null;
+    this.running = false;
   }
 
   private static final long NANOS_PER_MS = TimeUnit.MILLISECONDS.toNanos(1);
@@ -665,36 +599,26 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     private ScheduledFuture<?> inputFuture = null;
     private ScheduledFuture<?> runFuture = null;
 
-    private class Bootstrap {
-      boolean bootstrap = false;
-    }
-
     public void start() {
       sampler.reset(-1);
-      this.service = Executors.newSingleThreadScheduledExecutor();
-      final Bootstrap bootstrap = new Bootstrap();
-      this.service.execute(() -> {
-        engineThread = Thread.currentThread();
-        engineThread.setName(EngineThread.THREAD_NAME);
+      this.service = Executors.newSingleThreadScheduledExecutor(r -> {
+        engineThread = new Thread(r, EngineThread.THREAD_NAME);
         engineThread.setPriority(lx.flags.engineThreadPriority);
+        return engineThread;
+      });
+      final CountDownLatch bootstrap = new CountDownLatch(1);
+      this.service.execute(() -> {
         LX.log("LXEngine.ExecutorService starting...");
-        synchronized (bootstrap) {
-          bootstrap.bootstrap = true;
-          bootstrap.notify();
-        }
+        bootstrap.countDown();
       });
       this.inputFuture = service.scheduleAtFixedRate(LXEngine.this::processInputEvents, 0, NANOS_INTERVAL_60FPS, TimeUnit.NANOSECONDS);
       this.runFuture = service.scheduleAtFixedRate(this::runLoop, 0, (long) (NANOS_PER_SECOND / framesPerSecond.getValue()), TimeUnit.NANOSECONDS);
 
       // Do not return until we know we've gotten the executor thread up and running
-      synchronized (bootstrap) {
-        if (!bootstrap.bootstrap) {
-          try {
-            bootstrap.wait();
-          } catch (InterruptedException ix) {
-            throw new IllegalThreadStateException("Interrupted waiting for ExecutorService to bootstrap");
-          }
-        }
+      try {
+        bootstrap.await();
+      } catch (InterruptedException ix) {
+        throw new IllegalThreadStateException("Interrupted waiting for ExecutorService to bootstrap");
       }
     }
 
@@ -1284,16 +1208,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       }
     }
 
-    // Step 5: our cue and render frames are ready! Let's get them output
-    boolean isNetworkMultithreaded = this.isNetworkMultithreaded.isOn();
-    boolean isDoubleBuffering = isThreaded()|| isNetworkMultithreaded;
-    if (isDoubleBuffering) {
-      // We are multi-threading, lock the double buffer and flip it
-      this.buffer.flip();
-    }
+    // Step 5: our cue and render frames are ready! Let's get them output.
+    // We are multi-threading, lock the double buffer and flip it
+    this.buffer.flip();
 
     if (eulaAccepted && !this.output.restricted.isOn()) {
-      if (isNetworkMultithreaded) {
+      if (this.isNetworkMultithreaded.isOn()) {
         // Notify the network thread of new work to do!
         synchronized (this.networkThread) {
           this.networkThread.notify();
@@ -1302,7 +1222,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       } else {
         // Or do it ourself here on the engine thread
         long outputStart = System.nanoTime();
-        Frame sendFrame = isDoubleBuffering ? this.buffer.copy : this.buffer.render;
+        Frame sendFrame = this.buffer.copy;
         int[] sendColors = (this.lx.flags.sendCueToOutput && sendFrame.cueOn) ? sendFrame.cue : sendFrame.main;
         this.output.send(sendColors);
         this.profiler.outputNanos = System.nanoTime() - outputStart;
@@ -1542,6 +1462,5 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Clean up engine parameters
     super.dispose();
   }
-
 
 }

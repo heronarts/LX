@@ -238,7 +238,7 @@ public class LXOscEngine extends LXComponent {
               error(iox, "Exception closing JmDNS");
             }
           }
-        }).start();
+        }, "JMDNS Shutdown Thread").start();
       }
       this.registered = false;
     }
