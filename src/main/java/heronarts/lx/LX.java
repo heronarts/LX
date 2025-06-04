@@ -447,6 +447,10 @@ public class LX {
   }
 
   public LX(Flags flags, LXModel model) {
+    this(null, flags, model);
+  }
+
+  public LX(LXPreferences preferences, Flags flags, LXModel model) {
     LX.initProfiler.init();
     this.flags = flags;
     this.flags.immutableModel = (model != null);
@@ -475,7 +479,8 @@ public class LX {
     LX.initProfiler.log("Registry");
 
     // Load the global preferences before plugin initialization
-    this.preferences = new LXPreferences(this);
+    this.preferences = (preferences == null) ? new LXPreferences(flags) : preferences;
+    this.preferences.setLX(this);
     if (this.flags.loadPreferences) {
       this.preferences.load();
     } else {

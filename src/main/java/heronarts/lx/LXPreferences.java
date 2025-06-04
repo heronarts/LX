@@ -39,7 +39,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String PREFERENCES_FILE_NAME = ".lxpreferences";
   private static final String DEFAULT_PROJECT_FILE = "default.lxp";
 
-  private final LX lx;
+  private LX lx;
 
   private final File file;
 
@@ -91,9 +91,20 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
   private boolean inLoad = false;
 
+  /**
+   * Legacy constructor, now deprecated
+   *
+   * @param lx LX instance
+   * @deprecated Use flags-constructor
+   */
+  @Deprecated
   protected LXPreferences(LX lx) {
-    this.lx = lx;
-    this.file = lx.getMediaFile(PREFERENCES_FILE_NAME);
+    this(lx.flags);
+    setLX(lx);
+  }
+
+  public LXPreferences(LX.Flags flags) {
+    this.file = new File(flags.mediaPath, PREFERENCES_FILE_NAME);
     this.eulaAccepted.addListener(this);
     this.focusChannelOnCue.addListener(this);
     this.focusActivePattern.addListener(this);
@@ -103,7 +114,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.showHelpMessages.addListener(this);
     this.schedulerEnabled.addListener(this);
     this.showCpuLoad.addListener(this);
+  }
 
+  public void setLX(LX lx) {
+    this.lx = lx;
     lx.registry.addListener(new LXRegistry.Listener() {
       @Override
       public void pluginChanged(LX lx, LXRegistry.Plugin plugin) {
@@ -114,7 +128,9 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
   @Override
   public void onParameterChanged(LXParameter p) {
-    // Update LX parameter flags
+    if (this.lx == null) {
+      throw new IllegalStateException("LXPreferences.onParameterChanged() invoked before LX instance was set");
+    }
     this.lx.flags.focusChannelOnCue = this.focusChannelOnCue.isOn();
     this.lx.flags.focusActivePattern = this.focusActivePattern.isOn();
     this.lx.flags.sendCueToOutput = this.sendCueToOutput.isOn();
@@ -232,6 +248,21 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.showCpuLoad, object, KEY_SHOW_CPU_LOAD);
     LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
     LXSerializable.Utils.loadString(this.uiTheme, object, KEY_UI_THEME);
+    loadWindowSettings(object);
+    if (object.has(KEY_PROJECT_FILE_NAME)) {
+      this.projectFileName = object.get(KEY_PROJECT_FILE_NAME).getAsString();
+    } else {
+      this.projectFileName = null;
+    }
+    if (object.has(KEY_SCHEDULE_FILE_NAME)) {
+      this.scheduleFileName = object.get(KEY_SCHEDULE_FILE_NAME).getAsString();
+    } else {
+      this.scheduleFileName = null;
+    }
+    LXSerializable.Utils.loadObject(this.lx, this.lx.registry, object, KEY_REGISTRY);
+  }
+
+  private void loadWindowSettings(JsonObject object) {
     if (object.has(KEY_WINDOW_WIDTH)) {
       this.windowWidth = object.get(KEY_WINDOW_WIDTH).getAsInt();
     } else if (object.has(KEY_WINDOW_WIDTH_LEGACY)) {
@@ -246,17 +277,6 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     if (object.has(KEY_WINDOW_POS_Y)) {
       this.windowPosY = object.get(KEY_WINDOW_POS_Y).getAsInt();
     }
-    if (object.has(KEY_PROJECT_FILE_NAME)) {
-      this.projectFileName = object.get(KEY_PROJECT_FILE_NAME).getAsString();
-    } else {
-      this.projectFileName = null;
-    }
-    if (object.has(KEY_SCHEDULE_FILE_NAME)) {
-      this.scheduleFileName = object.get(KEY_SCHEDULE_FILE_NAME).getAsString();
-    } else {
-      this.scheduleFileName = null;
-    }
-    LXSerializable.Utils.loadObject(this.lx, this.lx.registry, object, KEY_REGISTRY);
   }
 
   private void save() {
@@ -273,6 +293,18 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     } catch (IOException iox) {
       LX.error(iox, "Exception writing the preferences file: " + this.file);
     }
+  }
+
+  public void loadWindowSettings() {
+    this.inLoad = true;
+    if (this.file.exists()) {
+      try (FileReader fr = new FileReader(this.file)) {
+        loadWindowSettings(new Gson().fromJson(fr, JsonObject.class));
+      } catch (Exception x) {
+        LX.error(x, "Exception loading window settings from file: " + this.file);
+      }
+    }
+    this.inLoad = false;
   }
 
   public void loadEULA() {
