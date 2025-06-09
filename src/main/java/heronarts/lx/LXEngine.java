@@ -92,6 +92,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final LXDmxEngine dmx;
 
+  public final LXEngineUtilities utilities = new LXEngineUtilities();
+
   private Dispatch inputDispatch = null;
 
   private boolean inLoopTasks = false;
@@ -435,6 +437,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addParameter("framesPerSecond", this.framesPerSecond);
     addParameter("speed", this.speed);
     addParameter("performanceMode", this.performanceMode);
+
+    // Add utility parameters
+    addParameters(this.utilities.parameters);
 
     // Log messages for restriction state
     this.restricted.addListener(p -> {
