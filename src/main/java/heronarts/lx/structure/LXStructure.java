@@ -167,6 +167,10 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     new BooleanParameter("Show Normalization Bounds", false)
     .setDescription("Outline the normalization bounds in the preview window");
 
+  public final BooleanParameter showFixtureLabels =
+    new BooleanParameter("Show Fixture Labels", false)
+    .setDescription("Show the fixture labels in the main preview window");
+
   private final List<Listener> listeners = new ArrayList<Listener>();
 
   private final List<LXFixture> mutableFixtures = new ArrayList<LXFixture>();
@@ -202,6 +206,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     addNormalizationParameter("normalizationHeight", this.normalizationHeight);
     addNormalizationParameter("normalizationDepth", this.normalizationDepth);
     addInternalParameter("showNormalizationBounds", this.showNormalizationBounds);
+    addInternalParameter("showFixtureLabels", this.showFixtureLabels);
 
     addChild("views", this.views = new LXViewEngine(lx));
 
