@@ -196,6 +196,10 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     new BoundedParameter("Sound Object Size", 10, 1, 100000)
     .setDescription("Size of sound objects");
 
+  public final BooleanParameter showSoundObjectLabels =
+    new BooleanParameter("Sound Objects Labels", true)
+    .setDescription("Show sound object labels");
+
   public SoundStage(LX lx) {
     super(lx);
 
@@ -222,6 +226,7 @@ public class SoundStage extends LXComponent implements LXOscComponent {
     addParameter("showSoundObjects", this.showSoundObjects);
     addParameter("soundObjectMeterMode", this.soundObjectMeterMode);
     addParameter("soundObjectSize", this.soundObjectSize);
+    addParameter("soundObjectLabels", this.showSoundObjectLabels);
 
     recomputeBounds(null);
 
