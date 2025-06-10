@@ -57,6 +57,7 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXGroup;
+import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.modulation.LXCompoundModulation;
 import heronarts.lx.modulation.LXModulationContainer;
@@ -507,6 +508,41 @@ public abstract class LXCommand {
         }
       }
 
+    }
+
+    protected static class MultiSetValue extends LXCommand {
+
+      private final List<Parameter.SetValue> setValues = new ArrayList<>();
+
+      private final String description;
+
+      protected MultiSetValue(String description) {
+        this.description = description;
+      }
+
+      public void add(LXParameter parameter, double value) {
+        this.setValues.add(new Parameter.SetValue(parameter, value));
+      }
+
+      public void add(BooleanParameter parameter, boolean value) {
+        add(parameter, value ? 1 : 0);
+      }
+
+      @Override
+      public String getDescription() {
+        return this.description;
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.setValues.forEach(setValue -> setValue.perform(lx));
+
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.setValues.forEach(setValue -> setValue.undo(lx));
+      }
     }
 
     public static class SetIndex extends SetValue {
@@ -1714,6 +1750,23 @@ public abstract class LXCommand {
 
     }
 
+    public static class AutoMute extends Parameter.MultiSetValue {
+
+      public AutoMute(LXPatternEngine patternEngine, boolean autoMute) {
+        super("Auto-Mute " + (autoMute ? "All Patterns" : " No Patterns"));
+        for (LXPattern pattern : patternEngine.patterns) {
+          add(pattern.autoMute, autoMute);
+        }
+      }
+
+      public AutoMute(LXMixerEngine mixer, boolean autoMute) {
+        super("Auto-Mute " + (autoMute ? "All Channels" : " No Channels"));
+        for (LXAbstractChannel bus : mixer.channels) {
+          add(bus.autoMute, autoMute);
+        }
+      }
+    }
+
   }
 
   public static class Modulation {
@@ -2796,31 +2849,12 @@ public abstract class LXCommand {
       }
     }
 
-    public static class ArrangeFixtures extends LXCommand {
+    public static class ArrangeFixtures extends Parameter.MultiSetValue {
 
-      private final List<Parameter.SetValue> setValues = new ArrayList<>();
-
-      public ArrangeFixtures() {}
-
-      public void add(LXParameter parameter, double value) {
-        this.setValues.add(new Parameter.SetValue(parameter, value));
+      public ArrangeFixtures() {
+        super("Arrange Fixtures");
       }
 
-      @Override
-      public String getDescription() {
-        return "Arrange Fixtures";
-      }
-
-      @Override
-      public void perform(LX lx) throws InvalidCommandException {
-        this.setValues.forEach(setValue -> setValue.perform(lx));
-
-      }
-
-      @Override
-      public void undo(LX lx) throws InvalidCommandException {
-        this.setValues.forEach(setValue -> setValue.undo(lx));
-      }
     }
 
     public static class ModifyFixturePositions extends LXCommand {
