@@ -325,6 +325,18 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   public static final double POSITION_RANGE = 1000000;
 
+  public static BoundedParameter newPositionParameter(String label, String description) {
+    return new BoundedParameter(label, 0, -POSITION_RANGE, POSITION_RANGE)
+    .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
+    .setDescription(description);
+  }
+
+  public static BoundedParameter newRotationParameter(String label, String description) {
+    return new BoundedParameter(label, 0, -360, 360)
+    .setUnits(LXParameter.Units.DEGREES)
+    .setDescription(description);
+  }
+
   public final BooleanParameter selected =
     new BooleanParameter("Selected", false)
     .setDescription("Whether this fixture is selected for editing");
@@ -334,34 +346,22 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
      .setDescription("Causes the fixture to flash red for identification");
 
   public final BoundedParameter x =
-    new BoundedParameter("X", 0, -POSITION_RANGE, POSITION_RANGE)
-    .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
-    .setDescription("Base X position of the fixture in space");
+    newPositionParameter("X", "Base X position of the fixture in space");
 
   public final BoundedParameter y =
-    new BoundedParameter("Y", 0, -POSITION_RANGE, POSITION_RANGE)
-    .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
-    .setDescription("Base Y position of the fixture in space");
+    newPositionParameter("Y", "Base Y position of the fixture in space");
 
   public final BoundedParameter z =
-    new BoundedParameter("Z", 0, -POSITION_RANGE, POSITION_RANGE)
-    .setFormatter(LXParameter.Formatter.DECIMAL_2_TO_8_PLACES)
-    .setDescription("Base Z position of the fixture in space");
+    newPositionParameter("Z", "Base Z position of the fixture in space");
 
   public final BoundedParameter yaw =
-    new BoundedParameter("Yaw", 0, -360, 360)
-    .setDescription("Rotation of the fixture about the vertical axis")
-    .setUnits(LXParameter.Units.DEGREES);
+    newRotationParameter("Yaw", "Rotation of the fixture about the vertical axis");
 
   public final BoundedParameter pitch =
-    new BoundedParameter("Pitch", 0, -360, 360)
-    .setDescription("Rotation of the fixture about the horizontal plane")
-    .setUnits(LXParameter.Units.DEGREES);
+    newRotationParameter("Pitch", "Rotation of the fixture about the horizontal plane");
 
   public final BoundedParameter roll =
-    new BoundedParameter("Roll", 0, -360, 360)
-    .setDescription("Rotation of the fixture about the forward vector")
-    .setUnits(LXParameter.Units.DEGREES);
+    newRotationParameter("Roll", "Rotation of the fixture about the forward vector");
 
   public final BoundedParameter scale =
     new BoundedParameter("Scale", 1, 0, 1000)

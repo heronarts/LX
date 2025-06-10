@@ -2796,6 +2796,33 @@ public abstract class LXCommand {
       }
     }
 
+    public static class ArrangeFixtures extends LXCommand {
+
+      private final List<Parameter.SetValue> setValues = new ArrayList<>();
+
+      public ArrangeFixtures() {}
+
+      public void add(LXParameter parameter, double value) {
+        this.setValues.add(new Parameter.SetValue(parameter, value));
+      }
+
+      @Override
+      public String getDescription() {
+        return "Arrange Fixtures";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.setValues.forEach(setValue -> setValue.perform(lx));
+
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.setValues.forEach(setValue -> setValue.undo(lx));
+      }
+    }
+
     public static class ModifyFixturePositions extends LXCommand {
 
       private final Map<String, LXCommand.Parameter.SetValue> setValues =
