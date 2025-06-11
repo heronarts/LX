@@ -715,10 +715,10 @@ public abstract class LXSnapshot extends LXComponent {
             if (rackPattern.enabled.isOn()) {
               // Store all settings for any pattern that is active, explicitly including enabled state
               addParameterView(ViewScope.PATTERNS, rackPattern.enabled);
-              addPatternView(pattern);
+              addPatternView(rackPattern);
             } else {
               // Just store enabled (disabled) state for a pattern that's off
-              addParameterView(ViewScope.PATTERNS, pattern.enabled);
+              addParameterView(ViewScope.PATTERNS, rackPattern.enabled);
             }
           }
         }
