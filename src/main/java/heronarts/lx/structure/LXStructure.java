@@ -167,9 +167,30 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     new BooleanParameter("Show Normalization Bounds", false)
     .setDescription("Outline the normalization bounds in the preview window");
 
+  public enum LabelPosition {
+    POSITION("Base Position"),
+    CENTER("Model Center"),
+    TRANSFORM("Transform Position");
+
+    private final String label;
+
+    private LabelPosition(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   public final BooleanParameter showFixtureLabels =
     new BooleanParameter("Show Fixture Labels", false)
     .setDescription("Show the fixture labels in the main preview window");
+
+  public final EnumParameter<LabelPosition> showFixtureLabelPosition =
+    new EnumParameter<LabelPosition>("Show Fixture Labels", LabelPosition.POSITION)
+    .setDescription("Where to display fixture labels");
 
   private final List<Listener> listeners = new ArrayList<Listener>();
 
@@ -207,6 +228,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     addNormalizationParameter("normalizationDepth", this.normalizationDepth);
     addInternalParameter("showNormalizationBounds", this.showNormalizationBounds);
     addInternalParameter("showFixtureLabels", this.showFixtureLabels);
+    addInternalParameter("showFixtureLabelPosition", this.showFixtureLabelPosition);
 
     addChild("views", this.views = new LXViewEngine(lx));
 

@@ -828,6 +828,10 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     return LXPoint.DEFAULT_POINT_SIZE;
   }
 
+  public LXModel getModel() {
+    return this.model;
+  }
+
   /**
    * Invoked when this fixture has been loaded or added to some container. Will
    * rebuild the points and the metrics, and notify container of the change to
