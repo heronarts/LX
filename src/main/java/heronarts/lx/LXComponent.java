@@ -1154,6 +1154,19 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   /**
+   * Add all parameters from a collection as internal parameters
+   *
+   * @param parameters Collection of parameters to add as internal
+   * @return this
+   */
+  protected final LXComponent addInternalParameters(LXParameter.Collection parameters) {
+    for (Map.Entry<String, LXParameter> entry : parameters.entrySet()) {
+      addInternalParameter(entry.getKey(), entry.getValue());
+    }
+    return this;
+  }
+
+  /**
    * Adds a parameter to the component at a fixed path. The parameter will be registered in the
    * LX hierarchy, and if it is of a listenable type will also send and receive OSC messages.
    * Listenable parameters will also be automatically registered with their parent component as
