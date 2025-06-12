@@ -237,6 +237,18 @@ public class LXMatrix {
     return m34;
   }
 
+  public float x(float x, float y, float z, float w) {
+    return m11 * x + m12 * y + m13 * z + m14 * w;
+  }
+
+  public float y(float x, float y, float z, float w) {
+    return m21 * x + m22 * y + m23 * z + m24 * w;
+  }
+
+  public float z(float x, float y, float z, float w) {
+    return m31 * x + m32 * y + m33 * z + m34 * w;
+  }
+
   /**
    * Returns the x value after the given
    * point is transformed by this matrix.
