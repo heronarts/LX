@@ -139,7 +139,7 @@ public class LXTriggerModulation extends LXParameterModulation {
   public enum ToggleMomentaryMode {
     ON("On → Trigger"),
     OFF("Off → Trigger"),
-    ALWAYS("Any Change → Trigger"),;
+    ALWAYS("Any Change → Trigger");
 
     public final String label;
 
