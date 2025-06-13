@@ -382,7 +382,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.networkThread = new NetworkThread(lx);
 
     // Mapping engine
-    this.mapping = new LXMappingEngine();
+    this.mapping = new LXMappingEngine(lx);
 
     // Color palette
     addChild("palette", this.palette = new LXPalette(lx));
