@@ -87,19 +87,15 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     return this;
   }
 
-  public boolean isValidTarget(LXParameter target) {
-    LXComponent parent = getParent();
-    if (parent instanceof LXEngine) {
+  public boolean isParameterInScope(LXParameter target) {
+    if (target == null) {
+      return false;
+    }
+    final LXComponent scope = getParent();
+    if (scope instanceof LXEngine) {
       return true;
     }
-    LXComponent targetComponent = target.getParent();
-    while (targetComponent != null) {
-      if (targetComponent == parent) {
-        return true;
-      }
-      targetComponent = targetComponent.getParent();
-    }
-    return false;
+    return target.isDescendant(scope);
   }
 
   @Override
