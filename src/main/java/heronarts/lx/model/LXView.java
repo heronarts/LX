@@ -459,6 +459,8 @@ public class LXView extends LXModel {
 
   final Map<Integer, LXPoint> clonedPoints;
 
+  public final String viewSelector;
+
   final String allTags(List<String> tags) {
     String tag = "";
     for (String t : tags) {
@@ -512,6 +514,7 @@ public class LXView extends LXModel {
     this.normalization = normalization;
     this.clonedPoints = java.util.Collections.unmodifiableMap(clonedPoints);
     model.derivedViews.add(this);
+    this.viewSelector = viewSelector;
 
     if (normalization == Normalization.RELATIVE) {
       if (orientation == Orientation.GROUP) {
