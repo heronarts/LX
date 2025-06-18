@@ -81,35 +81,35 @@ public class LXStructureLabelConfig extends LXParameter.Collection {
     }
   }
 
-  public final BooleanParameter showLabels =
+  public transient final BooleanParameter showLabels =
     new BooleanParameter("Show Fixture Labels", false)
     .setDescription("Show the fixture labels in the main preview window");
 
-  public final EnumParameter<HorizontalAlignment> horizontalAlignment =
+  public transient final EnumParameter<HorizontalAlignment> horizontalAlignment =
     new EnumParameter<>("Label Horizontal Alignment", HorizontalAlignment.CENTER);
 
-  public final EnumParameter<VerticalAlignment> verticalAlignment =
+  public transient final EnumParameter<VerticalAlignment> verticalAlignment =
     new EnumParameter<>("Label Vertical Alignment", VerticalAlignment.MIDDLE);
 
-  public final EnumParameter<Position> positionX =
+  public transient final EnumParameter<Position> positionX =
     new EnumParameter<Position>("Fixture Label Position X", Position.POSITION)
     .setDescription("How to position fixture X coordinate");
 
-  public final EnumParameter<Position> positionY =
+  public transient final EnumParameter<Position> positionY =
     new EnumParameter<Position>("Fixture Label Position Y", Position.POSITION)
     .setDescription("How to position fixture Y coordinate");
 
-  public final EnumParameter<Position> positionZ =
+  public transient final EnumParameter<Position> positionZ =
     new EnumParameter<Position>("Fixture Label Position Z", Position.POSITION)
     .setDescription("How to position fixture Z coordinate");
 
-  public final BoundedParameter offsetX =
+  public transient final BoundedParameter offsetX =
     LXFixture.newPositionParameter("Fixture Label X-Offset", "X-Offset Fixture Labels");
 
-  public final BoundedParameter offsetY =
+  public transient final BoundedParameter offsetY =
     LXFixture.newPositionParameter("Fixture Label Y-Offset", "Z-Offset Fixture Labels");
 
-  public final BoundedParameter offsetZ =
+  public transient final BoundedParameter offsetZ =
     LXFixture.newPositionParameter("Fixture Label Z-Offset", "Z-Offset Fixture Labels");
 
   LXStructureLabelConfig() {
