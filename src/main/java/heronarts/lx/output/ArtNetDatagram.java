@@ -32,6 +32,17 @@ public class ArtNetDatagram extends LXDatagram {
 
   private final static int DEFAULT_UNIVERSE = 0;
 
+  public final static int OPCODE_LSB = 8;
+  public final static int OPCODE_MSB = 9;
+
+  public final static int OPCODE_POLL = 0x2000;
+  public final static int OPCODE_POLL_REPLY = 0x2100;
+  public final static int OPCODE_DMX = 0x5000;
+  public final static int OPCODE_SYNC = 0x5100;
+
+  public final static int VERSION_MSB = 10;
+  public final static int VERSION_LSB = 11;
+
   public final static int UNIVERSE_LSB = 14;
   public final static int UNIVERSE_MSB = 15;
 
@@ -209,10 +220,10 @@ public class ArtNetDatagram extends LXDatagram {
     validateBufferSize();
 
     System.arraycopy(HEADER, 0, this.buffer, 0, HEADER.length);
-    this.buffer[8] = 0x00; // ArtDMX opcode
-    this.buffer[9] = 0x50; // ArtDMX opcode
-    this.buffer[10] = 0; // Protocol version
-    this.buffer[11] = 14; // Protocol version
+    this.buffer[OPCODE_LSB] = 0x00; // ArtDMX opcode
+    this.buffer[OPCODE_MSB] = 0x50; // ArtDMX opcode
+    this.buffer[VERSION_MSB] = 0; // Protocol version
+    this.buffer[VERSION_LSB] = 14; // Protocol version
     this.buffer[12] = 0; // Sequence
     this.buffer[13] = 0; // Physical
 
