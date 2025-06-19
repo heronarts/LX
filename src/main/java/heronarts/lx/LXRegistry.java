@@ -390,11 +390,21 @@ public class LXRegistry implements LXSerializable {
     private boolean isEnabled = false;
     private Throwable exception = null;
     private final boolean cliEnabled;
+    private final boolean trusted;
 
     private Plugin(Class<? extends LXPlugin> clazz) {
+      this(clazz, false);
+    }
+
+    private Plugin(Class<? extends LXPlugin> clazz, boolean trusted) {
       this.clazz = clazz;
       this.cliEnabled = isPluginCliEnabled(clazz);
       this.isEnabled = restorePluginEnabled(clazz);
+      this.trusted = trusted;
+    }
+
+    public boolean isTrusted() {
+      return this.trusted;
     }
 
     private boolean isPluginCliEnabled(Class<? extends LXPlugin> clazz) {
@@ -845,7 +855,7 @@ public class LXRegistry implements LXSerializable {
       addFixture(clz.asSubclass(LXFixture.class));
     }
     if (LXPlugin.class.isAssignableFrom(clz)) {
-      addPlugin(clz.asSubclass(LXPlugin.class));
+      addPlugin(clz.asSubclass(LXPlugin.class), pack.trusted);
     }
   }
 
@@ -1290,8 +1300,12 @@ public class LXRegistry implements LXSerializable {
   }
 
   protected void addPlugin(Class<? extends LXPlugin> plugin) {
+    addPlugin(plugin, false);
+  }
+
+  protected void addPlugin(Class<? extends LXPlugin> plugin, boolean trusted) {
     Objects.requireNonNull(plugin, "May not add null LXRegistry.addPlugin");
-    this.mutablePlugins.add(new Plugin(plugin));
+    this.mutablePlugins.add(new Plugin(plugin, trusted));
   }
 
   protected void initializePlugins() {
