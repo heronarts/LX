@@ -55,7 +55,7 @@ public class ADM extends LXComponent {
       .setDescription("Elevation from horizontal plane in degrees");
 
     public final BoundedParameter distance =
-      new BoundedParameter("Distance", 1, 0, 1)
+      new BoundedParameter("Distance", 1, 0, Math.sqrt(3))
       .setDescription("Distance from center point, normalized 0-1");
 
     public final BoundedParameter x =
@@ -100,7 +100,7 @@ public class ADM extends LXComponent {
         final double xydist = LXUtils.dist(x, y, 0, 0);
         if (xydist > 0) {
           this.azimuth.setValue(Math.toDegrees(Math.atan2(-x, y)));
-          this.elevation.setValue(Math.atan(z / xydist));
+          this.elevation.setValue(Math.toDegrees(Math.atan(z / xydist)));
         } else if (z != 0) {
           this.elevation.setValue(z > 0 ? 90 : -90);
         }
@@ -157,13 +157,13 @@ public class ADM extends LXComponent {
         if (ADM_AED_PATH.equals(field)) {
           obj.azimuth.setValue(message.getFloat(0));
           obj.elevation.setValue(message.getFloat(1));
-          obj.distance.setValue(message.getFloat(2));
+          obj.distance.setValue(LXUtils.constrainf(message.getFloat(2), 0, 1));
         } else if (ADM_AZIM_PATH.equals(field)) {
           obj.azimuth.setValue(message.getFloat(0));
         } else if (ADM_ELEV_PATH.equals(field)) {
           obj.elevation.setValue(message.getFloat(0));
         } else if (ADM_DIST_PATH.equals(field)) {
-          obj.distance.setValue(message.getFloat(0));
+          obj.distance.setValue(LXUtils.constrainf(message.getFloat(0), 0, 1));
         } else if (ADM_XYZ_PATH.equals(field)) {
           obj.x.setValue(message.getFloat(0));
           obj.y.setValue(message.getFloat(1));
