@@ -60,8 +60,11 @@ public class LXClassLoader extends URLClassLoader {
   public static class Package {
 
     private static final List<String> TRUSTED_PACKAGES = Arrays.asList(new String[] {
-      // Envelop for Chromatik - 0.0.1-SNAPSHOT
-      "8ae6ccb33f5431e6f446ede59273e4ab2767e3da37ea8ef40680d4ba48bfdb6a"
+      // https://github.com/EnvelopSound/EnvelopForChromatik/releases/tag/0.0.1-SNAPSHOT-2025-06-12
+      "8ae6ccb33f5431e6f446ede59273e4ab2767e3da37ea8ef40680d4ba48bfdb6a",
+
+      // https://github.com/jkbelcher/AudioStemsPlugin/releases/tag/v0.1.2
+      "b501cfccf9a2d6822b941ca920df80620ec16aef2dec3e001c20867d562946af"
     });
 
     final File jarFile;
