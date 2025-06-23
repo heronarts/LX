@@ -29,6 +29,7 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.LXUtils;
 
@@ -47,6 +48,11 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
     super(lx, clip.bus);
     this.clip = clip;
     addParameter("recall", this.recall);
+  }
+
+  @Override
+  public StringParameter getLabelParameter() {
+    return this.clip.label;
   }
 
   public LXClip getClip() {
