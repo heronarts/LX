@@ -77,13 +77,24 @@ public abstract class LXSnapshot extends LXComponent {
   public final List<View> views = Collections.unmodifiableList(this.mutableViews);
 
   public static enum ViewScope {
-    MIXER,
-    PATTERNS,
-    EFFECTS,
-    OUTPUT,
-    MODULATION,
-    GLOBAL,
-    MASTER;
+    MIXER("Mixer"),
+    PATTERNS("Pattern"),
+    EFFECTS("Effect"),
+    OUTPUT("Output"),
+    MODULATION("Modulation"),
+    GLOBAL("Global"),
+    MASTER("Master");
+
+    public final String label;
+
+    private ViewScope(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
   }
 
   /**
@@ -126,9 +137,10 @@ public abstract class LXSnapshot extends LXComponent {
     /**
      * Whether this view is enabled for recall or not.
      */
-    public final BooleanParameter enabled = new BooleanParameter("Enabled", true)
-    .setMappable(false)
-    .setDescription("Whether this view is enabled in the snapshot");
+    public final BooleanParameter enabled =
+      new BooleanParameter("Enabled", true)
+      .setMappable(false)
+      .setDescription("Whether this view is enabled in the snapshot");
 
     private View(ViewScope scope, ViewType type) {
       this.scope = scope;
@@ -147,6 +159,13 @@ public abstract class LXSnapshot extends LXComponent {
      * @return Descriptive label for the parameter or field represented by the view
      */
     public abstract String getLabel();
+
+    /**
+     * Gets a description of the behavior of the parameter or field represented by the view
+     *
+     * @return Description of the behavior of the parameter or field represented by the view
+     */
+    public abstract String getDescription();
 
     /**
      * Gets the component that owns the parameter/field referenced by the view
@@ -322,6 +341,12 @@ public abstract class LXSnapshot extends LXComponent {
     }
 
     @Override
+    public String getDescription() {
+      final String description = this.parameter.getDescription();
+      return LXUtils.isEmpty(description) ? "<No Description>" : description;
+    }
+
+    @Override
     public LXComponent getViewComponent() {
       return this.component;
     }
@@ -468,6 +493,11 @@ public abstract class LXSnapshot extends LXComponent {
     }
 
     @Override
+    public String getDescription() {
+      return this.channel.fader.getDescription();
+    }
+
+    @Override
     public LXComponent getViewComponent() {
       return this.channel;
     }
@@ -581,6 +611,11 @@ public abstract class LXSnapshot extends LXComponent {
     }
 
     @Override
+    public String getDescription() {
+      return "Specifies which pattern is active on the channel.";
+    }
+
+    @Override
     public LXComponent getViewComponent() {
       return this.channel;
     }
@@ -657,6 +692,11 @@ public abstract class LXSnapshot extends LXComponent {
     @Override
     public String getLabel() {
       return "Active Pattern";
+    }
+
+    @Override
+    public String getDescription() {
+      return "Specifies which pattern is active in the rack.";
     }
 
     @Override
