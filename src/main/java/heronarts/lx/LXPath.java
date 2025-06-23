@@ -112,7 +112,7 @@ public interface LXPath {
     return getCanonicalLabel(null);
   }
 
-  static final String DEFAULT_SEPARATOR = " \u2022 ";
+  public static final String DEFAULT_SEPARATOR = " \u2022 ";
 
   /**
    * Returns the canonical user-facing label of this component. The label
