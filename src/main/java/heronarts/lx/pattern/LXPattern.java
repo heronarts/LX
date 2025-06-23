@@ -167,6 +167,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   public final CompoundParameter compositeLevel =
     new CompoundParameter("Composite Level", 1)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
     .setDescription("Alpha level to composite pattern at when in channel blend mode");
 
   public final BooleanParameter hasCustomCycleTime =
