@@ -207,10 +207,6 @@ public class ChasePattern extends LXPattern {
     .setUnits(CompoundParameter.Units.PERCENT)
     .setDescription("How much the swarm affects the brightness");
 
-  public final CompoundParameter swarmPolarity =
-    new CompoundParameter("Polarity", 0)
-    .setDescription("Swarm polarity");
-
   public ChasePattern(LX lx) {
     super(lx);
 
@@ -248,7 +244,6 @@ public class ChasePattern extends LXPattern {
     addParameter("swarmSize", this.swarmSize);
     addParameter("swarmFade", this.swarmFade);
     addParameter("swarmBrightness", this.swarmBrightness);
-    addParameter("swarmPolarity", this.swarmPolarity);
 
     setRemoteControls(
       this.chunkSize,
