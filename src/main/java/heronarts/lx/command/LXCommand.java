@@ -2618,31 +2618,34 @@ public abstract class LXCommand {
       }
     }
 
-    private static class RemoveView extends LXCommand {
+    public static class RemoveView extends LXCommand {
 
-      private ComponentReference<LXSnapshot> snapshot;
-      private LXSnapshot.View view;
+      private final ComponentReference<LXSnapshot> snapshot;
+      private final String viewPath;
       private final JsonObject viewObj;
+      private final String label;
 
       public RemoveView(LXSnapshot.View view) {
         this.snapshot = new ComponentReference<LXSnapshot>(view.getSnapshot());
-        this.view = view;
+        this.viewPath = view.getViewPath();
         this.viewObj = LXSerializable.Utils.toObject(view.getSnapshot().getLX(), view);
+        this.label = view.getLabel();
       }
 
       @Override
       public String getDescription() {
-        return "Delete Snapshot View";
+        return "Delete Snapshot View " + this.label;
       }
 
       @Override
       public void perform(LX lx) {
-        this.snapshot.get().removeView(this.view);
+        final LXSnapshot snapshot = this.snapshot.get();
+        snapshot.removeView(snapshot.getView(this.viewPath));
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        this.view = this.snapshot.get().addView(this.viewObj);
+        this.snapshot.get().addView(this.viewObj);
       }
     }
   }

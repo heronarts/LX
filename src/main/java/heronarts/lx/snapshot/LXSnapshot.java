@@ -67,6 +67,12 @@ import heronarts.lx.utils.LXUtils;
  */
 public abstract class LXSnapshot extends LXComponent {
 
+  public interface Listener {
+    public void snapshotDisposed(LXSnapshot snapshot);
+    public void viewAdded(LXSnapshot snapshot, View view);
+    public void viewRemoved(LXSnapshot snapshot, View view);
+  }
+
   private final Map<String, View> viewPaths = new HashMap<>();
 
   private final List<View> mutableViews = new ArrayList<View>();
@@ -756,6 +762,27 @@ public abstract class LXSnapshot extends LXComponent {
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
   }
 
+  private final List<Listener> listeners = new ArrayList<Listener>();
+
+  public final void addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXSnapshot.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXSnapshot.Listener: " + listener);
+    }
+    this.listeners.add(listener);
+  }
+
+  public final void removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXSnapshot.Listener: " + listener);
+    }
+    if (this.inDispose) {
+      this.disposeListeners.add(listener);
+    } else {
+      this.listeners.remove(listener);
+    }
+  }
+
   public boolean isGlobalSnapshot() {
     return (this instanceof LXGlobalSnapshot);
   }
@@ -864,8 +891,7 @@ public abstract class LXSnapshot extends LXComponent {
         case BLEND ->{
           for (LXPattern rackPattern : rack.patterns) {
             if (rackPattern.enabled.isOn()) {
-              // Store all settings for any pattern that is active, explicitly including enabled state
-              addParameterView(ViewScope.PATTERNS, rackPattern.enabled);
+              // Store all settings for any pattern that is active (implicitly includes enabled state)
               addPatternView(rackPattern);
             } else {
               // Just store enabled (disabled) state for a pattern that's off
@@ -967,10 +993,11 @@ public abstract class LXSnapshot extends LXComponent {
     }
     final String viewPath = view.getViewPath();
     if (this.viewPaths.containsKey(viewPath)) {
-      LX.error("Attempting to registering two Snapshot views to the same path " + viewPath + ": " + view.getClass().getName());
+      LX.error("Attempting to register two Snapshot views to the same path " + viewPath + ": " + view.getClass().getName());
     }
     this.viewPaths.put(viewPath, view);
     this.mutableViews.add(view);
+    this.listeners.forEach(listener -> listener.viewAdded(this, view));
   }
 
   /**
@@ -984,7 +1011,18 @@ public abstract class LXSnapshot extends LXComponent {
     }
     this.viewPaths.remove(view.getViewPath());
     this.mutableViews.remove(view);
+    this.listeners.forEach(listener -> listener.viewRemoved(this, view));
     view.dispose();
+  }
+
+  /**
+   * Get a view by its scoped path in this snapshot
+   *
+   * @param viewPath Path to the view in this snapshot (matching view.getViewPath())
+   * @return View
+   */
+  public View getView(String viewPath) {
+    return this.viewPaths.get(viewPath);
   }
 
   private void clearViews() {
@@ -1009,14 +1047,20 @@ public abstract class LXSnapshot extends LXComponent {
     return new LXGlobalSnapshot.ChannelFaderView(channel, false, 0);
   }
 
+  private boolean inDispose = false;
+  private final List<Listener> disposeListeners = new ArrayList<>();
+
   @Override
   public void dispose() {
-    for (View view : this.views) {
-      view.dispose();
-    }
-    this.viewPaths.clear();
-    this.mutableViews.clear();
+    clearViews();
+    this.inDispose = true;
+    this.listeners.forEach(listener -> listener.snapshotDisposed(this));
+    this.inDispose = false;
+    this.listeners.removeAll(this.disposeListeners);
+    this.disposeListeners.clear();
     super.dispose();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXSnapshot.Listener: " + listener));
+    this.listeners.clear();
   }
 
   private static final String KEY_VIEWS = "views";
