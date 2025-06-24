@@ -133,7 +133,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
   public final void removeListener(Listener listener) {
     if (!this.listeners.contains(listener)) {
-      throw new IllegalStateException("May not remove non-registered Bus.Listener: " + listener);
+      throw new IllegalStateException("May not remove non-registered LXPattern.Listener: " + listener);
     }
     this.listeners.remove(listener);
   }
