@@ -1284,7 +1284,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
   @Override
   public void load(LX lx, JsonObject obj) {
     if (obj.has(KEY_RESET)) {
-      this.parameters.reset();
+      for (LXParameter p : this.parameters.values()) {
+        if (p != this.label) {
+          p.reset();
+        }
+      }
     }
 
     // Add the new channels
