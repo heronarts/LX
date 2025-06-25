@@ -112,7 +112,9 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
   // relevant in the project scope. It's a bit of an arbitrary selection at the moment
   @Override
   public void initializeViews() {
-    addParameterView(ViewScope.OUTPUT, lx.engine.output.brightness);
+    // Stop doing this, super confusing now that there's separate master fader!
+    // addParameterView(ViewScope.OUTPUT, lx.engine.output.brightness);
+
     addParameterView(ViewScope.MIXER, lx.engine.mixer.crossfader);
     for (LXAbstractChannel bus : lx.engine.mixer.channels) {
       initializeGlobalBus(bus);
