@@ -2648,6 +2648,34 @@ public abstract class LXCommand {
         this.snapshot.get().addView(this.viewObj);
       }
     }
+
+    public static class RemoveViews extends LXCommand {
+
+      private final List<RemoveView> removeViews = new ArrayList<>();
+      private final String label;
+
+      public RemoveViews(String label, List<LXSnapshot.View> views) {
+        this.label = label;
+        views.forEach(view -> this.removeViews.add(new RemoveView(view)));
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Snapshot Views " + this.label;
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.removeViews.forEach(removeView -> removeView.perform(lx));
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (RemoveView removeView : this.removeViews) {
+          removeView.undo(lx);
+        }
+      }
+    }
   }
 
   public static class Structure {
