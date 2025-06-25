@@ -122,7 +122,9 @@ public class LXGlobalSnapshot extends LXSnapshot implements LXComponent.Renamabl
     // Modulator settings
     for (LXModulator modulator : lx.engine.modulation.getModulators()) {
       for (LXParameter p : modulator.getParameters()) {
-        addParameterView(ViewScope.MODULATION, p);
+        if (modulator.isSnapshotControl(_checkParameter(p))) {
+          addParameterView(ViewScope.MODULATION, p);
+        }
       }
     }
 

@@ -647,6 +647,16 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   /**
+   * Returns whether this parameter is stored along with snapshots
+   *
+   * @param parameter Parameter
+   * @return true if this can be included in snapshots
+   */
+  public boolean isSnapshotControl(LXParameter parameter) {
+    return !(parameter == this.label);
+  }
+
+  /**
    * Determines whether the given LX object is contained by this
    * parent, at any depth in the tree of child components and parameters.
    *

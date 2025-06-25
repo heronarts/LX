@@ -20,6 +20,8 @@ package heronarts.lx.modulator;
 
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.StringParameter;
 
 public abstract class LXMacroModulator extends LXModulator implements LXOscComponent {
 
@@ -30,6 +32,12 @@ public abstract class LXMacroModulator extends LXModulator implements LXOscCompo
   protected LXMacroModulator(String label) {
     super(label);
     addInternalParameter("showEight", this.showEight);
+  }
+
+  @Override
+  public boolean isSnapshotControl(LXParameter p) {
+    return !(p instanceof StringParameter) &&
+      super.isSnapshotControl(p);
   }
 
 }

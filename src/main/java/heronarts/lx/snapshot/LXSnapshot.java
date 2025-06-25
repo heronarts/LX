@@ -906,11 +906,14 @@ public abstract class LXSnapshot extends LXComponent {
     }
   }
 
+  protected LXParameter _checkParameter(LXParameter p) {
+    AggregateParameter ap = p.getParentParameter();
+    return (ap != null) ? ap : p;
+  }
+
   protected void addDeviceView(ViewScope scope, LXDeviceComponent device) {
     for (LXParameter p : device.getParameters()) {
-      AggregateParameter ap = p.getParentParameter();
-      LXParameter check = (ap != null) ? ap : p;
-      if (device.isSnapshotControl(check)) {
+      if (device.isSnapshotControl(_checkParameter(p))) {
         addParameterView(scope, p);
       }
     }
@@ -924,7 +927,7 @@ public abstract class LXSnapshot extends LXComponent {
 
   protected void addLayeredView(ViewScope scope, LXLayeredComponent component) {
     for (LXParameter p : component.getParameters()) {
-      if (p != component.label) {
+      if (component.isSnapshotControl(_checkParameter(p))) {
         addParameterView(scope, p);
       }
     }
@@ -935,7 +938,7 @@ public abstract class LXSnapshot extends LXComponent {
 
   protected void addDeviceChildView(ViewScope scope, LXComponent component) {
     for (LXParameter p : component.getParameters()) {
-      if (p != component.label) {
+      if (component.isSnapshotControl(_checkParameter(p))) {
         addParameterView(scope, p);
       }
     }
