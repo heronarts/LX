@@ -67,6 +67,7 @@ import heronarts.lx.modulation.LXTriggerModulation;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscConnection;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -95,6 +96,10 @@ public abstract class LXCommand {
   public static class InvalidCommandException extends Exception {
 
     private static final long serialVersionUID = 1L;
+
+    protected InvalidCommandException(String message) {
+      super(message);
+    }
 
     protected InvalidCommandException(Exception cause) {
       super(cause.getMessage(), cause);
@@ -2644,7 +2649,7 @@ public abstract class LXCommand {
       }
 
       @Override
-      public void undo(LX lx) throws InvalidCommandException {
+      public void undo(LX lx) {
         this.snapshot.get().addView(this.viewObj);
       }
     }
@@ -2671,8 +2676,196 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        for (RemoveView removeView : this.removeViews) {
-          removeView.undo(lx);
+        this.removeViews.forEach(removeView -> removeView.undo(lx));
+      }
+    }
+
+    public static class UpdateView extends LXCommand {
+
+      private final ComponentReference<LXSnapshot> snapshot;
+      private final String viewPath;
+      private final String label;
+
+      private boolean discrete = false, string = false;
+
+      private int fromInt;
+      private double fromValue;
+      private double fromNormalized;
+      private String fromString;
+
+      private int toInt;
+      private double toValue;
+      private double toNormalized;
+      private String toString;
+
+      private UpdateView(LXSnapshot.ParameterView view) {
+        this.snapshot = new ComponentReference<LXSnapshot>(view.getSnapshot());
+        this.viewPath = view.getViewPath();
+        this.label = view.getLabel();
+      }
+
+      public UpdateView(LXSnapshot.ParameterView view, boolean toogle) {
+        this(view);
+        this.toValue = this.toNormalized = (view.getParameterValue() > 0) ? 0 : 1;
+      }
+
+      public UpdateView(LXSnapshot.ParameterView view, BoundedParameter replacement) {
+        this(view);
+        this.toValue = replacement.getValue();
+        this.toNormalized = (view.parameter instanceof BoundedParameter bounded) ? bounded.getNormalized(this.toValue) : LXUtils.clamp(this.toValue, 0, 1);
+      }
+
+      public UpdateView(LXSnapshot.ParameterView view, DiscreteParameter replacement) {
+        this(view);
+        this.toInt = replacement.getValuei();
+        this.toNormalized = replacement.getNormalized();
+        this.discrete = true;
+      }
+
+      public UpdateView(LXSnapshot.ParameterView view, StringParameter replacement) {
+        this(view);
+        this.toString = replacement.getString();
+        this.string = true;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Update Snapshot View " + this.label;
+      }
+
+      private LXSnapshot.ParameterView getParameterView() {
+        return (LXSnapshot.ParameterView) this.snapshot.get().getView(this.viewPath);
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          final LXSnapshot.ParameterView view = getParameterView();
+
+          this.fromInt = view.getParameterDiscreteValue();
+          this.fromString = view.getParameterStringValue();
+          this.fromValue = view.getParameterValue();
+          this.fromNormalized = view.getParameterNormalizedValue();
+
+          if (this.discrete) {
+            view.updateDiscrete(this.toInt, this.toNormalized);
+          } else if (this.string) {
+            view.updateString(this.toString);
+          } else {
+            view.updateNormalized(this.toValue, this.toNormalized);
+          }
+        } catch (Exception x) {
+          throw new InvalidCommandException(x);
+        }
+
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        try {
+          final LXSnapshot.ParameterView view = getParameterView();
+          if (this.discrete) {
+            view.updateDiscrete(this.fromInt, this.fromNormalized);
+          } else if (this.string) {
+            view.updateString(this.fromString);
+          } else {
+            view.updateNormalized(this.fromValue, this.fromNormalized);
+          }
+        } catch (Exception x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+    }
+
+    public static class UpdateChannelFaderView extends LXCommand {
+
+      private final ComponentReference<LXSnapshot> snapshot;
+      private final String viewPath;
+
+      private double fromValue;
+      private final double toValue;
+
+      public UpdateChannelFaderView(LXSnapshot.ChannelFaderView view, BoundedParameter replacement) {
+        this.snapshot = new ComponentReference<LXSnapshot>(view.getSnapshot());
+        this.viewPath = view.getViewPath();
+        this.toValue = replacement.getValue();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Update Snapshot Channel Fader View";
+      }
+
+      private LXSnapshot.ChannelFaderView getChannelFaderView() {
+        return (LXSnapshot.ChannelFaderView) this.snapshot.get().getView(this.viewPath);
+      }
+
+      private void updateValue(double value) throws InvalidCommandException {
+        try {
+          getChannelFaderView().update(value);
+        } catch (Exception x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        updateValue(this.toValue);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        updateValue(this.fromValue);
+      }
+    }
+
+    public static class UpdatePatternView extends LXCommand {
+
+      private final ComponentReference<LXSnapshot> snapshot;
+      private final String viewPath;
+      private int fromIndex;
+      private final int toIndex;
+
+      public UpdatePatternView(LXSnapshot.View view, int patternIndex) {
+        this.snapshot = new ComponentReference<LXSnapshot>(view.getSnapshot());
+        this.viewPath = view.getViewPath();
+        this.toIndex = patternIndex;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Update Snapshot Active Pattern";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          switch (this.snapshot.get().getView(this.viewPath)) {
+          case LXSnapshot.ActivePatternView active -> {
+            this.fromIndex = active.getPattern().getIndex();
+            active.update(this.toIndex);
+          }
+          case LXSnapshot.RackPatternView rack -> {
+            this.fromIndex = rack.getPattern().getIndex();
+            rack.update(this.toIndex);
+          }
+          default -> throw new InvalidCommandException("UpdatePatternView can only operate ActivePatternView or RackPatternView");
+          }
+        } catch (Exception x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        try {
+          switch (this.snapshot.get().getView(this.viewPath)) {
+          case LXSnapshot.ActivePatternView active -> active.update(this.fromIndex);
+          case LXSnapshot.RackPatternView rack -> rack.update(this.fromIndex);
+          default -> throw new InvalidCommandException("UpdatePatternView can only operate ActivePatternView or RackPatternView");
+          }
+        } catch (Exception x) {
+          throw new InvalidCommandException(x);
         }
       }
     }
