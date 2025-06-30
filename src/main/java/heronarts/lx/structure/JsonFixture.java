@@ -1676,7 +1676,7 @@ public class JsonFixture extends LXFixture {
       JsonObject parameterObj = parameterElem.getAsJsonObject();
       if (parameterObj.has(KEY_PARAMETER_LABEL)) {
         String rawLabel = loadString(parameterObj, KEY_PARAMETER_LABEL, false, "Parameter " + KEY_PARAMETER_LABEL + " must be valid String");
-        if (!rawLabel.matches("^[a-zA-Z0-9 ]+$")) {
+        if (!rawLabel.matches("^[a-zA-Z0-9 _-]+$")) {
           addWarning("Invalid parameter label, must be non-empty only containing ASCII alphanumerics: " + rawLabel);
         } else {
           parameterLabel = rawLabel;
