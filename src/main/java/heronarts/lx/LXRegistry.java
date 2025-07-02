@@ -697,7 +697,7 @@ public class LXRegistry implements LXSerializable {
     if (!effects.isEmpty()) {
       new ArrayList<LXEffect>(effects).forEach(effect -> {
         if (pkg.hasClass(effect.getClass())) {
-          LX.log("Reloading effect: " + effect);
+          LX.debug("Reloading effect: " + effect);
           effect.reload();
         }
       });
