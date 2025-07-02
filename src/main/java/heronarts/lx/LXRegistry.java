@@ -67,6 +67,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.structure.LXFixture;
 
 /**
@@ -532,54 +533,12 @@ public class LXRegistry implements LXSerializable {
 
   private boolean contentReloading = false;
 
-  private final WatchService watchService;
+  private WatchService watchService = null;
 
   public LXRegistry(LX lx) {
     this.lx = lx;
     this.classLoader = new LXClassLoader(lx);
-    this.watchService = createWatchService();
   }
-
-  private WatchService createWatchService() {
-    try {
-      final WatchService watchService = FileSystems.getDefault().newWatchService();
-      this.lx.getMediaFolder(LX.Media.PACKAGES).toPath().register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
-      return watchService;
-    } catch (IOException iox) {
-      LX.error(iox, "Could not create WatchService for LXRegistry");
-    }
-    return null;
-  }
-
-  public void runWatchService() {
-    if (this.watchService != null) {
-      WatchKey watchKey = null;
-      boolean changed = false;
-      while ((watchKey = this.watchService.poll()) != null) {
-        for (WatchEvent<?> event : watchKey.pollEvents()) {
-          final Path path = (Path) event.context();
-          LX.log("Detected change " + event.kind() + " to package file: " + path);
-          changed = true;
-        }
-        watchKey.reset();
-      }
-      if (changed && this.lx.preferences.autoReloadPackages.isOn()) {
-        reloadContent();
-
-        // TODO(mcslee): consider making this more efficiently reload only
-        // devices from packages that actually changed... it's a lot of
-        // bookkeeping, perhaps not worth it
-        for (LXAbstractChannel bus : this.lx.engine.mixer.channels) {
-          if (bus instanceof LXChannel channel) {
-            new ArrayList<LXPattern>(channel.patterns).forEach(pattern -> pattern.reload());
-          }
-          new ArrayList<LXEffect>(bus.effects).forEach(effect -> effect.reload());
-        }
-        new ArrayList<LXEffect>(lx.engine.mixer.masterBus.effects).forEach(effect -> effect.reload());
-      }
-    }
-  }
-
 
   public LXClassLoader getClassLoader() {
     return this.classLoader;
@@ -615,6 +574,133 @@ public class LXRegistry implements LXSerializable {
   public void checkRegistration() {
     if (!this.contentReloading && this.lx.engine.hasStarted) {
       throw new IllegalStateException("May not register components outside of initialize() callback");
+    }
+  }
+
+  void enableWatchService(boolean enabled) {
+    if (enabled) {
+      if (this.watchService == null) {
+        final Path path = this.lx.getMediaFolder(LX.Media.PACKAGES).toPath();
+        LX.debug("Registering package directory with LXRegistry.WatchService: " + path);
+        try {
+          this.watchService = FileSystems.getDefault().newWatchService();
+          path.register(this.watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
+        } catch (IOException iox) {
+          LX.error(iox, "Failed to register LXRegistry.WatchService");
+          if (this.watchService != null) {
+            try {
+              this.watchService.close();
+            } catch (IOException iox2) {
+              LX.error(iox2, "Error closing LXRegistry.WatchService in error handler");
+            }
+          }
+          this.watchService = null;
+        }
+      }
+    } else {
+      if (this.watchService != null) {
+        LX.debug("Closing package directory LXRegistry.WatchService");
+        try {
+          this.watchService.close();
+        } catch (IOException iox) {
+          LX.error(iox, "Error closing LXRegistry.WatchService");
+        }
+        this.watchService = null;
+      }
+    }
+  }
+
+  public void runWatchService() {
+    if (this.watchService == null) {
+      return;
+    }
+
+    final boolean autoReload = this.lx.preferences.autoReloadPackages.isOn();
+    boolean changed = false;
+    WatchKey watchKey = null;
+    List<LXClassLoader.Package> modifiedPackages = null;
+    while ((watchKey = this.watchService.poll()) != null) {
+      for (WatchEvent<?> event : watchKey.pollEvents()) {
+        final Path path = (Path) event.context();
+        LX.log("Detected change " + event.kind() + " to package file: " + path);
+        changed = true;
+        if (autoReload && (event.kind() == StandardWatchEventKinds.ENTRY_MODIFY)) {
+          final LXClassLoader.Package pkg = getPackage(path);
+          if (pkg != null) {
+            if (modifiedPackages == null) {
+              modifiedPackages = new ArrayList<>();
+            }
+            modifiedPackages.add(pkg);
+          }
+        }
+      }
+      watchKey.reset();
+    }
+    if (changed && autoReload) {
+      reloadContent();
+      if (modifiedPackages != null) {
+        for (LXClassLoader.Package pkg : modifiedPackages) {
+          reloadPackageDevices(pkg);
+        }
+      }
+    }
+  }
+
+  void closeWatchService() {
+    if (this.watchService != null) {
+      try {
+        this.watchService.close();
+      } catch (IOException iox) {
+        LX.error(iox, "Could not close LXRegistry.WatchService");
+      }
+      this.watchService = null;
+    }
+  }
+
+  private LXClassLoader.Package getPackage(Path path) {
+    for (LXClassLoader.Package pkg : this.packages) {
+      if (pkg.jarFile.equals(this.lx.getMediaFile(LX.Media.PACKAGES, path.toString(), false))) {
+        return pkg;
+      }
+    }
+    LX.error("Could not find LXClassLoader.Package for modified path: " + path);
+    return null;
+  }
+
+  private void reloadPackageDevices(LXClassLoader.Package pkg) {
+    for (LXAbstractChannel bus : this.lx.engine.mixer.channels) {
+      if (bus instanceof LXChannel channel) {
+        reloadPackagePatterns(pkg, channel.patterns);
+      }
+      reloadPackageEffects(pkg, bus.effects);
+    }
+    reloadPackageEffects(pkg, lx.engine.mixer.masterBus.effects);
+  }
+
+  private void reloadPackagePatterns(LXClassLoader.Package pkg, List<LXPattern> patterns) {
+    if (!patterns.isEmpty()) {
+      new ArrayList<LXPattern>(patterns).forEach(pattern -> {
+        if (pkg.hasClass(pattern.getClass())) {
+          LX.debug("Reloading pattern: " + pattern);
+          pattern.reload();
+        } else {
+          if (pattern instanceof PatternRack rack) {
+            reloadPackagePatterns(pkg, rack.patterns);
+          }
+          reloadPackageEffects(pkg, pattern.effects);
+        }
+      });
+    }
+  }
+
+  private void reloadPackageEffects(LXClassLoader.Package pkg, List<LXEffect> effects) {
+    if (!effects.isEmpty()) {
+      new ArrayList<LXEffect>(effects).forEach(effect -> {
+        if (pkg.hasClass(effect.getClass())) {
+          LX.log("Reloading effect: " + effect);
+          effect.reload();
+        }
+      });
     }
   }
 

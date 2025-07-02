@@ -487,6 +487,11 @@ public class LX {
       this.preferences.loadEULA();
     }
 
+    // Glue registry watch service to package preference
+    this.preferences.autoReloadPackages.addListener(p -> {
+      this.registry.enableWatchService(this.preferences.autoReloadPackages.isOn());
+    }, true);
+
     // Scheduler
     this.scheduler = new LXScheduler(this);
 
@@ -727,6 +732,7 @@ public class LX {
    */
   public void dispose() {
     LX.dispose(this.engine);
+    this.registry.closeWatchService();
   }
 
   /**

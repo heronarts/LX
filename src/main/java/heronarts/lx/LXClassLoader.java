@@ -88,6 +88,8 @@ public class LXClassLoader extends URLClassLoader {
     private int numClasses = 0;
     private int numFailedClasses = 0;
 
+    private final List<Class<?>> classes = new ArrayList<Class<?>>();
+
     private Package(File jarFile) {
       this.jarFile = jarFile;
       this.name = jarFile.getName();
@@ -179,6 +181,10 @@ public class LXClassLoader extends URLClassLoader {
 
     public boolean isNewerThanApp() {
       return this.versionCompare < 0;
+    }
+
+    boolean hasClass(Class<?> clz) {
+      return this.classes.contains(clz);
     }
 
     public boolean hasError() {
@@ -413,6 +419,7 @@ public class LXClassLoader extends URLClassLoader {
     ++pack.numClasses;
     this.duplicates.put(className, pack);
     this.classes.add(clz);
+    pack.classes.add(clz);
     this.lx.registry.addClass(clz, pack);
   }
 
