@@ -23,9 +23,14 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardWatchEventKinds;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -58,6 +63,8 @@ import heronarts.lx.blend.NormalBlend;
 import heronarts.lx.blend.SpotlightBlend;
 import heronarts.lx.blend.SubtractBlend;
 import heronarts.lx.effect.LXEffect;
+import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.structure.LXFixture;
@@ -525,10 +532,54 @@ public class LXRegistry implements LXSerializable {
 
   private boolean contentReloading = false;
 
+  private final WatchService watchService;
+
   public LXRegistry(LX lx) {
     this.lx = lx;
     this.classLoader = new LXClassLoader(lx);
+    this.watchService = createWatchService();
   }
+
+  private WatchService createWatchService() {
+    try {
+      final WatchService watchService = FileSystems.getDefault().newWatchService();
+      this.lx.getMediaFolder(LX.Media.PACKAGES).toPath().register(watchService, StandardWatchEventKinds.ENTRY_CREATE, StandardWatchEventKinds.ENTRY_MODIFY, StandardWatchEventKinds.ENTRY_DELETE);
+      return watchService;
+    } catch (IOException iox) {
+      LX.error(iox, "Could not create WatchService for LXRegistry");
+    }
+    return null;
+  }
+
+  public void runWatchService() {
+    if (this.watchService != null) {
+      WatchKey watchKey = null;
+      boolean changed = false;
+      while ((watchKey = this.watchService.poll()) != null) {
+        for (WatchEvent<?> event : watchKey.pollEvents()) {
+          final Path path = (Path) event.context();
+          LX.log("Detected change " + event.kind() + " to package file: " + path);
+          changed = true;
+        }
+        watchKey.reset();
+      }
+      if (changed && this.lx.preferences.autoReloadPackages.isOn()) {
+        reloadContent();
+
+        // TODO(mcslee): consider making this more efficiently reload only
+        // devices from packages that actually changed... it's a lot of
+        // bookkeeping, perhaps not worth it
+        for (LXAbstractChannel bus : this.lx.engine.mixer.channels) {
+          if (bus instanceof LXChannel channel) {
+            new ArrayList<LXPattern>(channel.patterns).forEach(pattern -> pattern.reload());
+          }
+          new ArrayList<LXEffect>(bus.effects).forEach(effect -> effect.reload());
+        }
+        new ArrayList<LXEffect>(lx.engine.mixer.masterBus.effects).forEach(effect -> effect.reload());
+      }
+    }
+  }
+
 
   public LXClassLoader getClassLoader() {
     return this.classLoader;
@@ -588,6 +639,7 @@ public class LXRegistry implements LXSerializable {
     // objects defined by a new instance of the LXClassLoader.
     this.classLoader = new LXClassLoader(this.lx);
     this.classLoader.load();
+
     loadClasspathPlugins();
 
     // Reload the available JSON fixture list

@@ -33,6 +33,7 @@ import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.LXTime;
 import heronarts.lx.blend.LXBlend;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.mixer.LXChannel;
@@ -766,6 +767,11 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
       removeEffect(this.mutableEffects.get(i));
     }
+  }
+
+  @Override
+  public void reload() {
+    this.lx.command.perform(new LXCommand.Channel.ReloadPattern(getEngine(), this));
   }
 
   private static final String KEY_EFFECTS = "effects";

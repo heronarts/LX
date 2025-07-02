@@ -77,6 +77,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BooleanParameter("Show CPU Load %")
     .setDescription("Whether CPU load percentage is shown in toolbar");
 
+  public final BooleanParameter autoReloadPackages =
+    new BooleanParameter("Auto-Reload Packages", false)
+    .setDescription("When true, package content automatically updates when changed on disk");
+
   public final StringParameter uiTheme =
     new StringParameter("UI Theme", null)
     .setDescription("Which UI theme is used");
@@ -114,6 +118,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.showHelpMessages.addListener(this);
     this.schedulerEnabled.addListener(this);
     this.showCpuLoad.addListener(this);
+    this.autoReloadPackages.addListener(this);
   }
 
   public void setLX(LX lx) {
@@ -208,6 +213,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_SHOW_HELP_MESSAGES = "showHelpMessages";
   private static final String KEY_SCHEDULER_ENABLED = "schedulerEnabled";
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
+  private static final String KEY_AUTO_RELOAD_PACKAGES = "autoReloadPackages";
   private static final String KEY_REGISTRY = "registry";
 
 
@@ -233,6 +239,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_SHOW_HELP_MESSAGES, this.showHelpMessages.isOn());
     object.addProperty(KEY_SCHEDULER_ENABLED, this.schedulerEnabled.isOn());
     object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
+    object.addProperty(KEY_AUTO_RELOAD_PACKAGES, this.autoReloadPackages.isOn());
 
     object.add(KEY_REGISTRY, LXSerializable.Utils.toObject(this.lx, this.lx.registry));
   }
@@ -246,6 +253,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.showHelpMessages, object, KEY_SHOW_HELP_MESSAGES);
     LXSerializable.Utils.loadBoolean(this.schedulerEnabled, object, KEY_SCHEDULER_ENABLED);
     LXSerializable.Utils.loadBoolean(this.showCpuLoad, object, KEY_SHOW_CPU_LOAD);
+    LXSerializable.Utils.loadBoolean(this.autoReloadPackages, object, KEY_AUTO_RELOAD_PACKAGES);
     LXSerializable.Utils.loadInt(this.uiZoom, object, KEY_UI_ZOOM);
     LXSerializable.Utils.loadString(this.uiTheme, object, KEY_UI_THEME);
     loadWindowSettings(object);

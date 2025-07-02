@@ -31,6 +31,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -233,7 +234,7 @@ public class LXClassLoader extends URLClassLoader {
     return urls.toArray(new URL[0]);
   }
 
-  private final List<File> jarFiles;
+  final List<File> jarFiles;
 
   protected LXClassLoader(LX lx) {
     this(lx, defaultJarFiles(lx));
@@ -242,7 +243,7 @@ public class LXClassLoader extends URLClassLoader {
   protected LXClassLoader(LX lx, List<File> jarFiles) {
     super(fileListToURLArray(jarFiles), lx.getClass().getClassLoader());
     this.lx = lx;
-    this.jarFiles = jarFiles;
+    this.jarFiles = Collections.unmodifiableList(jarFiles);
   }
 
   protected void load() {

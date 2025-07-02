@@ -27,6 +27,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXDeviceComponent;
+import heronarts.lx.command.LXCommand;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
@@ -383,6 +384,11 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
    * @param enabledAmount The amount of the effect to apply, scaled from 0-1
    */
   protected abstract void run(double deltaMs, double enabledAmount);
+
+  @Override
+  public void reload() {
+    this.lx.command.perform(new LXCommand.Channel.ReloadEffect(getParent(), this));
+  }
 
   @Override
   public void dispose() {

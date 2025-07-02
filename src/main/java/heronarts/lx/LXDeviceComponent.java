@@ -276,6 +276,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @param parameter Parameter
    * @return true if this can be included in snapshots
    */
+  @Override
   public boolean isSnapshotControl(LXParameter parameter) {
     return !(
       (parameter == this.label) ||
@@ -428,6 +429,8 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     }
     getModulationEngine().midiDispatch(message);
   }
+
+  public abstract void reload();
 
   @Override
   public void dispose() {

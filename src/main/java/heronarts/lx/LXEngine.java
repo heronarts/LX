@@ -1073,6 +1073,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
       return;
     }
 
+    // Check for registry changes
+    this.lx.registry.runWatchService();
+
     // Process input events, unless we're running on the engine thread
     // which uses timing in its main loop to do this. Note that these input
     // events can trigger all sorts of LX API calls, which may result in
