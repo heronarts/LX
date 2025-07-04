@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import static heronarts.lx.structure.Expression.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class JsonFixtureTest {
+public class ExpressionTest {
 
     /**
      * Testing more complex expressions, similar to an expression that might show up in an actual LXF
