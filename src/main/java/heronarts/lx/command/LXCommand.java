@@ -952,6 +952,37 @@ public abstract class LXCommand {
       }
     }
 
+    public static class RemovePatterns extends LXCommand {
+
+      private final List<RemovePattern> removePatterns = new ArrayList<>();
+
+      public RemovePatterns(LXPatternEngine patternEngine, List<LXPattern> patterns) {
+        for (LXPattern pattern : patterns) {
+          this.removePatterns.add(new RemovePattern(patternEngine, pattern));
+        }
+      }
+
+      @Override
+      public String getDescription() {
+        return "Delete Patterns";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        for (int i = this.removePatterns.size() - 1; i >=0; --i) {
+          this.removePatterns.get(i).perform(lx);
+        }
+
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        for (RemovePattern removePattern : this.removePatterns) {
+          removePattern.undo(lx);
+        }
+      }
+    }
+
     public static class ReloadPattern extends RemovePattern {
 
       public ReloadPattern(LXPatternEngine.Container container, LXPattern pattern) {
