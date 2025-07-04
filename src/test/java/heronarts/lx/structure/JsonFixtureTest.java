@@ -5,16 +5,15 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 public class JsonFixtureTest {
-    @Test
-    void testSimpleEvaluateBooleanExpression() {
-        assertEquals(true, JsonFixture._evaluateBooleanExpression("true"));
-        // Using ".toString()" as least invasive way to access the contents of ExpressionResult
-        assertEquals("true", JsonFixture._evaluateExpression("true").toString());
-    }
+  @Test
+  void testSimpleEvaluateBooleanExpression() {
+    assertEquals(true, Expression.evaluateBoolean("true"));
+    assertEquals(Expression.Result.Boolean.TRUE, Expression.evaluate("true"));
+  }
 
-    @Test
-    void testEvaluateBooleanExpressionWithAndOperator() {
-        assertEquals(true, JsonFixture._evaluateBooleanExpression("true&&true"));
-        assertEquals("true", JsonFixture._evaluateExpression("true&&true").toString());
-    }
+  @Test
+  void testEvaluateBooleanExpressionWithAndOperator() {
+    assertEquals(true, Expression.evaluateBoolean("true&&true"));
+    assertEquals(Expression.Result.Boolean.TRUE, Expression.evaluate("true&&true"));
+  }
 }
