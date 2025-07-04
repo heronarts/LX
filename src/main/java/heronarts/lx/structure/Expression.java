@@ -18,11 +18,25 @@
 
 package heronarts.lx.structure;
 
+import heronarts.lx.utils.LXUtils;
+
+/**
+ * Expressions can have ambiguous types when nested with parentheses! This is getting
+ * out of control and I really should have just used a proper expression parsing library
+ * of some sort.
+ *
+ * Did you actually read that? I kept leaving comments like that for years, suggesting this
+ * should all be replaced, but at this point (July 2025) I suppose I've changed my tune.
+ * This is self-contained enough in a reasonably manageable small-ish amount of code, with a
+ * few particular bits-and-bobs like rounding float precision errors that are of direct
+ * relevance to the LXF use case. Thanks to Andrew Look for adding unit test support.
+ */
 public class Expression {
 
   public static abstract class Result {
 
     public static class Numeric extends Result {
+
       private final float number;
 
       private Numeric(float number) {
@@ -35,7 +49,14 @@ public class Expression {
 
       @Override
       public String toString() {
-        return String.valueOf(this.number);
+        // Keep scientific notation out of here!! Will break recursive parsing
+        // if we end up with "E-7" hanging about in there.
+        //
+        // If you need more than 10 digits of precision from LXF files, probably
+        // doing something wrong (and in fact this rounding is often desirable
+        // to stave off miniscule fixture mis-alignment that stems from
+        // precision errors, e.g. Math.sin(0) != Math.sin(Math.PI)
+        return String.format("%.10f", this.number);
       }
     }
 
@@ -61,6 +82,30 @@ public class Expression {
       @Override
       public String toString() {
         return String.valueOf(this.bool);
+      }
+    }
+
+    public static class List extends Result {
+
+      private final Result[] results;
+
+      private List(Result[] results) {
+        this.results = results;
+      }
+
+      @Override
+      public String toString() {
+        final StringBuilder str = new StringBuilder();
+        boolean first = true;
+        for (Result result : this.results) {
+          if (first) {
+            first = false;
+          } else {
+            str.append(',');
+          }
+          str.append(result.toString());
+        }
+        return str.toString();
       }
     }
   }
@@ -112,14 +157,19 @@ public class Expression {
   }
 
   /**
-   * Expressions can have ambiguous types when nested with parentheses! This is getting
-   * out of control and I really should have just used a proper expression parsing library
-   * of some sort (-mcslee, June 2025, and yet bound to continue bolting onto this...)
+   * Evaluate a mathematical expression containing a mix of operators, function calls
+   * and parentheses. The result type is ambiguous, depending upon the content. Use
+   * evaluateNumeric() or evaluateBoolean() when a known result type is desired.
    *
    * @param expression Portion of expression to evaluate
-   * @return ExpressionResult, which may be boolean or numeric
+   * @return Result, which may be Boolean, Numeric or List
    */
   public static Result evaluate(String expression) {
+    expression = expression.trim();
+    if (expression.isEmpty()) {
+      throw new IllegalArgumentException("Cannot evaluate empty expression");
+    }
+
     final char[] chars = expression.toCharArray();
 
     // Parentheses pass
@@ -135,19 +185,44 @@ public class Expression {
         // Whenever we find a closed paren, evaluate just this one parenthetical.
         // This will naturally work from in->out on nesting, since every closed-paren
         // catches the open-paren that was closest to it.
-        Result result = evaluate(expression.substring(openParen+1, i));
+        final String inner = expression.substring(openParen+1, i);
+        Result result = evaluate(inner);
         if ((openParen == 0) && (i == chars.length-1)) {
-          // Whole thing in parentheses? Just return!
+          // Whole thing was in parentheses? Just return!
+          return result;
+        }
+
+        // Check for a function call against this parenthetical
+        String left = expression.substring(0, openParen).trim();
+        for (SimpleFunction function : SimpleFunction.values()) {
+          final String name = function.name();
+          if (left.endsWith(name)) {
+            result = function.evaluate(result);
+            left = left.substring(0, left.length() - name.length()).trim();
+            break;
+          }
+        }
+
+        // Nothing around us after possible function call?
+        final String right = expression.substring(i + 1).trim();
+        if (left.isEmpty() && right.isEmpty()) {
           return result;
         }
 
         // Evaluate expression recursively with this parenthetical removed
-        return evaluate(
-          expression.substring(0, openParen) +
-          result.toString() +
-          expression.substring(i + 1)
-        );
+        return evaluate(left + result.toString() + right);
       }
+    }
+
+    // We're now clear of parentheses, check for a comma-delimited list
+    if (expression.indexOf(',') >= 0) {
+      final String[] parts = expression.split(",");
+      final Result[] results = new Result[parts.length];
+      int i = 0;
+      for (String part : parts) {
+        results[i++] = evaluate(part);
+      }
+      return new Result.List(results);
     }
 
     // Ternary conditional, lowest precedence, right->left associative
@@ -226,61 +301,92 @@ public class Expression {
     }
 
     // Dreaded nasty unary operators!
-    final String trimmed = expression.trim();
-    if (!trimmed.isEmpty()) {
-      final char unary = trimmed.charAt(0);
-      if (unary == '-') {
-        // Float.parseFloat() would handle one of these fine, but it won't handle
-        // them potentially stacking up at the front, e.g. if multiple expression
-        // resolutions have resulted in something like ---4, so do the negations
-        // manually one by one
-        return new Result.Numeric(-evaluateNumeric(expression.substring(1)));
-      } else if (unary == '!') {
-        return Result.Boolean.get(!evaluateBoolean(expression.substring(1)));
-      }
-
-      // Check for simple function operators
-      for (SimpleFunction function : SimpleFunction.values()) {
-        final String name = function.name();
-        if (trimmed.startsWith(name)) {
-          final float argument = evaluateNumeric(expression.substring(name.length()));
-          return new Result.Numeric(function.compute.compute(argument));
-        }
-      }
+    final char unary = expression.charAt(0);
+    if (unary == '-') {
+      // Float.parseFloat() would handle one of these fine, but it won't handle
+      // them potentially stacking up at the front, e.g. if multiple expression
+      // resolutions have resulted in something like ---4, so do the negations
+      // manually one by one
+      return new Result.Numeric(-evaluateNumeric(expression.substring(1)));
+    } else if (unary == '!') {
+      return Result.Boolean.get(!evaluateBoolean(expression.substring(1)));
     }
 
     // Sort out what we got here
-    return switch (trimmed.toLowerCase()) {
-      case "" -> throw new IllegalArgumentException("Cannot evaluate empty expression: " + expression);
+    return switch (expression.toLowerCase()) {
       case "true" -> Result.Boolean.TRUE;
       case "false" -> Result.Boolean.FALSE;
-      default -> new Result.Numeric(Float.parseFloat(trimmed));
+      default -> new Result.Numeric(Float.parseFloat(expression));
     };
   }
 
   private enum SimpleFunction {
-    sin(f -> { return (float) Math.sin(Math.toRadians(f)); }),
-    cos(f -> { return (float) Math.cos(Math.toRadians(f)); }),
-    tan(f -> { return (float) Math.tan(Math.toRadians(f)); }),
-    asin(f -> { return (float) Math.toDegrees(Math.asin(f)); }),
-    acos(f -> { return (float) Math.toDegrees(Math.acos(f)); }),
-    atan(f -> { return (float) Math.toDegrees(Math.atan(f)); }),
-    deg(f -> { return (float) Math.toDegrees(f); }),
-    rad(f -> { return (float) Math.toRadians(f); }),
-    abs(f -> { return Math.abs(f); }),
-    sqrt(f -> { return (float) Math.sqrt(f); }),
-    floor(f -> { return (float) Math.floor(f); }),
-    ceil(f -> { return (float) Math.ceil(f); }),
-    round(f -> { return Math.round(f); });
+    acos(1, f -> { return (float) Math.toDegrees(Math.acos(f[0])); }),
+    asin(1, f -> { return (float) Math.toDegrees(Math.asin(f[0])); }),
+    atan(1, f -> { return (float) Math.toDegrees(Math.atan(f[0])); }),
+    atan2(2, f -> { return (float) Math.toDegrees(Math.atan2(f[0], f[1])); }),
+    atan2p(2, f -> { return (float) Math.toDegrees(LXUtils.atan2pf(f[0], f[1])); }),
+
+    // NB: it's critical that cos/sin/tan come *after* asin/acos/atan so that
+    // they are not mistaken for the above when checking for functions, since
+    // str.endsWidth("cos") is true when str.endsWidth("acos") is true
+    cos(1, f -> { return LXUtils.cosf(Math.toRadians(f[0])); }),
+    sin(1, f -> { return LXUtils.sinf(Math.toRadians(f[0])); }),
+    tan(1, f -> { return LXUtils.tanf(Math.toRadians(f[0])); }),
+
+    abs(1, f -> { return Math.abs(f[0]); }),
+    cbrt(1, f -> { return (float) Math.cbrt(f[0]); }),
+    ceil(1, f -> { return (float) Math.ceil(f[0]); }),
+    deg(1, f -> { return (float) Math.toDegrees(f[0]); }),
+    floor(1, f -> { return (float) Math.floor(f[0]); }),
+    log(1, f -> { return (float) Math.log(f[0]); }),
+    log10(1, f -> { return (float) Math.log10(f[0]); }),
+    max(2, f -> { return Math.max(f[0], f[1]); }),
+    min(2, f -> { return Math.min(f[0], f[1]); }),
+    pow(2, f -> { return (float) Math.pow(f[0], f[1]); }),
+    rad(1, f -> { return (float) Math.toRadians(f[0]); }),
+    round(1, f -> { return Math.round(f[0]); }),
+    sqrt(1, f -> { return (float) Math.sqrt(f[0]); });
 
     private interface Compute {
-      public float compute(float f);
+      public float compute(float ... f);
     }
 
+    private final int numArgs;
     private final Compute compute;
 
-    private SimpleFunction(Compute compute) {
+    private SimpleFunction(int numArgs, Compute compute) {
+      this.numArgs = numArgs;
       this.compute = compute;
+    }
+
+    private Result.Numeric evaluate(Result result) {
+      switch (result) {
+      case Result.List list -> {
+        if (this.numArgs != list.results.length) {
+          throw new IllegalArgumentException("Function " + name() + " expects " + this.numArgs + " arguments, was given " + list.results.length);
+        }
+        final float[] args = new float[list.results.length];
+        int a = 0;
+        for (Result number : list.results) {
+          if (number instanceof Result.Numeric numeric) {
+            args[a++] = numeric.getNumber();
+          } else {
+            throw new IllegalArgumentException("Function " + name() + " requires numeric arguments, was passed " + number);
+          }
+        }
+        return new Result.Numeric(this.compute.compute(args));
+      }
+
+      case Result.Numeric numeric -> {
+        if (this.numArgs != 1) {
+          throw new IllegalArgumentException("Function " + name() + " expects " + this.numArgs + " arguments, was given 1");
+        }
+        return new Result.Numeric(this.compute.compute(numeric.getNumber()));
+      }
+
+      default -> throw new IllegalArgumentException("Function " + name() + " expects numeric arguments, was passed " + result);
+      }
     }
 
   }
@@ -302,15 +408,7 @@ public class Expression {
     if (OPERATOR_CHARS.indexOf(chars[index-1]) >= 0) {
       return true;
     }
-    // Check if preceded by a simple function token, which will no longer have
-    // parentheses, e.g. sin(-4) will have become sin-4 after parenthetical resolution
-    for (SimpleFunction function : SimpleFunction.values()) {
-      final String name = function.name();
-      final int len = name.length();
-      if ((index >= len) && new String(chars, index-len, len).equals(name)) {
-        return true;
-      }
-    }
+
     return false;
   }
 
