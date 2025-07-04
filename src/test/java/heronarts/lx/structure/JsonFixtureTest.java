@@ -2,18 +2,19 @@ package heronarts.lx.structure;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 public class JsonFixtureTest {
-    // @BeforeEach
-    // void setUp() {
-    //     evaluator = new StringExpressionEvaluator();
-    // }
+    @Test
+    void testSimpleEvaluateBooleanExpression() {
+        assertEquals(true, JsonFixture._evaluateBooleanExpression("true"));
+        // Using ".toString()" as least invasive way to access the contents of ExpressionResult
+        assertEquals("true", JsonFixture._evaluateExpression("true").toString());
+    }
 
-    // // Helper methods for cleaner test code
-    // private float evaluateNumeric(String expression) {
-    //     return evaluator.evaluateNumeric(expression);
-    // }
+    @Test
+    void testEvaluateBooleanExpressionWithAndOperator() {
+        assertEquals(true, JsonFixture._evaluateBooleanExpression("true&&true"));
+        assertEquals("true", JsonFixture._evaluateExpression("true&&true").toString());
+    }
 }
