@@ -1044,7 +1044,7 @@ public class JsonFixture extends LXFixture {
   // Super-trivial hacked up implementation of *very* basic math expressions, which has now
   // got some functions tacked on. If this slippery slope keeps sliding will need to get a
   // real expression parsing + evaluation library involved at some point...
-  private float _evaluateNumericExpression(String expression) {
+  static float _evaluateNumericExpression(String expression) {
     if (_evaluateExpression(expression) instanceof ExpressionResult.Numeric numeric) {
       return numeric.number;
     }
@@ -1065,14 +1065,14 @@ public class JsonFixture extends LXFixture {
     }
   }
 
-  private boolean _evaluateBooleanExpression(String expression) {
+  static boolean _evaluateBooleanExpression(String expression) {
     if (_evaluateExpression(expression) instanceof ExpressionResult.Boolean bool) {
       return bool.bool;
     }
     throw new IllegalArgumentException("Expected expression to be boolean: " + expression);
   }
 
-  private static abstract class ExpressionResult {
+  static abstract class ExpressionResult {
 
     private static class Numeric extends ExpressionResult {
       private final float number;
@@ -1113,7 +1113,7 @@ public class JsonFixture extends LXFixture {
     { "^" }
   };
 
-  private int _getOperatorIndex(String expression, char[] chars, String operator) {
+  static int _getOperatorIndex(String expression, char[] chars, String operator) {
     if ("-".equals(operator)) {
       for (int index = chars.length - 1; index > 0; --index) {
         // Skip over the tricky unary minus operator! If preceded by another operator,
@@ -1136,7 +1136,7 @@ public class JsonFixture extends LXFixture {
    * @param expression Portion of expression to evaluate
    * @return ExpressionResult, which may be boolean or numeric
    */
-  private ExpressionResult _evaluateExpression(String expression) {
+  static ExpressionResult _evaluateExpression(String expression) {
     char[] chars = expression.toCharArray();
 
     // Parentheses pass
