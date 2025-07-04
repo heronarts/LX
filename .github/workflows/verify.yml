@@ -4,13 +4,10 @@ on:
     branches:
       - main
       - dev
-      # TODO(look): remove these (after verifying)
-      - add-expression-tests
   push:
     branches:
       - main
       - dev
-      - add-expression-tests
 jobs:
   spotless:
     runs-on: ubuntu-latest
