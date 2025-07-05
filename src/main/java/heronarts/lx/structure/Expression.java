@@ -33,9 +33,11 @@ import heronarts.lx.utils.LXUtils;
  */
 public class Expression {
 
-  public static abstract class Result {
+  public static abstract class Result<T> {
 
-    public static class Numeric extends Result {
+    public abstract T getValue();
+
+    public static class Numeric extends Result<Float> {
 
       private final float number;
 
@@ -43,7 +45,8 @@ public class Expression {
         this.number = number;
       }
 
-      public float getNumber() {
+      @Override
+      public Float getValue() {
         return this.number;
       }
 
@@ -60,7 +63,7 @@ public class Expression {
       }
     }
 
-    public static class Boolean extends Result {
+    public static class Boolean extends Result<java.lang.Boolean> {
 
       public static final Boolean TRUE = new Boolean(true);
       public static final Boolean FALSE = new Boolean(false);
@@ -75,7 +78,8 @@ public class Expression {
         this.bool = bool;
       }
 
-      public boolean getBoolean() {
+      @Override
+      public java.lang.Boolean getValue() {
         return this.bool;
       }
 
@@ -85,19 +89,24 @@ public class Expression {
       }
     }
 
-    public static class List extends Result {
+    public static class List extends Result<Result<?>[]> {
 
-      private final Result[] results;
+      private final Result<?>[] results;
 
-      private List(Result[] results) {
+      private List(Result<?>[] results) {
         this.results = results;
+      }
+
+      @Override
+      public Result<?>[] getValue() {
+        return this.results;
       }
 
       @Override
       public String toString() {
         final StringBuilder str = new StringBuilder();
         boolean first = true;
-        for (Result result : this.results) {
+        for (Result<?> result : this.results) {
           if (first) {
             first = false;
           } else {
@@ -164,7 +173,7 @@ public class Expression {
    * @param expression Portion of expression to evaluate
    * @return Result, which may be Boolean, Numeric or List
    */
-  public static Result evaluate(String expression) {
+  public static Result<?> evaluate(String expression) {
     expression = expression.trim();
     if (expression.isEmpty()) {
       throw new IllegalArgumentException("Cannot evaluate empty expression");
@@ -186,7 +195,7 @@ public class Expression {
         // This will naturally work from in->out on nesting, since every closed-paren
         // catches the open-paren that was closest to it.
         final String inner = expression.substring(openParen+1, i);
-        Result result = evaluate(inner);
+        Result<?> result = evaluate(inner);
         if ((openParen == 0) && (i == chars.length-1)) {
           // Whole thing was in parentheses? Just return!
           return result;
@@ -217,7 +226,7 @@ public class Expression {
     // We're now clear of parentheses, check for a comma-delimited list
     if (expression.indexOf(',') >= 0) {
       final String[] parts = expression.split(",");
-      final Result[] results = new Result[parts.length];
+      final Result<?>[] results = new Result<?>[parts.length];
       int i = 0;
       for (String part : parts) {
         results[i++] = evaluate(part);
@@ -364,7 +373,7 @@ public class Expression {
       this.compute = compute;
     }
 
-    private Result.Numeric evaluate(Result result) {
+    private Result.Numeric evaluate(Result<?> result) {
       switch (result) {
       case Result.List list -> {
         if (this.numArgs != list.results.length) {
@@ -372,11 +381,11 @@ public class Expression {
         }
         final float[] args = new float[list.results.length];
         int a = 0;
-        for (Result number : list.results) {
-          if (number instanceof Result.Numeric numeric) {
-            args[a++] = numeric.getNumber();
+        for (Result<?> arg : list.results) {
+          if (arg instanceof Result.Numeric numeric) {
+            args[a++] = numeric.number;
           } else {
-            throw new IllegalArgumentException("Function " + name() + " requires numeric arguments, was passed " + number);
+            throw new IllegalArgumentException("Function " + name() + " requires numeric arguments, was passed " + arg);
           }
         }
         return new Result.Numeric(this.compute.compute(args));
@@ -386,7 +395,7 @@ public class Expression {
         if (this.numArgs != 1) {
           throw new IllegalArgumentException("Function " + name() + " expects " + this.numArgs + " arguments, was given 1");
         }
-        return new Result.Numeric(this.compute.compute(numeric.getNumber()));
+        return new Result.Numeric(this.compute.compute(numeric.number));
       }
 
       default -> throw new IllegalArgumentException("Function " + name() + " expects numeric arguments, was passed " + result);

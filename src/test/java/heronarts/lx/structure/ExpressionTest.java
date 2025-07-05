@@ -61,10 +61,10 @@ public class ExpressionTest {
         assertEquals(3.14f, evaluateNumeric("3.14"));
         assertEquals(-5.0f, evaluateNumeric("-5"));
         assertEquals(0.0f, evaluateNumeric("0"));
-        assertEquals(0f, ((Expression.Result.Numeric) evaluate("0")).getNumber());
+        assertEquals(Float.valueOf(0f), evaluate("0").getValue());
         assertTrue(evaluateBoolean("true"));
         assertFalse(evaluateBoolean("false"));
-        assertEquals(Expression.Result.Boolean.TRUE, evaluate("true"));
+        assertEquals(java.lang.Boolean.TRUE, evaluate("true").getValue());
     }
 
     @Test
