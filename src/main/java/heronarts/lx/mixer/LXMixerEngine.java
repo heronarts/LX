@@ -1271,6 +1271,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
         }
       }
     }
+    _removeRemoteControls(container.getParent(), component);
   }
 
   private static final String KEY_CHANNELS = "channels";
