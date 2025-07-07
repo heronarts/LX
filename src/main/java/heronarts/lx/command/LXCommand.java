@@ -74,6 +74,7 @@ import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.snapshot.LXSnapshot;
 import heronarts.lx.snapshot.LXClipSnapshot;
 import heronarts.lx.snapshot.LXGlobalSnapshot;
@@ -335,8 +336,8 @@ public abstract class LXCommand {
       // Tally up all the modulations and triggers that relate to this component and must be restored!
       LXComponent parent = component.getParent();
       while (parent != null) {
-        if (parent instanceof LXModulationContainer) {
-          removeModulationMappings(((LXModulationContainer) parent).getModulationEngine(), component);
+        if (parent instanceof LXModulationContainer modulationContainer) {
+          removeModulationMappings(modulationContainer.getModulationEngine(), component);
         }
         parent = parent.getParent();
       }
@@ -844,6 +845,10 @@ public abstract class LXCommand {
         this(engine, patternClass, null);
       }
 
+      public AddPattern(LXPatternEngine engine, Class<? extends LXPattern> patternClass, int patternIndex) {
+        this(engine, patternClass, null, patternIndex);
+      }
+
       public AddPattern(LXPatternEngine.Container container, Class<? extends LXPattern> patternClass, JsonObject patternObject) {
         this(container.getPatternEngine(), patternClass, patternObject);
       }
@@ -894,6 +899,10 @@ public abstract class LXCommand {
           throw new IllegalStateException("Pattern was not successfully added, cannot undo");
         }
         getPatternEngine().removePattern(this.pattern.get());
+      }
+
+      ComponentReference<LXPattern> getPattern() {
+        return this.pattern;
       }
 
     }
@@ -950,6 +959,27 @@ public abstract class LXCommand {
         }
         super.undo(lx);
       }
+
+      private ComponentReference<LXPattern> movedPattern;
+
+      protected void move(LX lx, LXPatternEngine engine, int index) throws InvalidCommandException {
+        if (this.movedPattern != null) {
+          throw new InvalidCommandException("Cannot move pattern that was already moved");
+        }
+        this.movedPattern = new ComponentReference<>(engine.loadPattern(this.patternObj, index));
+      }
+
+      protected void unmove(LX lx, LXPatternEngine engine) throws InvalidCommandException {
+        if (this.movedPattern == null) {
+          throw new InvalidCommandException("Cannot unmoved pattern that was not moved");
+        }
+        final LXPattern moved = this.movedPattern.get();
+        if (!engine.patterns.contains(moved)) {
+          throw new InvalidCommandException("Cannot unmove pattern that doesn't exist on channel");
+        }
+        engine.removePattern(moved);
+        this.movedPattern = null;
+      }
     }
 
     public static class RemovePatterns extends LXCommand {
@@ -972,13 +1002,101 @@ public abstract class LXCommand {
         for (int i = this.removePatterns.size() - 1; i >=0; --i) {
           this.removePatterns.get(i).perform(lx);
         }
-
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         for (RemovePattern removePattern : this.removePatterns) {
           removePattern.undo(lx);
+        }
+      }
+
+      protected void move(LX lx, LXPatternEngine engine) throws InvalidCommandException {
+        int patternIndex = 0;
+        for (RemovePattern removePattern : this.removePatterns) {
+          removePattern.move(lx, engine, patternIndex++);
+        }
+      }
+
+      protected void unmove(LX lx, LXPatternEngine engine) throws InvalidCommandException {
+        for (int i = this.removePatterns.size() - 1; i >=0; --i) {
+          this.removePatterns.get(i).unmove(lx, engine);
+        }
+      }
+    }
+
+    public static class GroupPatterns extends LXCommand {
+
+      private final ComponentReference<LXComponent> component;
+      private final RemovePatterns removePatterns;
+      private final AddPattern addRack;
+      private final int focusedIndex;
+      private final int targetIndex;
+      private final int engineTargetIndex;
+      private ComponentReference<LXPattern> rack;
+
+      public GroupPatterns(LXPatternEngine patternEngine, List<LXPattern> patterns) {
+        this.component = new ComponentReference<>(patternEngine.component);
+        final LXPattern targetPattern = patternEngine.getTargetPattern();
+        if (targetPattern != null) {
+          this.targetIndex = patterns.indexOf(targetPattern);
+          this.engineTargetIndex = patternEngine.patterns.indexOf(targetPattern);
+        } else {
+          this.targetIndex = this.engineTargetIndex = -1;
+        }
+        this.focusedIndex = patternEngine.focusedPattern.getValuei();
+        this.removePatterns = new RemovePatterns(patternEngine, patterns);
+        this.addRack = new AddPattern(patternEngine, PatternRack.class, patterns.get(0).getIndex());
+      }
+
+      private LXPatternEngine getPatternEngine() {
+        return ((LXPatternEngine.Container) this.component.get()).getPatternEngine();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Group Patterns to Rack";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.removePatterns.perform(lx);
+        this.addRack.perform(lx);
+        this.rack = this.addRack.getPattern();
+
+        final PatternRack rack = (PatternRack) this.rack.get();
+        final LXPatternEngine engine = getPatternEngine();
+        final LXPatternEngine rackEngine = rack.getPatternEngine();
+        rackEngine.compositeMode.setValue(engine.compositeMode.getEnum());
+        rackEngine.compositeDampingEnabled.setValue(engine.compositeDampingEnabled.isOn());
+        rackEngine.compositeDampingTimeSecs.setValue(engine.compositeDampingTimeSecs.getValue());
+        rackEngine.autoCycleEnabled.setValue(engine.autoCycleEnabled.isOn());
+        rackEngine.autoCycleMode.setValue(engine.autoCycleMode.getEnum());
+        rackEngine.autoCycleTimeSecs.setValue(engine.autoCycleTimeSecs.getValue());
+        rackEngine.transitionTimeSecs.setValue(engine.transitionTimeSecs.getValue());
+        rackEngine.transitionEnabled.setValue(engine.transitionEnabled.isOn());
+        rackEngine.transitionBlendMode.setIndex(engine.transitionBlendMode.getIndex());
+
+        this.removePatterns.move(lx, rackEngine);
+        if (this.targetIndex >= 0) {
+          rackEngine.goPattern(rack.patterns.get(this.targetIndex), true);
+          engine.goPattern(rack, true);
+          engine.focusedPattern.setValue(rack.getIndex());
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.addRack.undo(lx);
+        this.removePatterns.undo(lx);
+        final LXPatternEngine engine = getPatternEngine();
+        if (this.engineTargetIndex >= 0) {
+          engine.goPattern(engine.patterns.get(this.engineTargetIndex), true);
+        }
+        if (engine.focusedPattern.getValuei() != this.focusedIndex) {
+          engine.focusedPattern.setValue(this.focusedIndex);
+        } else {
+          engine.focusedPattern.bang();
         }
       }
     }
