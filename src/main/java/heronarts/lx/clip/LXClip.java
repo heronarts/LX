@@ -1719,6 +1719,18 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return null;
   }
 
+  public LXClipLane<?> moveLane(LX lx, JsonObject laneObj, int index, String fromPath, String toPath) {
+    final String laneType = getLaneType(laneObj);
+    if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
+      final JsonObject moveObj = laneObj.deepCopy();
+      final String lanePath = moveObj.get(LXComponent.KEY_PATH).getAsString();
+      moveObj.addProperty(LXComponent.KEY_PATH, LXPath.replacePrefix(lanePath, fromPath, toPath, this.bus));
+      return addParameterLane(lx, moveObj, index);
+    }
+    LX.error("Cannot move unknown clip lane type: " + laneType);
+    return null;
+  }
+
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);

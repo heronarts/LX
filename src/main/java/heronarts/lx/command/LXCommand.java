@@ -1156,10 +1156,10 @@ public abstract class LXCommand {
           for (Device.SetRemoteControls controls : removePattern.removeRemoteControls) {
             controls.move(lx, removePattern.path, toPath);
           }
+          for (Clip.RemoveClipLane lane : removePattern.removeClipLanes) {
+            lane.move(lx, removePattern.path, toPath);
+          }
           // TODO(group): restore these references to the new pattern
-//        for (Clip.RemoveClipLane lane : removePattern.removeClipLanes) {
-//
-//        }
 //        for (Clip.Event.Pattern.RemoveReferences patternReferences : removePattern.removePatternClipEvents) {
 //
 //        }
@@ -3864,6 +3864,10 @@ public abstract class LXCommand {
         if (lane != null) {
           super.undo(lx);
         }
+      }
+
+      private void move(LX lx, String fromPath, String toPath) {
+        this.clip.get().moveLane(lx, this.laneObj, this.laneIndex, fromPath, toPath);
       }
 
     }

@@ -280,4 +280,8 @@ public interface LXPath {
     return subject;
   }
 
+  public static String replacePrefix(String subject, String search, String replace, LXComponent scope) {
+    final String prefix = scope.getCanonicalPath();
+    return replacePrefix(subject, stripPrefix(search, prefix), stripPrefix(replace, prefix));
+  }
 }
