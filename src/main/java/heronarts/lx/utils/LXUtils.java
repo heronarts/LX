@@ -553,4 +553,18 @@ public class LXUtils {
   public static boolean isEmpty(String s) {
     return s == null || s.trim().isEmpty();
   }
+
+  public static String stripPrefix(String subject, String prefix) {
+    if (subject.startsWith(prefix)) {
+      return subject.substring(prefix.length());
+    }
+    return subject;
+  }
+
+  public static String replacePrefix(String subject, String search, String replace) {
+    if (subject.startsWith(search)) {
+      return replace + subject.substring(search.length());
+    }
+    return subject;
+  }
 }
