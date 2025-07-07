@@ -187,10 +187,6 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
   // NB(mcslee): chain parameters in case there are modulation mappings from the trigger cycle parameter!
   public final QuantizedTriggerParameter launchPatternCycle;
 
-  public final BooleanParameter viewPatternLabel =
-    new BooleanParameter("View Pattern Label", false)
-    .setDescription("Whether to show the active pattern as channel label");
-
   // Listenable parameter for when number of patterns changes
   public final MutableParameter numPatternsChanged = new MutableParameter();
 
