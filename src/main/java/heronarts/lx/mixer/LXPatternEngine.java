@@ -84,6 +84,11 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
   private final List<Listener> addListeners = new ArrayList<>();
   private final List<Listener> removeListeners = new ArrayList<>();
 
+  /**
+   * Can be monitored for changes to the name of any pattern on this engine
+   */
+  public final MutableParameter patternRenamed = new MutableParameter();
+
   public enum AutoCycleMode {
     NEXT("Next"),
     RANDOM("Random");

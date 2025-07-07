@@ -257,6 +257,13 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     }
   };
 
+  private final LXParameterListener onRename = p -> {
+    final LXPatternEngine engine = getEngine();
+    if (engine != null) {
+      engine.patternRenamed.bang();
+    }
+  };
+
   protected double runMs = 0;
 
   private boolean isActive = false;
@@ -304,6 +311,8 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
 
     this.cueActive.addListener(this.onCue);
     this.auxActive.addListener(this.onAux);
+
+    this.label.addListener(this.onRename);
   }
 
   @Override
@@ -822,6 +831,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
     this.enabled.removeListener(this.onEnabled);
     this.autoMute.removeListener(this.onAutoMute);
     this.compositeBlend.removeListener(this.onCompositeBlend);
+    this.label.removeListener(this.onRename);
     super.dispose();
     disposeCompositeBlendOptions();
     this.listeners.forEach(listener -> LX.warning("Stranded LXPattern.Listener: " + listener));
