@@ -126,7 +126,11 @@ public abstract class LXSnapshot extends LXComponent {
     /**
      * The pattern which is active on a rack
      */
-    RACK_PATTERN
+    RACK_PATTERN;
+
+    public static ViewType get(JsonObject obj) {
+      return valueOf(obj.get(View.KEY_TYPE).getAsString());
+    }
   };
 
   /**
@@ -157,7 +161,7 @@ public abstract class LXSnapshot extends LXComponent {
     private View(LX lx, JsonObject obj) {
       LXSerializable.Utils.loadBoolean(this.enabled, obj, KEY_ENABLED);
       this.scope = ViewScope.valueOf(obj.get(KEY_SCOPE).getAsString());
-      this.type = ViewType.valueOf(obj.get(KEY_TYPE).getAsString());
+      this.type = ViewType.get(obj);
     }
 
     /**
@@ -472,7 +476,7 @@ public abstract class LXSnapshot extends LXComponent {
       recall();
     }
 
-    private static final String KEY_PARAMETER_PATH = "parameterPath";
+    private static final String KEY_PARAMETER_PATH = LXComponent.KEY_PARAMETER_PATH;
     private static final String KEY_VALUE = "value";
     private static final String KEY_NORMALIZED_VALUE = "normalizedValue";
 
@@ -699,6 +703,7 @@ public abstract class LXSnapshot extends LXComponent {
 
     private static final String KEY_CHANNEL_PATH = "channelPath";
     private static final String KEY_ACTIVE_PATTERN_INDEX = "activePatternIndex";
+    private static final String KEY_PATTERN_ID = "patternId";
 
     @Override
     public void save(LX lx, JsonObject obj) {
@@ -707,6 +712,7 @@ public abstract class LXSnapshot extends LXComponent {
         obj.addProperty(KEY_CHANNEL_PATH, this.channel.getCanonicalPath(snapshotParameterScope));
       }
       obj.addProperty(KEY_ACTIVE_PATTERN_INDEX, this.pattern.getIndex());
+      obj.addProperty(KEY_PATTERN_ID, this.pattern.getId());
     }
   }
 
@@ -790,12 +796,14 @@ public abstract class LXSnapshot extends LXComponent {
 
     private static final String KEY_RACK_PATH = "rackPath";
     private static final String KEY_ACTIVE_PATTERN_INDEX = "activePatternIndex";
+    private static final String KEY_PATTERN_ID = ActivePatternView.KEY_PATTERN_ID;
 
     @Override
     public void save(LX lx, JsonObject obj) {
       super.save(lx, obj);
       obj.addProperty(KEY_RACK_PATH, this.rack.getCanonicalPath(snapshotParameterScope));
       obj.addProperty(KEY_ACTIVE_PATTERN_INDEX, this.pattern.getIndex());
+      obj.addProperty(KEY_PATTERN_ID, this.pattern.getId());
     }
   }
 
@@ -1026,8 +1034,7 @@ public abstract class LXSnapshot extends LXComponent {
    * @return The new view object
    */
   public View addView(JsonObject viewObj) {
-    final ViewType type = ViewType.valueOf(viewObj.get(View.KEY_TYPE).getAsString());
-    final View view = switch (type) {
+    final View view = switch (ViewType.get(viewObj)) {
     case PARAMETER -> new ParameterView(getLX(), viewObj);
     case ACTIVE_PATTERN -> new ActivePatternView(getLX(), viewObj);
     case RACK_PATTERN -> new RackPatternView(getLX(), viewObj);
@@ -1040,6 +1047,43 @@ public abstract class LXSnapshot extends LXComponent {
       addView(view);
     }
     return view;
+  }
+
+  public View moveView(JsonObject viewObj, String fromPath, String toPath, PatternRack rack) {
+    switch (ViewType.get(viewObj)) {
+      case PARAMETER -> {
+        viewObj = _moveView(viewObj, ParameterView.KEY_PARAMETER_PATH, fromPath, toPath);
+      }
+      case RACK_PATTERN -> {
+        viewObj = _moveView(viewObj, RackPatternView.KEY_RACK_PATH, fromPath, toPath);
+        _moveViewPattern(viewObj, rack);
+      }
+      case ACTIVE_PATTERN -> {
+        _moveViewPattern(viewObj, rack);
+      }
+      case CHANNEL_FADER -> {}
+    }
+    return addView(viewObj);
+  }
+
+  private void _moveViewPattern(JsonObject viewObj, PatternRack rack) {
+    LXPattern pattern = (LXPattern) this.lx.getProjectComponent(viewObj.get(ActivePatternView.KEY_PATTERN_ID).getAsInt());
+    if (rack.patterns.contains(pattern)) {
+      // The active pattern was moved into a rack, the rack is now active
+      viewObj.addProperty(ActivePatternView.KEY_ACTIVE_PATTERN_INDEX, rack.getIndex());
+    } else {
+      // Indices may have changed in a rack group operation... update
+      viewObj.addProperty(ActivePatternView.KEY_ACTIVE_PATTERN_INDEX, pattern.getIndex());
+    }
+  }
+
+  private JsonObject _moveView(JsonObject viewObj, String key, String fromPath, String toPath) {
+    JsonObject moveObj = viewObj.deepCopy();
+    final String prefix = this.snapshotParameterScope.getCanonicalPath();
+    fromPath = LXUtils.stripPrefix(fromPath, prefix);
+    toPath = LXUtils.stripPrefix(toPath, prefix);
+    moveObj.addProperty(key, LXUtils.replacePrefix(moveObj.get(key).getAsString(), fromPath, toPath));
+    return moveObj;
   }
 
   /**

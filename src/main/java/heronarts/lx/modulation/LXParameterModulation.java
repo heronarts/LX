@@ -224,7 +224,7 @@ public abstract class LXParameterModulation extends LXComponent {
       if (parameter != null) {
         return parameter;
       }
-      LX.error("Failed to locate parameter at " + obj.get(KEY_PATH).getAsString() + " in scope " + scope.getParent());
+      LX.error("LXParameterModulation.getParameter() failed for path " + obj.get(KEY_PATH).getAsString() + " in scope " + scope.getParent());
     }
     if (obj.has(KEY_ID)) {
       return (LXParameter) lx.getProjectComponent(obj.get(KEY_ID).getAsInt());
@@ -263,16 +263,37 @@ public abstract class LXParameterModulation extends LXComponent {
     super.save(lx, obj);
   }
 
-  public static JsonObject move(JsonObject obj, LXModulationEngine scope, String fromPath, String toPath) {
+  public static JsonObject move(JsonObject obj, LXModulationEngine scope, Map<String, String> pathChanges) {
     final String prefix = scope.getParent().getCanonicalPath();
-    fromPath = LXUtils.stripPrefix(fromPath, prefix);
-    toPath = LXUtils.stripPrefix(toPath, prefix);
 
     final JsonObject move = obj.deepCopy();
     final JsonObject source = move.getAsJsonObject(KEY_SOURCE);
     final JsonObject target = move.getAsJsonObject(KEY_TARGET);
-    source.addProperty(KEY_PATH, LXUtils.replacePrefix(source.get(KEY_PATH).getAsString(), fromPath, toPath));
-    target.addProperty(KEY_PATH, LXUtils.replacePrefix(target.get(KEY_PATH).getAsString(), fromPath, toPath));
+
+    String sourcePath = source.get(KEY_PATH).getAsString();
+    String targetPath = target.get(KEY_PATH).getAsString();
+    boolean checkSource = true;
+    boolean checkTarget = true;
+
+    for (Map.Entry<String, String> entry : pathChanges.entrySet()) {
+      String fromPath = entry.getKey();
+      String toPath = entry.getValue();
+      if (prefix != null) {
+        fromPath = LXUtils.stripPrefix(fromPath, prefix);
+        toPath = LXUtils.stripPrefix(toPath, prefix);
+      }
+      if (checkSource && sourcePath.startsWith(fromPath)) {
+        sourcePath = toPath + sourcePath.substring(fromPath.length());
+        checkSource = false;
+      }
+      if (checkTarget && targetPath.startsWith(fromPath)) {
+        targetPath = toPath + targetPath.substring(fromPath.length());
+        checkTarget = false;
+      }
+    }
+
+    source.addProperty(KEY_PATH, sourcePath);
+    target.addProperty(KEY_PATH, targetPath);
     return move;
   }
 

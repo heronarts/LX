@@ -21,8 +21,10 @@ package heronarts.lx.command;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.gson.JsonObject;
 
@@ -220,6 +222,19 @@ public abstract class LXCommand {
 
   public static abstract class RemoveComponent extends LXCommand {
 
+    /**
+     * Events that remove multiple components in coordinated fashion (e.g. GroupPattern) may
+     * detect the same modulations from multiple sub-actions, say for instance there is a
+     * modulation between PatternA.param -> PatternB.param. The RemovePattern() action for
+     * A and B will *both* pick up that this modulation needs removing. But we only want
+     * that to actually happen once, so we track modulations by ID in this situation.
+     */
+    static class ModulationContext {
+      private Set<Integer> uniqueModulations = new HashSet<>();
+    }
+
+    private final ModulationContext modulationContext;
+
     final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
     final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
     final List<Midi.RemoveMapping> removeMidiMappings = new ArrayList<Midi.RemoveMapping>();
@@ -228,11 +243,24 @@ public abstract class LXCommand {
     final List<Clip.Event.Pattern.RemoveReferences> removePatternClipEvents = new ArrayList<>();
     final List<Device.SetRemoteControls> removeRemoteControls = new ArrayList<>();
 
+    private boolean shouldRemoveModulation(LXParameterModulation modulation) {
+      if (this.modulationContext == null) {
+        return true;
+      }
+      if (this.modulationContext.uniqueModulations.contains(modulation.getId())) {
+        return false;
+      }
+      this.modulationContext.uniqueModulations.add(modulation.getId());
+      return true;
+    }
+
     private void _removeModulations(LXModulationEngine modulation, LXComponent component) {
       List<LXCompoundModulation> compounds = modulation.findModulations(component, modulation.modulations);
       if (compounds != null) {
         for (LXCompoundModulation compound : compounds) {
-          this.removeModulations.add(new Modulation.RemoveModulation(modulation, compound));
+          if (shouldRemoveModulation(compound)) {
+            this.removeModulations.add(new Modulation.RemoveModulation(modulation, compound));
+          }
         }
       }
     }
@@ -241,7 +269,9 @@ public abstract class LXCommand {
       List<LXTriggerModulation> triggers = modulation.findModulations(component, modulation.triggers);
       if (triggers != null) {
         for (LXTriggerModulation trigger : triggers) {
-          this.removeTriggers.add(new Modulation.RemoveTrigger(modulation, trigger));
+          if (shouldRemoveModulation(trigger)) {
+            this.removeTriggers.add(new Modulation.RemoveTrigger(modulation, trigger));
+          }
         }
       }
     }
@@ -333,6 +363,12 @@ public abstract class LXCommand {
     }
 
     protected RemoveComponent(LXComponent component) {
+      this(component, null);
+    }
+
+    protected RemoveComponent(LXComponent component, ModulationContext modulationContext) {
+      this.modulationContext = modulationContext;
+
       // Tally up all the modulations and triggers that relate to this component and must be restored!
       LXComponent parent = component.getParent();
       while (parent != null) {
@@ -922,7 +958,11 @@ public abstract class LXCommand {
       }
 
       public RemovePattern(LXPatternEngine engine, LXPattern pattern) {
-        super(pattern);
+        this(engine, pattern, null);
+      }
+
+      private RemovePattern(LXPatternEngine engine, LXPattern pattern, ModulationContext context) {
+        super(pattern, context);
         if (!engine.patterns.contains(pattern)) {
           throw new IllegalArgumentException("Cannot remove pattern not present in engine: " + pattern + " !! " + engine.component);
         }
@@ -951,6 +991,11 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
+        undoPattern(lx);
+        undoReferences(lx);
+      }
+
+      private void undoPattern(LX lx) {
         LXPatternEngine engine = getPatternEngine();
         LXPattern pattern = engine.loadPattern(this.patternObj, this.patternIndex);
         if (this.isActive) {
@@ -959,34 +1004,10 @@ public abstract class LXCommand {
         if (this.isFocused) {
           engine.focusedPattern.setValue(pattern.getIndex());
         }
-        super.undo(lx);
       }
 
-      private void move(LX lx, LXPatternEngine engine, int index) throws InvalidCommandException {
-        final LXPattern moved = engine.loadPattern(this.patternObj, index);
-        final String toPath = moved.getCanonicalPath();
-        for (Modulation.RemoveModulation modulation : this.removeModulations) {
-          modulation.move(lx, this.path, toPath);
-        }
-        for (Modulation.RemoveTrigger trigger : this.removeTriggers) {
-          trigger.move(lx, this.path, toPath);
-        }
-        for (Midi.RemoveMapping mapping : this.removeMidiMappings) {
-          mapping.move(lx, this.path, toPath);
-        }
-        // TODO(group): restore these references to the new pattern
-//        for (Snapshots.RemoveView view : this.removeSnapshotViews) {
-//
-//        }
-//        for (Device.SetRemoteControls controls : this.removeRemoteControls) {
-//
-//        }
-//        for (Clip.RemoveClipLane lane : this.removeClipLanes) {
-//
-//        }
-//        for (Clip.Event.Pattern.RemoveReferences patternReferences : this.removePatternClipEvents) {
-//
-//        }
+      private void undoReferences(LX lx) throws InvalidCommandException {
+        super.undo(lx);
       }
     }
 
@@ -995,8 +1016,9 @@ public abstract class LXCommand {
       private final List<RemovePattern> removePatterns = new ArrayList<>();
 
       public RemovePatterns(LXPatternEngine patternEngine, List<LXPattern> patterns) {
+        final RemoveComponent.ModulationContext context = new RemoveComponent.ModulationContext();
         for (LXPattern pattern : patterns) {
-          this.removePatterns.add(new RemovePattern(patternEngine, pattern));
+          this.removePatterns.add(new RemovePattern(patternEngine, pattern, context));
         }
       }
 
@@ -1015,16 +1037,13 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         for (RemovePattern removePattern : this.removePatterns) {
-          removePattern.undo(lx);
+          removePattern.undoPattern(lx);
+        }
+        for (RemovePattern removePattern : this.removePatterns) {
+          removePattern.undoReferences(lx);
         }
       }
 
-      private void move(LX lx, LXPatternEngine engine) throws InvalidCommandException {
-        int patternIndex = 0;
-        for (RemovePattern removePattern : this.removePatterns) {
-          removePattern.move(lx, engine, patternIndex++);
-        }
-      }
     }
 
     public static class GroupPatterns extends LXCommand {
@@ -1036,6 +1055,7 @@ public abstract class LXCommand {
       private final int targetIndex;
       private final int engineTargetIndex;
       private ComponentReference<LXPattern> rack;
+      private final Map<String, String> pathChanges = new HashMap<>();
 
       public GroupPatterns(LXPatternEngine patternEngine, List<LXPattern> patterns) {
         this.component = new ComponentReference<>(patternEngine.component);
@@ -1062,12 +1082,28 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
+        final LXPatternEngine engine = getPatternEngine();
+
+        final Map<LXPattern, String> patternPath = new HashMap<>();
+        engine.patterns.forEach(pattern -> patternPath.put(pattern, pattern.getCanonicalPath()));
+
         this.removePatterns.perform(lx);
         this.addRack.perform(lx);
         this.rack = this.addRack.getPattern();
-
         final PatternRack rack = (PatternRack) this.rack.get();
-        final LXPatternEngine engine = getPatternEngine();
+
+        // Path may have updated since # of patterns may have changed
+        engine.patterns.forEach(pattern -> {
+          if (pattern != rack) {
+            String originalPath = patternPath.get(pattern);
+            String newPath = pattern.getCanonicalPath();
+            if (!newPath.equals(originalPath)) {
+              this.pathChanges.put(originalPath, newPath);
+            }
+          }
+        });
+
+
         final LXPatternEngine rackEngine = rack.getPatternEngine();
         rackEngine.compositeMode.setValue(engine.compositeMode.getEnum());
         rackEngine.compositeDampingEnabled.setValue(engine.compositeDampingEnabled.isOn());
@@ -1079,11 +1115,52 @@ public abstract class LXCommand {
         rackEngine.transitionEnabled.setValue(engine.transitionEnabled.isOn());
         rackEngine.transitionBlendMode.setIndex(engine.transitionBlendMode.getIndex());
 
-        this.removePatterns.move(lx, rackEngine);
+        movePatterns(lx, rackEngine, rack);
         if (this.targetIndex >= 0) {
           rackEngine.goPattern(rack.patterns.get(this.targetIndex), true);
           engine.goPattern(rack, true);
+        }
+        if (engine.focusedPattern.getValuei() != rack.getIndex()) {
           engine.focusedPattern.setValue(rack.getIndex());
+        } else {
+          engine.focusedPattern.bang();
+        }
+      }
+
+      private void movePatterns(LX lx, LXPatternEngine engine, PatternRack rack) throws InvalidCommandException {
+        int patternIndex = 0;
+        for (RemovePattern removePattern : this.removePatterns.removePatterns) {
+          final LXPattern moved = engine.loadPattern(removePattern.patternObj, patternIndex++);
+
+          // Modulations may have references between *multiple* moved patterns as both
+          // source and target, so we need to build a full map of all the path changes
+          this.pathChanges.put(removePattern.path, moved.getCanonicalPath());
+        }
+
+        // Now that all patterns are moved, update references to all of them
+        for (RemovePattern removePattern : this.removePatterns.removePatterns) {
+          for (Modulation.RemoveModulation modulation : removePattern.removeModulations) {
+            modulation.move(lx, this.pathChanges);
+          }
+          for (Modulation.RemoveTrigger trigger : removePattern.removeTriggers) {
+            trigger.move(lx, this.pathChanges);
+          }
+          for (Midi.RemoveMapping mapping : removePattern.removeMidiMappings) {
+            mapping.move(lx, removePattern.path, this.pathChanges.get(removePattern.path));
+          }
+          for (Snapshots.RemoveView view : removePattern.removeSnapshotViews) {
+            view.move(lx, removePattern.path, this.pathChanges.get(removePattern.path), rack);
+          }
+          // TODO(group): restore these references to the new pattern
+//        for (Device.SetRemoteControls controls : this.removeRemoteControls) {
+//
+//        }
+//        for (Clip.RemoveClipLane lane : this.removeClipLanes) {
+//
+//        }
+//        for (Clip.Event.Pattern.RemoveReferences patternReferences : this.removePatternClipEvents) {
+//
+//        }
         }
       }
 
@@ -2177,10 +2254,10 @@ public abstract class LXCommand {
         }
       }
 
-      private void move(LX lx, String fromPath, String toPath) throws InvalidCommandException {
+      private void move(LX lx, Map<String, String> pathChanges) throws InvalidCommandException {
         try {
           final LXModulationEngine engine = this.engine.get();
-          JsonObject moveObj = LXParameterModulation.move(this.modulationObj, engine, fromPath, toPath);
+          JsonObject moveObj = LXParameterModulation.move(this.modulationObj, engine, pathChanges);
           final LXCompoundModulation modulation = new LXCompoundModulation(lx, engine, moveObj);
           engine.addModulation(modulation);
           modulation.load(lx, moveObj);
@@ -2293,10 +2370,10 @@ public abstract class LXCommand {
         }
       }
 
-      private void move(LX lx, String fromPath, String toPath) throws InvalidCommandException {
+      private void move(LX lx, Map<String, String> pathChanges) throws InvalidCommandException {
         try {
           final LXModulationEngine engine = this.engine.get();
-          JsonObject moveObj = LXParameterModulation.move(this.triggerObj, engine, fromPath, toPath);
+          JsonObject moveObj = LXParameterModulation.move(this.triggerObj, engine, pathChanges);
           final LXTriggerModulation trigger = new LXTriggerModulation(lx, engine, moveObj);
           engine.addTrigger(trigger);
           trigger.load(lx, moveObj);
@@ -2827,6 +2904,10 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) {
         this.snapshot.get().addView(this.viewObj);
+      }
+
+      private void move(LX lx, String fromPath, String toPath, PatternRack rack)  throws InvalidCommandException {
+        this.snapshot.get().moveView(this.viewObj, fromPath, toPath, rack);
       }
     }
 
@@ -4739,7 +4820,7 @@ public abstract class LXCommand {
         lx.engine.midi.addMapping(this.mapping = LXMidiMapping.create(lx, this.mappingObj));
       }
 
-      public void move(LX lx, String fromPath, String toPath)  throws InvalidCommandException {
+      private void move(LX lx, String fromPath, String toPath)  throws InvalidCommandException {
         lx.engine.midi.addMapping(LXMidiMapping.move(lx, this.mappingObj, fromPath, toPath));
       }
     }
