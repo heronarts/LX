@@ -1159,10 +1159,9 @@ public abstract class LXCommand {
           for (Clip.RemoveClipLane lane : removePattern.removeClipLanes) {
             lane.move(lx, removePattern.path, toPath);
           }
-          // TODO(group): restore these references to the new pattern
-//        for (Clip.Event.Pattern.RemoveReferences patternReferences : removePattern.removePatternClipEvents) {
-//
-//        }
+          for (Clip.Event.Pattern.RemoveReferences patternReferences : removePattern.removePatternClipEvents) {
+            patternReferences.move(lx, rack);
+          }
         }
       }
 
@@ -4385,6 +4384,10 @@ public abstract class LXCommand {
           @Override
           public void undo(LX lx) throws InvalidCommandException {
             this.clipLane.get().load(lx, this.preState);
+          }
+
+          private void move(LX lx, PatternRack rack) {
+            this.clipLane.get().update(lx, this.preState, rack);
           }
         }
 

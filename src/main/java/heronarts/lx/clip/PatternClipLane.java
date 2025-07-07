@@ -232,12 +232,35 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   @Override
   protected PatternClipEvent loadEvent(LX lx, JsonObject eventObj) {
     final int numPatterns = this.engine.patterns.size();
-    final int patternIndex = eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt();
+    int patternIndex = eventObj.get(PatternClipEvent.KEY_PATTERN_INDEX).getAsInt();
+    if (this.rackUpdate != null) {
+      LXPattern pattern = (LXPattern) lx.getProjectComponent(eventObj.get(PatternClipEvent.KEY_PATTERN_ID).getAsInt());
+      if (this.rackUpdate.patterns.contains(pattern)) {
+        // Reference the rack instead of the pattern that was moved
+        patternIndex = this.rackUpdate.getIndex();
+      } else {
+        // Ensure reference is correct after rack move
+        patternIndex = pattern.getIndex();
+      }
+    }
     if (!LXUtils.inRange(patternIndex, 0, numPatterns - 1)) {
       LX.error("Invalid pattern index found in PatternClipLane.loadEvent on channel with " + numPatterns + " patterns: " + eventObj);
       return null;
     }
     return new PatternClipEvent(this, this.engine.patterns.get(patternIndex));
+  }
+
+  private PatternRack rackUpdate = null;
+
+  public void update(LX lx, JsonObject obj, PatternRack rack) {
+    this.rackUpdate = rack;
+    try {
+      super.load(lx, obj);
+    } catch (Exception x) {
+      throw x;
+    } finally {
+      this.rackUpdate = null;
+    }
   }
 
   @Override
