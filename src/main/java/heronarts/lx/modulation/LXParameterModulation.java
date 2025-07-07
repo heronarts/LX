@@ -33,6 +33,7 @@ import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.modulator.MultiTrig;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.utils.LXUtils;
 
 public abstract class LXParameterModulation extends LXComponent {
 
@@ -228,9 +229,12 @@ public abstract class LXParameterModulation extends LXComponent {
     if (obj.has(KEY_ID)) {
       return (LXParameter) lx.getProjectComponent(obj.get(KEY_ID).getAsInt());
     }
-    LXComponent component = lx.getProjectComponent(obj.get(KEY_COMPONENT_ID).getAsInt());
-    String path = obj.get(KEY_PARAMETER_PATH).getAsString();
-    return component.getParameter(path);
+    if (obj.has(KEY_COMPONENT_ID)) {
+      LXComponent component = lx.getProjectComponent(obj.get(KEY_COMPONENT_ID).getAsInt());
+      String path = obj.get(KEY_PARAMETER_PATH).getAsString();
+      return component.getParameter(path);
+    }
+    return null;
   }
 
   @Override
@@ -242,8 +246,7 @@ public abstract class LXParameterModulation extends LXComponent {
   @Override
   public void save(LX lx, JsonObject obj) {
     JsonObject sourceObj = new JsonObject();
-    if (this.source instanceof LXComponent) {
-      LXComponent sourceComponent = (LXComponent) this.source;
+    if (this.source instanceof LXComponent sourceComponent) {
       sourceObj.addProperty(KEY_ID, sourceComponent.getId());
     } else {
       sourceObj.addProperty(KEY_COMPONENT_ID, this.source.getParent().getId());
@@ -258,6 +261,19 @@ public abstract class LXParameterModulation extends LXComponent {
     targetObj.addProperty(KEY_PATH, this.target.getCanonicalPath(this.scope.getParent()));
     obj.add(KEY_TARGET, targetObj);
     super.save(lx, obj);
+  }
+
+  public static JsonObject move(JsonObject obj, LXModulationEngine scope, String fromPath, String toPath) {
+    final String prefix = scope.getParent().getCanonicalPath();
+    fromPath = LXUtils.stripPrefix(fromPath, prefix);
+    toPath = LXUtils.stripPrefix(toPath, prefix);
+
+    final JsonObject move = obj.deepCopy();
+    final JsonObject source = move.getAsJsonObject(KEY_SOURCE);
+    final JsonObject target = move.getAsJsonObject(KEY_TARGET);
+    source.addProperty(KEY_PATH, LXUtils.replacePrefix(source.get(KEY_PATH).getAsString(), fromPath, toPath));
+    target.addProperty(KEY_PATH, LXUtils.replacePrefix(target.get(KEY_PATH).getAsString(), fromPath, toPath));
+    return move;
   }
 
 }

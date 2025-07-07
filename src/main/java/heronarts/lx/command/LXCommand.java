@@ -220,13 +220,13 @@ public abstract class LXCommand {
 
   public static abstract class RemoveComponent extends LXCommand {
 
-    private final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
-    private final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
-    private final List<Midi.RemoveMapping> removeMidiMappings = new ArrayList<Midi.RemoveMapping>();
-    private final List<Snapshots.RemoveView> removeSnapshotViews = new ArrayList<Snapshots.RemoveView>();
-    private final List<Clip.RemoveClipLane> removeClipLanes = new ArrayList<>();
-    private final List<Clip.Event.Pattern.RemoveReferences> removePatternClipEvents = new ArrayList<>();
-    private final List<Device.SetRemoteControls> removeRemoteControls = new ArrayList<>();
+    final List<Modulation.RemoveModulation> removeModulations = new ArrayList<Modulation.RemoveModulation>();
+    final List<Modulation.RemoveTrigger> removeTriggers = new ArrayList<Modulation.RemoveTrigger>();
+    final List<Midi.RemoveMapping> removeMidiMappings = new ArrayList<Midi.RemoveMapping>();
+    final List<Snapshots.RemoveView> removeSnapshotViews = new ArrayList<Snapshots.RemoveView>();
+    final List<Clip.RemoveClipLane> removeClipLanes = new ArrayList<>();
+    final List<Clip.Event.Pattern.RemoveReferences> removePatternClipEvents = new ArrayList<>();
+    final List<Device.SetRemoteControls> removeRemoteControls = new ArrayList<>();
 
     private void _removeModulations(LXModulationEngine modulation, LXComponent component) {
       List<LXCompoundModulation> compounds = modulation.findModulations(component, modulation.modulations);
@@ -909,6 +909,7 @@ public abstract class LXCommand {
 
     public static class RemovePattern extends RemoveComponent {
 
+      private final String path;
       private final ComponentReference<LXComponent> component;
       private final ComponentReference<LXPattern> pattern;
       private final JsonObject patternObj;
@@ -925,6 +926,7 @@ public abstract class LXCommand {
         if (!engine.patterns.contains(pattern)) {
           throw new IllegalArgumentException("Cannot remove pattern not present in engine: " + pattern + " !! " + engine.component);
         }
+        this.path = pattern.getCanonicalPath();
         this.component = new ComponentReference<LXComponent>(engine.component);
         this.pattern = new ComponentReference<LXPattern>(pattern);
         this.patternObj = LXSerializable.Utils.toObject(pattern);
@@ -960,25 +962,31 @@ public abstract class LXCommand {
         super.undo(lx);
       }
 
-      private ComponentReference<LXPattern> movedPattern;
-
-      protected void move(LX lx, LXPatternEngine engine, int index) throws InvalidCommandException {
-        if (this.movedPattern != null) {
-          throw new InvalidCommandException("Cannot move pattern that was already moved");
+      private void move(LX lx, LXPatternEngine engine, int index) throws InvalidCommandException {
+        final LXPattern moved = engine.loadPattern(this.patternObj, index);
+        final String toPath = moved.getCanonicalPath();
+        for (Modulation.RemoveModulation modulation : this.removeModulations) {
+          modulation.move(lx, this.path, toPath);
         }
-        this.movedPattern = new ComponentReference<>(engine.loadPattern(this.patternObj, index));
-      }
-
-      protected void unmove(LX lx, LXPatternEngine engine) throws InvalidCommandException {
-        if (this.movedPattern == null) {
-          throw new InvalidCommandException("Cannot unmoved pattern that was not moved");
+        for (Modulation.RemoveTrigger trigger : this.removeTriggers) {
+          trigger.move(lx, this.path, toPath);
         }
-        final LXPattern moved = this.movedPattern.get();
-        if (!engine.patterns.contains(moved)) {
-          throw new InvalidCommandException("Cannot unmove pattern that doesn't exist on channel");
+        for (Midi.RemoveMapping mapping : this.removeMidiMappings) {
+          mapping.move(lx, this.path, toPath);
         }
-        engine.removePattern(moved);
-        this.movedPattern = null;
+        // TODO(group): restore these references to the new pattern
+//        for (Snapshots.RemoveView view : this.removeSnapshotViews) {
+//
+//        }
+//        for (Device.SetRemoteControls controls : this.removeRemoteControls) {
+//
+//        }
+//        for (Clip.RemoveClipLane lane : this.removeClipLanes) {
+//
+//        }
+//        for (Clip.Event.Pattern.RemoveReferences patternReferences : this.removePatternClipEvents) {
+//
+//        }
       }
     }
 
@@ -1011,16 +1019,10 @@ public abstract class LXCommand {
         }
       }
 
-      protected void move(LX lx, LXPatternEngine engine) throws InvalidCommandException {
+      private void move(LX lx, LXPatternEngine engine) throws InvalidCommandException {
         int patternIndex = 0;
         for (RemovePattern removePattern : this.removePatterns) {
           removePattern.move(lx, engine, patternIndex++);
-        }
-      }
-
-      protected void unmove(LX lx, LXPatternEngine engine) throws InvalidCommandException {
-        for (int i = this.removePatterns.size() - 1; i >=0; --i) {
-          this.removePatterns.get(i).unmove(lx, engine);
         }
       }
     }
@@ -2164,11 +2166,24 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         try {
-          LXCompoundModulation modulation = new LXCompoundModulation(lx, this.engine.get(), this.modulationObj);
-          this.engine.get().addModulation(modulation);
+          final LXModulationEngine engine = this.engine.get();
+          final LXCompoundModulation modulation = new LXCompoundModulation(lx, engine, this.modulationObj);
+          engine.addModulation(modulation);
           modulation.load(lx, this.modulationObj);
-          this.modulation = new ComponentReference<LXCompoundModulation>(modulation);
+          this.modulation = new ComponentReference<>(modulation);
           super.undo(lx);
+        } catch (LXParameterModulation.ModulationException mx) {
+          throw new InvalidCommandException(mx);
+        }
+      }
+
+      private void move(LX lx, String fromPath, String toPath) throws InvalidCommandException {
+        try {
+          final LXModulationEngine engine = this.engine.get();
+          JsonObject moveObj = LXParameterModulation.move(this.modulationObj, engine, fromPath, toPath);
+          final LXCompoundModulation modulation = new LXCompoundModulation(lx, engine, moveObj);
+          engine.addModulation(modulation);
+          modulation.load(lx, moveObj);
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
@@ -2273,6 +2288,18 @@ public abstract class LXCommand {
           trigger.load(lx, this.triggerObj);
           this.trigger = new ComponentReference<LXTriggerModulation>(trigger);
           super.undo(lx);
+        } catch (LXParameterModulation.ModulationException mx) {
+          throw new InvalidCommandException(mx);
+        }
+      }
+
+      private void move(LX lx, String fromPath, String toPath) throws InvalidCommandException {
+        try {
+          final LXModulationEngine engine = this.engine.get();
+          JsonObject moveObj = LXParameterModulation.move(this.triggerObj, engine, fromPath, toPath);
+          final LXTriggerModulation trigger = new LXTriggerModulation(lx, engine, moveObj);
+          engine.addTrigger(trigger);
+          trigger.load(lx, moveObj);
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
@@ -4710,6 +4737,10 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) throws InvalidCommandException {
         lx.engine.midi.addMapping(this.mapping = LXMidiMapping.create(lx, this.mappingObj));
+      }
+
+      public void move(LX lx, String fromPath, String toPath)  throws InvalidCommandException {
+        lx.engine.midi.addMapping(LXMidiMapping.move(lx, this.mappingObj, fromPath, toPath));
       }
     }
 
