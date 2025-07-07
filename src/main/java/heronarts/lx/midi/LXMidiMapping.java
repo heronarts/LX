@@ -118,7 +118,7 @@ public abstract class LXMidiMapping implements LXSerializable {
   public static LXMidiMapping move(LX lx, JsonObject object, String fromPath, String toPath) {
     JsonObject moveObj = object.deepCopy();
     String path = object.get(LXComponent.KEY_PATH).getAsString();
-    moveObj.addProperty(LXComponent.KEY_PATH, LXUtils.replacePrefix(path, fromPath, toPath));
+    moveObj.addProperty(LXComponent.KEY_PATH, LXPath.replacePrefix(path, fromPath, toPath));
     return create(lx, moveObj);
   }
 

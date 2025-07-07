@@ -33,7 +33,6 @@ import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.modulator.MultiTrig;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
-import heronarts.lx.utils.LXUtils;
 
 public abstract class LXParameterModulation extends LXComponent {
 
@@ -279,8 +278,8 @@ public abstract class LXParameterModulation extends LXComponent {
       String fromPath = entry.getKey();
       String toPath = entry.getValue();
       if (prefix != null) {
-        fromPath = LXUtils.stripPrefix(fromPath, prefix);
-        toPath = LXUtils.stripPrefix(toPath, prefix);
+        fromPath = LXPath.stripPrefix(fromPath, prefix);
+        toPath = LXPath.stripPrefix(toPath, prefix);
       }
       if (checkSource && sourcePath.startsWith(fromPath)) {
         sourcePath = toPath + sourcePath.substring(fromPath.length());

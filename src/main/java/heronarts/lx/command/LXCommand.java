@@ -1139,6 +1139,8 @@ public abstract class LXCommand {
 
         // Now that all patterns are moved, update references to all of them
         for (RemovePattern removePattern : this.removePatterns.removePatterns) {
+          final String toPath = this.pathChanges.get(removePattern.path);
+
           for (Modulation.RemoveModulation modulation : removePattern.removeModulations) {
             modulation.move(lx, this.pathChanges);
           }
@@ -1146,19 +1148,19 @@ public abstract class LXCommand {
             trigger.move(lx, this.pathChanges);
           }
           for (Midi.RemoveMapping mapping : removePattern.removeMidiMappings) {
-            mapping.move(lx, removePattern.path, this.pathChanges.get(removePattern.path));
+            mapping.move(lx, removePattern.path, toPath);
           }
           for (Snapshots.RemoveView view : removePattern.removeSnapshotViews) {
-            view.move(lx, removePattern.path, this.pathChanges.get(removePattern.path), rack);
+            view.move(lx, removePattern.path, toPath, rack);
+          }
+          for (Device.SetRemoteControls controls : removePattern.removeRemoteControls) {
+            controls.move(lx, removePattern.path, toPath);
           }
           // TODO(group): restore these references to the new pattern
-//        for (Device.SetRemoteControls controls : this.removeRemoteControls) {
+//        for (Clip.RemoveClipLane lane : removePattern.removeClipLanes) {
 //
 //        }
-//        for (Clip.RemoveClipLane lane : this.removeClipLanes) {
-//
-//        }
-//        for (Clip.Event.Pattern.RemoveReferences patternReferences : this.removePatternClipEvents) {
+//        for (Clip.Event.Pattern.RemoveReferences patternReferences : removePattern.removePatternClipEvents) {
 //
 //        }
         }
@@ -1603,6 +1605,24 @@ public abstract class LXCommand {
           this.device.get().setCustomRemoteControls(toControls(this.oldCustomControls));
         }
       }
+
+      private void move(LX lx, String fromPath, String toPath) {
+        if (this.oldCustomControls != null) {
+          final String prefix = this.device.get().getCanonicalPath();
+          fromPath = LXPath.stripPrefix(fromPath, prefix);
+          toPath = LXPath.stripPrefix(toPath, prefix);
+          int i = 0;
+          final String[] moveCustomControls = new String[this.oldCustomControls.length];
+          for (String str : this.oldCustomControls) {
+            if (str != null) {
+              moveCustomControls[i] = LXPath.replacePrefix(str, fromPath, toPath);
+            }
+            ++i;
+          }
+          this.device.get().setCustomRemoteControls(toControls(moveCustomControls));
+        }
+      }
+
     }
 
     public static class ClearRemoteControls extends RemoteControls {

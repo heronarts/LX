@@ -1080,9 +1080,9 @@ public abstract class LXSnapshot extends LXComponent {
   private JsonObject _moveView(JsonObject viewObj, String key, String fromPath, String toPath) {
     JsonObject moveObj = viewObj.deepCopy();
     final String prefix = this.snapshotParameterScope.getCanonicalPath();
-    fromPath = LXUtils.stripPrefix(fromPath, prefix);
-    toPath = LXUtils.stripPrefix(toPath, prefix);
-    moveObj.addProperty(key, LXUtils.replacePrefix(moveObj.get(key).getAsString(), fromPath, toPath));
+    fromPath = LXPath.stripPrefix(fromPath, prefix);
+    toPath = LXPath.stripPrefix(toPath, prefix);
+    moveObj.addProperty(key, LXPath.replacePrefix(moveObj.get(key).getAsString(), fromPath, toPath));
     return moveObj;
   }
 
