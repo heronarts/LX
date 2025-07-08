@@ -130,11 +130,11 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     .setDescription("Enables aux preview of crossfade group B");
 
   public final BooleanParameter autoMuteDefault =
-    new BooleanParameter("Auto-Mute Default", false)
+    new BooleanParameter("Auto-Mute Default", true)
     .setDescription("Whether new channels have Auto-Mute enabled by default");
 
   public final BooleanParameter autoMutePatternDefault =
-    new BooleanParameter("Auto-Mute Pattern Default", false)
+    new BooleanParameter("Auto-Mute Pattern Default", true)
     .setDescription("Whether new rack patterns have Auto-Mute enabled by default");
 
   public final ModelBuffer backgroundBlack;
@@ -1308,10 +1308,20 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     // Load the parameters after restoring the channels!
     super.load(lx, obj);
 
+    // Legacy compatibility, projects saved before auto-mute default existed use false
+    if (obj.has(LXComponent.KEY_PARAMETERS)) {
+      if (!LXSerializable.Utils.hasParameter(obj, this.autoMuteDefault.getPath())) {
+        this.autoMuteDefault.setValue(false);
+      }
+      if (!LXSerializable.Utils.hasParameter(obj, this.autoMutePatternDefault.getPath())) {
+        this.autoMutePatternDefault.setValue(false);
+      }
+    }
+
     // Notify all the active patterns
-    for (LXAbstractChannel channel : this.channels) {
-      if (channel instanceof LXChannel) {
-        LXPattern pattern = ((LXChannel) channel).getActivePattern();
+    for (LXAbstractChannel bus : this.channels) {
+      if (bus instanceof LXChannel channel) {
+        LXPattern pattern = channel.getActivePattern();
         if (pattern != null) {
           pattern.activate(LXMixerEngine.patternFriendAccess);
         }
