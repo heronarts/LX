@@ -1398,7 +1398,7 @@ public abstract class LXCommand {
 
       private final ComponentReference<LXComponent> container;
       private final ComponentReference<LXEffect> effect;
-      private final JsonObject effectObj;
+      final JsonObject effectObj;
       private final int effectIndex;
 
       public RemoveEffect(LXComponent container, LXEffect effect) {
@@ -1420,10 +1420,18 @@ public abstract class LXCommand {
         }
       }
 
+      protected LXEffect.Container getEffectContainer() {
+        return (LXEffect.Container) this.container.get();
+      }
+
+      protected LXEffect getEffect() {
+        return this.effect.get();
+      }
+
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         checkLocked();
-        ((LXEffect.Container) this.container.get()).removeEffect(this.effect.get());
+        getEffectContainer().removeEffect(this.effect.get());
       }
 
       @Override
@@ -1508,6 +1516,90 @@ public abstract class LXCommand {
         } else if (parent instanceof LXPattern) {
           ((LXPattern) parent).moveEffect(this.effect.get(), this.fromIndex);
         }
+      }
+    }
+
+    public static class RelocateEffect extends RemoveEffect {
+
+      private final String fromPath;
+      private final ComponentReference<LXComponent> target;
+      private ComponentReference<LXEffect> moved;
+      private final Map<String, String> pathChanges = new HashMap<>();
+
+      public RelocateEffect(LXEffect effect, LXEffect.Container target) {
+        super(effect.getParent(), effect);
+        this.target = new ComponentReference<>((LXComponent) target);
+        this.fromPath = effect.getCanonicalPath();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Relocate Effect";
+      }
+
+      private LXEffect.Container getTargetContainer() {
+        return (LXEffect.Container) this.target.get();
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        final LXEffect.Container originalContainer = getEffectContainer();
+        final LXEffect.Container targetContainer = getTargetContainer();
+
+        // Cache original effect paths
+        final Map<LXEffect, String> effectPath = new HashMap<>();
+        originalContainer.getEffects().forEach(effect -> effectPath.put(effect, effect.getCanonicalPath()));
+
+        // Remove it
+        super.perform(lx);
+
+        final LXEffect moved = targetContainer.loadEffect(lx, this.effectObj, -1);
+        this.moved = new ComponentReference<>(moved);
+
+        // Path may have updated since # of patterns may have changed
+        originalContainer.getEffects().forEach(effect -> {
+          String originalPath = effectPath.get(effect);
+          String newPath = effect.getCanonicalPath();
+          if (!newPath.equals(originalPath)) {
+            this.pathChanges.put(originalPath, newPath);
+          }
+        });
+
+        final String toPath = moved.getCanonicalPath();
+        this.pathChanges.put(this.fromPath, toPath);
+
+        final Map<String, String> pathChanges = new HashMap<>();
+        pathChanges.put(this.fromPath, toPath);
+
+        // Restore references to the effect in a new position
+        for (Modulation.RemoveModulation modulation : this.removeModulations) {
+          modulation.move(lx, pathChanges, moved);
+        }
+        for (Modulation.RemoveTrigger trigger : this.removeTriggers) {
+          trigger.move(lx, pathChanges, moved);
+        }
+        for (Midi.RemoveMapping mapping : this.removeMidiMappings) {
+          mapping.move(lx, this.fromPath, toPath);
+        }
+        for (Snapshots.RemoveView view : this.removeSnapshotViews) {
+          view.move(lx, this.fromPath, toPath, null);
+        }
+        for (Clip.RemoveClipLane lane : this.removeClipLanes) {
+          lane.move(lx, this.fromPath, toPath);
+        }
+
+        // TODO(relocate): this is more subtle, the effect could have moved *out* of a
+        // context where it's a valid remote control, would need to check these...
+        // for (Device.SetRemoteControls controls : this.removeRemoteControls) {
+        //   controls.move(lx, this.fromPath, toPath);
+        // }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        getTargetContainer().removeEffect(this.moved.get());
+        this.moved = null;
+        super.undo(lx);
       }
     }
 
@@ -2274,12 +2366,18 @@ public abstract class LXCommand {
       }
 
       private void move(LX lx, Map<String, String> pathChanges) throws InvalidCommandException {
+        move(lx, pathChanges, null);
+      }
+
+      private void move(LX lx, Map<String, String> pathChanges, LXComponent moved) throws InvalidCommandException {
         try {
           final LXModulationEngine engine = this.engine.get();
-          JsonObject moveObj = LXParameterModulation.move(this.modulationObj, engine, pathChanges);
-          final LXCompoundModulation modulation = new LXCompoundModulation(lx, engine, moveObj);
-          engine.addModulation(modulation);
-          modulation.load(lx, moveObj);
+          JsonObject moveObj = LXParameterModulation.move(this.modulationObj, engine, pathChanges, moved);
+          if (moveObj != null) {
+            final LXCompoundModulation modulation = new LXCompoundModulation(lx, engine, moveObj);
+            engine.addModulation(modulation);
+            modulation.load(lx, moveObj);
+          }
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
@@ -2390,12 +2488,18 @@ public abstract class LXCommand {
       }
 
       private void move(LX lx, Map<String, String> pathChanges) throws InvalidCommandException {
+        move(lx, pathChanges, null);
+      }
+
+      private void move(LX lx, Map<String, String> pathChanges, LXComponent moved) throws InvalidCommandException {
         try {
           final LXModulationEngine engine = this.engine.get();
-          JsonObject moveObj = LXParameterModulation.move(this.triggerObj, engine, pathChanges);
-          final LXTriggerModulation trigger = new LXTriggerModulation(lx, engine, moveObj);
-          engine.addTrigger(trigger);
-          trigger.load(lx, moveObj);
+          JsonObject moveObj = LXParameterModulation.move(this.triggerObj, engine, pathChanges, moved);
+          if (moveObj != null) {
+            final LXTriggerModulation trigger = new LXTriggerModulation(lx, engine, moveObj);
+            engine.addTrigger(trigger);
+            trigger.load(lx, moveObj);
+          }
         } catch (LXParameterModulation.ModulationException mx) {
           throw new InvalidCommandException(mx);
         }
@@ -2925,7 +3029,7 @@ public abstract class LXCommand {
         this.snapshot.get().addView(this.viewObj);
       }
 
-      private void move(LX lx, String fromPath, String toPath, PatternRack rack)  throws InvalidCommandException {
+      private void move(LX lx, String fromPath, String toPath, PatternRack rack) throws InvalidCommandException {
         this.snapshot.get().moveView(this.viewObj, fromPath, toPath, rack);
       }
     }

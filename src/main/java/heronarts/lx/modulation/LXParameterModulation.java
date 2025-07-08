@@ -262,7 +262,12 @@ public abstract class LXParameterModulation extends LXComponent {
     super.save(lx, obj);
   }
 
-  public static JsonObject move(JsonObject obj, LXModulationEngine scope, Map<String, String> pathChanges) {
+  public static JsonObject move(JsonObject obj, LXModulationEngine scope, Map<String, String> pathChanges, LXComponent moved) {
+    if ((moved != null) && !moved.isDescendant(scope.getParent())) {
+      LX.debug("Modulation cannot be restored, component (" + moved.getCanonicalPath() + ") moved out of modulation scope (" + scope.getCanonicalPath() + ")");
+      return null;
+    }
+
     final String prefix = scope.getParent().getCanonicalPath();
 
     final JsonObject move = obj.deepCopy();
