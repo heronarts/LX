@@ -1523,13 +1523,15 @@ public abstract class LXCommand {
 
       private final String fromPath;
       private final ComponentReference<LXComponent> target;
+      private final int effectIndex;
       private ComponentReference<LXEffect> moved;
       private final Map<String, String> pathChanges = new HashMap<>();
 
-      public RelocateEffect(LXEffect effect, LXEffect.Container target) {
+      public RelocateEffect(LXEffect effect, LXEffect.Container target, int effectIndex) {
         super(effect.getParent(), effect);
         this.target = new ComponentReference<>((LXComponent) target);
         this.fromPath = effect.getCanonicalPath();
+        this.effectIndex = effectIndex;
       }
 
       @Override
@@ -1553,7 +1555,7 @@ public abstract class LXCommand {
         // Remove it
         super.perform(lx);
 
-        final LXEffect moved = targetContainer.loadEffect(lx, this.effectObj, -1);
+        final LXEffect moved = targetContainer.loadEffect(lx, this.effectObj, this.effectIndex);
         this.moved = new ComponentReference<>(moved);
 
         // Path may have updated since # of patterns may have changed
