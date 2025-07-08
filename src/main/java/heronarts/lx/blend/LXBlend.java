@@ -176,7 +176,12 @@ public abstract class LXBlend extends LXModulatorComponent {
       src = from;
       alpha = (1-amt) * 2.;
     }
-    blend(dst, src, alpha, output, model);
+    if (model == this.lx.getModel()) {
+      // Potential 4-6x speedup per Andrew Look's benchmarks
+      blend(dst, src, alpha, output, 0, model.size);
+    } else {
+      blend(dst, src, alpha, output, model);
+    }
   }
 
   /**

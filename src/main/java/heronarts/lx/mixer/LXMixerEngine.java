@@ -966,8 +966,13 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
     }
 
     void blend(LXBlend blend, int[] src, double alpha, LXModel model) {
-      blend.blend(this.destination, src, alpha, this.output, model);
-      this.destination = this.output;
+      if (model == lx.getModel()) {
+        // Potential 4-6x speedup per Andrew Look's benchmarks
+        blend(blend, src, alpha, 0, model.size);
+      } else {
+        blend.blend(this.destination, src, alpha, this.output, model);
+        this.destination = this.output;
+      }
     }
 
     void blend(LXBlend blend, int[] src, double alpha, int start, int num) {
