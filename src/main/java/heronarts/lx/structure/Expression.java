@@ -344,6 +344,7 @@ public class Expression {
     tan(1, f -> { return LXUtils.tanf(Math.toRadians(f[0])); }),
 
     abs(1, f -> { return Math.abs(f[0]); }),
+    avg(2, f -> { return 0.5f * (f[0] + f[1]); }),
     cbrt(1, f -> { return (float) Math.cbrt(f[0]); }),
     ceil(1, f -> { return (float) Math.ceil(f[0]); }),
     clamp(3, f -> { return LXUtils.clampf(f[0], f[1], f[2]); }),
