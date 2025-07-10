@@ -316,6 +316,11 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     return this;
   }
 
+  protected final LXLayeredComponent lightestColor(int i, int c) {
+    this.colors[i] = LXColor.lightest(this.colors[i], c);
+    return this;
+  }
+
   /**
    * Sets all points to one color
    *
