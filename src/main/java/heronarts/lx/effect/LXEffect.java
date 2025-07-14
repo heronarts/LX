@@ -370,8 +370,8 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
       if (enabledDamped > 0) {
         run(deltaMs, enabledDamped);
       }
-    } else {
-      run(deltaMs, this.enabled.isOn() ? 1 : 0);
+    } else if (this.enabled.isOn()) {
+      run(deltaMs, 1);
     }
     this.profiler.runNanos = System.nanoTime() - runStart;
   }
