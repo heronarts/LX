@@ -357,4 +357,34 @@ public abstract class LXLayeredComponent extends LXModelComponent implements LXL
     return setColors(0);
   }
 
+  protected void copyColors(LXModel from, LXModel to, boolean flip) {
+    if (flip) {
+      copyColors(to, from);
+    } else {
+      copyColors(from, to);
+    }
+  }
+
+  protected void copyColors(LXModel from, LXModel to) {
+    copyColors(from.points, to.points);
+  }
+
+  protected void copyColors(LXPoint[] from, LXPoint[] to, boolean flip) {
+    if (flip) {
+      copyColors(to, from);
+    } else {
+      copyColors(from, to);
+    }
+  }
+
+  protected void copyColors(LXPoint[] from, LXPoint[] to) {
+    if (from.length != to.length) {
+      throw new IllegalArgumentException("copyColors() expects arrays of the same size: " + from.length + " != " + to.length);
+    }
+    int pi = 0;
+    for (LXPoint p : from) {
+      this.colors[to[pi++].index] = this.colors[p.index];
+    }
+  }
+
 }
