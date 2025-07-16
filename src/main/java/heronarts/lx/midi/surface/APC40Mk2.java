@@ -205,6 +205,27 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
 
   private final DeviceListener deviceListener;
 
+  public enum BankSelectMode {
+    SINGLE("Single", 1, 1),
+    PAGE("Page", 8, 5);
+
+    public final String label;
+    public final int columnIncrement;
+    public final int rowIncrement;
+
+    private BankSelectMode(String label, int columnIncrement, int rowIncrement) {
+      this.label = label;
+      this.columnIncrement = columnIncrement;
+      this.rowIncrement = rowIncrement;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+
+  }
+
   public enum GridMode {
     PATTERN(LXClipEngine.GridMode.PATTERNS),
     CLIP(LXClipEngine.GridMode.CLIPS),
@@ -910,6 +931,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     new EnumParameter<LXMidiParameterControl.Mode>("Fader Mode", LXMidiParameterControl.Mode.SCALE)
     .setDescription("Parameter control mode for faders");
 
+  public final EnumParameter<BankSelectMode> bankSelectMode =
+    new EnumParameter<BankSelectMode>("Bank Select Mode", BankSelectMode.SINGLE)
+    .setDescription("Whether the bank buttons jump by a single row/column or by page");
+
   private final LXMidiParameterControl masterFader;
   private final LXMidiParameterControl crossfader;
   private final LXMidiParameterControl[] channelFaders;
@@ -936,6 +961,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     addSetting("masterFaderEnabled", this.masterFaderEnabled);
     addSetting("crossfaderEnabled", this.crossfaderEnabled);
     addSetting("faderMode", this.faderMode);
+    addSetting("bankSelectMode", this.bankSelectMode);
     addSetting("deviceControl", this.deviceControl);
     addSetting("performanceLock", this.performanceLock);
   }
@@ -1645,7 +1671,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
           }
         } else {
-          this.mixerSurface.decrementChannel();
+          this.mixerSurface.decrementChannel(this.bankSelectMode.getEnum().columnIncrement);
         }
         return;
       case BANK_SELECT_RIGHT:
@@ -1655,7 +1681,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             lx.engine.mixer.selectChannel(lx.engine.mixer.getFocusedChannel());
           }
         } else {
-          this.mixerSurface.incrementChannel();
+          this.mixerSurface.incrementChannel(this.bankSelectMode.getEnum().columnIncrement);
         }
         return;
       case BANK_SELECT_UP:
@@ -1665,7 +1691,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             channel.patternEngine.focusedPattern.decrement(1, false);
           }
         } else {
-          this.mixerSurface.decrementGridOffset();
+          this.mixerSurface.decrementGridOffset(this.bankSelectMode.getEnum().rowIncrement);
         }
         return;
       case BANK_SELECT_DOWN:
@@ -1675,7 +1701,7 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
             channel.patternEngine.focusedPattern.increment(1, false);
           }
         } else {
-          this.mixerSurface.incrementGridOffset();
+          this.mixerSurface.incrementGridOffset(this.bankSelectMode.getEnum().rowIncrement);
         }
         return;
       case CLIP_DEVICE_VIEW:

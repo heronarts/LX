@@ -132,23 +132,31 @@ public class MixerSurface implements LXParameterListener {
   }
 
   public void incrementGridOffset() {
+    incrementGridOffset(1);
+  }
+
+  public void incrementGridOffset(int delta) {
     switch (this.gridMode) {
     case CLIPS:
-      this.gridClipOffset.increment();
+      this.gridClipOffset.increment(delta);
       break;
     case PATTERNS:
-      this.gridPatternOffset.increment();
+      this.gridPatternOffset.increment(delta);
       break;
     }
   }
 
   public void decrementGridOffset() {
+    decrementGridOffset(1);
+  }
+
+  public void decrementGridOffset(int delta) {
     switch (this.gridMode) {
     case CLIPS:
-      this.gridClipOffset.decrement();
+      this.gridClipOffset.decrement(delta);
       break;
     case PATTERNS:
-      this.gridPatternOffset.decrement();
+      this.gridPatternOffset.decrement(delta);
       break;
     }
   }
@@ -180,11 +188,19 @@ public class MixerSurface implements LXParameterListener {
   }
 
   public void incrementChannel() {
-    this.channelNumber.increment(1);
+    incrementChannel(1);
+  }
+
+  public void incrementChannel(int delta) {
+    this.channelNumber.increment(delta);
   }
 
   public void decrementChannel() {
-    this.channelNumber.decrement(1);
+    decrementChannel(1);
+  }
+
+  public void decrementChannel(int delta) {
+    this.channelNumber.decrement(delta);
   }
 
   public void incrementBank() {

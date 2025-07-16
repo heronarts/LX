@@ -240,11 +240,19 @@ public class FocusedDevice {
   };
 
   public void previousChannel() {
-    getFocusedChannelTarget().decrement();
+    previousChannel(1);
+  }
+
+  public void previousChannel(int delta) {
+    getFocusedChannelTarget().decrement(delta);
   }
 
   public void nextChannel() {
-    getFocusedChannelTarget().increment();
+    nextChannel(1);
+  }
+
+  public void nextChannel(int delta) {
+    getFocusedChannelTarget().increment(delta);
   }
 
   /**
