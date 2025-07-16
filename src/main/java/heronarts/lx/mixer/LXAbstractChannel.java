@@ -295,7 +295,7 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
 
   private boolean isAnimating() {
     // Cue is active? We must loop to preview ourselves
-    if (this.cueActive.isOn()) {
+    if (this.cueActive.isOn() || this.auxActive.isOn()) {
       return true;
     }
     // We're not active? Then we're disabled for sure
