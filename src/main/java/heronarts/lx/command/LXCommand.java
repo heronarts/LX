@@ -1103,7 +1103,7 @@ public abstract class LXCommand {
           }
         });
 
-
+        // Copy pattern engine parameters
         final LXPatternEngine rackEngine = rack.getPatternEngine();
         rackEngine.compositeMode.setValue(engine.compositeMode.getEnum());
         rackEngine.compositeDampingEnabled.setValue(engine.compositeDampingEnabled.isOn());
@@ -1114,6 +1114,14 @@ public abstract class LXCommand {
         rackEngine.transitionTimeSecs.setValue(engine.transitionTimeSecs.getValue());
         rackEngine.transitionEnabled.setValue(engine.transitionEnabled.isOn());
         rackEngine.transitionBlendMode.setIndex(engine.transitionBlendMode.getIndex());
+
+        // And duplicate midi filter settings
+        final LXComponent source = this.component.get();
+        if (source instanceof LXChannel channel) {
+          rack.midiFilter.set(channel.midiFilter);
+        } else if (source instanceof LXPattern pattern) {
+          rack.midiFilter.set(pattern.midiFilter);
+        }
 
         movePatterns(lx, rackEngine, rack);
         if (this.targetIndex >= 0) {

@@ -103,6 +103,16 @@ public class MidiFilterParameter extends AggregateParameter {
     return this;
   }
 
+  public MidiFilterParameter set(MidiFilterParameter that) {
+    this.channel.setValue(that.channel.getEnum());
+    this.minNote.setValue(that.minNote.getValuei());
+    this.noteRange.setValue(that.noteRange.getValuei());
+    this.minVelocity.setValue(that.minVelocity.getValuei());
+    this.velocityRange.setValue(that.velocityRange.getValuei());
+    this.enabled.setValue(that.enabled.isOn());
+    return this;
+  }
+
   /**
    * Check whether this MIDI note passes through the filter
    *
