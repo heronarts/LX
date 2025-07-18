@@ -106,7 +106,8 @@ public class LXTriggerModulation extends LXParameterModulation {
     TOGGLE("Trigger → Toggle"),
     ON("Trigger → On"),
     OFF("Trigger → Off"),
-    DIRECT("Trigger → Direct");
+    DIRECT("Trigger → Direct"),
+    INVERT("Trigger → Invert");
 
     public final String label;
 
@@ -121,17 +122,17 @@ public class LXTriggerModulation extends LXParameterModulation {
 
     private void onMomentary(BooleanParameter target) {
       switch (this) {
-      case TOGGLE: target.toggle(); break;
-      case ON: target.setValue(true); break;
-      case OFF: target.setValue(false); break;
-      case DIRECT: target.setValue(true); break;
+      case TOGGLE -> target.toggle();
+      case ON, DIRECT -> target.setValue(true);
+      case OFF, INVERT -> target.setValue(false);
       }
     }
 
     private void onRelease(BooleanParameter target) {
       switch (this) {
-      case DIRECT: target.setValue(false); break;
-      default: break;
+      case DIRECT -> target.setValue(false);
+      case INVERT -> target.setValue(true);
+      default -> {}
       }
     }
   };
@@ -236,10 +237,10 @@ public class LXTriggerModulation extends LXParameterModulation {
       } else {
         if (this.targetMomentary) {
           // Toggle -> Momentary
-          final ToggleMomentaryMode mode = this.toggleMomentaryMode.getEnum();
-          if (mode.shouldTrigger(this.source)) {
+          final ToggleMomentaryMode momentary = this.toggleMomentaryMode.getEnum();
+          if (momentary.shouldTrigger(this.source)) {
             this.target.setValue(true);
-          } else if (mode.shouldClear(this.source)) {
+          } else if (momentary.shouldClear(this.source)) {
             this.target.setValue(false);
           }
         } else {
