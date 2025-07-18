@@ -485,11 +485,12 @@ public class LXColor {
   }
 
   public static int lerp(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       ((dst & RB_MASK) * dstAlpha + (src & RB_MASK) * srcAlpha) >>> 8 & RB_MASK |
       ((dst & G_MASK) * dstAlpha + (src & G_MASK) * srcAlpha) >>> 8 & G_MASK;
   }
@@ -526,12 +527,13 @@ public class LXColor {
    * @return Summed RGB channels with 255 clip
    */
   public static int add(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int rb = (dst & RB_MASK) + ((src & RB_MASK) * srcAlpha >>> 8 & RB_MASK);
     int gn = (dst & G_MASK) + ((src & G_MASK) * srcAlpha >>> 8);
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       min(rb & 0xffff0000, R_MASK) |
       min(gn & 0x00ffff00, G_MASK) |
       min(rb & 0x0000ffff, B_MASK);
@@ -546,12 +548,13 @@ public class LXColor {
   }
 
   public static int subtract(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int rb = (src & RB_MASK) * srcAlpha >>> 8;
     int gn = (src & G_MASK) * srcAlpha >>> 8;
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       max((dst & R_MASK) - (rb & R_MASK), 0) |
       max((dst & G_MASK) - (gn & G_MASK), 0) |
       max((dst & B_MASK) - (rb & B_MASK), 0);
@@ -566,7 +569,8 @@ public class LXColor {
   }
 
   public static int multiply(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
 
@@ -578,7 +582,7 @@ public class LXColor {
     int g = (src & G_MASK) * (dstG + 0x100) >>> 16 & G_MASK;
 
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
       (dstG * dstAlpha + g * srcAlpha) >>> 8 & G_MASK;
   }
@@ -592,7 +596,8 @@ public class LXColor {
   }
 
   public static int screen(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
 
@@ -609,7 +614,7 @@ public class LXColor {
     int gnSub = srcGn * (dstGn + 0x100) >> 16 & G_MASK;
 
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       (dstRb * dstAlpha + (dstRb + (src & RB_MASK) - rbSub) * srcAlpha) >>> 8 & RB_MASK |
       (dstGn * dstAlpha + (dstGn + srcGn - gnSub) * srcAlpha) >>> 8 & G_MASK;
   }
@@ -623,15 +628,16 @@ public class LXColor {
   }
 
   public static int lightest(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
-    int srcAlpha = a + (a >= 0x7F ? 1 : 0);
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
+    final int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
     int rb =
       max(src & R_MASK, dst & R_MASK) |
       max(src & B_MASK, dst & B_MASK);
     int gn = max(src & G_MASK, dst & G_MASK);
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       (((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8) & RB_MASK |
       (((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8) & G_MASK;
   }
@@ -645,7 +651,8 @@ public class LXColor {
   }
 
   public static int darkest(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
     int rb =
@@ -653,7 +660,7 @@ public class LXColor {
       min(src & B_MASK, dst & B_MASK);
     int gn = min(src & G_MASK, dst & G_MASK);
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       (((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8) & RB_MASK |
       (((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8) & G_MASK;
   }
@@ -667,7 +674,8 @@ public class LXColor {
   }
 
   public static int difference(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
     int srcAlpha = a + (a >= 0x7F ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
     int r = (dst & R_MASK) - (src & R_MASK);
@@ -676,7 +684,7 @@ public class LXColor {
     int rb = (r < 0 ? -r : r) | (b < 0 ? -b : b);
     int gn = g < 0 ? -g : g;
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
       ((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8 & G_MASK;
   }
@@ -690,7 +698,8 @@ public class LXColor {
   }
 
   public static int dodge(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
 
     int srcAlpha = a + (a >= 0x7f ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
@@ -703,7 +712,7 @@ public class LXColor {
     int gn = (g > 0xff00 ? G_MASK : (g & G_MASK));
 
     return
-      min((dst >>> ALPHA_SHIFT) + a, 0xff) << ALPHA_SHIFT |
+      min((dst >>> ALPHA_SHIFT) + oa, 0xff) << ALPHA_SHIFT |
       ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
       ((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8 & G_MASK;
   }
@@ -717,7 +726,8 @@ public class LXColor {
   }
 
   public static int burn(int dst, int src, int alpha) {
-    int a = (((src >>> ALPHA_SHIFT) * alpha) >> 8) & 0xff;
+    final int oa = src >>> ALPHA_SHIFT;
+    final int a = ((oa * alpha) >> 8) & 0xff;
 
     int srcAlpha = a + (a >= 0x7f ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
@@ -731,7 +741,7 @@ public class LXColor {
         (b > 0x00ff ? B_MASK : b);
     int gn = G_MASK - (g > 0xff00 ? G_MASK : (g & G_MASK));
 
-    return min((dst >>> 24) + a, 0xFF) << 24 |
+    return min((dst >>> 24) + oa, 0xFF) << 24 |
         ((dst & RB_MASK) * dstAlpha + rb * srcAlpha) >>> 8 & RB_MASK |
         ((dst & G_MASK) * dstAlpha + gn * srcAlpha) >>> 8 & G_MASK;
   }
