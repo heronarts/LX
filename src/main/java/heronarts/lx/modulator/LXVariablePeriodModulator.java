@@ -27,16 +27,17 @@ public abstract class LXVariablePeriodModulator extends LXRangeModulator {
   public static enum ClockMode {
     FAST,
     SLOW,
-    SYNC;
+    SYNC,
+    INPUT;
 
     @Override
     public String toString() {
-      switch (this) {
-      case FAST: return "Fast";
-      case SLOW: return "Slow";
-      default:
-      case SYNC: return "Sync";
-      }
+      return switch (this) {
+      case FAST -> "Fast";
+      case SLOW -> "Slow";
+      case SYNC -> "Sync";
+      case INPUT -> "Input";
+      };
     }
   };
 
@@ -74,19 +75,32 @@ public abstract class LXVariablePeriodModulator extends LXRangeModulator {
       case FAST:
         setPeriod(this.periodFast);
         this.tempoSync.setValue(false);
+        this.manualBasis.setValue(false);
         break;
       case SLOW:
         setPeriod(this.periodSlow);
         this.tempoSync.setValue(false);
+        this.manualBasis.setValue(false);
         break;
       case SYNC:
         this.tempoSync.setValue(true);
+        this.manualBasis.setValue(false);
+        break;
+      case INPUT:
+        this.tempoSync.setValue(false);
+        this.manualBasis.setValue(true);
         break;
       }
       this.inClockUpdate = false;
     } else if (p == this.tempoSync) {
       if (this.tempoSync.isOn()) {
         this.clockMode.setValue(ClockMode.SYNC);
+      } else if (!this.inClockUpdate) {
+        this.clockMode.setValue(ClockMode.FAST);
+      }
+    } else if (p == this.manualBasis) {
+      if (this.manualBasis.isOn()) {
+        this.clockMode.setValue(ClockMode.INPUT);
       } else if (!this.inClockUpdate) {
         this.clockMode.setValue(ClockMode.FAST);
       }

@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.Tempo;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -55,6 +56,16 @@ public abstract class LXPeriodicModulator extends LXModulator {
   public final BooleanParameter tempoLock =
     new BooleanParameter("Lock", true)
     .setDescription("Whether this modulator is locked to the beat grid or free-running");
+
+  public final BooleanParameter manualBasis =
+    new BooleanParameter("Manual", false)
+    .setDescription("Whether this modulator follows manual time-basis input");
+
+  public final CompoundParameter basisIn =
+    new CompoundParameter("Basis", 0)
+    .setUnits(CompoundParameter.Units.PERCENT_NORMALIZED)
+    .setWrappable(true)
+    .setDescription("Manual basis input to the modulator");
 
   /**
    * Whether the modulator finished on this cycle.
@@ -108,6 +119,8 @@ public abstract class LXPeriodicModulator extends LXModulator {
     addParameter("tempoSync", this.tempoSync);
     addParameter("tempoMultiplier", this.tempoDivision);
     addParameter("tempoLock", this.tempoLock);
+    addParameter("manualBasis", this.manualBasis);
+    addParameter("basisIn", this.basisIn);
     this.tempoDivision.setWrappable(false);
     this.period = period;
   }
@@ -118,13 +131,14 @@ public abstract class LXPeriodicModulator extends LXModulator {
     if (p == this.running) {
       if (this.running.isOn()) {
         this.restarted = true;
-        if (this.needsReset && !this.disableAutoReset) {
+        if (!this.manualBasis.isOn() && this.needsReset && !this.disableAutoReset) {
           this.setBasis(0);
         }
       }
     } else if (p == this.tempoLock) {
       if (this.tempoLock.isOn()) {
         this.restarted = true;
+        this.manualBasis.setValue(false);
       }
     }
   }
@@ -266,11 +280,19 @@ public abstract class LXPeriodicModulator extends LXModulator {
 
   @Override
   protected final double computeValue(double deltaMs) {
+    // Manual basis mode skips state management, input parameter specifies basis,
+    // there is no looping/finishing in this mode, just external control
+    if (this.manualBasis.isOn()) {
+      this.basis = this.basisIn.getValue();
+      return computeValue(deltaMs, this.basis);
+    }
+
     this.finished = false;
     this.looped = false;
     this.numLoops = 0;
     this.needsReset = false;
     final double periodv = this.period.getValue();
+
     if (this.tempoSync.isOn()) {
       if (this.tempoLock.isOn()) {
         final Tempo.Division division = this.tempoDivision.getEnum();
