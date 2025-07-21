@@ -1378,14 +1378,16 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         LXOscEngine.log("Requested project file is already open, ignoring: " + projectFile);
         return false;
       }
-      try {
-        LXOscEngine.log("Opening project file: " + projectFile);
-        this.lx.openProject(projectFile);
-        return true;
-      } catch (Throwable x) {
-        LXOscEngine.error(x, "Error opening project \"" + projectFile + "\": " + x.getMessage());
-      }
-      return false;
+      // Schedule project to be loaded on next loop pass
+      lx.engine.addTask(() -> {
+        try {
+          LXOscEngine.log("Opening project file: " + projectFile);
+          this.lx.openProject(projectFile);
+        } catch (Throwable x) {
+          LXOscEngine.error(x, "Error opening project \"" + projectFile + "\": " + x.getMessage());
+        }
+      });
+      return true;
     }
     return super.handleOscMessage(message, parts, index);
   }
