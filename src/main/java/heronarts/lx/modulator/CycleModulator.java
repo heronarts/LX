@@ -29,7 +29,7 @@ import heronarts.lx.parameter.LXParameter;
 @LXModulator.Global("Cycle")
 @LXModulator.Device("Cycle")
 @LXCategory(LXCategory.CORE)
-public class CycleModulator extends LXModulator implements LXNormalizedParameter, LXOscComponent {
+public class CycleModulator extends LXModulator implements LXNormalizedParameter, LXOscComponent, LXModulator.ResetButton, LXModulator.TriggerButton {
 
   private double basis = 0.;
 

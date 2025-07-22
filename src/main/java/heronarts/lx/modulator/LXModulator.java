@@ -47,7 +47,15 @@ import heronarts.lx.parameter.LXParameter;
  */
 public abstract class LXModulator extends LXRunnableComponent implements LXComponent.Renamable, LXParameter {
 
+  /**
+   * Marker interface for modulators which should show a reset button in the UI
+   */
   public interface ResetButton {}
+
+  /**
+   * Marker interface for modulators which should show a trigger button in the UI
+   */
+  public interface TriggerButton {}
 
   /**
    * A market annotation which enables a registered modulator to appear in the global section

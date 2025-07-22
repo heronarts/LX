@@ -36,7 +36,7 @@ import heronarts.lx.parameter.LXParameter;
  * angle moving from 0 to two times pi. The period itself is a parameter which
  * may be a modulator or otherwise.
  */
-public abstract class LXPeriodicModulator extends LXModulator {
+public abstract class LXPeriodicModulator extends LXModulator implements LXModulator.TriggerButton {
 
   /**
    * Whether this modulator runs continuously looping.
