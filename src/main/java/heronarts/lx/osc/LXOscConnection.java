@@ -68,6 +68,8 @@ public abstract class LXOscConnection extends LXComponent {
     new StringParameter("Filter", "/lx")
     .setDescription("Filter OSC messages on matching prefix");
 
+  private String[] parsedFilters = null;
+
   private int _defaultInputPort() {
     int max = lx.engine.osc.receivePort.getValuei();
     for (LXOscConnection connection : lx.engine.osc.inputs) {
@@ -131,8 +133,13 @@ public abstract class LXOscConnection extends LXComponent {
     addParameter("active", this.active);
   }
 
-  protected String getFilter() {
-    return this.hasFilter.isOn() ? this.filter.getString() : null;
+  protected String[] getFilters() {
+    return this.hasFilter.isOn() ? this.parsedFilters : null;
+  }
+
+  protected void parseFilterString(String filter) {
+    // TODO: remove whitespace and/or empty entries? e.g. "/lx/palette/hue , ,/lx/tempo"
+    this.parsedFilters = filter.split(",");
   }
 
   /**
@@ -171,6 +178,8 @@ public abstract class LXOscConnection extends LXComponent {
         } else {
           stopReceiver(IOState.STOPPED);
         }
+      } else if (p == this.filter) {
+        this.parseFilterString(this.filter.getString());
       }
     }
 
@@ -259,6 +268,8 @@ public abstract class LXOscConnection extends LXComponent {
           // can easily toggle back on
           this.state.setValue(IOState.STOPPED);
         }
+      } else if (p == this.filter) {
+        this.parseFilterString(this.filter.getString());
       }
     }
 

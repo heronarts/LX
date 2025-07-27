@@ -515,9 +515,23 @@ public class LXOscEngine extends LXComponent {
       return this.active.isOn() && (this.state.getEnum() == IOState.BOUND);
     }
 
+    /**
+     * Whether or not this OSC address should be "filtered out" from the stream we're transmitting.
+     *
+     * @param oscAddress
+     * @return true if filters is null/empty, or if address matches one of the filters
+     */
     private boolean isAddressFiltered(String oscAddress) {
-      final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
-      return (prefixFilter != null) && !OscMessage.hasPrefix(oscAddress, prefixFilter);
+      final String[] prefixFilters = (this.connection != null) ? this.connection.getFilters() : null;
+      if (prefixFilters == null || prefixFilters.length == 0) {
+        return false;
+      }
+      for (String prefix : prefixFilters) {
+        if (OscMessage.hasPrefix(oscAddress, prefix)) {
+          return false;
+        }
+      }
+      return true;
     }
 
     @Override
