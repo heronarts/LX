@@ -385,6 +385,18 @@ public class LXOscEngine extends LXComponent {
     return null;
   }
 
+  static final boolean shouldAddressBeExcluded(String[] prefixFilters, String oscAddress) {
+    if (prefixFilters == null || prefixFilters.length == 0) {
+      return false;
+    }
+    for (String prefix : prefixFilters) {
+      if (OscMessage.hasPrefix(oscAddress, prefix)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private class EngineListener implements LXOscListener {
 
     @Override
@@ -515,9 +527,15 @@ public class LXOscEngine extends LXComponent {
       return this.active.isOn() && (this.state.getEnum() == IOState.BOUND);
     }
 
+    /**
+     * Whether or not this OSC address should be "filtered out" from the stream we're transmitting.
+     *
+     * @param oscAddress
+     * @return true if filters is null/empty, or if address matches one of the filters
+     */
     private boolean isAddressFiltered(String oscAddress) {
-      final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
-      return (prefixFilter != null) && !OscMessage.hasPrefix(oscAddress, prefixFilter);
+      final String[] prefixFilters = (this.connection != null) ? this.connection.getFilters() : null;
+      return shouldAddressBeExcluded(prefixFilters, oscAddress);
     }
 
     @Override
@@ -746,10 +764,10 @@ public class LXOscEngine extends LXComponent {
         // to the listener list will be post-processed to avoid ConcurrentModificationException
         this.inListener = true;
 
-        final String prefixFilter = (this.connection != null) ? this.connection.getFilter() : null;
+        final String[] prefixFilters = (this.connection != null) ? this.connection.getFilters() : null;
 
         for (OscMessage message : this.engineThreadEventQueue) {
-          if ((prefixFilter == null) || message.hasPrefix(prefixFilter)) {
+          if (!shouldAddressBeExcluded(prefixFilters, message.getAddressPattern().getValue())) {
             if ((this.log != null) && this.log.isOn()) {
               log("[RX] [" + this.port + "] " + message.toString());
             }
