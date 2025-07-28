@@ -385,8 +385,8 @@ public class LXOscEngine extends LXComponent {
     return null;
   }
 
-  static final boolean shouldAddressBeExcluded(String[] prefixFilters, String oscAddress) {
-    if (prefixFilters == null || prefixFilters.length == 0) {
+  static final boolean shouldAddressBeExcluded(List<String> prefixFilters, String oscAddress) {
+    if (prefixFilters == null || prefixFilters.isEmpty()) {
       return false;
     }
     for (String prefix : prefixFilters) {
@@ -534,7 +534,7 @@ public class LXOscEngine extends LXComponent {
      * @return true if filters is null/empty, or if address matches one of the filters
      */
     private boolean isAddressFiltered(String oscAddress) {
-      final String[] prefixFilters = (this.connection != null) ? this.connection.getFilters() : null;
+      final List<String> prefixFilters = (this.connection != null) ? this.connection.getFilters() : null;
       return shouldAddressBeExcluded(prefixFilters, oscAddress);
     }
 
@@ -764,7 +764,7 @@ public class LXOscEngine extends LXComponent {
         // to the listener list will be post-processed to avoid ConcurrentModificationException
         this.inListener = true;
 
-        final String[] prefixFilters = (this.connection != null) ? this.connection.getFilters() : null;
+        final List<String> prefixFilters = (this.connection != null) ? this.connection.getFilters() : null;
 
         for (OscMessage message : this.engineThreadEventQueue) {
           if (!shouldAddressBeExcluded(prefixFilters, message.getAddressPattern().getValue())) {

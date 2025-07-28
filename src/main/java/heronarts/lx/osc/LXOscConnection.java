@@ -21,6 +21,8 @@ package heronarts.lx.osc;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
@@ -68,7 +70,7 @@ public abstract class LXOscConnection extends LXComponent {
     new StringParameter("Filter", "/lx")
     .setDescription("Filter OSC messages on matching prefix");
 
-  private String[] parsedFilters = null;
+  private final List<String> parsedFilters = new ArrayList<>();
 
   private int _defaultInputPort() {
     int max = lx.engine.osc.receivePort.getValuei();
@@ -133,13 +135,18 @@ public abstract class LXOscConnection extends LXComponent {
     addParameter("active", this.active);
   }
 
-  protected String[] getFilters() {
+  protected List<String> getFilters() {
     return this.hasFilter.isOn() ? this.parsedFilters : null;
   }
 
   protected void parseFilterString(String filter) {
-    // TODO: remove whitespace and/or empty entries? e.g. "/lx/palette/hue , ,/lx/tempo"
-    this.parsedFilters = filter.split(",");
+    this.parsedFilters.clear();
+    for (String split : filter.split(",")) {
+      split = split.trim();
+      if (!split.isEmpty()) {
+        this.parsedFilters.add(split);
+      }
+    }
   }
 
   /**
