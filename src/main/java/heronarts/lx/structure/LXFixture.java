@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
@@ -1311,6 +1312,51 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
       ci -= fixtureTotalSize;
     }
     throw new IllegalArgumentException("Point index " + i + " exceeds fixture bounds: " + this + " (" + totalSize() + ")");
+  }
+
+  protected abstract String getLXFType();
+  protected void addLXFFields(JsonObject obj) {}
+  protected void addLXFOutputs(JsonObject obj) {}
+
+  protected final JsonObject toLXFComponent() {
+    final JsonObject obj = new JsonObject();
+    if (this.deactivate.isOn()) {
+      obj.addProperty(JsonFixture.KEY_ENABLED, false);
+    }
+    obj.addProperty(JsonFixture.KEY_LABEL, this.label.getString());
+
+    final JsonArray tags = new JsonArray();
+    final String[] customTags = this.tags.getString().trim().replace(',', ' ').split("\\s+");
+    for (String tag : customTags) {
+      tag = tag.trim();
+      if (!tag.isEmpty()) {
+        tags.add(tag);
+      }
+    }
+    if (!tags.isEmpty()) {
+      obj.add(JsonFixture.KEY_TAGS, tags);
+    }
+
+    final String type = getLXFType();
+    obj.addProperty(JsonFixture.KEY_TYPE, type);
+    if (type.equals(JsonFixture.TYPE_CLASS)) {
+      obj.addProperty(JsonFixture.KEY_CLASS, getClass().getName());
+    }
+
+    obj.addProperty(JsonFixture.KEY_X, this.x.getValue());
+    obj.addProperty(JsonFixture.KEY_Y, this.y.getValue());
+    obj.addProperty(JsonFixture.KEY_Z, this.z.getValue());
+    obj.addProperty(JsonFixture.KEY_YAW, this.yaw.getValue());
+    obj.addProperty(JsonFixture.KEY_PITCH, this.pitch.getValue());
+    obj.addProperty(JsonFixture.KEY_ROLL, this.roll.getValue());
+    if (this.hasCustomPointSize.isOn()) {
+      obj.addProperty(JsonFixture.KEY_POINT_SIZE, this.pointSize.getValue());
+    }
+
+    addLXFFields(obj);
+    addLXFOutputs(obj);
+
+    return obj;
   }
 
   @Override

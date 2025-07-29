@@ -21,6 +21,8 @@ package heronarts.lx.structure;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.model.LXModel;
@@ -96,6 +98,21 @@ public class SpiralFixture extends LXBasicFixture {
     metaData.put("numTurns", String.valueOf(this.numTurns.getValue()));
     metaData.put("radius", String.valueOf(this.radius.getValue()));
     metaData.put("length", String.valueOf(this.length.getValue()));
+  }
+
+  @Override
+  protected String getLXFType() {
+    return JsonFixture.TYPE_CLASS;
+  }
+
+  @Override
+  protected void addLXFFields(JsonObject obj) {
+    final JsonObject parameters = new JsonObject();
+    parameters.addProperty("numPoints", this.numPoints.getValue());
+    parameters.addProperty("numTurns", this.numTurns.getValue());
+    parameters.addProperty("radius", this.radius.getValue());
+    parameters.addProperty("length", this.length.getValue());
+    obj.add(JsonFixture.KEY_PARAMETERS, parameters);
   }
 
 }

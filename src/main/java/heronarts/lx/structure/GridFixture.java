@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.model.LXModel;
@@ -414,6 +416,25 @@ public class GridFixture extends LXBasicFixture {
     metaData.put("columnSpacing", String.valueOf(this.columnSpacing.getValue()));
     metaData.put("positionMode", this.positionMode.getEnum().toString());
 
+  }
+
+  @Override
+  protected String getLXFType() {
+    return JsonFixture.TYPE_CLASS;
+  }
+
+  @Override
+  protected void addLXFFields(JsonObject obj) {
+    final JsonObject parameters = new JsonObject();
+    parameters.addProperty("numRows", this.numRows.getValue());
+    parameters.addProperty("numColumns", this.numColumns.getValue());
+    parameters.addProperty("rowSpacing", this.rowSpacing.getValue());
+    parameters.addProperty("columnSpacing", this.columnSpacing.getValue());
+    parameters.addProperty("positionMode", this.positionMode.getValuei());
+    parameters.addProperty("wiring", this.wiring.getValuei());
+    parameters.addProperty("rowTags", this.rowTags.getString());
+    parameters.addProperty("columnTags", this.columnTags.getString());
+    obj.add(JsonFixture.KEY_PARAMETERS, parameters);
   }
 
 }

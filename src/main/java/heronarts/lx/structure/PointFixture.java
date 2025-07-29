@@ -55,4 +55,9 @@ public class PointFixture extends LXBasicFixture {
   public String[] getDefaultTags() {
     return new String[] { LXModel.Tag.POINT };
   }
+
+  @Override
+  protected String getLXFType() {
+    return JsonFixture.TYPE_POINT;
+  }
 }

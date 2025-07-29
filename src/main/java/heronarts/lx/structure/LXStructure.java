@@ -31,6 +31,7 @@ import java.util.Objects;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
@@ -948,6 +949,37 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       LX.error(iox, "Exception writing model file to " + file);
     }
 
+    return this;
+  }
+
+  public LXStructure exportSelectedFixturesToLXF(File file) {
+    final List<LXFixture> selectedFixtures = getSelectedFixtures();
+    if (selectedFixtures.isEmpty()) {
+      this.lx.pushError("No fixtures are selected");
+      return this;
+    }
+
+    try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
+      writer.setIndent("  ");
+
+      final JsonObject obj = new JsonObject();
+      final JsonArray components = new JsonArray();
+
+      String label = file.getName();
+      if (label.endsWith(".lxf")) {
+        label = label.substring(0, label.length() - 4);
+      }
+      obj.addProperty(JsonFixture.KEY_LABEL, label);
+      obj.add(JsonFixture.KEY_COMPONENTS, components);
+
+      for (LXFixture fixture : selectedFixtures) {
+        components.add(fixture.toLXFComponent());
+      }
+      new GsonBuilder().create().toJson(obj, writer);
+    } catch (Exception x) {
+      LX.error(x, "Exception exporting fixture file: " + file);
+      this.lx.pushError(x, "Could not export fixture file: " + file);
+    }
     return this;
   }
 

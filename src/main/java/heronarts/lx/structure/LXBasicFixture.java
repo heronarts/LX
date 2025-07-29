@@ -19,6 +19,7 @@
 package heronarts.lx.structure;
 
 import java.net.InetAddress;
+
 import heronarts.lx.LX;
 
 /**

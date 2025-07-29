@@ -21,6 +21,8 @@ package heronarts.lx.structure;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.model.LXModel;
@@ -123,5 +125,17 @@ public class ArcFixture extends LXBasicFixture {
     metaData.put("positionMode", this.positionMode.getEnum().toString());
   }
 
+  @Override
+  protected String getLXFType() {
+    return JsonFixture.TYPE_ARC;
+  }
+
+  @Override
+  protected void addLXFFields(JsonObject obj) {
+    obj.addProperty("numPoints", this.numPoints.getValuei());
+    obj.addProperty("radius", this.radius.getValue());
+    obj.addProperty("degrees", this.degrees.getValue());
+    obj.addProperty("mode", this.positionMode.getEnum().toString().toLowerCase());
+  }
 }
 

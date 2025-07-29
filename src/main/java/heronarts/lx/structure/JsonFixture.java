@@ -75,21 +75,21 @@ public class JsonFixture extends LXFixture {
   public static final char PATH_SEPARATOR_CHAR = '/';
 
   // Label
-  private static final String KEY_LABEL = "label";
+  protected static final String KEY_LABEL = "label";
 
   // Model tags
   private static final String KEY_TAG = "tag";
-  private static final String KEY_TAGS = "tags";
+  protected static final String KEY_TAGS = "tags";
   private static final String KEY_MODEL_KEY = "modelKey";   // deprecated, backwards-compatible
   private static final String KEY_MODEL_KEYS = "modelKeys"; // deprecated, backwards-compatible
 
   // Geometry
-  private static final String KEY_X = "x";
-  private static final String KEY_Y = "y";
-  private static final String KEY_Z = "z";
-  private static final String KEY_YAW = "yaw";
-  private static final String KEY_PITCH = "pitch";
-  private static final String KEY_ROLL = "roll";
+  protected static final String KEY_X = "x";
+  protected static final String KEY_Y = "y";
+  protected static final String KEY_Z = "z";
+  protected static final String KEY_YAW = "yaw";
+  protected static final String KEY_PITCH = "pitch";
+  protected static final String KEY_ROLL = "roll";
   private static final String KEY_ROTATE_X = "rotateX";
   private static final String KEY_ROTATE_Y = "rotateY";
   private static final String KEY_ROTATE_Z = "rotateZ";
@@ -97,7 +97,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_SCALE_Y = "scaleY";
   private static final String KEY_SCALE_Z = "scaleZ";
   private static final String KEY_SCALE = "scale";
-  private static final String KEY_POINT_SIZE = "pointSize";
+  protected static final String KEY_POINT_SIZE = "pointSize";
   private static final String KEY_DIRECTION = "direction";
   private static final String KEY_NORMAL = "normal";
   private static final String KEY_END = "end";
@@ -106,7 +106,7 @@ public class JsonFixture extends LXFixture {
 
   // Points
   private static final String KEY_POINTS = "points";
-  private static final String KEY_COORDINATES = "coords";
+  protected static final String KEY_COORDINATES = "coords";
 
   // Strips
   private static final String KEY_STRIPS = "strips";
@@ -122,22 +122,22 @@ public class JsonFixture extends LXFixture {
   private static final String VALUE_ARC_MODE_CENTER = "center";
 
   // Children
-  private static final String KEY_COMPONENTS = "components";
-  private static final String KEY_CHILDREN = "children";
-  private static final String KEY_TYPE = "type";
+  protected static final String KEY_COMPONENTS = "components";
+  protected static final String KEY_CHILDREN = "children";
+  protected static final String KEY_TYPE = "type";
   private static final String KEY_ID = "id";
   private static final String KEY_INSTANCES = "instances";
   private static final String KEY_INSTANCE = "instance";
   private static final int MAX_INSTANCES = 4096;
 
-  private static final String TYPE_POINT = "point";
-  private static final String TYPE_POINTS = "points";
-  private static final String TYPE_STRIP = "strip";
-  private static final String TYPE_ARC = "arc";
-  private static final String TYPE_CLASS = "class";
+  protected static final String TYPE_POINT = "point";
+  protected static final String TYPE_POINTS = "points";
+  protected static final String TYPE_STRIP = "strip";
+  protected static final String TYPE_ARC = "arc";
+  protected static final String TYPE_CLASS = "class";
 
   // Parameters
-  private static final String KEY_PARAMETERS = "parameters";
+  protected static final String KEY_PARAMETERS = "parameters";
   private static final String KEY_PARAMETER_LABEL = "label";
   private static final String KEY_PARAMETER_DESCRIPTION = "description";
   private static final String KEY_PARAMETER_TYPE = "type";
@@ -147,24 +147,24 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_PARAMETER_OPTIONS = "options";
 
   // Outputs
-  private static final String KEY_OUTPUT = "output";
-  private static final String KEY_OUTPUTS = "outputs";
-  private static final String KEY_ENABLED = "enabled";
+  protected static final String KEY_OUTPUT = "output";
+  protected static final String KEY_OUTPUTS = "outputs";
+  protected static final String KEY_ENABLED = "enabled";
   private static final String KEY_FPS = "fps";
-  private static final String KEY_PROTOCOL = "protocol";
-  private static final String KEY_TRANSPORT = "transport";
-  private static final String KEY_HOST = "host";
-  private static final String KEY_PORT = "port";
-  private static final String KEY_BYTE_ORDER = "byteOrder";
-  private static final String KEY_UNIVERSE = "universe";
-  private static final String KEY_DDP_DATA_OFFSET = "dataOffset";
-  private static final String KEY_KINET_PORT = "kinetPort";
-  private static final String KEY_KINET_VERSION = "kinetVersion";
-  private static final String KEY_OPC_CHANNEL = "channel";
-  private static final String KEY_CHANNEL = "channel";
-  private static final String KEY_PRIORITY = "priority";
-  private static final String KEY_SEQUENCE_ENABLED = "sequenceEnabled";
-  private static final String KEY_OFFSET = "offset";
+  protected static final String KEY_PROTOCOL = "protocol";
+  protected static final String KEY_TRANSPORT = "transport";
+  protected static final String KEY_HOST = "host";
+  protected static final String KEY_PORT = "port";
+  protected static final String KEY_BYTE_ORDER = "byteOrder";
+  protected static final String KEY_UNIVERSE = "universe";
+  protected static final String KEY_DDP_DATA_OFFSET = "dataOffset";
+  protected static final String KEY_KINET_PORT = "kinetPort";
+  protected static final String KEY_KINET_VERSION = "kinetVersion";
+  protected static final String KEY_OPC_CHANNEL = "channel";
+  protected static final String KEY_CHANNEL = "channel";
+  protected static final String KEY_PRIORITY = "priority";
+  protected static final String KEY_SEQUENCE_ENABLED = "sequenceEnabled";
+  protected static final String KEY_OFFSET = "offset";
   private static final String KEY_START = "start";
   private static final String KEY_COMPONENT_INDEX = "componentIndex";
   private static final String KEY_COMPONENT_ID = "componentId";
@@ -175,7 +175,7 @@ public class JsonFixture extends LXFixture {
   private static final String KEY_PAD_POST = "padPost";
   private static final String KEY_REPEAT = "repeat";
   private static final String KEY_DUPLICATE = "duplicate";
-  private static final String KEY_REVERSE = "reverse";
+  protected static final String KEY_REVERSE = "reverse";
   private static final String KEY_HEADER_BYTES = "headerBytes";
   private static final String KEY_FOOTER_BYTES = "footerBytes";
   private static final String KEY_SEGMENTS = "segments";
@@ -2892,6 +2892,19 @@ public class JsonFixture extends LXFixture {
     }
     obj.add(KEY_JSON_PARAMETERS, jsonParameters);
     super.save(lx, obj);
+  }
+
+  @Override
+  protected String getLXFType() {
+    return this.fixtureType.getString();
+  }
+
+  @Override
+  protected void addLXFFields(JsonObject obj) {
+    obj.addProperty(JsonFixture.KEY_SCALE, this.scale.getValue());
+    for (ParameterDefinition parameter : this.definedParameters.values()) {
+      obj.addProperty(parameter.name, parameter.getValueAsString());
+    }
   }
 
 }

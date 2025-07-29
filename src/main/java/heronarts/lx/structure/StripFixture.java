@@ -21,6 +21,8 @@ package heronarts.lx.structure;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.model.LXModel;
@@ -76,5 +78,16 @@ public class StripFixture extends LXBasicFixture {
   public void addModelMetaData(Map<String, String> metaData) {
     metaData.put("numPoints", String.valueOf(this.numPoints.getValuei()));
     metaData.put("spacing", String.valueOf(this.spacing.getValue()));
+  }
+
+  @Override
+  protected String getLXFType() {
+    return JsonFixture.TYPE_STRIP;
+  }
+
+  @Override
+  protected void addLXFFields(JsonObject obj) {
+    obj.addProperty("numPoints", this.numPoints.getValuei());
+    obj.addProperty("spacing", this.spacing.getValue());
   }
 }

@@ -21,6 +21,9 @@ package heronarts.lx.structure;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
@@ -58,5 +61,23 @@ public class PointListFixture extends LXBasicFixture {
   @Override
   public String[] getDefaultTags() {
     return new String[] { LXModel.Tag.POINTS };
+  }
+
+  @Override
+  protected String getLXFType() {
+    return JsonFixture.TYPE_POINTS;
+  }
+
+  @Override
+  protected void addLXFFields(JsonObject obj) {
+    final JsonArray coords = new JsonArray();
+    for (LXVector v : this.coordinates) {
+      JsonObject coord = new JsonObject();
+      coord.addProperty(JsonFixture.KEY_X, v.x);
+      coord.addProperty(JsonFixture.KEY_Y, v.y);
+      coord.addProperty(JsonFixture.KEY_Z, v.z);
+      coords.add(coord);
+    }
+    obj.add(JsonFixture.KEY_COORDINATES, coords);
   }
 }

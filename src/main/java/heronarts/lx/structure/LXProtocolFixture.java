@@ -21,6 +21,8 @@ package heronarts.lx.structure;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
@@ -210,6 +212,52 @@ public abstract class LXProtocolFixture extends LXFixture {
       return this.sacnPriority.getValuei();
     default:
       return 0;
+    }
+  }
+
+  @Override
+  protected void addLXFOutputs(JsonObject obj) {
+    JsonObject output = new JsonObject();
+    output.addProperty(JsonFixture.KEY_ENABLED, this.enabled.isOn());
+    output.addProperty(JsonFixture.KEY_HOST, this.host.getString());
+    output.addProperty(JsonFixture.KEY_BYTE_ORDER, this.byteOrder.getEnum().name().toLowerCase());
+
+    switch (this.protocol.getEnum()) {
+    case ARTNET -> {
+      output.addProperty(JsonFixture.KEY_PROTOCOL, "artnet");
+      output.addProperty(JsonFixture.KEY_UNIVERSE, this.artNetUniverse.getValuei());
+      output.addProperty(JsonFixture.KEY_CHANNEL, this.dmxChannel.getValuei());
+      output.addProperty(JsonFixture.KEY_SEQUENCE_ENABLED, this.artNetSequenceEnabled.isOn());
+    }
+    case DDP -> {
+      output.addProperty(JsonFixture.KEY_PROTOCOL, "ddp");
+      output.addProperty(JsonFixture.KEY_OFFSET, this.ddpDataOffset.getValuei());
+
+    }
+    case KINET -> {
+      output.addProperty(JsonFixture.KEY_PROTOCOL, "kinet");
+      output.addProperty(JsonFixture.KEY_KINET_PORT, this.kinetPort.getValuei());
+      output.addProperty(JsonFixture.KEY_CHANNEL, this.dmxChannel.getValuei());
+      output.addProperty(JsonFixture.KEY_KINET_VERSION, this.kinetVersion.getEnum().name());
+    }
+    case OPC -> {
+      output.addProperty(JsonFixture.KEY_PROTOCOL, "opc");
+      output.addProperty(JsonFixture.KEY_CHANNEL, this.opcChannel.getValuei());
+      output.addProperty(JsonFixture.KEY_OFFSET, this.opcOffset.getValuei());
+      output.addProperty(JsonFixture.KEY_TRANSPORT, this.transport.getEnum().name().toLowerCase());
+      output.addProperty(JsonFixture.KEY_PORT, this.port.getValuei());
+    }
+    case SACN -> {
+      output.addProperty(JsonFixture.KEY_PROTOCOL, "sacn");
+      output.addProperty(JsonFixture.KEY_UNIVERSE, this.artNetUniverse.getValuei());
+      output.addProperty(JsonFixture.KEY_CHANNEL, this.dmxChannel.getValuei());
+    }
+    default -> output = null;
+    case NONE -> output = null;
+    }
+    if (output != null) {
+      output.addProperty(JsonFixture.KEY_REVERSE, this.reverse.isOn());
+      obj.add(JsonFixture.KEY_OUTPUT, output);
     }
   }
 }
