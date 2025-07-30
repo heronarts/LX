@@ -59,6 +59,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BooleanParameter("Cue applies to Live Output", false)
     .setDescription("Whether Cue selection applies to live output, not just the preview window");
 
+  public final BooleanParameter suppressOutput =
+    new BooleanParameter("Suppress Live Output", false)
+    .setDescription("Suppresses network output for local development");
+
   public final DiscreteParameter uiZoom =
     new DiscreteParameter("UI Scale", 100, 50, 201)
     .setDescription("Percentage by which the UI should be scaled")
@@ -113,6 +117,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.focusChannelOnCue.addListener(this);
     this.focusActivePattern.addListener(this);
     this.sendCueToOutput.addListener(this);
+    this.suppressOutput.addListener(this);
     this.uiZoom.addListener(this);
     this.uiTheme.addListener(this);
     this.showHelpMessages.addListener(this);
@@ -210,6 +215,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_FOCUS_CHANNEL_ON_CUE = "focusChannelOnCue";
   private static final String KEY_FOCUS_ACTIVE_PATTERN = "focusActivePattern";
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
+  private static final String KEY_SUPPRESS_OUTPUT = "suppressOutput";
   private static final String KEY_SHOW_HELP_MESSAGES = "showHelpMessages";
   private static final String KEY_SCHEDULER_ENABLED = "schedulerEnabled";
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
@@ -236,6 +242,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_FOCUS_CHANNEL_ON_CUE, this.focusChannelOnCue.isOn());
     object.addProperty(KEY_FOCUS_ACTIVE_PATTERN, this.focusActivePattern.isOn());
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
+    object.addProperty(KEY_SUPPRESS_OUTPUT, this.suppressOutput.isOn());
     object.addProperty(KEY_SHOW_HELP_MESSAGES, this.showHelpMessages.isOn());
     object.addProperty(KEY_SCHEDULER_ENABLED, this.schedulerEnabled.isOn());
     object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
@@ -250,6 +257,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.focusChannelOnCue, object, KEY_FOCUS_CHANNEL_ON_CUE);
     LXSerializable.Utils.loadBoolean(this.focusActivePattern, object, KEY_FOCUS_ACTIVE_PATTERN);
     LXSerializable.Utils.loadBoolean(this.sendCueToOutput, object, KEY_SEND_CUE_TO_OUTPUT);
+    LXSerializable.Utils.loadBoolean(this.suppressOutput, object, KEY_SUPPRESS_OUTPUT);
     LXSerializable.Utils.loadBoolean(this.showHelpMessages, object, KEY_SHOW_HELP_MESSAGES);
     LXSerializable.Utils.loadBoolean(this.schedulerEnabled, object, KEY_SCHEDULER_ENABLED);
     LXSerializable.Utils.loadBoolean(this.showCpuLoad, object, KEY_SHOW_CPU_LOAD);

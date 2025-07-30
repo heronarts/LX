@@ -1220,7 +1220,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // We are multi-threading, lock the double buffer and flip it
     this.buffer.flip();
 
-    if (eulaAccepted && !this.output.restricted.isOn()) {
+    if (eulaAccepted && !this.lx.preferences.suppressOutput.isOn() && !this.output.restricted.isOn()) {
       if (this.isNetworkMultithreaded.isOn()) {
         // Notify the network thread of new work to do!
         synchronized (this.networkThread) {
