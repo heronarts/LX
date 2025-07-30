@@ -840,6 +840,8 @@ public class LXRegistry implements LXSerializable {
           copyPackageMedia(packageDir, LX.Media.VIEWS, jarFile, entry);
         } else if (fileName.startsWith("presets/") && fileName.endsWith(".lxd")) {
           copyPackageMedia(packageDir, LX.Media.PRESETS, jarFile, entry);
+        } else if (fileName.startsWith("data/") && !entry.isDirectory()) {
+          copyPackageMedia(packageDir, LX.Media.DATA, jarFile, entry);
         }
       }
     } catch (Throwable throwable) {
