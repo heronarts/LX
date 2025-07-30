@@ -84,6 +84,13 @@ public class LXRegistry implements LXSerializable {
     default public void contentChanged(LX lx) {}
 
     /**
+     * Invoked when available LXF fixtures have changed
+     *
+     * @param lx LX instance
+     */
+    default public void fixturesChanged(LX lx) {}
+
+    /**
      * Invoked when the available channel blend implementations are changed
      *
      * @param lx LX instance
@@ -729,9 +736,7 @@ public class LXRegistry implements LXSerializable {
     loadClasspathPlugins();
 
     // Reload the available JSON fixture list
-    this.mutableJsonFixtures.clear();
-    this.mutableJsonFixtureErrors.clear();
-    addJsonFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
+    reloadJsonFixtures();
 
     // We are done reloading
     this.contentReloading = false;
@@ -742,6 +747,18 @@ public class LXRegistry implements LXSerializable {
     }
 
     this.lx.pushStatusMessage("Package content reloaded.");
+  }
+
+  public void reloadJsonFixtures() {
+    final boolean wasReloading = this.contentReloading;
+    this.contentReloading = true;
+    this.mutableJsonFixtures.clear();
+    this.mutableJsonFixtureErrors.clear();
+    addJsonFixtures(lx.getMediaFolder(LX.Media.FIXTURES, false));
+    this.contentReloading = wasReloading;
+    for (Listener listener : this.listeners) {
+      listener.fixturesChanged(this.lx);
+    }
   }
 
   void addPackage(LXClassLoader.Package pack) {

@@ -959,6 +959,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       return this;
     }
 
+    boolean reload = false;
+
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
 
@@ -980,10 +982,18 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       obj.add(JsonFixture.KEY_COMPONENTS, components);
 
       new GsonBuilder().create().toJson(obj, writer);
+      reload = true;
+
     } catch (Exception x) {
       LX.error(x, "Exception exporting fixture file: " + file);
       this.lx.pushError(x, "Could not export fixture file: " + file);
     }
+
+    // Update the available fixture list
+    if (reload) {
+      this.lx.registry.reloadJsonFixtures();
+    }
+
     return this;
   }
 
