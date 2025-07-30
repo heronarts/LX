@@ -2900,7 +2900,7 @@ public class JsonFixture extends LXFixture {
   }
 
   @Override
-  protected void addLXFFields(JsonObject obj) {
+  protected void addLXFFields(JsonObject obj, JsonObject parameters) {
     obj.addProperty(JsonFixture.KEY_SCALE, this.scale.getValue());
     for (ParameterDefinition parameter : this.definedParameters.values()) {
       obj.addProperty(parameter.name, parameter.getValueAsString());

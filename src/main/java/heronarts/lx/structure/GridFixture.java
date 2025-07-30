@@ -419,17 +419,18 @@ public class GridFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void addLXFFields(JsonObject obj) {
-    final JsonObject parameters = new JsonObject();
-    parameters.addProperty("numRows", this.numRows.getValue());
-    parameters.addProperty("numColumns", this.numColumns.getValue());
-    parameters.addProperty("rowSpacing", this.rowSpacing.getValue());
-    parameters.addProperty("columnSpacing", this.columnSpacing.getValue());
-    parameters.addProperty("positionMode", this.positionMode.getValuei());
-    parameters.addProperty("wiring", this.wiring.getValuei());
-    parameters.addProperty("rowTags", this.rowTags.getString());
-    parameters.addProperty("columnTags", this.columnTags.getString());
-    obj.add(JsonFixture.KEY_PARAMETERS, parameters);
+  protected void addLXFFields(JsonObject obj, JsonObject parameters) {
+    final JsonObject p = new JsonObject();
+    p.addProperty("numRows", this.numRows.getValue());
+    p.addProperty("numColumns", this.numColumns.getValue());
+    p.addProperty("rowSpacing", this.rowSpacing.getValue());
+    p.addProperty("columnSpacing", this.columnSpacing.getValue());
+    p.addProperty("positionMode", this.positionMode.getValuei());
+    p.addProperty("wiring", this.wiring.getValuei());
+    p.addProperty("rowTags", this.rowTags.getString());
+    p.addProperty("columnTags", this.columnTags.getString());
+    addLXFOutputParameters(p, parameters);
+    obj.add(JsonFixture.KEY_PARAMETERS, p);
   }
 
 }

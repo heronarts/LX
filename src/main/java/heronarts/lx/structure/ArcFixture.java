@@ -131,7 +131,7 @@ public class ArcFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void addLXFFields(JsonObject obj) {
+  protected void addLXFFields(JsonObject obj, JsonObject parameters) {
     obj.addProperty("numPoints", this.numPoints.getValuei());
     obj.addProperty("radius", this.radius.getValue());
     obj.addProperty("degrees", this.degrees.getValue());

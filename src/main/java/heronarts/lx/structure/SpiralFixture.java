@@ -101,13 +101,14 @@ public class SpiralFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void addLXFFields(JsonObject obj) {
-    final JsonObject parameters = new JsonObject();
-    parameters.addProperty("numPoints", this.numPoints.getValue());
-    parameters.addProperty("numTurns", this.numTurns.getValue());
-    parameters.addProperty("radius", this.radius.getValue());
-    parameters.addProperty("length", this.length.getValue());
-    obj.add(JsonFixture.KEY_PARAMETERS, parameters);
+  protected void addLXFFields(JsonObject obj, JsonObject parameters) {
+    final JsonObject p = new JsonObject();
+    p.addProperty("numPoints", this.numPoints.getValue());
+    p.addProperty("numTurns", this.numTurns.getValue());
+    p.addProperty("radius", this.radius.getValue());
+    p.addProperty("length", this.length.getValue());
+    addLXFOutputParameters(p, parameters);
+    obj.add(JsonFixture.KEY_PARAMETERS, p);
   }
 
 }

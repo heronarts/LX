@@ -69,7 +69,7 @@ public class PointListFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void addLXFFields(JsonObject obj) {
+  protected void addLXFFields(JsonObject obj, JsonObject parameters) {
     final JsonArray coords = new JsonArray();
     for (LXVector v : this.coordinates) {
       JsonObject coord = new JsonObject();

@@ -86,7 +86,7 @@ public class StripFixture extends LXBasicFixture {
   }
 
   @Override
-  protected void addLXFFields(JsonObject obj) {
+  protected void addLXFFields(JsonObject obj, JsonObject parameters) {
     obj.addProperty("numPoints", this.numPoints.getValuei());
     obj.addProperty("spacing", this.spacing.getValue());
   }

@@ -24,6 +24,7 @@ import java.net.UnknownHostException;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.output.ArtNetDatagram;
 import heronarts.lx.output.DDPDatagram;
 import heronarts.lx.output.KinetDatagram;
@@ -260,7 +261,6 @@ public abstract class LXProtocolFixture extends LXFixture {
     case DDP -> {
       output.addProperty(JsonFixture.KEY_PROTOCOL, "ddp");
       output.addProperty(JsonFixture.KEY_OFFSET, this.ddpDataOffset.getValuei());
-
     }
     case KINET -> {
       output.addProperty(JsonFixture.KEY_PROTOCOL, "kinet");
@@ -279,11 +279,75 @@ public abstract class LXProtocolFixture extends LXFixture {
       output.addProperty(JsonFixture.KEY_PROTOCOL, "sacn");
       output.addProperty(JsonFixture.KEY_UNIVERSE, this.artNetUniverse.getValuei());
       output.addProperty(JsonFixture.KEY_CHANNEL, this.dmxChannel.getValuei());
+      output.addProperty(JsonFixture.KEY_PRIORITY, this.sacnPriority.getValuei());
     }
     default -> {
       throw new IllegalStateException("Unsupported output protocol: " + protocol);
     }
     }
     obj.add(JsonFixture.KEY_OUTPUT, output);
+  }
+
+
+  protected void addLXFOutputParameters(JsonObject obj, JsonObject parameters) {
+    final Protocol protocol = this.protocol.getEnum();
+    if (protocol == Protocol.NONE) {
+      return;
+    }
+
+    final String id = String.format("%02d", (parameters.size()/2) + 1);
+    final String enabled = "output" + id;
+    final String host = "host" + id;
+
+    final String label = getLabel();
+
+    final JsonObject enabledParam = new JsonObject();
+    enabledParam.addProperty("label", label + " On");
+    enabledParam.addProperty("type", "boolean");
+    enabledParam.addProperty("default", this.enabled.isOn());
+    enabledParam.addProperty("description", "Whether output to " + label + " is enabled");
+    parameters.add(enabled, enabledParam);
+
+    final JsonObject hostParam = new JsonObject();
+    hostParam.addProperty("label", label + " Host");
+    hostParam.addProperty("type", "string");
+    hostParam.addProperty("default", this.host.getString());
+    hostParam.addProperty("description", "Output host for " + label);
+    parameters.add(host, hostParam);
+
+    obj.addProperty("enabled", "$" + enabled);
+    obj.addProperty("host", "$" + host);
+    LXSerializable.Utils.saveParameter(this.byteOrder, obj);
+    if (this.reverse.isOn()) {
+      LXSerializable.Utils.saveParameter(this.reverse, obj);
+    }
+
+    switch (protocol) {
+      case ARTNET -> {
+        LXSerializable.Utils.saveParameter(this.artNetUniverse, obj);
+        LXSerializable.Utils.saveParameter(this.dmxChannel, obj);
+        LXSerializable.Utils.saveParameter(this.artNetSequenceEnabled, obj);
+      }
+      case DDP -> {
+        LXSerializable.Utils.saveParameter(this.ddpDataOffset, obj);
+      }
+      case KINET -> {
+        LXSerializable.Utils.saveParameter(this.kinetPort, obj);
+        LXSerializable.Utils.saveParameter(this.dmxChannel, obj);
+        LXSerializable.Utils.saveParameter(this.kinetVersion, obj);
+      }
+      case OPC -> {
+        LXSerializable.Utils.saveParameter(this.opcChannel, obj);
+        LXSerializable.Utils.saveParameter(this.opcOffset, obj);
+        LXSerializable.Utils.saveParameter(this.transport, obj);
+        LXSerializable.Utils.saveParameter(this.port, obj);
+      }
+      case SACN -> {
+        LXSerializable.Utils.saveParameter(this.artNetUniverse, obj);
+        LXSerializable.Utils.saveParameter(this.dmxChannel, obj);
+        LXSerializable.Utils.saveParameter(this.sacnPriority, obj);
+      }
+      case NONE -> {}
+    }
   }
 }
