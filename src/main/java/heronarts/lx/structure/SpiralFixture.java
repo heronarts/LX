@@ -101,11 +101,6 @@ public class SpiralFixture extends LXBasicFixture {
   }
 
   @Override
-  protected String getLXFType() {
-    return JsonFixture.TYPE_CLASS;
-  }
-
-  @Override
   protected void addLXFFields(JsonObject obj) {
     final JsonObject parameters = new JsonObject();
     parameters.addProperty("numPoints", this.numPoints.getValue());

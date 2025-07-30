@@ -1314,8 +1314,12 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     throw new IllegalArgumentException("Point index " + i + " exceeds fixture bounds: " + this + " (" + totalSize() + ")");
   }
 
-  protected abstract String getLXFType();
+  protected String getLXFType() {
+    return JsonFixture.TYPE_CLASS;
+  }
+
   protected void addLXFFields(JsonObject obj) {}
+
   protected void addLXFOutputs(JsonObject obj, JsonObject parameters) {}
 
   protected final JsonObject toLXFComponent(JsonObject parameters) {
