@@ -962,19 +962,23 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     try (JsonWriter writer = new JsonWriter(new FileWriter(file))) {
       writer.setIndent("  ");
 
+      final JsonObject parameters = new JsonObject();
       final JsonObject obj = new JsonObject();
       final JsonArray components = new JsonArray();
 
       String label = file.getName();
-      if (label.endsWith(".lxf")) {
+      if (label.toLowerCase().endsWith(".lxf")) {
         label = label.substring(0, label.length() - 4);
       }
       obj.addProperty(JsonFixture.KEY_LABEL, label);
+      for (LXFixture fixture : selectedFixtures) {
+        components.add(fixture.toLXFComponent(parameters));
+      }
+      if (!parameters.isEmpty()) {
+        obj.add(JsonFixture.KEY_PARAMETERS, parameters);
+      }
       obj.add(JsonFixture.KEY_COMPONENTS, components);
 
-      for (LXFixture fixture : selectedFixtures) {
-        components.add(fixture.toLXFComponent());
-      }
       new GsonBuilder().create().toJson(obj, writer);
     } catch (Exception x) {
       LX.error(x, "Exception exporting fixture file: " + file);

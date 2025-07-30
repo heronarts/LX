@@ -1316,9 +1316,9 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   protected abstract String getLXFType();
   protected void addLXFFields(JsonObject obj) {}
-  protected void addLXFOutputs(JsonObject obj) {}
+  protected void addLXFOutputs(JsonObject obj, JsonObject parameters) {}
 
-  protected final JsonObject toLXFComponent() {
+  protected final JsonObject toLXFComponent(JsonObject parameters) {
     final JsonObject obj = new JsonObject();
     if (this.deactivate.isOn()) {
       obj.addProperty(JsonFixture.KEY_ENABLED, false);
@@ -1354,7 +1354,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
     }
 
     addLXFFields(obj);
-    addLXFOutputs(obj);
+    addLXFOutputs(obj, parameters);
 
     return obj;
   }

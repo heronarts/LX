@@ -216,13 +216,41 @@ public abstract class LXProtocolFixture extends LXFixture {
   }
 
   @Override
-  protected void addLXFOutputs(JsonObject obj) {
-    JsonObject output = new JsonObject();
-    output.addProperty(JsonFixture.KEY_ENABLED, this.enabled.isOn());
-    output.addProperty(JsonFixture.KEY_HOST, this.host.getString());
-    output.addProperty(JsonFixture.KEY_BYTE_ORDER, this.byteOrder.getEnum().name().toLowerCase());
+  protected void addLXFOutputs(JsonObject obj, JsonObject parameters) {
+    final Protocol protocol = this.protocol.getEnum();
+    if (protocol == Protocol.NONE) {
+      return;
+    }
 
-    switch (this.protocol.getEnum()) {
+    final String id = String.format("%02d", (parameters.size()/2) + 1);
+    final String enabled = "output" + id;
+    final String host = "host" + id;
+
+    final String label = getLabel();
+
+    final JsonObject enabledParam = new JsonObject();
+    enabledParam.addProperty("label", label + " On");
+    enabledParam.addProperty("type", "boolean");
+    enabledParam.addProperty("default", this.enabled.isOn());
+    enabledParam.addProperty("description", "Whether output to " + label + " is enabled");
+    parameters.add(enabled, enabledParam);
+
+    final JsonObject hostParam = new JsonObject();
+    hostParam.addProperty("label", label + " Host");
+    hostParam.addProperty("type", "string");
+    hostParam.addProperty("default", this.host.getString());
+    hostParam.addProperty("description", "Output host for " + label);
+    parameters.add(host, hostParam);
+
+    final JsonObject output = new JsonObject();
+    output.addProperty(JsonFixture.KEY_ENABLED, "$" + enabled);
+    output.addProperty(JsonFixture.KEY_HOST, "$" + host);
+    output.addProperty(JsonFixture.KEY_BYTE_ORDER, this.byteOrder.getEnum().name().toLowerCase());
+    if (this.reverse.isOn()) {
+      output.addProperty(JsonFixture.KEY_REVERSE, true);
+    }
+
+    switch (protocol) {
     case ARTNET -> {
       output.addProperty(JsonFixture.KEY_PROTOCOL, "artnet");
       output.addProperty(JsonFixture.KEY_UNIVERSE, this.artNetUniverse.getValuei());
@@ -252,12 +280,10 @@ public abstract class LXProtocolFixture extends LXFixture {
       output.addProperty(JsonFixture.KEY_UNIVERSE, this.artNetUniverse.getValuei());
       output.addProperty(JsonFixture.KEY_CHANNEL, this.dmxChannel.getValuei());
     }
-    default -> output = null;
-    case NONE -> output = null;
+    default -> {
+      throw new IllegalStateException("Unsupported output protocol: " + protocol);
     }
-    if (output != null) {
-      output.addProperty(JsonFixture.KEY_REVERSE, this.reverse.isOn());
-      obj.add(JsonFixture.KEY_OUTPUT, output);
     }
+    obj.add(JsonFixture.KEY_OUTPUT, output);
   }
 }
