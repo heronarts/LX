@@ -35,6 +35,7 @@ import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.IEnumParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.parameter.TriggerParameter;
 
 /**
  * Interface for any object that may be stored and loaded from a serialized file using
@@ -107,6 +108,8 @@ public interface LXSerializable {
     public static void saveParameter(LXParameter parameter, JsonObject obj, String path) {
       if (parameter instanceof StringParameter) {
         obj.addProperty(path, ((StringParameter) parameter).getString());
+      } else if (parameter instanceof TriggerParameter) {
+        obj.addProperty(path, false);
       } else if (parameter instanceof BooleanParameter) {
         obj.addProperty(path, ((BooleanParameter) parameter).isOn());
       } else if (parameter instanceof IEnumParameter<?> enumParameter) {
