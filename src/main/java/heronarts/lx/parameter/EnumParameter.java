@@ -31,10 +31,9 @@ public class EnumParameter<T extends Enum<T>> extends ObjectParameter<T> impleme
 
   public final Class<T> enumClass;
 
-  @SuppressWarnings("unchecked")
   public EnumParameter(String label, T t) {
     super(label, valuesFor(t), t);
-    this.enumClass = (Class<T>) t.getClass();
+    this.enumClass = t.getDeclaringClass();
   }
 
   public EnumParameter<T> setEnum(String enumName) {
