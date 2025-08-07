@@ -205,7 +205,11 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     if (view != null) {
       return view.getModelView();
     }
-    return switch (getParent()) {
+    LXComponent parent = getParent();
+    if (parent == null) {
+      return getModel();
+    }
+    return switch (parent) {
       case LXMasterBus master -> lx.model;
       case LXAbstractChannel bus -> bus.getModelView();
       case LXPattern pattern -> pattern.getModelView();
