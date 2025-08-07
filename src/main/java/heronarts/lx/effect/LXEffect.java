@@ -171,15 +171,21 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
       LX.error(new IllegalStateException("LXEffect.enabled was toggled while LXEffect.locked was true, UX should not make this possible."));
     }
     if (this.enabled.isOn()) {
-      if (this.hasDamping) {
+      if (this.inLoad) {
+        this.enabledDamped.setRange(1, 1).setValue(1).stop();
+      } else if (this.hasDamping) {
         this.enabledDamped.setRangeFromHereTo(1, this.enabledDampingAttack.getValue()).start();
       }
       this.onEnable = true;
     } else {
-      if (this.hasDamping) {
+      if (this.inLoad) {
+        this.enabledDamped.setRange(0, 0).setValue(0).stop();
+      } else if (this.hasDamping) {
         this.enabledDamped.setRangeFromHereTo(0, this.enabledDampingRelease.getValue()).start();
       }
-      this.onDisable = true;
+      if (!this.initialize) {
+        this.onDisable = true;
+      }
     }
   };
 
@@ -394,6 +400,19 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
   public void dispose() {
     this.enabled.removeListener(this.enabledListener);
     super.dispose();
+  }
+
+  private boolean inLoad = false;
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    final boolean wasInLoad = this.inLoad;
+    this.inLoad = true;
+    try {
+      super.load(lx, obj);
+    } finally {
+      this.inLoad = wasInLoad;
+    }
   }
 
 }
