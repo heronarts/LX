@@ -628,10 +628,16 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
 
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
-    String path = parts[index];
+    final String path = parts[index];
     for (LXGlobalSnapshot snapshot : this.snapshots) {
       if (path.equals(snapshot.getOscPath())) {
         return snapshot.handleOscMessage(message, parts, index+1);
+      }
+    }
+    if (path.matches("\\d+")) {
+      final int snapshotIndex = Integer.parseInt(path) - 1;
+      if (LXUtils.inRange(snapshotIndex, 0, this.snapshots.size() - 1)) {
+        return this.snapshots.get(snapshotIndex).handleOscMessage(message, parts, index+1);
       }
     }
     return super.handleOscMessage(message, parts, index);
