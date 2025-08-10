@@ -276,7 +276,7 @@ public class LXOscEngine extends LXComponent {
   }
 
   public LXOscEngine addIOListener(IOListener listener) {
-    Objects.requireNonNull("May not add null IOListener");
+    Objects.requireNonNull(listener, "May not add null IOListener");
     if (this.ioListeners.contains(listener)) {
       throw new IllegalStateException(
         "Cannot add duplicate LXOscEngine.IOListener: "
@@ -297,7 +297,7 @@ public class LXOscEngine extends LXComponent {
   }
 
   public LXOscEngine addListener(LXOscListener listener) {
-    Objects.requireNonNull("May not add null LXOscListener");
+    Objects.requireNonNull(listener, "May not add null LXOscListener");
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException(
         "Cannot add duplicate LXOscEngine.LXOscListener: "
@@ -692,7 +692,7 @@ public class LXOscEngine extends LXComponent {
     }
 
     public Receiver addListener(LXOscListener listener) {
-      Objects.requireNonNull("May not add null LXOscListener");
+      Objects.requireNonNull(listener,"May not add null LXOscListener");
       if (this.listeners.contains(listener)) {
         throw new IllegalStateException("Cannot add duplicate LXOscEngine.Receiver.LXOscListener: " + listener);
       }
