@@ -588,7 +588,7 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   }
 
   public Tempo addListener(Listener listener) {
-    Objects.requireNonNull("May not add null Tempo.Listener");
+    Objects.requireNonNull(listener,"May not add null Tempo.Listener");
     if (this.listeners.contains(listener)) {
       throw new IllegalStateException("Cannot add duplicate Tempo.Listener: " + listener);
     }
