@@ -23,6 +23,7 @@ import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOn;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Triggers")
@@ -38,7 +39,7 @@ public class MacroTriggers extends LXMacroModulator implements LXTriggerSource, 
   }
 
   private static StringParameter label(int num) {
-    return new StringParameter("Label-" + num, "-")
+    return new StringParameter("Label-" + num, DEFAULT_LABEL)
     .setDescription("Label for trigger " + num);
   }
 
@@ -98,6 +99,16 @@ public class MacroTriggers extends LXMacroModulator implements LXTriggerSource, 
   protected double computeValue(double deltaMs) {
     // Not relevant
     return 0;
+  }
+
+  @Override
+  public LXParameter[] getMacroParameters() {
+    return this.triggers;
+  }
+
+  @Override
+  public StringParameter[] getMacroLabels() {
+    return this.labels;
   }
 
   @Override

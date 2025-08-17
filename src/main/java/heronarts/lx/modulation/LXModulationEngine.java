@@ -35,10 +35,12 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiPanic;
+import heronarts.lx.modulator.LXMacroModulator;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.StringParameter;
 
 public class LXModulationEngine extends LXModulatorComponent implements LXOscComponent {
 
@@ -147,12 +149,23 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     return this;
   }
 
+  private void setMacroLabel(LXParameterModulation modulation) {
+    // Set a macro source label if it was default
+    if (modulation.source.getParent() instanceof LXMacroModulator macro) {
+      final StringParameter label = macro.getMacroLabel(modulation.source);
+      if ((label != null) && LXMacroModulator.DEFAULT_LABEL.equals(label.getString())) {
+        label.setValue(modulation.target.getLabel());
+      }
+    }
+  }
+
   public LXModulationEngine addModulation(LXCompoundModulation modulation) {
     if (this.mutableModulations.contains(modulation)) {
       throw new IllegalStateException("Cannot add duplicate LXCompoundModulation: " + modulation);
     }
     this.mutableModulations.add(modulation);
     _reindex(this.modulations);
+    setMacroLabel(modulation);
     for (Listener listener : this.listeners) {
       listener.modulationAdded(this, modulation);
     }
@@ -178,6 +191,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     }
     this.mutableTriggers.add(trigger);
     _reindex(this.triggers);
+    setMacroLabel(trigger);
     for (Listener listener : this.listeners) {
       listener.triggerAdded(this, trigger);
     }

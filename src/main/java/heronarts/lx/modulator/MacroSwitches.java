@@ -36,7 +36,7 @@ public class MacroSwitches extends LXMacroModulator implements LXTriggerSource, 
   }
 
   private static StringParameter label(int num) {
-    return new StringParameter("Label-" + num, "-")
+    return new StringParameter("Label-" + num, DEFAULT_LABEL)
     .setDescription("Label for switch " + num);
   }
 
@@ -125,6 +125,16 @@ public class MacroSwitches extends LXMacroModulator implements LXTriggerSource, 
   protected double computeValue(double deltaMs) {
     // Not relevant
     return 0;
+  }
+
+  @Override
+  public LXParameter[] getMacroParameters() {
+    return this.switches;
+  }
+
+  @Override
+  public StringParameter[] getMacroLabels() {
+    return this.labels;
   }
 
   @Override

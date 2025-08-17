@@ -25,6 +25,8 @@ import heronarts.lx.parameter.StringParameter;
 
 public abstract class LXMacroModulator extends LXModulator implements LXOscComponent {
 
+  public static final String DEFAULT_LABEL = "-";
+
   public final BooleanParameter showEight =
     new BooleanParameter("Show Eight")
     .setDescription("Whether the Macro shows 5 or 8 controls");
@@ -39,5 +41,19 @@ public abstract class LXMacroModulator extends LXModulator implements LXOscCompo
     return !(p instanceof StringParameter) &&
       super.isSnapshotControl(p);
   }
+
+  public final StringParameter getMacroLabel(LXParameter parameter) {
+    final LXParameter[] parameters = getMacroParameters();
+    for (int i = 0; i < parameters.length; ++i) {
+      if (parameters[i] == parameter) {
+        return getMacroLabels()[i];
+      }
+    }
+    return null;
+  }
+
+  public abstract LXParameter[] getMacroParameters();
+
+  public abstract StringParameter[] getMacroLabels();
 
 }

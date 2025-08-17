@@ -20,6 +20,7 @@ package heronarts.lx.modulator;
 
 import heronarts.lx.LXCategory;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 
 @LXModulator.Global("Knobs")
@@ -34,7 +35,7 @@ public class MacroKnobs extends LXMacroModulator {
   }
 
   private static StringParameter label(int num) {
-    return new StringParameter("Label-" + num, "-")
+    return new StringParameter("Label-" + num, DEFAULT_LABEL)
       .setDescription("Label for knob " + num);
   }
 
@@ -92,6 +93,16 @@ public class MacroKnobs extends LXMacroModulator {
   protected double computeValue(double deltaMs) {
     // Not relevant
     return 0;
+  }
+
+  @Override
+  public LXParameter[] getMacroParameters() {
+    return this.knobs;
+  }
+
+  @Override
+  public StringParameter[] getMacroLabels() {
+    return this.labels;
   }
 
 }
