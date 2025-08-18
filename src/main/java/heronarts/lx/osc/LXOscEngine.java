@@ -26,6 +26,7 @@ import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -641,8 +642,7 @@ public class LXOscEngine extends LXComponent {
 
     private final AtomicBoolean hasMessages = new AtomicBoolean(false);
 
-    private final List<OscMessage> threadSafeEventQueue = Collections
-      .synchronizedList(new ArrayList<OscMessage>());
+    private final ArrayDeque<OscMessage> threadSafeEventQueue = new ArrayDeque<OscMessage>(256);
 
     private final List<OscMessage> engineThreadEventQueue = new ArrayList<OscMessage>();
 
@@ -653,7 +653,7 @@ public class LXOscEngine extends LXComponent {
 
     private BooleanParameter log;
     private TriggerParameter activity;
-    private LXOscConnection connection;
+    private LXOscConnection.Input connection;
 
     private Receiver(int port, InetAddress address, int bufferSize)
       throws SocketException {
@@ -675,7 +675,7 @@ public class LXOscEngine extends LXComponent {
       this.thread.start();
     }
 
-    void setConnection(LXOscConnection connection) {
+    void setConnection(LXOscConnection.Input connection) {
       this.connection = connection;
       setLog(connection.log);
       setActivity(connection.activity);
@@ -724,15 +724,22 @@ public class LXOscEngine extends LXComponent {
             socket.receive(packet);
             try {
               // Parse the OSC packet
-              OscPacket oscPacket = OscPacket.parse(packet);
+              final OscPacket oscPacket = OscPacket.parse(packet);
+              final int delayMs = ((connection != null) && connection.hasDelay.isOn()) ? connection.delayMs.getValuei() : 0;
 
               // Add all messages in the packet to the queue
-              if (oscPacket instanceof OscMessage) {
-                threadSafeEventQueue.add((OscMessage) oscPacket);
+              if (oscPacket instanceof OscMessage oscMessage) {
+                oscMessage.nanoTime += delayMs * 1000000;
+                synchronized (threadSafeEventQueue) {
+                  threadSafeEventQueue.add(oscMessage);
+                }
                 hasMessages.set(true);
-              } else if (oscPacket instanceof OscBundle) {
-                for (OscMessage message : (OscBundle) oscPacket) {
-                  threadSafeEventQueue.add(message);
+              } else if (oscPacket instanceof OscBundle oscBundle) {
+                synchronized (threadSafeEventQueue) {
+                  for (OscMessage message : oscBundle) {
+                    message.nanoTime += delayMs * 1000000;
+                    threadSafeEventQueue.add(message);
+                  }
                 }
                 hasMessages.set(true);
               }
@@ -753,10 +760,19 @@ public class LXOscEngine extends LXComponent {
 
     private void dispatch() {
       if (this.hasMessages.compareAndSet(true, false)) {
+        final long now = System.nanoTime();
         this.engineThreadEventQueue.clear();
         synchronized (this.threadSafeEventQueue) {
-          this.engineThreadEventQueue.addAll(this.threadSafeEventQueue);
-          this.threadSafeEventQueue.clear();
+          OscMessage message;
+          while ((message = this.threadSafeEventQueue.peekFirst()) != null) {
+            if (now < message.nanoTime) {
+              // There are still messages that need processing...
+              this.hasMessages.set(true);
+              break;
+            }
+            this.engineThreadEventQueue.add(message);
+            this.threadSafeEventQueue.removeFirst();
+          }
         }
         // TODO(mcslee): do we want to handle NTP timetags?
 

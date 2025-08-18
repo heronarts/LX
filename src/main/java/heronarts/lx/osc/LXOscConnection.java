@@ -156,8 +156,19 @@ public abstract class LXOscConnection extends LXComponent {
 
     private Receiver receiver;
 
+    public final BooleanParameter hasDelay =
+      new BooleanParameter("Has Delay", false)
+      .setDescription("Whether delay is applied to OSC input events");
+
+    public final DiscreteParameter delayMs =
+      new DiscreteParameter("Delay", 0, 1001)
+      .setUnits(DiscreteParameter.Units.MILLISECONDS_RAW)
+      .setDescription("Delay input processing");
+
     Input(LX lx) {
       super(lx);
+      addParameter("hasDelay", this.hasDelay);
+      addParameter("delayMs", this.delayMs);
     }
 
     @Override

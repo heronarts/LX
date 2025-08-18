@@ -36,7 +36,7 @@ public class OscMessage extends OscPacket implements Iterable<OscArgument> {
 
   private int cursor = 0;
 
-  public final long nanoTime = System.nanoTime();
+  public long nanoTime = System.nanoTime();
 
   public OscMessage() {}
 
