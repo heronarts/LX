@@ -1145,7 +1145,7 @@ public class LXOscEngine extends LXComponent {
   @Override
   public void dispose() {
     super.dispose();
-    this.listeners.forEach(listener -> LX.warning("Stranged LXOscEngine.Listener: " + listener));
+    this.listeners.forEach(listener -> LX.warning("Stranded LXOscEngine.Listener: " + listener));
     this.listeners.clear();
     if (this.engineTransmitter != null) {
       this.engineTransmitter.dispose();
