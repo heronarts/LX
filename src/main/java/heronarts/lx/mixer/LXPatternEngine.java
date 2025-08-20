@@ -1129,6 +1129,7 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     }
     LXPattern activePattern = getActivePattern();
     if (activePattern != null) {
+      this.container.getPatternEngineDelegate().patternDidChange(this, activePattern);
       this.listeners.forEach(listener -> listener.patternDidChange(this, activePattern));
       this.lx.engine.osc.sendMessage(this.component.getOscAddress() + "/" + PATH_ACTIVE_PATTERN, activePattern.getIndex());
     }
