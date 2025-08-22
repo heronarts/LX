@@ -1554,6 +1554,10 @@ public class APC40Mk2 extends LXMidiSurface implements LXMidiSurface.Bidirection
     return isAuxActive() ? this.lx.engine.mixer.focusedChannel : this.lx.engine.mixer.focusedChannelAux;
   }
 
+  protected boolean isShift() {
+    return this.shiftOn;
+  }
+
   private class CueState {
     private int cueDown = 0;
     private boolean singleCueStartedOn = false;
