@@ -63,6 +63,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BooleanParameter("Suppress Live Output", false)
     .setDescription("Suppresses network output for local development");
 
+  public final BooleanParameter oscQuery =
+    new BooleanParameter("Enable OSCQuery / Zeroconf", false)
+    .setDescription("Enable OSC discovery with OSCQuery and Zeroconf");
+
   public final DiscreteParameter uiZoom =
     new DiscreteParameter("UI Scale", 100, 50, 201)
     .setDescription("Percentage by which the UI should be scaled")
@@ -118,6 +122,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.focusActivePattern.addListener(this);
     this.sendCueToOutput.addListener(this);
     this.suppressOutput.addListener(this);
+    this.oscQuery.addListener(this);
     this.uiZoom.addListener(this);
     this.uiTheme.addListener(this);
     this.showHelpMessages.addListener(this);
@@ -140,6 +145,9 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   public void onParameterChanged(LXParameter p) {
     if (this.lx == null) {
       throw new IllegalStateException("LXPreferences.onParameterChanged() invoked before LX instance was set");
+    }
+    if ((p == this.oscQuery) && !this.lx.flags.zeroconfForce) {
+      this.lx.flags.zeroconf = this.oscQuery.isOn();
     }
     this.lx.flags.focusChannelOnCue = this.focusChannelOnCue.isOn();
     this.lx.flags.focusActivePattern = this.focusActivePattern.isOn();
@@ -216,6 +224,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_FOCUS_ACTIVE_PATTERN = "focusActivePattern";
   private static final String KEY_SEND_CUE_TO_OUTPUT = "sendCueToOutput";
   private static final String KEY_SUPPRESS_OUTPUT = "suppressOutput";
+  private static final String KEY_OSC_QUERY = "oscQuery";
   private static final String KEY_SHOW_HELP_MESSAGES = "showHelpMessages";
   private static final String KEY_SCHEDULER_ENABLED = "schedulerEnabled";
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
@@ -243,6 +252,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_FOCUS_ACTIVE_PATTERN, this.focusActivePattern.isOn());
     object.addProperty(KEY_SEND_CUE_TO_OUTPUT, this.sendCueToOutput.isOn());
     object.addProperty(KEY_SUPPRESS_OUTPUT, this.suppressOutput.isOn());
+    object.addProperty(KEY_OSC_QUERY, this.oscQuery.isOn());
     object.addProperty(KEY_SHOW_HELP_MESSAGES, this.showHelpMessages.isOn());
     object.addProperty(KEY_SCHEDULER_ENABLED, this.schedulerEnabled.isOn());
     object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
@@ -258,6 +268,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     LXSerializable.Utils.loadBoolean(this.focusActivePattern, object, KEY_FOCUS_ACTIVE_PATTERN);
     LXSerializable.Utils.loadBoolean(this.sendCueToOutput, object, KEY_SEND_CUE_TO_OUTPUT);
     LXSerializable.Utils.loadBoolean(this.suppressOutput, object, KEY_SUPPRESS_OUTPUT);
+    LXSerializable.Utils.loadBoolean(this.oscQuery, object, KEY_OSC_QUERY);
     LXSerializable.Utils.loadBoolean(this.showHelpMessages, object, KEY_SHOW_HELP_MESSAGES);
     LXSerializable.Utils.loadBoolean(this.schedulerEnabled, object, KEY_SCHEDULER_ENABLED);
     LXSerializable.Utils.loadBoolean(this.showCpuLoad, object, KEY_SHOW_CPU_LOAD);

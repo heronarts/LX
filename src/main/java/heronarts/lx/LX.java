@@ -181,6 +181,7 @@ public class LX {
     public long autosaveIntervalMs = 15000;
     public boolean zeroconf = false;
     public String zeroconfServiceName = "LX";
+    public boolean zeroconfForce = false;
     public LXEngine.ThreadMode threadMode = LXEngine.ThreadMode.SCHEDULED_EXECUTOR_SERVICE;
     public int engineThreadPriority = Thread.MAX_PRIORITY;
     public String mediaPath = ".";
