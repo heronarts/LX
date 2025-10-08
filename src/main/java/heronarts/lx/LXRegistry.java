@@ -37,7 +37,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
@@ -281,6 +283,15 @@ public class LXRegistry implements LXSerializable {
    */
   public final List<Class<? extends LXModulator>> modulators =
     Collections.unmodifiableList(this.mutableModulators);
+
+  private final Map<Class<? extends LXComponent>, List<String>> mutableTags =
+    new HashMap<>();
+
+  /**
+   * Globally registered tags
+   */
+  public final Map<Class<? extends LXComponent>, List<String>> tags =
+    Collections.unmodifiableMap(this.mutableTags);
 
   private final List<Class<? extends LXBlend>> mutableChannelBlends =
     new ArrayList<Class<? extends LXBlend>>(DEFAULT_CHANNEL_BLENDS);
@@ -1029,6 +1040,8 @@ public class LXRegistry implements LXSerializable {
     if (LXFixture.class.isAssignableFrom(clz)) {
       removeFixture(clz.asSubclass(LXFixture.class));
     }
+    this.mutableTags.remove(clz);
+
     // NOTE: plugin classes are not removed, they can only be dealt with once at initialization
     // and if already running you can not "undo" their work until the next restart, so they should
     // remain visible
@@ -1047,6 +1060,7 @@ public class LXRegistry implements LXSerializable {
       throw new IllegalStateException("Attemping to register pattern twice: " + pattern);
     }
     this.mutablePatterns.add(pattern);
+    addDefaultTags(pattern);
     return this;
   }
 
@@ -1107,6 +1121,7 @@ public class LXRegistry implements LXSerializable {
       throw new IllegalStateException("Attemping to register effect twice: " + effect);
     }
     this.mutableEffects.add(effect);
+    addDefaultTags(effect);
     return this;
   }
 
@@ -1154,6 +1169,85 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
+  private void addDefaultTags(Class<? extends LXComponent> component) {
+    final LXComponent.Tags tags = component.getAnnotation(LXComponent.Tags.class);
+    if (tags != null) {
+      for (String tag : tags.value()) {
+        addTag(component, tag);
+      }
+    }
+  }
+
+  /**
+   * Add a tag to the given component type
+   *
+   * @param component Component class
+   * @param tag Tag
+   * @return this
+   */
+  public LXRegistry addTag(Class<? extends LXComponent> component, String tag) {
+    List<String> tags = this.mutableTags.get(component);
+    if (tags == null) {
+      tags = new ArrayList<String>();
+      this.mutableTags.put(component, tags);
+    }
+    if (tags.contains(tag)) {
+      LX.error("Cannot add duplicate tag \"" + tag + "\" to class " + component.getName());
+    } else {
+      tags.add(tag);
+    }
+    return this;
+  }
+
+  /**
+   * Remove a tag from the given component type
+   *
+   * @param component Component type
+   * @param tag Tag
+   * @return this
+   */
+  public LXRegistry removeTag(Class<? extends LXComponent> component, String tag) {
+    final List<String> tags = this.mutableTags.get(component);
+    if (tags == null || !tags.contains(tag)) {
+      LX.error("Cannot remove non-existent tag \"" + tag + "\" from class " + component.getName());
+      return this;
+    }
+    tags.remove(tag);
+    if (tags.isEmpty()) {
+      this.mutableTags.remove(component);
+    }
+    return this;
+  }
+
+  /**
+   * Get the set of tags for a given component class
+   *
+   * @param component Component type
+   * @return this
+   */
+  public List<String> getTags(Class<? extends LXComponent> component) {
+    return this.mutableTags.get(component);
+  }
+
+  /**
+   * Whether a given tag is a default tag for the component type
+   *
+   * @param component Component type
+   * @param tag Tag
+   * @return Whether this tag is a default annotation-tag for the component type
+   */
+  public boolean isDefaultTag(Class<? extends LXComponent> component, String tag) {
+    final LXComponent.Tags tags = component.getAnnotation(LXComponent.Tags.class);
+    if (tags != null) {
+      for (String candidate : tags.value()) {
+        if (candidate.equals(tag)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   /**
    * Register a modulator class with the engine
    *
@@ -1167,6 +1261,7 @@ public class LXRegistry implements LXSerializable {
       throw new IllegalStateException("Attemping to register modulator twice: " + modulator);
     }
     this.mutableModulators.add(modulator);
+    addDefaultTags(modulator);
     return this;
   }
 
@@ -1239,6 +1334,7 @@ public class LXRegistry implements LXSerializable {
       throw new IllegalStateException("Cannot double-register fixture: " + fixture);
     }
     this.mutableFixtures.add(fixture);
+    addDefaultTags(fixture);
     return this;
   }
 

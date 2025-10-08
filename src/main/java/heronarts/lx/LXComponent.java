@@ -100,6 +100,26 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   /**
+   * An annotation which specifies the author of this component
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Author {
+    String value();
+  }
+
+  /**
+   * An annotation which provides a list of tags applied to this component
+   */
+  @Documented
+  @Target(ElementType.TYPE)
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface Tags {
+    String[] value();
+  }
+
+  /**
    * Specifies that this component requires the given plugin to operate properly
    */
   @Documented
@@ -499,8 +519,8 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
   }
 
   public static String getCategory(Class<? extends LXComponent> clazz) {
-    LXCategory annotation = clazz.getAnnotation(LXCategory.class);
-    return (annotation != null) ? annotation.value() : LXCategory.OTHER;
+    final LXCategory category = clazz.getAnnotation(LXCategory.class);
+    return (category != null) ? category.value() : LXCategory.OTHER;
   }
 
   // Helper to check that a path is valid, no collisions allowed between parameters,
