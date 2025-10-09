@@ -27,10 +27,13 @@ import java.lang.annotation.Target;
 /**
  * An annotation to be applied to LXPattern or LXEffect classes giving them
  * a name in the UI different from their classname
+ *
+ * @deprecated Use @LXComponent.Name instead
  */
 @Documented
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
+@Deprecated
 public @interface LXComponentName {
   String value();
 }

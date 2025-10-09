@@ -376,6 +376,7 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @param suffix Suffix to remove
    * @return Name of component type
    */
+  @SuppressWarnings("deprecation")
   public static String getComponentName(Class<? extends LXComponent> component, String suffix) {
     Name name = component.getAnnotation(Name.class);
     if (name != null) {
@@ -399,7 +400,12 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
    * @param cls Component class
    * @return Name of component class
    */
+  @SuppressWarnings("deprecation")
   public static String getComponentName(Class<? extends LXComponent> cls) {
+    Name name = cls.getAnnotation(Name.class);
+    if (name != null) {
+      return name.value();
+    }
     LXComponentName annotation = cls.getAnnotation(LXComponentName.class);
     if (annotation != null) {
       return annotation.value();
