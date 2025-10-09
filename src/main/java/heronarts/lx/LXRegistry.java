@@ -71,6 +71,7 @@ import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.structure.LXFixture;
+import heronarts.lx.utils.LXUtils;
 
 /**
  * Registry container for content classes used by the LX implementation
@@ -290,8 +291,8 @@ public class LXRegistry implements LXSerializable {
   /**
    * Globally registered tags
    */
-  public final Map<Class<? extends LXComponent>, List<String>> tags =
-    Collections.unmodifiableMap(this.mutableTags);
+  private final Map<Class<? extends LXComponent>, List<String>> tags =
+    new HashMap<>();
 
   private final List<Class<? extends LXBlend>> mutableChannelBlends =
     new ArrayList<Class<? extends LXBlend>>(DEFAULT_CHANNEL_BLENDS);
@@ -399,7 +400,6 @@ public class LXRegistry implements LXSerializable {
    * Registered packages
    */
   public final List<LXClassLoader.Package> packages = Collections.unmodifiableList(this.mutablePackages);
-
 
   private final List<Plugin> mutablePlugins = new ArrayList<Plugin>();
 
@@ -556,6 +556,19 @@ public class LXRegistry implements LXSerializable {
   public LXRegistry(LX lx) {
     this.lx = lx;
     this.classLoader = new LXClassLoader(lx);
+
+    for (Class<? extends LXPattern> pattern : DEFAULT_PATTERNS) {
+      addDefaultTags(pattern);
+    }
+    for (Class<? extends LXEffect> effect : DEFAULT_EFFECTS) {
+      addDefaultTags(effect);
+    }
+    for (Class<? extends LXModulator> modulator : DEFAULT_MODULATORS) {
+      addDefaultTags(modulator);
+    }
+    for (Class<? extends LXFixture> fixture : DEFAULT_FIXTURES) {
+      addDefaultTags(fixture);
+    }
   }
 
   public LXClassLoader getClassLoader() {
@@ -1186,10 +1199,17 @@ public class LXRegistry implements LXSerializable {
    * @return this
    */
   public LXRegistry addTag(Class<? extends LXComponent> component, String tag) {
+    if (tag == null) {
+      throw new IllegalArgumentException("Tag may not be null for class " + component.getName());
+    } else if (!tag.matches("^[a-zA-Z0-9/]+$")) {
+      throw new IllegalArgumentException("Tag '" + tag + "' for class " + component.getName() + " contains illegal characters - only alphanumerics and slashes allowed");
+    }
     List<String> tags = this.mutableTags.get(component);
     if (tags == null) {
       tags = new ArrayList<String>();
+      List<String> unmodifiableTags = Collections.unmodifiableList(tags);
       this.mutableTags.put(component, tags);
+      this.tags.put(component, unmodifiableTags);
     }
     if (tags.contains(tag)) {
       LX.error("Cannot add duplicate tag \"" + tag + "\" to class " + component.getName());
@@ -1215,6 +1235,7 @@ public class LXRegistry implements LXSerializable {
     tags.remove(tag);
     if (tags.isEmpty()) {
       this.mutableTags.remove(component);
+      this.tags.remove(component);
     }
     return this;
   }
@@ -1223,10 +1244,10 @@ public class LXRegistry implements LXSerializable {
    * Get the set of tags for a given component class
    *
    * @param component Component type
-   * @return this
+   * @return An unmodifiable list of tags, or null if no tags exist
    */
   public List<String> getTags(Class<? extends LXComponent> component) {
-    return this.mutableTags.get(component);
+    return this.tags.get(component);
   }
 
   /**
