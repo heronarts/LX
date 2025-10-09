@@ -71,7 +71,6 @@ import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.structure.LXFixture;
-import heronarts.lx.utils.LXUtils;
 
 /**
  * Registry container for content classes used by the LX implementation
@@ -142,71 +141,73 @@ public class LXRegistry implements LXSerializable {
     return this;
   }
 
-  private static final List<Class<? extends LXPattern>> DEFAULT_PATTERNS;
-  static {
-    DEFAULT_PATTERNS = new ArrayList<Class<? extends LXPattern>>();
-    DEFAULT_PATTERNS.add(heronarts.lx.dmx.DmxPattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.PatternRack.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.audio.SoundObjectPattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.GradientPattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.color.SolidPattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.form.PlanesPattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.strip.ChasePattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.texture.NoisePattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.texture.SparklePattern.class);
-    DEFAULT_PATTERNS.add(heronarts.lx.pattern.test.TestPattern.class);
+  private static final Class<?>[] DEFAULT_PATTERNS = {
+    heronarts.lx.dmx.DmxPattern.class,
+    heronarts.lx.pattern.PatternRack.class,
+    heronarts.lx.pattern.audio.SoundObjectPattern.class,
+    heronarts.lx.pattern.color.GradientPattern.class,
+    heronarts.lx.pattern.color.SolidPattern.class,
+    heronarts.lx.pattern.form.PlanesPattern.class,
+    heronarts.lx.pattern.strip.ChasePattern.class,
+    heronarts.lx.pattern.texture.NoisePattern.class,
+    heronarts.lx.pattern.texture.SparklePattern.class,
+    heronarts.lx.pattern.test.TestPattern.class,
   };
 
-  private static final List<Class<? extends LXEffect>> DEFAULT_EFFECTS;
-  static {
-    DEFAULT_EFFECTS = new ArrayList<Class<? extends LXEffect>>();
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.audio.SoundObjectEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.BlurEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.FreezeEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.color.ColorizeEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.color.ColorMaskEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.color.GradientMaskEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.color.TransparifyEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.DynamicsEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.InvertEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.HueSaturationEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.LinearMaskEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.SparkleEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.StrobeEffect.class);
-    DEFAULT_EFFECTS.add(heronarts.lx.effect.midi.GateEffect.class);
+  private static final Class<?>[] DEFAULT_EFFECTS = {
+    heronarts.lx.effect.audio.SoundObjectEffect.class,
+    heronarts.lx.effect.BlurEffect.class,
+    heronarts.lx.effect.FreezeEffect.class,
+    heronarts.lx.effect.color.ColorizeEffect.class,
+    heronarts.lx.effect.color.ColorMaskEffect.class,
+    heronarts.lx.effect.color.GradientMaskEffect.class,
+    heronarts.lx.effect.color.TransparifyEffect.class,
+    heronarts.lx.effect.DynamicsEffect.class,
+    heronarts.lx.effect.InvertEffect.class,
+    heronarts.lx.effect.HueSaturationEffect.class,
+    heronarts.lx.effect.LinearMaskEffect.class,
+    heronarts.lx.effect.SparkleEffect.class,
+    heronarts.lx.effect.StrobeEffect.class,
+    heronarts.lx.effect.midi.GateEffect.class,
   };
 
-  private static final List<Class<? extends LXModulator>> DEFAULT_MODULATORS;
-  static {
-    DEFAULT_MODULATORS = new ArrayList<Class<? extends LXModulator>>();
-    DEFAULT_MODULATORS.add(heronarts.lx.audio.BandFilter.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.audio.BandGate.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.audio.SoundObject.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.dmx.DmxModulator.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.dmx.DmxColorModulator.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.BooleanLogic.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.ComparatorModulator.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.CycleModulator.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Damper.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Interval.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroKnobs.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroSwitches.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MacroTriggers.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MidiNoteTrigger.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiStageEnvelope.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiModeEnvelope.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.MultiTrig.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.NoiseModulator.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.OperatorModulator.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Quantizer.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Randomizer.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Scaler.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Smoother.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Spring.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Stepper.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.StepSequencer.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.Timer.class);
-    DEFAULT_MODULATORS.add(heronarts.lx.modulator.VariableLFO.class);
+  private static final Class<?>[] DEFAULT_MODULATORS = {
+    heronarts.lx.audio.BandFilter.class,
+    heronarts.lx.audio.BandGate.class,
+    heronarts.lx.audio.SoundObject.class,
+    heronarts.lx.dmx.DmxModulator.class,
+    heronarts.lx.dmx.DmxColorModulator.class,
+    heronarts.lx.modulator.BooleanLogic.class,
+    heronarts.lx.modulator.ComparatorModulator.class,
+    heronarts.lx.modulator.CycleModulator.class,
+    heronarts.lx.modulator.Damper.class,
+    heronarts.lx.modulator.Interval.class,
+    heronarts.lx.modulator.MacroKnobs.class,
+    heronarts.lx.modulator.MacroSwitches.class,
+    heronarts.lx.modulator.MacroTriggers.class,
+    heronarts.lx.modulator.MidiNoteTrigger.class,
+    heronarts.lx.modulator.MultiStageEnvelope.class,
+    heronarts.lx.modulator.MultiModeEnvelope.class,
+    heronarts.lx.modulator.MultiTrig.class,
+    heronarts.lx.modulator.NoiseModulator.class,
+    heronarts.lx.modulator.OperatorModulator.class,
+    heronarts.lx.modulator.Quantizer.class,
+    heronarts.lx.modulator.Randomizer.class,
+    heronarts.lx.modulator.Scaler.class,
+    heronarts.lx.modulator.Smoother.class,
+    heronarts.lx.modulator.Spring.class,
+    heronarts.lx.modulator.Stepper.class,
+    heronarts.lx.modulator.StepSequencer.class,
+    heronarts.lx.modulator.Timer.class,
+    heronarts.lx.modulator.VariableLFO.class,
+  };
+
+  private static final Class<?>[] DEFAULT_FIXTURES = {
+    heronarts.lx.structure.ArcFixture.class,
+    heronarts.lx.structure.GridFixture.class,
+    heronarts.lx.structure.PointFixture.class,
+    heronarts.lx.structure.SpiralFixture.class,
+    heronarts.lx.structure.StripFixture.class,
   };
 
   private static final List<Class<? extends LXBlend>> DEFAULT_CHANNEL_BLENDS;
@@ -223,7 +224,6 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_CHANNEL_BLENDS.add(SpotlightBlend.class);
     DEFAULT_CHANNEL_BLENDS.add(LightestBlend.class);
     DEFAULT_CHANNEL_BLENDS.add(DarkestBlend.class);
-
   }
 
   private static final List<Class<? extends LXBlend>> DEFAULT_TRANSITION_BLENDS;
@@ -248,27 +248,15 @@ public class LXRegistry implements LXSerializable {
     DEFAULT_CROSSFADER_BLENDS.add(DifferenceBlend.class);
   }
 
-  private static final List<Class<? extends LXFixture>> DEFAULT_FIXTURES;
-  static {
-    DEFAULT_FIXTURES = new ArrayList<Class<? extends LXFixture>>();
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.ArcFixture.class);
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.GridFixture.class);
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.PointFixture.class);
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.SpiralFixture.class);
-    DEFAULT_FIXTURES.add(heronarts.lx.structure.StripFixture.class);
-  };
-
   /**
    * The list of globally registered pattern classes
    */
-  private final List<Class<? extends LXPattern>> mutablePatterns =
-    new ArrayList<Class<? extends LXPattern>>(DEFAULT_PATTERNS);
+  private final List<Class<? extends LXPattern>> mutablePatterns = new ArrayList<>(DEFAULT_PATTERNS.length);
 
   public final List<Class<? extends LXPattern>> patterns =
     Collections.unmodifiableList(this.mutablePatterns);
 
-  private final List<Class<? extends LXEffect>> mutableEffects =
-    new ArrayList<Class<? extends LXEffect>>(DEFAULT_EFFECTS);
+  private final List<Class<? extends LXEffect>> mutableEffects = new ArrayList<>(DEFAULT_EFFECTS.length);
 
   /**
    * The list of globally registered effects
@@ -276,8 +264,7 @@ public class LXRegistry implements LXSerializable {
   public final List<Class<? extends LXEffect>> effects =
     Collections.unmodifiableList(this.mutableEffects);
 
-  private final List<Class<? extends LXModulator>> mutableModulators=
-    new ArrayList<Class<? extends LXModulator>>(DEFAULT_MODULATORS);
+  private final List<Class<? extends LXModulator>> mutableModulators = new ArrayList<>(DEFAULT_MODULATORS.length);
 
   /**
    * The list of globally registered effects
@@ -285,14 +272,15 @@ public class LXRegistry implements LXSerializable {
   public final List<Class<? extends LXModulator>> modulators =
     Collections.unmodifiableList(this.mutableModulators);
 
-  private final Map<Class<? extends LXComponent>, List<String>> mutableTags =
-    new HashMap<>();
+  private final List<Class<? extends LXFixture>> mutableFixtures = new ArrayList<>(DEFAULT_FIXTURES.length);
 
   /**
-   * Globally registered tags
+   * List of globally registered fixtures.
    */
-  private final Map<Class<? extends LXComponent>, List<String>> tags =
-    new HashMap<>();
+  public final List<Class<? extends LXFixture>> fixtures =
+    Collections.unmodifiableList(this.mutableFixtures);
+
+  private final Map<Class<? extends LXComponent>, List<String>> mutableTags = new HashMap<>();
 
   private final List<Class<? extends LXBlend>> mutableChannelBlends =
     new ArrayList<Class<? extends LXBlend>>(DEFAULT_CHANNEL_BLENDS);
@@ -320,15 +308,6 @@ public class LXRegistry implements LXSerializable {
    */
   public final List<Class<? extends LXBlend>> crossfaderBlends =
     Collections.unmodifiableList(this.mutableCrossfaderBlends);
-
-  private final List<Class<? extends LXFixture>> mutableFixtures =
-    new ArrayList<Class<? extends LXFixture>>(DEFAULT_FIXTURES);
-
-  /**
-   * List of globally registered fixtures.
-   */
-  public final List<Class<? extends LXFixture>> fixtures =
-    Collections.unmodifiableList(this.mutableFixtures);
 
   /**
    * JSON fixture type
@@ -557,18 +536,20 @@ public class LXRegistry implements LXSerializable {
     this.lx = lx;
     this.classLoader = new LXClassLoader(lx);
 
-    for (Class<? extends LXPattern> pattern : DEFAULT_PATTERNS) {
-      addDefaultTags(pattern);
+    this.contentReloading = true;
+    for (Class<?> pattern : DEFAULT_PATTERNS) {
+      addPattern(pattern.asSubclass(LXPattern.class));
     }
-    for (Class<? extends LXEffect> effect : DEFAULT_EFFECTS) {
-      addDefaultTags(effect);
+    for (Class<?> effect : DEFAULT_EFFECTS) {
+      addEffect(effect.asSubclass(LXEffect.class));
     }
-    for (Class<? extends LXModulator> modulator : DEFAULT_MODULATORS) {
-      addDefaultTags(modulator);
+    for (Class<?> modulator : DEFAULT_MODULATORS) {
+      addModulator(modulator.asSubclass(LXModulator.class));
     }
-    for (Class<? extends LXFixture> fixture : DEFAULT_FIXTURES) {
-      addDefaultTags(fixture);
+    for (Class<?> fixture : DEFAULT_FIXTURES) {
+      addFixture(fixture.asSubclass(LXFixture.class));
     }
+    this.contentReloading = false;
   }
 
   public LXClassLoader getClassLoader() {
@@ -1207,9 +1188,7 @@ public class LXRegistry implements LXSerializable {
     List<String> tags = this.mutableTags.get(component);
     if (tags == null) {
       tags = new ArrayList<String>();
-      List<String> unmodifiableTags = Collections.unmodifiableList(tags);
       this.mutableTags.put(component, tags);
-      this.tags.put(component, unmodifiableTags);
     }
     if (tags.contains(tag)) {
       LX.error("Cannot add duplicate tag \"" + tag + "\" to class " + component.getName());
@@ -1235,7 +1214,6 @@ public class LXRegistry implements LXSerializable {
     tags.remove(tag);
     if (tags.isEmpty()) {
       this.mutableTags.remove(component);
-      this.tags.remove(component);
     }
     return this;
   }
@@ -1247,7 +1225,8 @@ public class LXRegistry implements LXSerializable {
    * @return An unmodifiable list of tags, or null if no tags exist
    */
   public List<String> getTags(Class<? extends LXComponent> component) {
-    return this.tags.get(component);
+    final List<String> tags = this.mutableTags.get(component);
+    return (tags == null) ? null : Collections.unmodifiableList(tags);
   }
 
   /**
