@@ -1332,7 +1332,7 @@ public class JsonFixture extends LXFixture {
           if (tag == null || tag.isEmpty()) {
             addWarning(keyTags + " should not contain empty string values");
           } else if (!LXModel.Tag.isValid(tag)) {
-            addWarning("Ignoring invalid tag, should only contain [A-Za-z0-9_.-]: " + tag);
+            addWarning("Ignoring invalid tag, should only contain [A-Za-z0-9_.-/]: " + tag);
           } else {
             validTags.add(tag);
           }

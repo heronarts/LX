@@ -1172,6 +1172,8 @@ public class LXRegistry implements LXSerializable {
     }
   }
 
+  public static final String VALID_TAG_REGEX = "^[A-Za-z0-9_\\.\\-/]+$";
+
   /**
    * Add a tag to the given component type
    *
@@ -1182,8 +1184,8 @@ public class LXRegistry implements LXSerializable {
   public LXRegistry addTag(Class<? extends LXComponent> component, String tag) {
     if (tag == null) {
       throw new IllegalArgumentException("Tag may not be null for class " + component.getName());
-    } else if (!tag.matches("^[a-zA-Z0-9/]+$")) {
-      throw new IllegalArgumentException("Tag '" + tag + "' for class " + component.getName() + " contains illegal characters - only alphanumerics and slashes allowed");
+    } else if (!tag.matches(VALID_TAG_REGEX)) {
+      throw new IllegalArgumentException("Tag '" + tag + "' for class " + component.getName() + " contains illegal characters - only [A-Za-z0-9_.-/] allowed");
     }
     List<String> tags = this.mutableTags.get(component);
     if (tags == null) {
