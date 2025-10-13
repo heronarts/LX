@@ -22,9 +22,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.stream.JsonWriter;
 
@@ -95,6 +98,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
   private String projectFileName = null;
   private String scheduleFileName = null;
+
+  private static final int MAX_RECENT_PROJECTS = 12;
+
+  public final List<String> recentProjects = new ArrayList<>(MAX_RECENT_PROJECTS);
 
   private int windowWidth = -1;
   private int windowHeight = -1;
@@ -194,6 +201,11 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   protected void setProject(File project) {
     if (project != null) {
       this.projectFileName = this.lx.getMediaPath(LX.Media.PROJECTS, project);
+      this.recentProjects.remove(this.projectFileName);
+      while (this.recentProjects.size() >= MAX_RECENT_PROJECTS) {
+        this.recentProjects.remove(this.recentProjects.size()-1);
+      }
+      this.recentProjects.add(0, this.projectFileName);
     } else {
       this.projectFileName = null;
     }
@@ -213,6 +225,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_EULA_ACCEPTED = "eulaAccepted";
   private static final String KEY_PROJECT_FILE_NAME = "projectFileName";
   private static final String KEY_SCHEDULE_FILE_NAME = "scheduleFileName";
+  private static final String KEY_RECENT_PROJECTS = "recentProjects";
   private static final String KEY_WINDOW_WIDTH = "windowWidth";
   private static final String KEY_WINDOW_WIDTH_LEGACY = "windwWidth";
   private static final String KEY_WINDOW_HEIGHT = "windowHeight";
@@ -241,6 +254,11 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     if (this.scheduleFileName != null) {
       object.addProperty(KEY_SCHEDULE_FILE_NAME, this.scheduleFileName);
     }
+    final JsonArray recentProjectsArr = new JsonArray();
+    for (String recentProject : this.recentProjects) {
+      recentProjectsArr.add(recentProject);
+    }
+    object.add(KEY_RECENT_PROJECTS, recentProjectsArr);
     object.addProperty(KEY_EULA_ACCEPTED, this.eulaAccepted.isOn());
     object.addProperty(KEY_WINDOW_WIDTH, this.windowWidth);
     object.addProperty(KEY_WINDOW_HEIGHT, this.windowHeight);
@@ -285,6 +303,13 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
       this.scheduleFileName = object.get(KEY_SCHEDULE_FILE_NAME).getAsString();
     } else {
       this.scheduleFileName = null;
+    }
+    if (object.has(KEY_RECENT_PROJECTS)) {
+      final JsonArray recentProjectsArr = object.getAsJsonArray(KEY_RECENT_PROJECTS);
+      this.recentProjects.clear();
+      for (int i = 0; i < recentProjectsArr.size(); ++i) {
+        this.recentProjects.add(recentProjectsArr.get(i).getAsString());
+      }
     }
     LXSerializable.Utils.loadObject(this.lx, this.lx.registry, object, KEY_REGISTRY);
   }
