@@ -36,6 +36,42 @@ import heronarts.lx.utils.LXUtils;
 @LXComponent.Description("Masks content by a brightness gradient with linear falloff")
 public class LinearMaskEffect extends LXEffect {
 
+  public interface MaskFunction {
+    /**
+     * Blends the given color
+     *
+     * @param color Input color
+     * @param alpha Mask level 0-255
+     * @param effectMask Blend alpha 0 - LXColor.BLEND_ALPHA_FULL (0x100)
+     * @return Masked color
+     */
+    public int maskColor(int color, int alpha, int effectMask);
+
+    public final MaskFunction CUE = (color, alpha, effectMask) -> LXColor.rgb(255 - alpha, 255 - alpha, 255 - alpha);
+
+    public final MaskFunction FADE = (color, alpha, effectMask) -> LXColor.multiply(color, alpha << LXColor.ALPHA_SHIFT, effectMask);
+
+    public final MaskFunction WHITEOUT = (color, alpha, effectMask) -> LXColor.lightest(color, LXColor.rgb(alpha, alpha, alpha), effectMask);
+  }
+
+  public enum Mask {
+    FADE("Fade", MaskFunction.FADE),
+    WHITEOUT("Whiteout", MaskFunction.WHITEOUT);
+
+    public final String label;
+    public final MaskFunction function;
+
+    private Mask(String label, MaskFunction function) {
+      this.label = label;
+      this.function = function;
+    }
+
+    @Override
+    public String toString() {
+      return this.label;
+    }
+  }
+
   public interface PositionFunction {
     public float getPosition(LXPoint p, LXMatrix t);
   }
@@ -96,14 +132,16 @@ public class LinearMaskEffect extends LXEffect {
   }
 
   public enum FadePosition {
-    OUTER("Outer"),
-    INNER("Inner"),
-    MIDDLE("Middle");
+    OUTER("Outer", 255),
+    INNER("Inner", 0),
+    MIDDLE("Middle", 128);
 
     public final String label;
+    private final float baseLevel;
 
-    private FadePosition(String label) {
+    private FadePosition(String label, float baseLevel) {
       this.label = label;
+      this.baseLevel = baseLevel;
     }
 
     @Override
@@ -135,6 +173,10 @@ public class LinearMaskEffect extends LXEffect {
   public final EnumParameter<Mode> mode =
     new EnumParameter<Mode>("Mode", Mode.ABS)
     .setDescription("How the mask is directionally applied");
+
+  public final EnumParameter<Mask> mask=
+    new EnumParameter<Mask>("Mask", Mask.FADE)
+    .setDescription("Style of masking");
 
   public final EnumParameter<FadePosition> fadePosition =
     new EnumParameter<FadePosition>("Fade Position", FadePosition.OUTER)
@@ -201,6 +243,7 @@ public class LinearMaskEffect extends LXEffect {
     addParameter("fadePosition", this.fadePosition);
     addParameter("fadeSize", this.fadeSize);
     addParameter("cue", this.cue);
+    addParameter("mask", this.mask);
     addTransformParameter("rotate", this.rotate);
     addTransformParameter("yaw", this.yaw);
     addTransformParameter("pitch", this.pitch);
@@ -242,25 +285,13 @@ public class LinearMaskEffect extends LXEffect {
     final boolean invert = this.invert.isOn();
     final boolean cue = this.cue.isOn();
 
-    float base = 0;
-    switch (fadeMode) {
-      case OUTER -> {
-        base = 255;
-      }
-      case INNER -> {
-        base = 0;
-      }
-      case MIDDLE -> {
-        base = 128;
-      }
-    }
+    final MaskFunction maskFunction = cue ? MaskFunction.CUE : this.mask.getEnum().function;
 
     for (LXPoint p : model.points) {
       final float distance = distanceFn.getDistance(axisFn.getPosition(p, this.transform), offset);
-      final int mask = (int) LXUtils.constrainf(base - falloff * (distance - size), 0, 255);
+      final int mask = (int) LXUtils.constrainf(fadeMode.baseLevel - falloff * (distance - size), 0, 255);
       final int alpha = invert ? mask : (255 - mask);
-      colors[p.index] = cue ? LXColor.grayn((255 - alpha) / 255f) :
-        LXColor.multiply(colors[p.index], alpha << LXColor.ALPHA_SHIFT, effectMask);
+      colors[p.index] = maskFunction.maskColor(colors[p.index], alpha, effectMask);
     }
 
   }
