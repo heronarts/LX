@@ -94,6 +94,11 @@ public class LinearMaskEffect extends LXEffect {
     Z("Z-axis",
       (p, t) -> { return p.zn; },
       (p, t) -> { return t.zn(p); }
+    ),
+
+    RADIAL("Radial",
+      (p, t) -> { return p.rcn; },
+      (p, t) -> { return p.rcn; }
     );
 
     public final String label;
