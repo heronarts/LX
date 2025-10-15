@@ -34,6 +34,7 @@ import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.transform.LXParameterizedMatrix;
 import heronarts.lx.utils.LXUtils;
 
 import static heronarts.lx.utils.Noise.*;
@@ -265,6 +266,30 @@ public class NoisePattern extends LXPattern {
     new BoundedParameter("Ridge", .9, 0, 2)
     .setDescription("Used to invert the feedback ridges");
 
+  public final BooleanParameter rotate =
+    new BooleanParameter("Rotate", false)
+    .setDescription("Whether to rotate the geometry");
+
+  public final CompoundParameter yaw =
+    new CompoundParameter("Yaw", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Yaw rotation");
+
+  public final CompoundParameter pitch =
+    new CompoundParameter("Pitch", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Pitch rotation");
+
+  public final CompoundParameter roll =
+    new CompoundParameter("Roll", 0, 360)
+    .setWrappable(true)
+    .setUnits(CompoundParameter.Units.DEGREES)
+    .setDescription("Roll rotation");
+
+  private final LXParameterizedMatrix transform = new LXParameterizedMatrix();
+
   private final GradientUtils.GrayTable invertLUT = new GradientUtils.GrayTable(this.invert, 256);
 
   public NoisePattern(LX lx) {
@@ -305,6 +330,11 @@ public class NoisePattern extends LXPattern {
     addParameter("yMode", this.yMode);
     addParameter("zMode", this.zMode);
 
+    addTransformParameter("rotate", this.rotate);
+    addTransformParameter("yaw", this.yaw);
+    addTransformParameter("pitch", this.pitch);
+    addTransformParameter("roll", this.roll);
+
     // Set the order of most useful control parameters
     setRemoteControls(
       this.scale,
@@ -324,6 +354,11 @@ public class NoisePattern extends LXPattern {
     );
   }
 
+  private void addTransformParameter(String key, LXParameter parameter) {
+    addParameter(key, parameter);
+    this.transform.addParameter(parameter);
+  }
+
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
@@ -340,6 +375,17 @@ public class NoisePattern extends LXPattern {
   public void run(double deltaMs) {
     this.invertLUT.update();
 
+    if (this.rotate.isOn()) {
+      this.transform.update(matrix -> {
+        matrix
+          .translate(.5f, .5f, .5f)
+          .rotateZ((float) Math.toRadians(-this.roll.getValue()))
+          .rotateX((float) Math.toRadians(-this.pitch.getValue()))
+          .rotateY((float) Math.toRadians(-this.yaw.getValue()))
+          .translate(-.5f, -.5f, -.5f);
+      });
+    }
+
     switch (this.algorithm.getEnum()) {
     case PERLIN:
     case FBM:
@@ -352,6 +398,37 @@ public class NoisePattern extends LXPattern {
       break;
     }
   }
+
+  private interface CoordinateAccessor {
+
+    public float xn(LXPoint p);
+    public float yn(LXPoint p);
+    public float zn(LXPoint p);
+
+    static final CoordinateAccessor RAW = new CoordinateAccessor() {
+      public float xn(LXPoint p) {
+        return p.xn;
+      }
+      public float yn(LXPoint p) {
+        return p.yn;
+      }
+      public float zn(LXPoint p) {
+        return p.zn;
+      }
+    };
+  }
+
+  private final CoordinateAccessor TRANSFORM = new CoordinateAccessor() {
+    public float xn(LXPoint p) {
+      return transform.xn(p);
+    }
+    public float yn(LXPoint p) {
+      return transform.yn(p);
+    }
+    public float zn(LXPoint p) {
+      return transform.zn(p);
+    }
+  };
 
   private void runPerlin(double deltaMs, Algorithm algorithm) {
     final int seed = this.seed.getValuei();
@@ -375,15 +452,17 @@ public class NoisePattern extends LXPattern {
     final float maxLevel = this.maxLevel.getValuef();
     final float level = LXUtils.lerpf(minLevel, maxLevel, (this.level.getValuef() - contrast / 4) * .01f);
 
+    final CoordinateAccessor coord = this.rotate.isOn() ? TRANSFORM : CoordinateAccessor.RAW;
+
     final CoordinateFunction xMode = this.xMode.getEnum().function;
     final CoordinateFunction yMode = this.yMode.getEnum().function;
     final CoordinateFunction zMode = this.zMode.getEnum().function;
 
     if (algorithm.equals(Algorithm.PERLIN)) {
       for (LXPoint p : model.points) {
-        float xd = xMode.getCoordinate(p, p.xn, xo);
-        float yd = yMode.getCoordinate(p, p.yn, yo);
-        float zd = zMode.getCoordinate(p, p.zn, zo);
+        float xd = xMode.getCoordinate(p, coord.xn(p), xo);
+        float yd = yMode.getCoordinate(p, coord.yn(p), yo);
+        float zd = zMode.getCoordinate(p, coord.zn(p), zo);
 
         float b = level + contrast * stb_perlin_noise3_seed(xa + xs * xd, ya + ys * yd, za + zs * zd, 0, 0, 0, seed);
         this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
@@ -396,25 +475,25 @@ public class NoisePattern extends LXPattern {
       if (algorithm.equals(Algorithm.RIDGE)) {
         float ridgeOffset = this.ridgeOffset.getValuef();
         for (LXPoint p : model.points) {
-          float xd = xMode.getCoordinate(p, p.xn, xo);
-          float yd = yMode.getCoordinate(p, p.yn, yo);
-          float zd = zMode.getCoordinate(p, p.zn, zo);
+          float xd = xMode.getCoordinate(p, coord.xn(p), xo);
+          float yd = yMode.getCoordinate(p, coord.yn(p), yo);
+          float zd = zMode.getCoordinate(p, coord.zn(p), zo);
           float b = level + contrast * stb_perlin_ridge_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, ridgeOffset, octaves);
           this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
         }
       } else if (algorithm.equals(Algorithm.FBM)) {
         for (LXPoint p : model.points) {
-          float xd = xMode.getCoordinate(p, p.xn, xo);
-          float yd = yMode.getCoordinate(p, p.yn, yo);
-          float zd = zMode.getCoordinate(p, p.zn, zo);
+          float xd = xMode.getCoordinate(p, coord.xn(p), xo);
+          float yd = yMode.getCoordinate(p, coord.yn(p), yo);
+          float zd = zMode.getCoordinate(p, coord.zn(p), zo);
           float b = level + contrast * stb_perlin_fbm_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
           this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
         }
       } else if (algorithm.equals(Algorithm.TURBULENCE)) {
         for (LXPoint p : model.points) {
-          float xd = xMode.getCoordinate(p, p.xn, xo);
-          float yd = yMode.getCoordinate(p, p.yn, yo);
-          float zd = zMode.getCoordinate(p, p.zn, zo);
+          float xd = xMode.getCoordinate(p, coord.xn(p), xo);
+          float yd = yMode.getCoordinate(p, coord.yn(p), yo);
+          float zd = zMode.getCoordinate(p, coord.zn(p), zo);
           float b = level + contrast * stb_perlin_turbulence_noise3(xa + xs * xd, ya + ys * yd, za + zs * zd, lacunarity, gain, octaves);
           this.colors[p.index] = this.invertLUT.lut[(int) (2.559 * clamp(b, minLevel, maxLevel))];
         }
