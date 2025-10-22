@@ -190,6 +190,7 @@ public class LX {
     public List<String> enabledPlugins = new ArrayList<String>();
     public List<String> classpathPlugins = new ArrayList<String>();
     public OutputMode outputMode = OutputMode.PROJECT;
+    public float scrollMultiplier = 1f;
   }
 
   public static enum Media {
