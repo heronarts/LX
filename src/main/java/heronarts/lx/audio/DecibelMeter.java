@@ -33,6 +33,7 @@ import heronarts.lx.utils.LXUtils;
 public class DecibelMeter extends LXModulator implements LXNormalizedParameter, LXOscComponent {
 
   protected static final double LOG_10 = Math.log(10);
+  protected static final double RATIO_20_LOG10 = 20. / LOG_10;
 
   protected LXAudioBuffer buffer;
 
@@ -94,15 +95,16 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
 
   private final static double PEAK_HOLD_MS = 250;
 
-  protected float attackGain;
-  protected float releaseGain;
+  protected double attackGain;
+  protected double releaseGain;
 
   private float rmsRaw = 0;
-  private float rmsLevel = 0;
-  private double dbLevel = -96;
+  private double rmsEnv = 0;
+  private double rmsPeak = 0;
 
-  private float rmsPeak = 0;
+  private double dbEnv = -96;
   private double dbPeak = 0;
+
   private double normalizedPeak = 0;
   private double peakMillis = 0;
 
@@ -135,20 +137,37 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
 
   public DecibelMeter(String label, LXAudioBuffer buffer, CompoundParameter gain, CompoundParameter range, CompoundParameter attack, CompoundParameter release) {
     super(label);
-    this.buffer = buffer;
     this.gain = gain;
     this.range = range;
     this.attack = attack;
     this.release = release;
+    setBuffer(buffer);
   }
 
-  public DecibelMeter setBuffer(LXAudioBuffer buffer) {
+  public final DecibelMeter setBuffer(LXAudioBuffer buffer) {
+    if (this.buffer != null) {
+      this.buffer.removeMeter(this);
+    }
     this.buffer = buffer;
+    if (this.buffer != null) {
+      this.buffer.addMeter(this);
+    }
     return this;
   }
 
   public double getExponent() {
     throw new UnsupportedOperationException("DecibelMeter does not support exponent");
+  }
+
+  /**
+   * Converts an amplitude (normalized 0-1, typically RMS) to decibels, negative
+   * value up to 0dbFS
+   *
+   * @param amplitude Normalized amplitude, 0-1
+   * @return Decibel value, negative infinity -> max 0dBFS
+   */
+  public static double amplitudeToDecibels(double amplitude) {
+    return RATIO_20_LOG10 * Math.log(amplitude);
   }
 
   /**
@@ -164,7 +183,7 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
    * @return Raw decibel value of the meter
    */
   public double getDecibels() {
-    return this.dbLevel;
+    return this.dbEnv;
   }
 
   /**
@@ -189,36 +208,52 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
     return (float) getSquare();
   }
 
-  @Override
-  protected double computeValue(double deltaMs) {
-    double releaseValue = this.release.getValue();
-    this.attackGain = (float) Math.exp(-deltaMs / this.attack.getValue());
-    this.releaseGain = (float) Math.exp(-deltaMs / releaseValue);
-
+  /**
+   * Compute new values when a frame of audio input is received. This is called by the
+   * thread that has filled the audio buffer.
+   */
+  protected void onAudioFrame() {
     this.rmsRaw = this.buffer.getRms();
-    float rmsGain = (this.rmsRaw >= this.rmsLevel) ? this.attackGain : this.releaseGain;
-    this.rmsLevel = this.rmsRaw + rmsGain * (this.rmsLevel - this.rmsRaw);
+
+    this.attackGain = Math.exp(-this.buffer.bufferSize() / (this.attack.getValue() * this.buffer.sampleRate() * .001));
+    this.releaseGain = Math.exp(-this.buffer.bufferSize() / (this.release.getValue() * this.buffer.sampleRate() * .001));
+
+    final double gain = (this.rmsRaw > this.rmsEnv) ? this.attackGain : this.releaseGain;
+    this.rmsEnv = (this.rmsRaw + gain * (this.rmsEnv - this.rmsRaw));
 
     if (this.rmsRaw > this.rmsPeak) {
       this.rmsPeak = this.rmsRaw;
       this.peakMillis = 0;
     } else {
-      this.peakMillis += deltaMs;
+      this.peakMillis += this.buffer.bufferSize() * 1000. / this.buffer.sampleRate();
       if (this.peakMillis > PEAK_HOLD_MS) {
-        double peakReleaseTime = Math.min(deltaMs, this.peakMillis - PEAK_HOLD_MS);
-        float releaseGain = (float) Math.exp(-peakReleaseTime / releaseValue);
-        this.rmsPeak *= releaseGain;
+        final double r = Math.exp(-this.buffer.bufferSize() / (this.release.getValue() * .001 * this.buffer.sampleRate()));
+        this.rmsPeak = this.rmsRaw + r * (this.rmsPeak - this.rmsRaw);
       }
     }
-    double range = this.range.getValue();
-    double gain = this.gain.getValue();
+  }
 
-    this.dbPeak = 20 * Math.log(this.rmsPeak) / LOG_10 + gain;
+  @Override
+  protected double computeValue(double deltaMs) {
+    final double range = this.range.getValue();
+    final double gain = this.gain.getValue();
+
+    this.dbPeak = amplitudeToDecibels(this.rmsPeak) + gain;
     this.normalizedPeak = LXUtils.constrain(1 + this.dbPeak / range, 0, 1);
 
-    this.dbLevel = 20 * Math.log(this.rmsLevel) / LOG_10 + gain;
-    return LXUtils.constrain(1 + this.dbLevel / range, 0, 1);
+    this.dbEnv = amplitudeToDecibels(this.rmsEnv) + gain;
+    return LXUtils.constrain(1 + this.dbEnv / range, 0, 1);
   }
+
+  @Override
+  protected void onStop() {
+    super.onStop();
+    this.rmsRaw = 0;
+    this.rmsEnv = this.dbEnv = 0;
+    this.rmsPeak = this.dbPeak = this.normalizedPeak = 0;
+    setValue(0);
+  }
+
 
   @Override
   public LXNormalizedParameter setNormalized(double value) {

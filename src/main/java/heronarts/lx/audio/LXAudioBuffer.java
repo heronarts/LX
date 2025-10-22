@@ -18,42 +18,65 @@
 
 package heronarts.lx.audio;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import heronarts.lx.LX;
+
 public class LXAudioBuffer {
 
   protected static final float INV_16_BIT = 1 / 32768.0f;
 
-  private final int sampleRate;
-
   final float[] samples;
-  float rms;
+  private float rms;
+  private int sampleRate = -1;
 
-  LXAudioBuffer(int bufferSize, int sampleRate) {
+  /**
+   * Loosely thread-safe list of meters that need computations (e.g. db/FFT metering) on
+   * the audio thread
+   */
+  private final List<DecibelMeter> meters = new CopyOnWriteArrayList<>();
+
+  LXAudioBuffer(int bufferSize) {
     this.samples = new float[bufferSize];
-    this.sampleRate = sampleRate;
-  }
-
-  public int bufferSize() {
-    return this.samples.length;
   }
 
   public int sampleRate() {
     return this.sampleRate;
   }
 
+  public int bufferSize() {
+    return this.samples.length;
+  }
+
   public float getRms() {
     return this.rms;
   }
 
-  protected synchronized void computeMix(LXAudioBuffer left, LXAudioBuffer right) {
+  void addMeter(DecibelMeter meter) {
+    this.meters.add(meter);
+  }
+
+  void removeMeter(DecibelMeter meter) {
+    this.meters.remove(meter);
+  }
+
+  void computeMix(LXAudioBuffer left, LXAudioBuffer right) {
+    if (left.sampleRate != right.sampleRate) {
+      LX.error("LXAudioBuffer.computeMix given two different samplerates: " + left.sampleRate + " != " + right.sampleRate);
+    }
+    this.sampleRate = left.sampleRate;
     float sumSquares = 0;
     for (int i = 0; i < samples.length; ++i) {
       this.samples[i] = (left.samples[i] + right.samples[i]) * .5f;
       sumSquares += this.samples[i] * this.samples[i];
     }
     this.rms = (float) Math.sqrt(sumSquares / this.samples.length);
+    updateMeters();
   }
 
-  protected synchronized void putSamples(byte[] rawBytes, int offset, int dataSize, int frameSize) {
+  void putSamples(byte[] rawBytes, int offset, int dataSize, int frameSize, int sampleRate) {
+    this.sampleRate = sampleRate;
     int frameIndex = 0;
     float sumSquares = 0;
     for (int i = 0; i < dataSize; i += frameSize) {
@@ -62,13 +85,14 @@ public class LXAudioBuffer {
       ++frameIndex;
     }
     this.rms = (float) Math.sqrt(sumSquares / this.samples.length);
+    updateMeters();
   }
 
-  public synchronized void getSamples(float[] dest) {
-    if (this.samples.length != dest.length) {
-      throw new IllegalArgumentException("LXAudioBuffer getSamples destination array must have same length");
+  private void updateMeters() {
+    // Compute meters based upon new samples
+    for (DecibelMeter meter : this.meters) {
+      meter.onAudioFrame();
     }
-    System.arraycopy(this.samples, 0, dest, 0, dest.length);
   }
 
 }

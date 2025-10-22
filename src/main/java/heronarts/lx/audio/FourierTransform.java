@@ -18,6 +18,8 @@
 
 package heronarts.lx.audio;
 
+import java.util.Arrays;
+
 public class FourierTransform {
 
   public static final float LOG_2 = (float) Math.log(2);
@@ -40,8 +42,6 @@ public class FourierTransform {
   private Window window = Window.HAMMING;
 
   private final int bufferSize;
-  private final int sampleRate;
-  private final float bandWidthInv;
 
   private final int logN;
   private final float[] sinN;
@@ -53,20 +53,25 @@ public class FourierTransform {
   private final float[] imaginary;
   private final float[] amplitude;
 
-  private int numBands = 0;
-  private float[] bands;
-  private int[] bandOffset;
+  private final int numBands;
+  private final float[] bands;
+  private final int[] bandOffset;
+
+  // Function of sample rate, specified by compute() call
+  private int sampleRate;
+  private float bandWidthInv;
   private float bandOctaveRatio;
 
-  public FourierTransform(int bufferSize, int sampleRate) {
+  public FourierTransform(int bufferSize) {
+    this(bufferSize, DEFAULT_NUM_BANDS);
+  }
+
+  public FourierTransform(int bufferSize, int numBands) {
     if ((bufferSize & (bufferSize - 1)) != 0) {
       throw new IllegalArgumentException("bufferSize must be a power of two: " + bufferSize);
     }
 
     this.bufferSize = bufferSize;
-    this.sampleRate = sampleRate;
-    this.bandWidthInv = this.bufferSize / (float) this.sampleRate;
-
     this.logN = (int) (Math.log(bufferSize) / Math.log(2));
 
     this.sinN = new float[this.logN];
@@ -83,7 +88,9 @@ public class FourierTransform {
     this.imaginary = new float[this.bufferSize];
     this.amplitude = new float[this.bufferSize/2 + 1];
 
-    setNumBands(DEFAULT_NUM_BANDS);
+    this.numBands = numBands;
+    this.bands = new float[this.numBands];
+    this.bandOffset = new int[this.numBands + 1];
   }
 
   private void computePhaseTables() {
@@ -109,10 +116,6 @@ public class FourierTransform {
     return this.bufferSize;
   }
 
-  public int getSampleRate() {
-    return this.sampleRate;
-  }
-
   public FourierTransform setWindow(Window window) {
     if (this.window != window) {
       this.window = window;
@@ -127,10 +130,15 @@ public class FourierTransform {
     }
   }
 
-  public FourierTransform compute(float[] samples) {
+  public FourierTransform compute(LXAudioBuffer buffer) {
+    final float[] samples = buffer.samples;
     if (samples.length != this.bufferSize) {
       throw new IllegalArgumentException("Samples must have same length as FourierTransform size: " + samples.length);
     }
+
+    // Set sample rate
+    setSampleRate(buffer.sampleRate());
+
     // Apply window function, initialize bit-reverse-indexed values
     for (int i = 0; i < this.bufferSize; ++i) {
       int bri = this.bitReverseIndex[i];
@@ -181,24 +189,27 @@ public class FourierTransform {
     return this.amplitude[i];
   }
 
-  public FourierTransform setNumBands(int numBands) {
-    if (this.numBands != numBands) {
-      this.numBands = numBands;
-      this.bands = new float[this.numBands];
-      this.bandOffset = new int[this.numBands + 1];
-      this.bandOffset[0] = 0;
+  private void setSampleRate(int sampleRate) {
+    if (this.sampleRate != sampleRate) {
+      this.sampleRate = sampleRate;
+      if (this.sampleRate <= 0) {
+        this.bandWidthInv = 0;
+        this.bandOctaveRatio = 0;
+        Arrays.fill(this.bandOffset, 0);
+      } else {
+        this.bandWidthInv = this.bufferSize / (float) this.sampleRate;
 
-      float nyquist = this.sampleRate / 2;
-      float nyquistRatio = nyquist / BASE_BAND_HZ;
-      float bandExpRange = (float) Math.log(nyquistRatio) / LOG_2;
-      this.bandOctaveRatio = bandExpRange / (this.numBands - 1);
+        float nyquist = this.sampleRate / 2;
+        float nyquistRatio = nyquist / BASE_BAND_HZ;
+        float bandExpRange = (float) Math.log(nyquistRatio) / LOG_2;
+        this.bandOctaveRatio = bandExpRange / (this.numBands - 1);
 
-      for (int i = 0; i < this.numBands; ++i) {
-        float bandLimitHz = (float) Math.pow(2, i * this.bandOctaveRatio) * BASE_BAND_HZ;
-        this.bandOffset[i+1] = Math.round(this.bandWidthInv * bandLimitHz);
+        for (int i = 0; i < this.numBands; ++i) {
+          float bandLimitHz = (float) Math.pow(2, i * this.bandOctaveRatio) * BASE_BAND_HZ;
+          this.bandOffset[i+1] = Math.round(this.bandWidthInv * bandLimitHz);
+        }
       }
     }
-    return this;
   }
 
   public int getNumBands() {

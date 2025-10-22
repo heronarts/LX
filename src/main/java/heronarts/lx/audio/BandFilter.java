@@ -32,6 +32,8 @@ import heronarts.lx.utils.LXUtils;
 @LXModulator.Device("Band Filter")
 public class BandFilter extends LXModulator implements LXNormalizedParameter, LXOscComponent {
 
+  private static final int NYQUIST_FREQ = 24000;
+
   /**
    * Gain of the meter, in decibels
    */
@@ -110,15 +112,14 @@ public class BandFilter extends LXModulator implements LXNormalizedParameter, LX
   public BandFilter(String label, GraphicMeter meter) {
     super(label);
 
-    this.impl = new LXMeterImpl(meter.numBands, meter.fft.getBandOctaveRatio());
+    this.impl = new LXMeterImpl(meter.numBands);
     this.meter = meter;
 
-    final int nyquist = meter.fft.getSampleRate() / 2;
-    this.minFreq = new BoundedParameter("Min Freq", 60, 0, nyquist)
+    this.minFreq = new BoundedParameter("Min Freq", 60, 0, NYQUIST_FREQ)
       .setDescription("Minimum frequency the gate responds to")
       .setExponent(4)
       .setUnits(LXParameter.Units.HERTZ);
-    this.maxFreq = new BoundedParameter("Max Freq", 120, 0, nyquist)
+    this.maxFreq = new BoundedParameter("Max Freq", 120, 0, NYQUIST_FREQ)
       .setDescription("Maximum frequency the gate responds to")
       .setExponent(4)
       .setUnits(LXParameter.Units.HERTZ);
@@ -195,7 +196,7 @@ public class BandFilter extends LXModulator implements LXNormalizedParameter, LX
     float newAverage = this.meter.fft.getAverage(this.minFreq.getValuef(), this.maxFreq.getValuef()) / this.meter.fft.getSize();
     float averageGain = (newAverage >= this.averageRaw) ? attackGain : releaseGain;
     this.averageRaw = newAverage + averageGain * (this.averageRaw - newAverage);
-    double averageDb = 20 * Math.log(this.averageRaw) / DecibelMeter.LOG_10 + gainValue + slopeValue * this.averageOctave;
+    double averageDb = DecibelMeter.amplitudeToDecibels(this.averageRaw) + gainValue + slopeValue * this.averageOctave;
     this.averageNorm = 1 + averageDb / rangeValue;
 
     return LXUtils.constrain(this.averageNorm, 0, 1);

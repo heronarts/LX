@@ -22,6 +22,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXModulatorComponent;
+import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
@@ -106,21 +107,23 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
       this.right = new DecibelMeter("Right", input.right, this.gain, this.range, this.attack, this.release);
     }
 
-    public Meter setBuffer(LXAudioComponent device) {
-      setBuffer(device.mix);
-      this.left.setBuffer(device.left);
-      this.right.setBuffer(device.right);
+    public Meter setBuffer(LXAudioComponent component) {
+      setBuffer(component.mix);
+      this.left.setBuffer(component.left);
+      this.right.setBuffer(component.right);
       return this;
     }
 
     @Override
     public void onStart() {
+      super.onStart();
       this.left.start();
       this.right.start();
     }
 
     @Override
     public void onStop() {
+      super.onStop();
       this.left.stop();
       this.right.stop();
     }
@@ -136,19 +139,18 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
       return value;
     }
 
-
   }
 
   public LXAudioEngine(LX lx) {
     super(lx, "Audio");
-    addParameter("enabled", this.enabled);
     addParameter("mode", this.mode);
+    addParameter("enabled", this.enabled);
     addParameter("expandedPerformance", this.expandedPerformance);
     addInternalParameter("ioExpanded", this.ioExpanded);
     addInternalParameter("numSoundObjects", this.numSoundObjects);
 
     addChild("input", this.input = new LXAudioInput(lx));
-    addChild("output", this.output = new LXAudioOutput(lx));
+    addChild("output", this.output = new LXAudioOutput(lx, this));
     addChild("soundStage", this.soundStage = new SoundStage(lx));
     addChild("adm", this.adm = new ADM(lx));
     addChild("envelop", this.envelop = new Envelop(lx));
@@ -164,22 +166,37 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     this.reaper.loop(deltaMs);
   }
 
+  private void toggleMode() {
+    switch (this.mode.getEnum()) {
+      case INPUT -> {
+        this.output.stop();
+        this.input.open();
+        this.input.start();
+      }
+      case OUTPUT -> {
+        this.input.stop(false);
+        this.output.start();
+      }
+    }
+  }
+
   @Override
   public void onParameterChanged(LXParameter p) {
     if (p == this.enabled) {
       if (this.enabled.isOn()) {
-        this.input.open();
-        this.input.start();
-        // TODO(mcslee): start/stop output?
+        toggleMode();
       } else {
-        this.input.stop();
-        // TODO(mcslee): start/stop output?
+        this.input.stop(false);
+        this.output.stop();
       }
       this.meter.running.setValue(this.enabled.isOn());
     } else if (p == this.mode) {
       switch (this.mode.getEnum()) {
-      case INPUT: this.meter.setBuffer(this.input); break;
-      case OUTPUT: this.meter.setBuffer(this.output); break;
+        case INPUT -> this.meter.setBuffer(this.input);
+        case OUTPUT -> this.meter.setBuffer(this.output);
+      }
+      if (this.enabled.isOn()) {
+        toggleMode();
       }
     }
   }
@@ -195,8 +212,8 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   @Override
   public void dispose() {
-    this.input.close();
-    this.output.close();
+    this.input.dispose();
+    this.output.dispose();
     super.dispose();
   }
 
@@ -204,6 +221,12 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
   public void load(LX lx, JsonObject obj) {
     this.output.reset();
     this.numSoundObjects.setValue(0);
+
+    // Force-load input *first* so that the input device is selected before
+    // enabled is loaded... otherwise we may start up audio input on the
+    // default device only to immediately close it and open a different device
+    LXSerializable.Utils.loadChild(this.input, obj, this.input.getPath());
+
     super.load(lx, obj);
     SoundObject.updateSelectors(lx);
   }

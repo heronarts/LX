@@ -20,7 +20,6 @@ package heronarts.lx.audio;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
@@ -37,7 +36,9 @@ import heronarts.lx.parameter.ObjectParameter;
 
 public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
 
-  private AudioFormat format = STEREO;
+  private static final int BUFFER_FRAMES = 2;
+
+  private AudioFormat format;
 
   public final ObjectParameter<Device> device;
 
@@ -52,6 +53,7 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
     private final TargetDataLine line;
 
     private final AudioFormat format;
+    private final int sampleRate;
 
     private final byte[] rawBytes;
 
@@ -60,13 +62,22 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
       this.device = device;
       this.line = line;
       this.format = format;
-      this.rawBytes = new byte[this.format == MONO ? MONO_BUFFER_SIZE : STEREO_BUFFER_SIZE];
+      this.sampleRate = (int) format.getSampleRate();
+      this.rawBytes = new byte[bufferSize(this.format)];
 
       this.line.addLineListener(this);
       this.line.start();
 
       // Kick off the thread
       start();
+    }
+
+    private void setState(boolean stopped, boolean closed) {
+      this.stopped = stopped;
+      this.closed = closed;
+      synchronized (this) {
+        notify();
+      }
     }
 
     @Override
@@ -87,11 +98,13 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
         // Read from the audio line
         this.line.read(this.rawBytes, 0, this.rawBytes.length);
 
-        if (this.format == MONO) {
-          mix.putSamples(rawBytes, 0, MONO_BUFFER_SIZE, MONO_FRAME_SIZE);
+        if (isMono(this.format)) {
+          left.putSamples(this.rawBytes, 0, MONO_BUFFER_SIZE_16, MONO_FRAME_SIZE_16, this.sampleRate);
+          right.putSamples(this.rawBytes, 0, MONO_BUFFER_SIZE_16, MONO_FRAME_SIZE_16, this.sampleRate);
+          mix.putSamples(this.rawBytes, 0, MONO_BUFFER_SIZE_16, MONO_FRAME_SIZE_16, this.sampleRate);
         } else {
-          left.putSamples(rawBytes, 0, STEREO_BUFFER_SIZE, STEREO_FRAME_SIZE);
-          right.putSamples(rawBytes, 2, STEREO_BUFFER_SIZE, STEREO_FRAME_SIZE);
+          left.putSamples(this.rawBytes, 0, STEREO_BUFFER_SIZE_16, STEREO_FRAME_SIZE_16, this.sampleRate);
+          right.putSamples(this.rawBytes, BYTES_PER_SAMPLE_16, STEREO_BUFFER_SIZE_16, STEREO_FRAME_SIZE_16, this.sampleRate);
           mix.computeMix(left, right);
         }
       }
@@ -101,13 +114,14 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
 
     @Override
     public void update(LineEvent event) {
-      LineEvent.Type type = event.getType();
-      if (type == LineEvent.Type.OPEN) {
-      } else if (type == LineEvent.Type.START) {
-      } else if (type == LineEvent.Type.STOP) {
-        this.stopped = true;
-      } else if (type == LineEvent.Type.CLOSE) {
-        this.closed = true;
+      final LineEvent.Type eventType = event.getType();
+      LX.debug("LXAudioInput.line.update(LineEvent.Type." + eventType + ")");
+      if (eventType == LineEvent.Type.START) {
+        setState(false, false);
+      } else if (eventType == LineEvent.Type.STOP) {
+        setState(true, false);
+      } else if (eventType == LineEvent.Type.CLOSE) {
+        setState(true, true);
       }
     }
 
@@ -191,37 +205,43 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
     return this.format;
   }
 
+  private static AudioFormat[] LINE_FORMAT_PRIORITY = {
+    AUDIO_FORMAT_STEREO_48K,
+    AUDIO_FORMAT_STEREO_44K,
+    AUDIO_FORMAT_MONO_48K,
+    AUDIO_FORMAT_MONO_44K
+  };
+
   void open() {
     if (this.inputThread == null) {
-      Device device = this.device.getObject();
+      final Device device = this.device.getObject();
       if (!device.isAvailable()) {
         LX.error("LXAudioInput device is not available, audio input will not work: " + device);
         return;
       }
 
       DataLine.Info info = null;
-      if (device.mixer.isLineSupported(STEREO_TARGET_LINE)) {
-        this.format = STEREO;
-        info = STEREO_TARGET_LINE;
-      } else if (device.mixer.isLineSupported(MONO_TARGET_LINE)) {
-        this.format = MONO;
-        info = MONO_TARGET_LINE;
-      } else {
+      for (AudioFormat format : LINE_FORMAT_PRIORITY) {
+        final DataLine.Info candidate = getTargetLineInfo(format);
+        if (device.mixer.isLineSupported(candidate)) {
+          this.format = format;
+          info = candidate;
+          break;
+        }
+      }
+      if (info == null) {
         LX.error("Audio device does not support mono/stereo 16-bit input: " + device);
         return;
       }
 
-      TargetDataLine targetLine = null;
       try {
-        targetLine = (TargetDataLine) device.mixer.getLine(info);
-        targetLine.open(this.format, 2 * (this.format == MONO ? MONO_BUFFER_SIZE : STEREO_BUFFER_SIZE));
+        TargetDataLine targetLine = (TargetDataLine) device.mixer.getLine(info);
+        targetLine.open(this.format, BUFFER_FRAMES * bufferSize(this.format));
+        // This line seems good, start an input thread to service it
+        this.inputThread = new InputThread(device, targetLine, this.format);
       } catch (Exception x) {
         LX.error(x, "Exception opening audio input line and starting audio input thread: " + device);
-        return;
       }
-
-      // This line seems good, start an input thread to service it
-      this.inputThread = new InputThread(device, targetLine, this.format);
     }
   }
 
@@ -230,34 +250,40 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
       LX.error("Cannot start LXAudioInput - it is not open: " + this.device.getObject());
       return;
     }
-    this.inputThread.stopped = false;
     this.inputThread.line.start();
-    synchronized (this.inputThread) {
-      this.inputThread.notify();
-    }
+
+    // NOTE: the above does *not* always result in a LineListener START callback! That callback
+    // does not seem to happen until the InputThread actually resumes and makes another read()
+    // call
+    this.inputThread.setState(false, false);
   }
 
   void stop() {
+    stop(true);
+  }
+
+  void stop(boolean errorIfClosed) {
     if (this.inputThread == null) {
-      LX.error("Cannot stop LXAudioInput - it is not open: " + this.device.getObject());
+      if (errorIfClosed) {
+        LX.error("Cannot stop LXAudioInput - it is not open: " + this.device.getObject());
+      }
       return;
     }
-    this.inputThread.stopped = true;
     this.inputThread.line.stop();
-    synchronized (this.inputThread) {
-      this.inputThread.notify();
-    }
+
+    // NOTE: LineListener should handle this, but don't trust that completely
+    this.inputThread.setState(true, false);
   }
 
   void close() {
     if (this.inputThread != null) {
-      this.inputThread.line.flush();
       stop();
-      this.inputThread.closed = true;
+      this.inputThread.line.flush();
       this.inputThread.line.close();
-      synchronized (this.inputThread) {
-        this.inputThread.notify();
-      }
+
+      // Just in case LineListener doesn't trigger close action...
+      this.inputThread.setState(true, true);
+
       try {
         this.inputThread.join();
       } catch (InterruptedException ix) {
@@ -265,6 +291,12 @@ public class LXAudioInput extends LXAudioComponent implements LXOscComponent {
       }
       this.inputThread = null;
     }
+  }
+
+  @Override
+  public void dispose() {
+    close();
+    super.dispose();
   }
 
 }
