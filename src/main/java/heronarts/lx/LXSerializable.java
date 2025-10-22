@@ -133,6 +133,15 @@ public interface LXSerializable {
       }
     }
 
+    public static void loadChild(LXComponent child, JsonObject obj, String path) {
+      if (obj.has(LXComponent.KEY_CHILDREN)) {
+        final JsonObject children = obj.getAsJsonObject(LXComponent.KEY_CHILDREN);
+        if (children.has(path)) {
+          child.load(child.getLX(), children.getAsJsonObject(path));
+        }
+      }
+    }
+
     /**
      * Utility function to load a set of parameters
      *
