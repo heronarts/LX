@@ -155,6 +155,14 @@ public class DecibelMeter extends LXModulator implements LXNormalizedParameter, 
     return this;
   }
 
+  public int getBufferSize() {
+    return this.buffer.bufferSize();
+  }
+
+  public int getSampleRate() {
+    return this.buffer.sampleRate();
+  }
+
   public double getExponent() {
     throw new UnsupportedOperationException("DecibelMeter does not support exponent");
   }

@@ -18,6 +18,11 @@
 
 package heronarts.lx.audio;
 
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import heronarts.lx.LX;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.NormalizedParameter;
@@ -33,7 +38,14 @@ import heronarts.lx.parameter.NormalizedParameter;
  */
 public class GraphicMeter extends DecibelMeter {
 
+  public interface Processor {
+    public void onMeterAudioFrame(GraphicMeter meter);
+    public void onMeterStop(GraphicMeter meter);
+  }
+
   private final LXMeterImpl impl;
+
+  private final List<Processor> processors = new CopyOnWriteArrayList<>();
 
   /**
    * dB/octave slope applied to the equalizer
@@ -104,8 +116,26 @@ public class GraphicMeter extends DecibelMeter {
     }
   }
 
+  public final void addProcessor(Processor processor) {
+    Objects.requireNonNull(processor, "May not add null GraphicMeter.Processor");
+    if (this.processors.contains(processor)) {
+      throw new IllegalStateException("May not add duplicate GraphicMeter.Processor: " + processor);
+    }
+    this.processors.add(processor);
+  }
+
+  public final void removeProcessor(Processor processor) {
+    if (!this.processors.contains(processor)) {
+      throw new IllegalStateException("May not remove non-registered GraphicMeter.Processor: " + processor);
+    }
+    this.processors.remove(processor);
+  }
+
   @Override
   protected void onAudioFrame() {
+    if (!isRunning()) {
+      return;
+    }
     super.onAudioFrame();
     this.impl.compute(
       this.fft.compute(this.buffer),
@@ -115,12 +145,18 @@ public class GraphicMeter extends DecibelMeter {
       this.range.getValue(),
       this.slope.getValue()
     );
+    for (Processor processor : this.processors) {
+      processor.onMeterAudioFrame(this);
+    }
   }
 
   @Override
   protected void onStop() {
     super.onStop();
     this.impl.onStop();
+    for (Processor processor : this.processors) {
+      processor.onMeterStop(this);
+    }
   }
 
   /**
@@ -215,6 +251,13 @@ public class GraphicMeter extends DecibelMeter {
    */
   public float getAveragef(int minBand, int avgBands) {
     return (float) getAverage(minBand, avgBands);
+  }
+
+  @Override
+  public void dispose() {
+    super.dispose();
+    this.processors.forEach(processor -> LX.warning("Stranded GraphicMeter.Processor: " + processor));
+    this.processors.clear();
   }
 
 }
