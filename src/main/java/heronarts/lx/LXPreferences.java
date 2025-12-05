@@ -103,9 +103,9 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BoundedParameter("Scroll Sensitivity", 1, .1, 100)
     .setDescription("Scrolling sensitivity");
 
-  public final BooleanParameter showArrangementWindow =
-    new BooleanParameter("Show Arrangement Window", false)
-    .setDescription("Whether the arrangement window is visible");
+  public final BooleanParameter showAltWindow =
+    new BooleanParameter("Show Alt Window", false)
+    .setDescription("Whether the alt window is visible");
 
   private String projectFileName = null;
   private String scheduleFileName = null;
@@ -145,10 +145,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.showCpuLoad.addListener(this);
     this.autoReloadPackages.addListener(this);
     this.scrollSensitivity.addListener(this);
-    this.showArrangementWindow.addListener(this);
+    this.showAltWindow.addListener(this);
 
     this.windowSettings.put(KEY_WINDOW_MAIN, new DisplaySettings());
-    this.windowSettings.put(KEY_WINDOW_ARRANGEMENT, new DisplaySettings());
+    this.windowSettings.put(KEY_WINDOW_ALT, new DisplaySettings());
   }
 
   public void setLX(LX lx) {
@@ -266,10 +266,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
   private static final String KEY_AUTO_RELOAD_PACKAGES = "autoReloadPackages";
   private static final String KEY_SCROLL_SENSITIVITY = "scrollSensitivity";
-  private static final String KEY_SHOW_ARRANGEMENT_WINDOW = "showArrangementWindow";
+  private static final String KEY_SHOW_ALT_WINDOW = "showAltWindow";
   private static final String KEY_WINDOWS = "windows";
   public static final String KEY_WINDOW_MAIN = "main";
-  public static final String KEY_WINDOW_ARRANGEMENT = "arrangement";
+  public static final String KEY_WINDOW_ALT = "alt";
   private static final String KEY_REGISTRY = "registry";
 
   @Override
@@ -299,7 +299,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
     object.addProperty(KEY_AUTO_RELOAD_PACKAGES, this.autoReloadPackages.isOn());
     object.addProperty(KEY_SCROLL_SENSITIVITY, this.scrollSensitivity.getValue());
-    object.addProperty(KEY_SHOW_ARRANGEMENT_WINDOW, this.showArrangementWindow.isOn());
+    object.addProperty(KEY_SHOW_ALT_WINDOW, this.showAltWindow.isOn());
     object.add(KEY_WINDOWS, Utils.toObject(lx, this.windowSettings));
     object.add(KEY_REGISTRY, LXSerializable.Utils.toObject(this.lx, this.lx.registry));
   }
@@ -341,7 +341,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   }
 
   private void loadWindowSettings(JsonObject object) {
-    LXSerializable.Utils.loadBoolean(this.showArrangementWindow, object, KEY_SHOW_ARRANGEMENT_WINDOW);
+    LXSerializable.Utils.loadBoolean(this.showAltWindow, object, KEY_SHOW_ALT_WINDOW);
     boolean foundMain = false;
     if (object.has(KEY_WINDOWS)) {
       JsonObject windows = object.getAsJsonObject(KEY_WINDOWS);
@@ -349,8 +349,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
         foundMain = true;
         this.windowSettings.get(KEY_WINDOW_MAIN).load(this.lx, windows.getAsJsonObject(KEY_WINDOW_MAIN));
       }
-      if (windows.has(KEY_WINDOW_ARRANGEMENT)) {
-        this.windowSettings.get(KEY_WINDOW_ARRANGEMENT).load(this.lx, windows.getAsJsonObject(KEY_WINDOW_ARRANGEMENT));
+      if (windows.has(KEY_WINDOW_ALT)) {
+        this.windowSettings.get(KEY_WINDOW_ALT).load(this.lx, windows.getAsJsonObject(KEY_WINDOW_ALT));
       }
     }
 
