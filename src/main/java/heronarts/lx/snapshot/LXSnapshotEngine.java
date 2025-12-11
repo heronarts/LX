@@ -419,8 +419,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return null;
   }
 
-  private final List<LXSnapshot.View> recallViews =
-    new ArrayList<LXSnapshot.View>();
+  private List<LXSnapshot.View> recallViews = new ArrayList<>();
 
   /**
    * Recall this snapshot, apply all of its values
@@ -459,8 +458,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       commands.add(new LXCommand.Parameter.SetValue(this.autoCycleCursor, this.autoCycleCursor.getValuei()));
     }
     this.autoCycleCursor.setValue(snapshot.getIndex());
-    this.recallViews.clear();
-    this.recallViews.addAll(snapshot.views);
+    this.recallViews = new ArrayList<>(snapshot.views);
     if (this.transitionEnabled.isOn()) {
       transition = true;
       this.inTransition = snapshot;
