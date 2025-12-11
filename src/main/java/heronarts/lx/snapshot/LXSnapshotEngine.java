@@ -419,9 +419,6 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return null;
   }
 
-  private final List<LXSnapshot.View> recallViews =
-    new ArrayList<LXSnapshot.View>();
-
   /**
    * Recall this snapshot, apply all of its values
    *
@@ -459,8 +456,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       commands.add(new LXCommand.Parameter.SetValue(this.autoCycleCursor, this.autoCycleCursor.getValuei()));
     }
     this.autoCycleCursor.setValue(snapshot.getIndex());
-    this.recallViews.clear();
-    this.recallViews.addAll(snapshot.views);
+
+    final List<View> recallViews = new ArrayList<>();
+    recallViews.addAll(snapshot.views);
+
     if (this.transitionEnabled.isOn()) {
       transition = true;
       this.inTransition = snapshot;
@@ -470,12 +469,12 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (this.missingChannelMode.getEnum() == MissingChannelMode.DISABLE) {
       for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
         if (channel.enabled.isOn() && !snapshot.hasChannelFaderView(channel)) {
-          this.recallViews.add(snapshot.getMissingChannelView(channel));
+          recallViews.add(snapshot.getMissingChannelView(channel));
         }
       }
     }
 
-    for (View view : this.recallViews) {
+    for (View view : recallViews) {
       if (view.activeFlag = isValidView(view, mixer, pattern, effect, modulation, output, master)) {
         if (transition) {
           view.startTransition();
