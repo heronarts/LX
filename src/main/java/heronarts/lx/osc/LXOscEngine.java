@@ -354,6 +354,30 @@ public class LXOscEngine extends LXComponent {
     return this;
   }
 
+  public LXOscEngine sendMessage(String path, Object ... args) {
+    if (this.engineTransmitter != null) {
+      this.engineTransmitter.sendMessage(path, args);
+    }
+    for (LXOscConnection.Output output : this.outputs) {
+      if (output.transmitter != null) {
+        output.transmitter.sendMessage(path, args);
+      }
+    }
+    return this;
+  }
+
+  public LXOscEngine sendMessage(String path, OscArgument ... args) {
+    if (this.engineTransmitter != null) {
+      this.engineTransmitter.sendMessage(path, args);
+    }
+    for (LXOscConnection.Output output : this.outputs) {
+      if (output.transmitter != null) {
+        output.transmitter.sendMessage(path, args);
+      }
+    }
+    return this;
+  }
+
   public LXOscEngine sendParameter(LXParameter parameter) {
     if (this.engineTransmitter != null) {
       this.engineTransmitter.onParameterChanged(parameter);
@@ -586,6 +610,37 @@ public class LXOscEngine extends LXComponent {
         oscMessage.add(oscFloat);
       }
       _sendMessage(oscMessage);
+    }
+
+    private void sendMessage(String address, Object ... args) {
+      if (isActive() && !isAddressFiltered(address)) {
+        oscMessage.clearArguments();
+        oscMessage.setAddressPattern(address);
+        for (Object arg : args) {
+          oscMessage.add(switch (arg) {
+            case OscArgument a -> a;
+            case Integer i -> new OscInt(i);
+            case Long l -> new OscLong(l);
+            case Float f -> new OscFloat(f);
+            case Double d -> new OscDouble(d);
+            case String s -> new OscString(s);
+            case Boolean b -> b.booleanValue() ? new OscTrue() : new OscFalse();
+            default -> throw new IllegalArgumentException("Invalid OSC argument: " + arg);
+          });
+        }
+        _sendMessage(oscMessage);
+      }
+    }
+
+    private void sendMessage(String address, OscArgument ... args) {
+      if (isActive() && !isAddressFiltered(address)) {
+        oscMessage.clearArguments();
+        oscMessage.setAddressPattern(address);
+        for (OscArgument arg : args) {
+          oscMessage.add(arg);
+        }
+        _sendMessage(oscMessage);
+      }
     }
 
     private void sendMessage(String address, int value) {
