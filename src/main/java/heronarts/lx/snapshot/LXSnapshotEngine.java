@@ -19,10 +19,12 @@
 
 package heronarts.lx.snapshot;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Queue;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -419,7 +421,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return null;
   }
 
-  private List<LXSnapshot.View> recallViews = new ArrayList<>();
+  private final List<LXSnapshot.View> recallViews = new ArrayList<>();
 
   /**
    * Recall this snapshot, apply all of its values
@@ -431,19 +433,43 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     return recall(snapshot, null);
   }
 
+  private boolean inRecall = false;
+
+  private final Queue<LXGlobalSnapshot> snapshotQueue = new ArrayDeque<>();
+
   /**
    * Recall this snapshot, and populate an array of commands which
    * would need to be undone by this operation.
    *
    * @param snapshot Snapshot to recall
    * @param commands Array to populate with all the commands processed
-   * @return True the snapshot was recalled, false if it was already mid-transition
+   * @return True the snapshot was recalled, false if it was already mid-transition or another snapshot is mid-recall
    */
   public boolean recall(LXGlobalSnapshot snapshot, List<LXCommand> commands) {
     if (this.inTransition == snapshot) {
       finishTransition();
       return false;
     }
+
+    // Snapshot recall may end up triggering the recall of *another* snapshot due
+    // to modulation mappings based upon snapshot parameters values. If this occurs,
+    // queue up the re-entrant snapshot recalls such that are all processed in the
+    // order in which they were triggered.
+    if (this.inRecall) {
+      this.snapshotQueue.add(snapshot);
+      return false;
+    }
+
+    this.inRecall = true;
+    _recall(snapshot, commands);
+    while (!this.snapshotQueue.isEmpty()) {
+      _recall(this.snapshotQueue.remove(), null);
+    }
+    this.inRecall = false;
+    return true;
+  }
+
+  private void _recall(LXGlobalSnapshot snapshot, List<LXCommand> commands) {
 
     final boolean mixer = this.recallMixer.isOn();
     final boolean pattern = this.recallPattern.isOn();
@@ -458,7 +484,8 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
       commands.add(new LXCommand.Parameter.SetValue(this.autoCycleCursor, this.autoCycleCursor.getValuei()));
     }
     this.autoCycleCursor.setValue(snapshot.getIndex());
-    this.recallViews = new ArrayList<>(snapshot.views);
+    this.recallViews.clear();
+    this.recallViews.addAll(snapshot.views);
     if (this.transitionEnabled.isOn()) {
       transition = true;
       this.inTransition = snapshot;
@@ -488,8 +515,6 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (transition) {
       this.transition.trigger();
     }
-
-    return true;
   }
 
   private boolean isValidView(View view, boolean mixer, boolean pattern, boolean effect, boolean modulation, boolean output, boolean master) {
