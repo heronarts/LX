@@ -436,6 +436,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
   private boolean inRecall = false;
 
   private final Queue<LXGlobalSnapshot> snapshotQueue = new ArrayDeque<>();
+  private final List<LXGlobalSnapshot> snapshotChain = new ArrayList<>();
 
   /**
    * Recall this snapshot, and populate an array of commands which
@@ -456,7 +457,7 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     // queue up the re-entrant snapshot recalls such that are all processed in the
     // order in which they were triggered.
     if (this.inRecall) {
-      if (this.snapshotQueue.contains(snapshot)) {
+      if (this.snapshotChain.contains(snapshot)) {
         LX.error("Ignoring infinite loop snapshot recall triggered by: " + snapshot);
         this.lx.pushError("Recall of " + snapshot.getLabel() + " creates an infinite loop, ignoring.");
       } else {
@@ -466,14 +467,18 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     }
 
     this.inRecall = true;
+    this.snapshotChain.clear();
+    this.snapshotChain.add(snapshot);
     _recall(snapshot, commands);
 
     // Process deferred re-entrant snapshot recalls
     LXGlobalSnapshot reentrant;
-    while ((reentrant = this.snapshotQueue.peek()) != null) {
+    while ((reentrant = this.snapshotQueue.poll()) != null) {
+      this.snapshotChain.add(reentrant);
       _recall(reentrant, null);
-      this.snapshotQueue.remove();
     }
+
+    this.snapshotChain.clear();
     this.inRecall = false;
     return true;
   }
