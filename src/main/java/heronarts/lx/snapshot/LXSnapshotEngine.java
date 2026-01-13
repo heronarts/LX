@@ -456,14 +456,23 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     // queue up the re-entrant snapshot recalls such that are all processed in the
     // order in which they were triggered.
     if (this.inRecall) {
-      this.snapshotQueue.add(snapshot);
+      if (this.snapshotQueue.contains(snapshot)) {
+        LX.error("Ignoring infinite loop snapshot recall triggered by: " + snapshot);
+        this.lx.pushError("Recall of " + snapshot.getLabel() + " creates an infinite loop, ignoring.");
+      } else {
+        this.snapshotQueue.add(snapshot);
+      }
       return false;
     }
 
     this.inRecall = true;
     _recall(snapshot, commands);
-    while (!this.snapshotQueue.isEmpty()) {
-      _recall(this.snapshotQueue.remove(), null);
+
+    // Process deferred re-entrant snapshot recalls
+    LXGlobalSnapshot reentrant;
+    while ((reentrant = this.snapshotQueue.peek()) != null) {
+      _recall(reentrant, null);
+      this.snapshotQueue.remove();
     }
     this.inRecall = false;
     return true;
