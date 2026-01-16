@@ -19,6 +19,7 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.mixer.LXGroup;
 
 public class LXGroupClip extends LXAbstractChannelClip {
@@ -26,7 +27,11 @@ public class LXGroupClip extends LXAbstractChannelClip {
   public final LXGroup group;
 
   public LXGroupClip(LX lx, LXGroup group, int index) {
-    super(lx, group, index, true);
+    this(lx, group, group, group, index);
+  }
+
+  public LXGroupClip(LX lx, LXGroup group, LXComponent parent, LXClipContainer clipContainer, int index) {
+    super(lx, group, parent, clipContainer, index, true);
     this.group = group;
   }
 }

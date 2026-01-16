@@ -95,7 +95,13 @@ public class LXClipboardComponent<T extends LXComponent> implements LXClipboardI
 
     public Clip(LXClip clip) {
       super(LXClip.class, clip);
-      this.bus = clip.bus;
+
+      if (clip.bus instanceof LXBus bus) {
+        this.bus = bus;
+      } else {
+        this.bus = null;
+      }
+      // this.bus = clip.bus;
     }
   }
 

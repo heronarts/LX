@@ -19,10 +19,12 @@
 package heronarts.lx.mixer;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXModelComponent;
 import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.LXClipContainer;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.effect.LXEffect;
@@ -48,7 +50,7 @@ import com.google.gson.JsonObject;
  * Abstract representation of a channel, which could be a normal channel with patterns
  * or the master channel.
  */
-public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent, LXModulationContainer, LXEffect.Container {
+public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent, LXModulationContainer, LXEffect.Container, LXClipContainer {
 
   /**
    * Listener interface for objects which want to be notified when the internal
@@ -563,6 +565,30 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
     for (int i = this.mutableEffects.size() - 1; i >= 0; --i) {
       removeEffect(this.mutableEffects.get(i));
     }
+  }
+
+  // ClipContainer
+
+  @Override
+  public BooleanParameter getArmParameter() {
+    return this.arm;
+  }
+
+  public List<LXClip> getClips() {
+    return this.clips;
+  }
+
+  public void addEffectsListener(LXBus.Listener listener) {
+    addListener(listener);
+  }
+
+  public void removeEffectsListener(LXBus.Listener listener) {
+    removeListener(listener);
+  }
+
+  @Override
+  public LXComponent getComponent() {
+    return this;
   }
 
   private static final String KEY_EFFECTS = "effects";

@@ -1,0 +1,239 @@
+package heronarts.lx.clip;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
+import heronarts.lx.LXSerializable;
+import heronarts.lx.effect.LXEffect;
+import heronarts.lx.mixer.LXBus;
+import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.MutableParameter;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+public class LXCompositionEngine extends LXComponent implements LXOscComponent, LXClipContainer {
+
+  public interface Listener {
+    public void compositionChanged(Composition composition);
+  }
+
+  private final List<Listener> listeners = new ArrayList<>();
+
+  // TODO: allow a list of compositions, not just one
+  private Composition composition;
+
+  public final BooleanParameter clipExpanded =
+    new BooleanParameter("Clip", true)
+      .setMode(BooleanParameter.Mode.TOGGLE)
+      .setDescription("Toggle Clip visibility in the alt window");
+
+  public final BooleanParameter deviceExpanded =
+    new BooleanParameter("Device", false)
+      .setMode(BooleanParameter.Mode.TOGGLE)
+      .setDescription("Toggle Device visibility in the alt window");
+
+  public final BooleanParameter mixerExpanded =
+    new BooleanParameter("Mixer", false)
+      .setMode(BooleanParameter.Mode.TOGGLE)
+      .setDescription("Toggle Mixer visibility in the alt window");
+
+  public final BooleanParameter arm =
+    new BooleanParameter("Arm")
+      .setDescription("Arms the composition for recording. If the Start Transport With Record preference is enabled, recording will start immediately.");
+
+  public final FocusedClipParameter focusedClip = new FocusedClipParameter();
+
+  public LXCompositionEngine(LX lx) {
+    super(lx, "Composition");
+
+    addParameter("clipExpanded", this.clipExpanded);
+    addParameter("deviceExpanded", this.deviceExpanded);
+    addParameter("mixerExpanded", this.mixerExpanded);
+    addParameter("focusedClip", this.focusedClip);
+
+    this.arm.addListener(this::armChanged);
+  }
+
+  public Composition getComposition() {
+    return this.composition;
+  }
+
+  private void clearCompositions() {
+    // This will reference a list eventually...
+    if (this.composition != null) {
+      Composition prior = this.composition;
+      this.composition = null;
+      notifyCompositionChanged();
+      prior.dispose();
+    }
+  }
+
+  private void armChanged(LXParameter p) {
+    // If "Start Transport With Record" preference is enabled, then start recording when arm is pressed.
+    // TODO: update preference to project-specific location?
+    // if (lx.preferences.startTransportWithRecord.isOn()) {
+      if (this.composition.isRunning()) {
+        // Already playing, just arm for overdub
+        return;
+      }
+      if (this.composition.hasContent()) {
+        // Existing composition: start recording from current cursor position
+        this.composition.launchAutomationFromCursor();
+      } else {
+        // New/empty composition: start from the beginning
+        this.composition.launch();
+      }
+    // }
+  }
+
+  public void loop(double deltaMs) {
+    if (this.composition != null) {
+      this.composition.loop(deltaMs);
+    }
+  }
+
+  public LXClip getFocusedClip() {
+    return this.focusedClip.getClip();
+  }
+
+  public LXCompositionEngine setFocusedClip(LXClip clip) {
+    this.focusedClip.setClip(clip);
+    return this;
+  }
+
+  // LXClipContainer
+
+  @Override
+  public BooleanParameter getArmParameter() {
+    return this.arm;
+  }
+
+  private final List<LXClip> emptyClips = List.of();
+  private final List<LXEffect> emptyEffects = List.of();
+
+  @Override
+  public List<LXClip> getClips() {
+    return emptyClips;
+  }
+
+  @Override
+  public List<LXEffect> getEffects() {
+    return emptyEffects;
+  }
+
+  @Override
+  public void addEffectsListener(LXBus.Listener listener) {}
+
+  @Override
+  public void removeEffectsListener(LXBus.Listener listener) {}
+
+  @Override
+  public void onClipStart(LXClip clip) {}
+
+  @Override
+  public void onClipStop(LXClip clip) {}
+
+  @Override
+  public LXComponent getComponent() {
+    return this;
+  }
+
+  // Listeners
+
+  public final void addListener(Listener listener) {
+    Objects.requireNonNull(listener, "May not add null LXCompositionEngine.Listener");
+    if (this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not add duplicate LXCompositionEngine.Listener: " + listener);
+    }
+    this.listeners.add(listener);
+  }
+
+  public final void removeListener(Listener listener) {
+    if (!this.listeners.contains(listener)) {
+      throw new IllegalStateException("May not remove non-registered LXCompositionEngine.Listener: " + listener);
+    }
+    this.listeners.remove(listener);
+  }
+
+  private void notifyCompositionChanged() {
+    for (Listener listener : this.listeners) {
+      listener.compositionChanged(this.composition);
+    }
+  }
+
+  // Disposal
+
+  @Override
+  public void dispose() {
+    clearCompositions();
+    super.dispose();
+  }
+
+  // Serialization
+
+  private static final String KEY_COMPOSITIONS = "compositions";
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);;
+    JsonArray clipsArr = new JsonArray();
+    // There's only one composition for now...
+    clipsArr.add(LXSerializable.Utils.toObject(lx, this.composition));
+    obj.add(KEY_COMPOSITIONS, clipsArr);
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    clearCompositions();
+
+    super.load(lx, obj);
+
+    if (obj.has(KEY_COMPOSITIONS)) {
+      JsonArray compArr = obj.get(KEY_COMPOSITIONS).getAsJsonArray();
+      for (JsonElement compElem : compArr) {
+        JsonObject compObj = compElem.getAsJsonObject();
+        Composition composition = new Composition(lx);
+        composition.load(lx, compObj);
+        // There's only one composition for now...
+        this.composition = composition;
+        break;
+      }
+    }
+
+    if (this.composition == null) {
+      // New project or no composition was saved
+      this.composition = new Composition(lx);
+    }
+
+    notifyCompositionChanged();
+  }
+
+  public static class FocusedClipParameter extends MutableParameter {
+
+    private LXClip clip = null;
+
+    private FocusedClipParameter() {
+      super("Focused Clip");
+      setDescription("Parameter which indicate the globally focused clip");
+    }
+
+    public FocusedClipParameter setClip(LXClip clip) {
+      if (this.clip != clip) {
+        this.clip = clip;
+        bang();
+      }
+      return this;
+    }
+
+    public LXClip getClip() {
+      return this.clip;
+    }
+
+  }
+}

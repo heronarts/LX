@@ -19,6 +19,7 @@
 package heronarts.lx;
 
 import heronarts.lx.audio.LXAudioEngine;
+import heronarts.lx.clip.LXCompositionEngine;
 import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXPalette;
@@ -79,6 +80,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public final Tempo tempo;
 
   public final LXClipEngine clips;
+
+  public final LXCompositionEngine composition;
 
   public final LXMixerEngine mixer;
 
@@ -407,6 +410,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Mixer engine
     addChild("mixer", this.mixer = new LXMixerEngine(lx));
     LX.initProfiler.log("Engine: Mixer");
+
+    // Composition engine
+    addChild("composition", this.composition = new LXCompositionEngine(lx));
+    LX.initProfiler.log("Engine: Composition");
 
     // Modulation matrix
     addChild(KEY_MODULATION, this.modulation = new LXModulationEngine(lx));
@@ -1128,6 +1135,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Run the color control
     this.lx.engine.palette.loop(deltaMs);
 
+    // Run the composition
+    this.composition.loop(deltaMs);
+
     // Run top-level loop tasks, take care to handle removals that
     // are scheduled from within the loop tasks themselves
     this.inLoopTasks = true;
@@ -1462,6 +1472,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.lx.registry.disposePlugins();
 
     // And now remove core engine components
+    LX.dispose(this.composition);
     LX.dispose(this.clips);
     LX.dispose(this.modulation);
     LX.dispose(this.mixer);

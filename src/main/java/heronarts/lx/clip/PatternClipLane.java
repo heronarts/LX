@@ -35,8 +35,8 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
 
   public final LXPatternEngine engine;
 
-  PatternClipLane(LXClip clip) {
-    this(clip, ((LXChannel) clip.bus).patternEngine);
+  PatternClipLane(LXClip clip, LXChannel channel) {
+    this(clip, channel.patternEngine);
   }
 
   PatternClipLane(LXClip clip, PatternRack rack) {
@@ -225,7 +225,7 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     if (this.engine.component instanceof PatternRack rack) {
-      obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.bus));
+      obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.bus.getComponent()));
     }
   }
 
