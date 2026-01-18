@@ -202,7 +202,7 @@ public abstract class LXListenableParameter implements LXParameter {
 
   private static record ReentrantSetValue(double value, boolean notifyListeners) {}
 
-  private final Queue<ReentrantSetValue> setValues = new ArrayDeque<>();
+  private Queue<ReentrantSetValue> setValues = null;
 
   public final LXParameter setValue(double value) {
     return setValue(value, true);
@@ -213,6 +213,9 @@ public abstract class LXListenableParameter implements LXParameter {
       // setValue() was called recursively from a parameter listener.
       // This is okay, but we need to call all the listeners with the
       // first value before we make this next update.
+      if (this.setValues == null) {
+        this.setValues = new ArrayDeque<>();
+      }
       this.setValues.add(new ReentrantSetValue(value, notifyListeners));
     } else {
       if (this.value != value) {
@@ -224,9 +227,11 @@ public abstract class LXListenableParameter implements LXParameter {
             this.listeners.forEach(l -> l.onParameterChanged(this));
             this.inListener = false;
           }
-          while (!this.setValues.isEmpty()) {
-            ReentrantSetValue rsv = this.setValues.poll();
-            setValue(rsv.value, rsv.notifyListeners);
+          if (this.setValues != null) {
+            ReentrantSetValue rsv;
+            while ((rsv = this.setValues.poll()) != null) {
+              setValue(rsv.value, rsv.notifyListeners);
+            }
           }
         }
       }
