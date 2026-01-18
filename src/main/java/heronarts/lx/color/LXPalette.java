@@ -158,8 +158,8 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   public final StringParameter[] labels = { this.label1, this.label2, this.label3, this.label4, this.label5 };
 
   private LXSwatch inTransition = null;
-  private LXSwatch transitionFrom = null;
-  private LXSwatch transitionTo = null;
+  private LXSwatch.Static transitionFrom = null;
+  private LXSwatch.Static transitionTo = null;
   private JsonObject transitionTarget = null;
 
   private LinearEnvelope transition = new LinearEnvelope(0, 1, new FunctionalParameter() {
@@ -452,7 +452,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
       }
 
       // Make sure we have same number of colors as the max of from/to during transition
-      int nColors = Math.max(this.transitionFrom.colors.size(), this.transitionTo.colors.size());
+      int nColors = Math.max(this.transitionFrom.colors.length, this.transitionTo.colors.length);
       while (this.swatch.colors.size() < nColors) {
         this.swatch.addColor();
       }
@@ -562,8 +562,8 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
 
   private void _transitionColor(LXDynamicColor color, int i, float lerp) {
     color.primary.setColor(this.transitionMode.getEnum().function.blend(
-      this.transitionFrom.getColor(i).primary,
-      this.transitionTo.getColor(i).primary,
+      this.transitionFrom.getColor(i),
+      this.transitionTo.getColor(i),
       lerp
     ));
   }
