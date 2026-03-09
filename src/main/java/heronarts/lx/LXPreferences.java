@@ -23,7 +23,9 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -101,6 +103,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BoundedParameter("Scroll Sensitivity", 1, .1, 100)
     .setDescription("Scrolling sensitivity");
 
+  public final BooleanParameter showAltWindow =
+    new BooleanParameter("Show Alt Window", false)
+    .setDescription("Whether the alt window is visible");
+
   private String projectFileName = null;
   private String scheduleFileName = null;
 
@@ -108,10 +114,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
   public final List<String> recentProjects = new ArrayList<>(MAX_RECENT_PROJECTS);
 
-  private int windowWidth = -1;
-  private int windowHeight = -1;
-  private int windowPosX = -1;
-  private int windowPosY = -1;
+  private final Map<String, DisplaySettings> windowSettings = new HashMap<>();
 
   private boolean inLoad = false;
 
@@ -142,6 +145,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.showCpuLoad.addListener(this);
     this.autoReloadPackages.addListener(this);
     this.scrollSensitivity.addListener(this);
+    this.showAltWindow.addListener(this);
+
+    this.windowSettings.put(KEY_WINDOW_MAIN, new DisplaySettings());
+    this.windowSettings.put(KEY_WINDOW_ALT, new DisplaySettings());
   }
 
   public void setLX(LX lx) {
@@ -157,6 +164,10 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   @Override
   public void onParameterChanged(LXParameter p) {
     if (this.lx == null) {
+      if (this.inLoad) {
+        // Ignore changes during first window settings load
+        return;
+      }
       throw new IllegalStateException("LXPreferences.onParameterChanged() invoked before LX instance was set");
     }
     if ((p == this.oscQuery) && !this.lx.flags.zeroconfForce) {
@@ -169,40 +180,45 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     save();
   }
 
-  public int getWindowWidth() {
-    return this.windowWidth;
+  @Deprecated
+  public int getWindowWidth(String key) {
+    return this.windowSettings.get(key).getWidth();
   }
 
-  public int getWindowHeight() {
-    return this.windowHeight;
+  @Deprecated
+  public int getWindowHeight(String key) {
+    return this.windowSettings.get(key).getHeight();
   }
 
-  public void setWindowSize(int windowWidth, int windowHeight) {
-    this.windowWidth = windowWidth;
-    this.windowHeight = windowHeight;
+  @Deprecated
+  public void setWindowSize(String key, int width, int height) {
+    this.windowSettings.get(key).setSize(width, height);
     save();
   }
 
-  public void setWindowSize(int windowWidth, int windowHeight, int windowPosX, int windowPosY) {
-    this.windowWidth = windowWidth;
-    this.windowHeight = windowHeight;
-    this.windowPosX = windowPosX;
-    this.windowPosY = windowPosY;
+  public void setWindowSettings(String key, int windowWidth, int windowHeight, int windowPosX, int windowPosY) {
+    this.windowSettings.get(key).setSize(windowWidth, windowHeight);
+    this.windowSettings.get(key).setPosition(windowPosX, windowPosY);
     save();
   }
 
-  public int getWindowPosX() {
-    return this.windowPosX;
+  @Deprecated
+  public int getWindowPosX(String key) {
+    return this.windowSettings.get(key).getX();
   }
 
-  public int getWindowPosY() {
-    return this.windowPosY;
+  @Deprecated
+  public int getWindowPosY(String key) {
+    return this.windowSettings.get(key).getY();
   }
 
-  public void setWindowPosition(int windowPosX, int windowPosY) {
-    this.windowPosX = windowPosX;
-    this.windowPosY = windowPosY;
+  public void setWindowPosition(String key, int windowPosX, int windowPosY) {
+    this.windowSettings.get(key).setPosition(windowPosX, windowPosY);
     save();
+  }
+
+  public DisplaySettings getWindowSettings(String key) {
+    return this.windowSettings.get(key);
   }
 
   protected void setProject(File project) {
@@ -250,8 +266,11 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
   private static final String KEY_AUTO_RELOAD_PACKAGES = "autoReloadPackages";
   private static final String KEY_SCROLL_SENSITIVITY = "scrollSensitivity";
+  private static final String KEY_SHOW_ALT_WINDOW = "showAltWindow";
+  private static final String KEY_WINDOWS = "windows";
+  public static final String KEY_WINDOW_MAIN = "main";
+  public static final String KEY_WINDOW_ALT = "alt";
   private static final String KEY_REGISTRY = "registry";
-
 
   @Override
   public void save(LX lx, JsonObject object) {
@@ -268,10 +287,6 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     }
     object.add(KEY_RECENT_PROJECTS, recentProjectsArr);
     object.addProperty(KEY_EULA_ACCEPTED, this.eulaAccepted.isOn());
-    object.addProperty(KEY_WINDOW_WIDTH, this.windowWidth);
-    object.addProperty(KEY_WINDOW_HEIGHT, this.windowHeight);
-    object.addProperty(KEY_WINDOW_POS_X, this.windowPosX);
-    object.addProperty(KEY_WINDOW_POS_Y, this.windowPosY);
     object.addProperty(KEY_UI_ZOOM, this.uiZoom.getValuei());
     object.addProperty(KEY_UI_THEME, this.uiTheme.getString());
     object.addProperty(KEY_FOCUS_CHANNEL_ON_CUE, this.focusChannelOnCue.isOn());
@@ -284,7 +299,8 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
     object.addProperty(KEY_AUTO_RELOAD_PACKAGES, this.autoReloadPackages.isOn());
     object.addProperty(KEY_SCROLL_SENSITIVITY, this.scrollSensitivity.getValue());
-
+    object.addProperty(KEY_SHOW_ALT_WINDOW, this.showAltWindow.isOn());
+    object.add(KEY_WINDOWS, Utils.toObject(lx, this.windowSettings));
     object.add(KEY_REGISTRY, LXSerializable.Utils.toObject(this.lx, this.lx.registry));
   }
 
@@ -325,19 +341,31 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   }
 
   private void loadWindowSettings(JsonObject object) {
-    if (object.has(KEY_WINDOW_WIDTH)) {
-      this.windowWidth = object.get(KEY_WINDOW_WIDTH).getAsInt();
-    } else if (object.has(KEY_WINDOW_WIDTH_LEGACY)) {
-      this.windowWidth = object.get(KEY_WINDOW_WIDTH_LEGACY).getAsInt();
+    LXSerializable.Utils.loadBoolean(this.showAltWindow, object, KEY_SHOW_ALT_WINDOW);
+    boolean foundMain = false;
+    if (object.has(KEY_WINDOWS)) {
+      JsonObject windows = object.getAsJsonObject(KEY_WINDOWS);
+      if (windows.has(KEY_WINDOW_MAIN)) {
+        foundMain = true;
+        this.windowSettings.get(KEY_WINDOW_MAIN).load(this.lx, windows.getAsJsonObject(KEY_WINDOW_MAIN));
+      }
+      if (windows.has(KEY_WINDOW_ALT)) {
+        this.windowSettings.get(KEY_WINDOW_ALT).load(this.lx, windows.getAsJsonObject(KEY_WINDOW_ALT));
+      }
     }
-    if (object.has(KEY_WINDOW_HEIGHT)) {
-      this.windowHeight = object.get(KEY_WINDOW_HEIGHT).getAsInt();
-    }
-    if (object.has(KEY_WINDOW_POS_X)) {
-      this.windowPosX = object.get(KEY_WINDOW_POS_X).getAsInt();
-    }
-    if (object.has(KEY_WINDOW_POS_Y)) {
-      this.windowPosY = object.get(KEY_WINDOW_POS_Y).getAsInt();
+
+    // Check for window settings in legacy format
+    if (!foundMain) {
+      if ((object.has(KEY_WINDOW_WIDTH) || object.has(KEY_WINDOW_WIDTH_LEGACY)) && object.has(KEY_WINDOW_HEIGHT)) {
+        int width = object.has(KEY_WINDOW_WIDTH) ? object.get(KEY_WINDOW_WIDTH).getAsInt() : object.get(KEY_WINDOW_WIDTH_LEGACY).getAsInt();
+        int height = object.get(KEY_WINDOW_HEIGHT).getAsInt();
+        this.windowSettings.get(KEY_WINDOW_MAIN).setSize(width, height);
+      }
+      if (object.has(KEY_WINDOW_POS_X) && object.has(KEY_WINDOW_POS_Y)) {
+        int x = object.get(KEY_WINDOW_POS_X).getAsInt();
+        int y = object.get(KEY_WINDOW_POS_Y).getAsInt();
+        this.windowSettings.get(KEY_WINDOW_MAIN).setPosition(x, y);
+      }
     }
   }
 
