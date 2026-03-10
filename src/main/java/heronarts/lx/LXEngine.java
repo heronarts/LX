@@ -120,6 +120,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     new BooleanParameter("Performance", false)
     .setDescription("Whether performance mode UI is enabled");
 
+  public final BooleanParameter showTimelineWindow =
+    new BooleanParameter("Show Timeline Window", false)
+    .setDescription("Whether the timeline automation window is visible");
+
   public final BooleanParameter restricted =
     new BooleanParameter("Restricted", false)
     .setDescription("Whether rendering is disabled due to license restrictions");
@@ -437,6 +441,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addParameter("framesPerSecond", this.framesPerSecond);
     addParameter("speed", this.speed);
     addParameter("performanceMode", this.performanceMode);
+    addParameter("showTimelineWindow", this.showTimelineWindow);
 
     // Add utility parameters
     addParameters(this.utilities.parameters);
@@ -1399,6 +1404,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
   public void load(LX lx, JsonObject obj) {
     // TODO(mcslee): remove loop tasks that other things might have added? maybe
     // need to separate application-owned loop tasks from project-specific ones...
+
+    this.showTimelineWindow.reset();
 
     // These need to be explicitly enabled per-project
     this.isCompositorMultithreaded.setValue(false);
