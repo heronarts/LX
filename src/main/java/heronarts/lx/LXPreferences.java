@@ -23,10 +23,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -39,6 +36,7 @@ import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.StringParameter;
+import heronarts.lx.utils.LXUtils;
 
 public class LXPreferences implements LXSerializable, LXParameterListener {
 
@@ -103,10 +101,6 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     new BoundedParameter("Scroll Sensitivity", 1, .1, 100)
     .setDescription("Scrolling sensitivity");
 
-  public final BooleanParameter showAltWindow =
-    new BooleanParameter("Show Alt Window", false)
-    .setDescription("Whether the alt window is visible");
-
   private String projectFileName = null;
   private String scheduleFileName = null;
 
@@ -114,7 +108,219 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
 
   public final List<String> recentProjects = new ArrayList<>(MAX_RECENT_PROJECTS);
 
-  private final Map<String, DisplaySettings> windowSettings = new HashMap<>();
+  private final WindowSettings windowSettingsMain = new WindowSettings(Window.MAIN);
+  private final WindowSettings windowSettingsAlt = new WindowSettings(Window.ALT);
+
+  public final WindowSettings getWindowSettings(Window window) {
+    return switch (window) {
+      case MAIN -> this.windowSettingsMain;
+      case ALT -> this.windowSettingsAlt;
+      case null -> null;
+    };
+  }
+
+  public enum Window {
+    MAIN("main"),
+    ALT("alt");
+
+    public final String key;
+
+    private Window(String key) {
+      this.key = key;
+    }
+  }
+
+  /**
+   * Helper class for storing position (x,y) and size (width,height) of a window or monitor.
+   */
+  public static class WindowSettings implements LXSerializable {
+
+    public final Window window;
+
+    private static final int DEFAULT = -1;
+
+    private int x = DEFAULT;
+    private int y = DEFAULT;
+    private int width = DEFAULT;
+    private int height = DEFAULT;
+
+    private boolean hasPosition = false;
+    private boolean hasSize = false;
+
+    public WindowSettings() {
+      this(null);
+    }
+
+    public WindowSettings(Window window) {
+      this.window = window;
+    }
+
+    public WindowSettings setPosition(int x, int y) {
+      this.x = x;
+      this.y = y;
+      this.hasPosition = true;
+      return this;
+    }
+
+    public WindowSettings setSize(int width, int height) {
+      this.width = width;
+      this.height = height;
+      this.hasSize = true;
+      return this;
+    }
+
+    /**
+     * Whether the current settings include a position.
+     */
+    public boolean hasPosition() {
+      return this.hasPosition;
+    }
+
+    /**
+     * Whether the current settings include a size.
+     */
+    public boolean hasSize() {
+      return this.hasSize;
+    }
+
+    /**
+     * Position (x) of the left edge of the display, in screen pixels.
+     */
+    public int getX() {
+      return this.x;
+    }
+
+    /**
+     * Position (y) of the top edge of the display, in screen pixels.
+     */
+    public int getY() {
+      return this.y;
+    }
+
+    /**
+     * Width in screen pixels. Does not include UI scaling.
+     */
+    public int getWidth() {
+      return this.width;
+    }
+
+    /**
+     * Height in screen pixels. Does not include UI scaling.
+     */
+    public int getHeight() {
+      return this.height;
+    }
+
+    /**
+     * Position (x) of the right edge of the display, in screen pixels.
+     */
+    private int getXMax() {
+      return this.x + this.width;
+    }
+
+    /**
+     * Position (y) of the bottom edge of the display, in screen pixels.
+     */
+    private int getYMax() {
+      return this.y + this.height;
+    }
+
+    /**
+     * Determines if a set of (x,y) coordinates are within the display bounds.
+     *
+     * @param x X-value to check
+     * @param y Y-value to check
+     * @return True if the coordinates are within the display bounds
+     */
+    public boolean contains(int x, int y) {
+      if (!this.hasPosition || !this.hasSize) {
+        return false;
+      }
+      return
+        (x >= this.x) &&
+        (x < (this.x + this.width)) &&
+        (y >= this.y) &&
+        (y < (this.y + this.height));
+    }
+
+    /**
+     * Determines whether the X/Y upper-bounds of this setting exceeds the container
+     *
+     * @param that Countainer bounds
+     * @return True if these bounds go past the container bounds
+     */
+    public boolean exceeds(WindowSettings that) {
+      return (getXMax() > that.getXMax()) || (getYMax() > that.getYMax());
+    }
+
+    /**
+     * Resize these bounds so that they will fit within the container
+     *
+     * @param that Container bounds
+     * @return These bounds, updated to fit within the container
+     */
+    public WindowSettings constrain(WindowSettings that) {
+      int width = LXUtils.min(getWidth(), that.getWidth());
+      int x = that.getXMax() - width;
+
+      int height = LXUtils.min(getHeight(), that.getHeight());
+      int y = that.getYMax() - height;
+
+      setPosition(x, y);
+      setSize(width, height);
+      return this;
+    }
+
+    @Override
+    public String toString() {
+      return toSizeString() + ", " + toPositionString();
+    }
+
+    public String toPositionString() {
+      return this.hasPosition ? "pos(" + this.x + "," + this.y + ")" : "pos(n/a)";
+    }
+
+    public String toSizeString() {
+      return this.hasSize ? "size(" + this.width + "x" + this.height + ")" : "size(n/a)";
+    }
+
+    private static final String KEY_X = "x";
+    private static final String KEY_Y = "y";
+    private static final String KEY_WIDTH = "width";
+    private static final String KEY_HEIGHT = "height";
+
+    @Override
+    public void load(LX lx, JsonObject object) {
+      if (object.has(KEY_WIDTH) && object.has(KEY_HEIGHT)) {
+        int width = object.get(KEY_WIDTH).getAsInt();
+        int height = object.get(KEY_HEIGHT).getAsInt();
+        setSize(width, height);
+      } else {
+        this.width = this.height = DEFAULT;
+        this.hasSize = false;
+      }
+      if (object.has(KEY_X) && object.has(KEY_Y)) {
+        int x = object.get(KEY_X).getAsInt();
+        int y = object.get(KEY_Y).getAsInt();
+        setPosition(x, y);
+      } else {
+        this.x = this.y = DEFAULT;
+        this.hasPosition = false;
+      }
+    }
+
+    @Override
+    public void save(LX lx, JsonObject object) {
+      if (hasPosition()) {
+        object.addProperty(KEY_X, this.x);
+        object.addProperty(KEY_Y, this.y);
+      }
+      if (hasSize()) {
+        object.addProperty(KEY_WIDTH, this.width);
+        object.addProperty(KEY_HEIGHT, this.height);
+      }
+    }
+  }
 
   private boolean inLoad = false;
 
@@ -145,10 +351,6 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     this.showCpuLoad.addListener(this);
     this.autoReloadPackages.addListener(this);
     this.scrollSensitivity.addListener(this);
-    this.showAltWindow.addListener(this);
-
-    this.windowSettings.put(KEY_WINDOW_MAIN, new DisplaySettings());
-    this.windowSettings.put(KEY_WINDOW_ALT, new DisplaySettings());
   }
 
   public void setLX(LX lx) {
@@ -164,10 +366,6 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   @Override
   public void onParameterChanged(LXParameter p) {
     if (this.lx == null) {
-      if (this.inLoad) {
-        // Ignore changes during first window settings load
-        return;
-      }
       throw new IllegalStateException("LXPreferences.onParameterChanged() invoked before LX instance was set");
     }
     if ((p == this.oscQuery) && !this.lx.flags.zeroconfForce) {
@@ -180,45 +378,15 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     save();
   }
 
-  @Deprecated
-  public int getWindowWidth(String key) {
-    return this.windowSettings.get(key).getWidth();
-  }
-
-  @Deprecated
-  public int getWindowHeight(String key) {
-    return this.windowSettings.get(key).getHeight();
-  }
-
-  @Deprecated
-  public void setWindowSize(String key, int width, int height) {
-    this.windowSettings.get(key).setSize(width, height);
+  public void setWindowSettings(Window window, int windowWidth, int windowHeight, int windowPosX, int windowPosY) {
+    getWindowSettings(window).setSize(windowWidth, windowHeight);
+    getWindowSettings(window).setPosition(windowPosX, windowPosY);
     save();
   }
 
-  public void setWindowSettings(String key, int windowWidth, int windowHeight, int windowPosX, int windowPosY) {
-    this.windowSettings.get(key).setSize(windowWidth, windowHeight);
-    this.windowSettings.get(key).setPosition(windowPosX, windowPosY);
+  public void setWindowPosition(Window window, int windowPosX, int windowPosY) {
+    getWindowSettings(window).setPosition(windowPosX, windowPosY);
     save();
-  }
-
-  @Deprecated
-  public int getWindowPosX(String key) {
-    return this.windowSettings.get(key).getX();
-  }
-
-  @Deprecated
-  public int getWindowPosY(String key) {
-    return this.windowSettings.get(key).getY();
-  }
-
-  public void setWindowPosition(String key, int windowPosX, int windowPosY) {
-    this.windowSettings.get(key).setPosition(windowPosX, windowPosY);
-    save();
-  }
-
-  public DisplaySettings getWindowSettings(String key) {
-    return this.windowSettings.get(key);
   }
 
   protected void setProject(File project) {
@@ -266,10 +434,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   private static final String KEY_SHOW_CPU_LOAD = "showCpuLoad";
   private static final String KEY_AUTO_RELOAD_PACKAGES = "autoReloadPackages";
   private static final String KEY_SCROLL_SENSITIVITY = "scrollSensitivity";
-  private static final String KEY_SHOW_ALT_WINDOW = "showAltWindow";
   private static final String KEY_WINDOWS = "windows";
-  public static final String KEY_WINDOW_MAIN = "main";
-  public static final String KEY_WINDOW_ALT = "alt";
   private static final String KEY_REGISTRY = "registry";
 
   @Override
@@ -299,8 +464,12 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     object.addProperty(KEY_SHOW_CPU_LOAD, this.showCpuLoad.isOn());
     object.addProperty(KEY_AUTO_RELOAD_PACKAGES, this.autoReloadPackages.isOn());
     object.addProperty(KEY_SCROLL_SENSITIVITY, this.scrollSensitivity.getValue());
-    object.addProperty(KEY_SHOW_ALT_WINDOW, this.showAltWindow.isOn());
-    object.add(KEY_WINDOWS, Utils.toObject(lx, this.windowSettings));
+
+    final JsonObject windows = new JsonObject();
+    windows.add(Window.MAIN.key, LXSerializable.Utils.toObject(this.lx, this.windowSettingsMain));
+    windows.add(Window.ALT.key, LXSerializable.Utils.toObject(this.lx, this.windowSettingsAlt));
+    object.add(KEY_WINDOWS, windows);
+
     object.add(KEY_REGISTRY, LXSerializable.Utils.toObject(this.lx, this.lx.registry));
   }
 
@@ -341,16 +510,16 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   }
 
   private void loadWindowSettings(JsonObject object) {
-    LXSerializable.Utils.loadBoolean(this.showAltWindow, object, KEY_SHOW_ALT_WINDOW);
     boolean foundMain = false;
     if (object.has(KEY_WINDOWS)) {
-      JsonObject windows = object.getAsJsonObject(KEY_WINDOWS);
-      if (windows.has(KEY_WINDOW_MAIN)) {
-        foundMain = true;
-        this.windowSettings.get(KEY_WINDOW_MAIN).load(this.lx, windows.getAsJsonObject(KEY_WINDOW_MAIN));
-      }
-      if (windows.has(KEY_WINDOW_ALT)) {
-        this.windowSettings.get(KEY_WINDOW_ALT).load(this.lx, windows.getAsJsonObject(KEY_WINDOW_ALT));
+      final JsonObject windows = object.getAsJsonObject(KEY_WINDOWS);
+      for (Window window : Window.values()) {
+        if (windows.has(window.key)) {
+          getWindowSettings(window).load(this.lx, windows.getAsJsonObject(window.key));
+          if (window == Window.MAIN) {
+            foundMain = true;
+          }
+        }
       }
     }
 
@@ -359,12 +528,12 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
       if ((object.has(KEY_WINDOW_WIDTH) || object.has(KEY_WINDOW_WIDTH_LEGACY)) && object.has(KEY_WINDOW_HEIGHT)) {
         int width = object.has(KEY_WINDOW_WIDTH) ? object.get(KEY_WINDOW_WIDTH).getAsInt() : object.get(KEY_WINDOW_WIDTH_LEGACY).getAsInt();
         int height = object.get(KEY_WINDOW_HEIGHT).getAsInt();
-        this.windowSettings.get(KEY_WINDOW_MAIN).setSize(width, height);
+        this.windowSettingsMain.setSize(width, height);
       }
       if (object.has(KEY_WINDOW_POS_X) && object.has(KEY_WINDOW_POS_Y)) {
         int x = object.get(KEY_WINDOW_POS_X).getAsInt();
         int y = object.get(KEY_WINDOW_POS_Y).getAsInt();
-        this.windowSettings.get(KEY_WINDOW_MAIN).setPosition(x, y);
+        this.windowSettingsMain.setPosition(x, y);
       }
     }
   }
