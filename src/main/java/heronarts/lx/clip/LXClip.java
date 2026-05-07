@@ -263,7 +263,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this.timeBase.getEnum().operator;
   }
 
-  public final LXBus bus;
+  public final LXClipContainer bus;
+  public final BooleanParameter armParameter;
 
   public final LXClipSnapshot snapshot;
 
@@ -291,16 +292,20 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   public LXClip(LX lx, LXBus bus, int index) {
-    this(lx, bus, index, true);
+    this(lx, bus, bus, index, true);
   }
 
-  protected LXClip(LX lx, LXBus bus, int index, boolean registerListener) {
+  public LXClip(LX lx, LXComponent parent, LXClipContainer bus, int index) {
+    this(lx, parent, bus, index, true);
+  }
+
+  protected LXClip(LX lx, LXComponent parent, LXClipContainer bus, int index, boolean registerListener) {
     super(lx);
     this.label.setDescription("The name of this clip");
     this.bus = bus;
     this.index = index;
     this.busListener = registerListener;
-    setParent(this.bus);
+    setParent(parent);
 
     // Use reference BPM value at time of clip creation, this is used to preserve accurate
     // conversions between the two different TimeBase options (e.g. Cursor objects in this clip's
@@ -335,10 +340,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addInternalParameter("clipView", this.clipView);
     addInternalParameter("launchAutomation", this.launchAutomation);
     addInternalParameter("zoom", this.zoom);
-    addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this));
+    addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this, getSnapshotParameterScope()));
     addArray("lane", this.lanes);
 
-    for (LXEffect effect : bus.effects) {
+    for (LXEffect effect : bus.getEffects()) {
       registerComponent(effect);
     }
 
@@ -346,9 +351,21 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // that parent class will take care of registering as a listener and this will avoid
     // having duplicated double-listeners
     if (registerListener) {
-      bus.addListener(this);
+      bus.addEffectsListener(this);
     }
-    bus.arm.addListener(this);
+    this.armParameter = bus.getArmParameter();
+    this.armParameter.addListener(this);
+  }
+
+  public LXComponent getSnapshotParameterScope() {
+    if (this.bus instanceof LXBus lxBus) {
+      return lxBus;
+    } else if (getParent() instanceof BusLane lane) {
+      return lane.bus;
+    } else if (getParent() instanceof LXCompositionEngine) {
+      return null;
+    }
+    throw new IllegalStateException("Could not find snapshot scope for LXClip. Unexpected parent type: " + getParent().getClass());
   }
 
   public Cursor.TimeBase getTimeBase() {
@@ -475,6 +492,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public String getPath() {
+    if (getParent() instanceof BusLane busLane) {
+      return "event/" + (busLane.getIndex() + 1) + "/internalClip";
+    }
     return "clip/" + (this.index + 1);
   }
 
@@ -482,7 +502,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private Tempo.Division isQuantizedStop = null;
 
   private void _launchAutomationScheduled() {
-    for (LXClip clip : this.bus.clips) {
+    for (LXClip clip : this.bus.getClips()) {
       if ((clip != null) && (clip != this)) {
         clip.launch.cancel();
         clip.launchAutomation.cancel();
@@ -573,13 +593,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public void dispose() {
-    for (LXEffect effect : bus.effects) {
+    for (LXEffect effect : bus.getEffects()) {
       unregisterComponent(effect);
     }
     if (this.busListener) {
-      this.bus.removeListener(this);
+      this.bus.removeEffectsListener(this);
     }
-    this.bus.arm.removeListener(this);
+    this.armParameter.removeListener(this);
     for (int i = this.lanes.size() - 1; i >= 0; --i) {
       _removeLane(this.lanes.get(i));
     }
@@ -697,18 +717,27 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Whether the clip is armed for recording
    */
   public boolean isArmed() {
-    return this.bus.arm.isOn();
+    return this.armParameter.isOn();
   }
 
   /**
    * Whether the clip is actively recording.
    */
   public boolean isRecording() {
-    return isRunning() && this.bus.arm.isOn();
+    return isRunning() && isArmed();
   }
 
   public boolean isOverdub() {
     return isRecording() && this.hasTimeline;
+  }
+
+  /**
+   * Whether this clip has any recorded content (non-zero length)
+   *
+   * @return true if the clip has content
+   */
+  public boolean hasContent() {
+    return this.hasTimeline;
   }
 
   /**
@@ -813,15 +842,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   public LXClip setPlayEnd(Cursor playEnd) {
     final Cursor oldEnd = this.playEnd.cursor.clone();
-    playEnd = CursorOp().bound(
-      playEnd,
-      this.playStart.cursor.add(Cursor.MIN_LOOP),
-      this.length.cursor
-    );
+    playEnd = CursorOp().max(this.playStart.cursor.add(Cursor.MIN_LOOP), playEnd);
     this.playEnd.set(playEnd);
 
     // If we cross the cursor going left, while we are the relevant marker, stop playback
-    if (!this.loop.isOn() && isRunning() && !this.bus.arm.isOn()) {
+    if (!this.loop.isOn() && isRunning() && !isArmed()) {
       if (CursorOp().isBefore(this.cursor, oldEnd) && CursorOp().isAfter(this.cursor, this.playEnd.cursor)) {
         stop();
       }
@@ -836,7 +861,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @param oldEnd value of the loop end marker before the move
    */
   private void captureCursorWithLoopMove(Cursor oldEnd) {
-    if (this.loop.isOn() && isRunning() && !this.bus.arm.isOn()) {
+    if (this.loop.isOn() && isRunning() && !isArmed()) {
       if (CursorOp().isBefore(this.cursor, oldEnd) && CursorOp().isAfter(this.cursor, this.loopEnd.cursor)) {
         // Advance cursor to previous loop end, playing everything
         playCursor(this.cursor, oldEnd, true);
@@ -861,9 +886,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     super.onParameterChanged(p);
 
     // Now check our own stuff
-    if (p == this.bus.arm) {
+    if (p == this.armParameter) {
       if (isRunning()) {
-        if (this.bus.arm.isOn()) {
+        if (this.armParameter.isOn()) {
           if (this.hasTimeline) {
             startHotOverdub();
           } else {
@@ -909,7 +934,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   protected final void onStart() {
     // Stop other clips on the bus
-    for (LXClip clip : this.bus.clips) {
+    for (LXClip clip : this.bus.getClips()) {
       if ((clip != null) && (clip != this)) {
         clip.stop();
       }
@@ -926,7 +951,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
 
     // Check for recording state
-    if (this.bus.arm.isOn()) {
+    if (isArmed()) {
       this.isRecording = true;
       if (this.hasTimeline) {
         startOverdub();
@@ -949,7 +974,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Wrap up any recording/playback state
     if (this.isRecording) {
       this.isRecording = false;
-      this.bus.arm.setValue(false);
+      // JKB: can't turn off Arm on the composition (from inner clip) or it will stop the entire composition. How to handle?
+      if (!(this.bus instanceof LXCompositionEngine)) {
+        this.armParameter.setValue(false);
+      }
       if (!this.hasTimeline) {
         stopFirstRecording();
       } else {
@@ -969,7 +997,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void _startRecording(boolean isOverdub) {
-    this.automationEnabled.setValue(true);
+    if (!(this.bus instanceof LXCompositionEngine)) {
+      this.automationEnabled.setValue(true);
+    }
     updateParameterDefaults();
     resetRecordingState();
     onStartRecording(isOverdub);
@@ -1046,8 +1076,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         this.cursor.set(this.length.cursor);
       }
     } else {
-      // First recording sets loop to true
-      this.loop.setValue(true);
+      // First recording sets loop to true (unless subclass overrides)
+      if (enableLoopOnFirstRecording()) {
+        this.loop.setValue(true);
+      }
       if (hotStop) {
         // Hot stop cursor keeps on playing from where it was, or
         // jumps back into loop if shortened
@@ -1105,6 +1137,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   // State change notifications to subclasses
+
+  /**
+   * Whether the first recording should automatically enable looping.
+   * Subclasses may override to prevent auto-enabling loop.
+   *
+   * @return true to enable loop after first recording (default), false to leave it unchanged
+   */
+  protected boolean enableLoopOnFirstRecording() {
+    return true;
+  }
 
   /**
    * Subclasses may override
@@ -1335,7 +1377,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Compute the cursor position
     computeNextCursor(deltaMs);
 
-    if (this.bus.arm.isOn()) {
+    if (isArmed()) {
       // Recording
       if (!this.hasTimeline) {
         runFirstRecording();
@@ -1682,7 +1724,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     LXParameter parameter;
     if (laneObj.has(LXComponent.KEY_PATH)) {
       String parameterPath = laneObj.get(KEY_PATH).getAsString();
-      parameter = LXPath.getParameter(this.bus, parameterPath);
+      // parameter = LXPath.getParameter(this.getParent(), parameterPath);
+      // Adjust for the full path saved in ParameterClipLane.save()
+      if (parameterPath.startsWith(LXPath.ROOT_PREFIX)) {
+        parameter = LXPath.getParameter(this.lx, parameterPath);
+      } else {
+        parameter = LXPath.getParameter(this.bus.getComponent(), parameterPath);
+      }
       if (parameter == null) {
         LX.error("No parameter found for saved parameter clip lane on bus " + this.bus + " at path: " + parameterPath);
         return null;
@@ -1724,7 +1772,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
       final JsonObject moveObj = laneObj.deepCopy();
       final String lanePath = moveObj.get(LXComponent.KEY_PATH).getAsString();
-      moveObj.addProperty(LXComponent.KEY_PATH, LXPath.replacePrefix(lanePath, fromPath, toPath, this.bus));
+      moveObj.addProperty(LXComponent.KEY_PATH, LXPath.replacePrefix(lanePath, fromPath, toPath, this.getParent()));
       return addParameterLane(lx, moveObj, index);
     }
     LX.error("Cannot move unknown clip lane type: " + laneType);

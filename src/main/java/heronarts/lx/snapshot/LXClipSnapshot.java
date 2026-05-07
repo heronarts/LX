@@ -21,7 +21,10 @@ package heronarts.lx.snapshot;
 import java.util.List;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
+import heronarts.lx.clip.BusLane;
+import heronarts.lx.clip.BusLaneEvent;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.mixer.LXBus;
@@ -44,8 +47,8 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
     new TriggerParameter("Recall", this::recallImmediate)
     .setDescription("Restores the values of this snapshot");
 
-  public LXClipSnapshot(LX lx, LXClip clip) {
-    super(lx, clip.bus);
+  public LXClipSnapshot(LX lx, LXClip clip, LXComponent snapshotParameterScope) {
+    super(lx, snapshotParameterScope);
     this.clip = clip;
     addParameter("recall", this.recall);
   }
@@ -60,17 +63,29 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
   }
 
   public LXBus getBus() {
-    return this.clip.bus;
+    // Temp:
+    if (this.clip.bus instanceof LXBus) {
+      return (LXBus) this.clip.bus;
+    }
+    return null;
   }
 
   @Override
   public LXChannel getClipChannel() {
+    if (this.clip.getParent() instanceof BusLane busLane) {
+      if (busLane.bus instanceof LXChannel channel) {
+        return channel;
+      }
+    }
     return (this.clip.bus instanceof LXChannel) ? (LXChannel) this.clip.bus : null;
   }
 
   @Override
   protected void initializeViews() {
-    initializeClipBus(this.clip.bus);
+    // Temp:
+    if (this.clip.bus instanceof LXBus) {
+      initializeClipBus((LXBus)this.clip.bus);
+    }
   }
 
   public boolean isInTransition() {

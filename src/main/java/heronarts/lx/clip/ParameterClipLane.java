@@ -103,7 +103,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   public String getLabel() {
-    return this.parameter.getCanonicalLabel(this.clip.bus, " | ", 3);
+    return this.parameter.getCanonicalLabel(this.clip.bus.getComponent(), " | ", 3);
   }
 
   public boolean shouldRecordParameterChange(LXNormalizedParameter p) {
@@ -532,7 +532,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    obj.addProperty(LXComponent.KEY_PATH, this.parameter.getCanonicalPath(this.clip.bus));
+    obj.addProperty(LXComponent.KEY_PATH, this.parameter.getCanonicalPath(this.clip.bus.getComponent()));
     obj.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getParent().getId());
     obj.addProperty(LXComponent.KEY_PARAMETER_PATH, this.parameter.getPath());
   }

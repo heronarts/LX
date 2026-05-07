@@ -19,6 +19,7 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.mixer.LXAbstractChannel;
@@ -28,8 +29,9 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
   public final LXAbstractChannel channel;
   public final MidiNoteClipLane midiNoteLane = new MidiNoteClipLane(this);
 
-  protected LXAbstractChannelClip(LX lx, LXAbstractChannel channel, int index, boolean registerListener) {
-    super(lx, channel, index, registerListener);
+  protected LXAbstractChannelClip(
+    LX lx, LXAbstractChannel channel, LXComponent parent, LXClipContainer clipContainer, int index, boolean registerListener) {
+    super(lx, parent, clipContainer, index, registerListener);
     this.channel = channel;
     this.mutableLanes.add(this.midiNoteLane);
     registerParameter(channel.fader);

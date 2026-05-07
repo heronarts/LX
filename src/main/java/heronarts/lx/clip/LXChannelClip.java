@@ -21,6 +21,7 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
@@ -34,9 +35,13 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   public final PatternClipLane patternLane;
 
   public LXChannelClip(LX lx, LXChannel channel, int index) {
-    super(lx, channel, index, false);
+    this(lx, channel, channel, channel, index);
+  }
+
+  public LXChannelClip(LX lx, LXChannel channel, LXComponent parent, LXClipContainer clipContainer, int index) {
+    super(lx, channel, parent, clipContainer, index, false);
     this.channel = channel;
-    this.mutableLanes.add(this.patternLane = new PatternClipLane(this));
+    this.mutableLanes.add(this.patternLane = new PatternClipLane(this, channel));
 
     // Note that we passed false to the parent class's register listener, because
     // we're going to do it here ourselves, and a channel listener supersedes
@@ -143,7 +148,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
 
   private PatternClipLane addRackPatternLane(LX lx, JsonObject laneObj, int index) {
     final String rackPath = laneObj.get(PatternClipLane.KEY_RACK).getAsString();
-    final PatternRack rack = (PatternRack) LXPath.get(this.bus, rackPath);
+    final PatternRack rack = (PatternRack) LXPath.get(this.getParent(), rackPath);
     if (rack == null) {
       LX.error("No PatternRack found for saved patternclip lane on bus " + this.bus + " at path: " + rackPath);
       return null;

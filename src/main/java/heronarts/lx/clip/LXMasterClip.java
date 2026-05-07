@@ -19,10 +19,15 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 
 public class LXMasterClip extends LXClip {
   public LXMasterClip(LX lx, int index) {
-    super(lx, lx.engine.mixer.masterBus, index);
+    this(lx, lx.engine.mixer.masterBus, lx.engine.mixer.masterBus, index);
+  }
+
+  public LXMasterClip(LX lx, LXComponent parent, LXClipContainer clipContainer, int index) {
+    super(lx, parent, clipContainer, index);
     registerParameter(lx.engine.mixer.masterBus.fader);
     registerParameter(lx.engine.mixer.crossfader);
     registerComponent(lx.engine.palette);

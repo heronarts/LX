@@ -39,6 +39,7 @@ import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEvent;
 import heronarts.lx.clip.LXClipLane;
+import heronarts.lx.clip.Locator;
 import heronarts.lx.clip.MidiNoteClipEvent;
 import heronarts.lx.clip.MidiNoteClipLane;
 import heronarts.lx.clip.ParameterClipEvent;
@@ -3741,12 +3742,12 @@ public abstract class LXCommand {
 
     public static class Remove extends LXCommand {
 
-      private final ComponentReference<LXBus> bus;
+      private final ComponentReference<LXComponent> bus;
       private final int index;
       private final JsonObject clipObj;
 
       public Remove(LXClip clip) {
-        this.bus = new ComponentReference<LXBus>(clip.bus);
+        this.bus = new ComponentReference<LXComponent>(clip.bus.getComponent());
         this.clipObj = LXSerializable.Utils.toObject(clip);
         this.index = clip.getIndex();
       }
@@ -3758,12 +3759,18 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.bus.get().removeClip(this.index);
+        if (this.bus.get() instanceof LXBus) {
+          ((LXBus) this.bus.get()).removeClip(this.index);
+        }
+        // this.bus.get().removeClip(this.index);
       }
 
       @Override
       public void undo(LX lx) {
-        this.bus.get().addClip(this.clipObj, this.index);
+        if (this.bus.get() instanceof LXBus) {
+          ((LXBus) this.bus.get()).addClip(this.clipObj, this.index);
+        }
+        // this.bus.get().addClip(this.clipObj, this.index);
       }
 
     }
@@ -4799,6 +4806,313 @@ public abstract class LXCommand {
         }
       }
     }
+  }
+
+  public static class Composition {
+
+    public static class Record extends LXCommand {
+
+      private final ComponentReference<heronarts.lx.clip.Composition> compositionRef;
+      private final JsonObject compObjPre;
+      private JsonObject compObjPost = null;
+
+      public Record(heronarts.lx.clip.Composition composition) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.compObjPre = LXSerializable.Utils.toObject(composition.getLX(), composition);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Record Composition";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        heronarts.lx.clip.Composition composition = this.compositionRef.get();
+        if (this.compObjPost == null) {
+          this.compObjPost = LXSerializable.Utils.toObject(lx, composition);
+        } else {
+          composition.load(lx, this.compObjPost);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.compositionRef.get().load(lx, this.compObjPre);
+      }
+
+    }
+
+    public enum Marker {
+
+      LOOP_START("Loop Start"),
+      LOOP_BRACE("Loop"),
+      LOOP_END("Loop End"),
+      LENGTH("Length");
+
+      public Cursor getCursor(heronarts.lx.clip.Composition composition) {
+        return switch (this) {
+          case LOOP_BRACE, LOOP_START -> composition.loopStart.cursor;
+          case LOOP_END -> composition.loopEnd.cursor;
+          case LENGTH -> composition.playEnd.cursor;
+        };
+      }
+
+      public void setCursor(heronarts.lx.clip.Composition composition, Cursor cursor) {
+        switch (this) {
+          case LOOP_BRACE:
+            composition.setLoopBrace(cursor);
+            break;
+          case LOOP_END:
+            composition.setLoopEnd(cursor);
+            break;
+          case LOOP_START:
+            composition.setLoopStart(cursor);
+            break;
+          case LENGTH:
+            composition.setPlayEnd(cursor);
+            break;
+        }
+      }
+
+      private final String label;
+
+      private Marker(String label) {
+        this.label = label;
+      }
+    }
+
+    public static class SetMarker extends LXCommand {
+
+      private final ComponentReference<heronarts.lx.clip.Composition> compositionRef;
+      public final Composition.Marker marker;
+      private final Cursor fromCursor;
+      private final Cursor toCursor;
+
+      /**
+       * Move composition marker to a new value (in time units)
+       */
+      public SetMarker(heronarts.lx.clip.Composition composition, Composition.Marker marker, Cursor toCursor) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.marker = marker;
+        this.fromCursor = this.marker.getCursor(composition).clone();
+        this.toCursor = toCursor.clone();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Composition " + this.marker.label;
+      }
+
+      public Composition.SetMarker update(Cursor toCursor) {
+        this.toCursor.set(toCursor);
+        return this;
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.marker.setCursor(this.compositionRef.get(), this.toCursor);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        heronarts.lx.clip.Composition composition = this.compositionRef.get();
+        this.marker.setCursor(composition, this.fromCursor);
+      }
+    }
+
+    public static class MoveMarker extends Composition.SetMarker {
+
+      public enum Operation {
+        ADD,
+        SUBTRACT;
+
+        private Cursor perform(Cursor cursor, Cursor increment) {
+          return switch (this) {
+            case SUBTRACT -> cursor.subtract(increment);
+            default -> cursor.add(increment);
+          };
+        }
+      }
+
+      /**
+       * Move composition marker by a given amount
+       */
+      public MoveMarker(heronarts.lx.clip.Composition composition, Composition.Marker marker, Cursor increment) {
+        this(composition, marker, increment, Composition.MoveMarker.Operation.ADD);
+      }
+
+      public MoveMarker(heronarts.lx.clip.Composition composition, Composition.Marker marker, Cursor increment, Composition.MoveMarker.Operation op) {
+        super(composition, marker, op.perform(marker.getCursor(composition), increment));
+      }
+    }
+
+    public static class AddLocator extends LXCommand {
+
+      private final ComponentReference<heronarts.lx.clip.Composition> compositionRef;
+      private final Cursor cursor;
+      private Locator locator;
+
+      public AddLocator(heronarts.lx.clip.Composition composition, Cursor cursor) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.cursor = cursor.clone();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Locator";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.locator = this.compositionRef.get().addLocator(this.cursor);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        if (this.locator != null) {
+          this.compositionRef.get().removeLocator(this.locator);
+        }
+      }
+    }
+
+    public static class RemoveLocator extends LXCommand {
+
+      private final ComponentReference<heronarts.lx.clip.Composition> compositionRef;
+      private ComponentReference<Locator> locatorRef;
+      private final JsonObject locatorObj;
+
+      public RemoveLocator(heronarts.lx.clip.Composition composition, Locator locator) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.locatorRef = new ComponentReference<>(locator);
+        this.locatorObj = LXSerializable.Utils.toObject(composition.getLX(), locator);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Locator";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.compositionRef.get().removeLocator(this.locatorRef.get());
+      }
+
+      @Override
+      public void undo(LX lx) {
+        heronarts.lx.clip.Composition composition = this.compositionRef.get();
+        Locator locator = composition.addLocator(composition.getLX(), locatorObj);
+        this.locatorRef = new ComponentReference<>(locator);
+      }
+    }
+
+    public static class MoveLocator extends LXCommand {
+
+      private final ComponentReference<heronarts.lx.clip.Composition> compositionRef;
+      private Locator locator;
+      private final Cursor fromCursor;
+      private final Cursor toCursor;
+
+      public MoveLocator(heronarts.lx.clip.Composition composition, Locator locator, Cursor toCursor) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.locator = locator;
+        this.fromCursor = locator.cursor.clone();
+        this.toCursor = toCursor.clone();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Locator";
+      }
+
+      public MoveLocator update(Cursor toCursor) {
+        this.toCursor.set(toCursor);
+        return this;
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.compositionRef.get().setLocatorCursor(this.locator, this.toCursor);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.compositionRef.get().setLocatorCursor(this.locator, this.fromCursor);
+      }
+    }
+
+    public static class MoveLane extends LXCommand {
+
+      private final ComponentReference<LXClipLane<?>> laneRef;
+      private final int fromIndex, toIndex;
+
+      public MoveLane(LXClipLane<?> lane, int index) {
+        this.laneRef = new ComponentReference<>(lane);
+        this.fromIndex = lane.getIndex();
+        this.toIndex = index;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Composition Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        LXClipLane<?> lane = this.laneRef.get();
+        lane.clip.moveClipLane(lane, this.toIndex);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        LXClipLane<?> lane = this.laneRef.get();
+        lane.clip.moveClipLane(lane, this.fromIndex);
+      }
+    }
+
+    public static class RemoveCompositionLane extends LXCommand.RemoveComponent {
+
+      private final ComponentReference<heronarts.lx.clip.Composition> compositionRef;
+      private final ComponentReference<LXClipLane<?>> laneRef;
+      private final int laneIndex;
+      private final JsonObject laneObj;
+
+      public RemoveCompositionLane(LXClipLane<?> lane) {
+        super(lane);
+        if (!(lane.clip instanceof heronarts.lx.clip.Composition)) {
+          throw new IllegalArgumentException("Cannot remove lane. Parent is not composition: " + lane);
+        }
+        this.compositionRef = new ComponentReference<>((heronarts.lx.clip.Composition)lane.clip);
+        this.laneRef = new ComponentReference<>(lane);
+        this.laneIndex = lane.getIndex();
+        this.laneObj = LXSerializable.Utils.toObject(lane.getLX(), lane);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Composition Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        final LXClipLane<?> clipLane = this.laneRef.get();
+        clipLane.clip.removeClipLane(clipLane);
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        final LXClipLane<?> lane = this.compositionRef.get().loadLane(lx, this.laneObj, this.laneIndex);
+        if (lane != null) {
+          super.undo(lx);
+        }
+      }
+
+      private void move(LX lx, String fromPath, String toPath) {
+        this.compositionRef.get().moveLane(lx, this.laneObj, this.laneIndex, fromPath, toPath);
+      }
+
+    }
+
   }
 
   public static class Osc {

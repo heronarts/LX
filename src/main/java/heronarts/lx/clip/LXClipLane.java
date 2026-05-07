@@ -317,8 +317,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       entry.getKey().setCursor(entry.getValue());
     }
     // NOTE(mcslee): very tricky case... full explanation in ParameterClipLane.reverseEvents
-    for (Map.Entry<T, Double> entry : fromValues.entrySet()) {
-      setEventNormalized(entry.getKey(), entry.getValue());
+    if (fromValues != null) {
+      for (Map.Entry<T, Double> entry : fromValues.entrySet()) {
+        setEventNormalized(entry.getKey(), entry.getValue());
+      }
     }
 
     // Was this a non-edit? Bail fast after restoring original state
@@ -579,7 +581,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    *
    * @param to Cursor position to start playback from
    */
-  void initializeCursorPlayback(Cursor to) {}
+  void initializeCursorPlayback(Cursor to) { /* TODO: use "from" as parameter name? */ }
 
   /**
    * Subclasses may override to take action when cursor position jumps mid-playback
@@ -640,6 +642,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    */
   public LXClipLane<T> removeEvent(T event) {
     this.mutableEvents.remove(event);
+    onRemoveEvent(event);
     this.onChange.bang();
     return this;
   }
@@ -659,14 +662,29 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       // Use removeAll to avoid N array-shifting operations on the
       // underlying ArrayList
       this.mutableEvents.removeAll(toRemove);
+      for (T event : toRemove) {
+        onRemoveEvent(event);
+      }
       this.onChange.bang();
     }
     return this;
   }
 
   void clear() {
+    List<T> toRemove = new ArrayList<>(this.mutableEvents);
     this.mutableEvents.clear();
+    for (T event : toRemove) {
+      onRemoveEvent(event);
+    }
     this.onChange.bang();
+  }
+
+  protected void onRemoveEvent(T event) { }
+
+  @Override
+  public void dispose() {
+    clear();
+    super.dispose();
   }
 
   private static final String KEY_EVENTS = "events";
@@ -674,6 +692,9 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected static final String VALUE_LANE_TYPE_PARAMETER = "parameter";
   protected static final String VALUE_LANE_TYPE_PATTERN = "pattern";
   protected static final String VALUE_LANE_TYPE_MIDI_NOTE = "midiNote";
+  protected static final String VALUE_LANE_TYPE_BUS = "bus";
+  protected static final String VALUE_LANE_TYPE_AUDIO = "audio";
+  protected static final String VALUE_LANE_TYPE_NOTES = "notes";
 
   @Override
   public void load(LX lx, JsonObject obj) {
@@ -714,6 +735,12 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_PATTERN);
     } else if (this instanceof MidiNoteClipLane) {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_MIDI_NOTE);
+    } else if (this instanceof BusLane) {
+      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_BUS);
+    } else if (this instanceof AudioLane) {
+      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_AUDIO);
+    } else if (this instanceof NotesLane) {
+      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_NOTES);
     }
     obj.add(KEY_EVENTS, LXSerializable.Utils.toArray(lx, this.events));
   }
