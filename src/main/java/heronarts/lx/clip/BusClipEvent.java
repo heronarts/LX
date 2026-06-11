@@ -29,21 +29,21 @@ import heronarts.lx.parameter.LXParameterListener;
 /**
  * A composition bus lane event is a light container around... a clip! What fun!
  */
-public class BusLaneEvent extends LXCompositionEvent<BusLaneEvent> {
+public class BusClipEvent extends LXCompositionEvent<BusClipEvent> {
 
   private static final int INVALID_CLIP_ID = -1;
 
   private final LX lx;
-  public final BusLane lane;
+  public final BusClipLane lane;
   private final LXClip internalClip;
   private final LXParameterListener internalClipListener;
   private int originalClipId = INVALID_CLIP_ID;
 
-  BusLaneEvent(LX lx, BusLane lane) {
+  BusClipEvent(LX lx, BusClipLane lane) {
     this(lx, lane, null);
   }
 
-  BusLaneEvent(LX lx, BusLane lane, LXClip original) {
+  BusClipEvent(LX lx, BusClipLane lane, LXClip original) {
     super(lane);
     this.lx = lx;
     this.lane = lane;

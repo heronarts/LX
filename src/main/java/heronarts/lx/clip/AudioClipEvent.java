@@ -16,9 +16,9 @@ import javax.sound.sampled.UnsupportedAudioFileException;
 /**
  * A composition event that plays back an audio file
  */
-public class AudioLaneEvent extends LXCompositionEvent<AudioLaneEvent> {
+public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
 
-  public final AudioLane lane;
+  public final AudioClipLane lane;
 
   private File file;
   private final Cursor sourceLength = new Cursor();
@@ -134,11 +134,11 @@ public class AudioLaneEvent extends LXCompositionEvent<AudioLaneEvent> {
   // TODO: convert playbackOffset to CursorParameter
   public final BiCursor playbackOffset = new BiCursor();
 
-  AudioLaneEvent(LX lx, AudioLane lane) {
+  AudioClipEvent(LX lx, AudioClipLane lane) {
     this(lx, lane, null);
   }
 
-  AudioLaneEvent(LX lx, AudioLane lane, File file) {
+  AudioClipEvent(LX lx, AudioClipLane lane, File file) {
     super(lane);
     this.lane = lane;
     if (file != null) {
@@ -148,7 +148,7 @@ public class AudioLaneEvent extends LXCompositionEvent<AudioLaneEvent> {
 
   // Initialization
 
-  public AudioLaneEvent setFile(File file) {
+  public AudioClipEvent setFile(File file) {
     releaseSampleData();
     this.file = file;
     this.filePath.setValue(this.file.getAbsolutePath());

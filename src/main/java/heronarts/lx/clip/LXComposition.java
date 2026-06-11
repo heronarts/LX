@@ -35,29 +35,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class Composition extends LXClip {
+public class LXComposition extends LXClip {
 
   public interface Listener extends LXClip.Listener {
-    public default void busLaneAdded(Composition composition, BusLane lane) {}
-    public default void busLaneRemoved(Composition composition, BusLane lane) {}
-    public default void audioLaneAdded(Composition composition, AudioLane lane) {}
-    public default void audioLaneRemoved(Composition composition, AudioLane lane) {}
-    public default void notesLaneAdded(Composition composition, NotesLane lane) {}
-    public default void notesLaneRemoved(Composition composition, NotesLane lane) {}
+    public default void busLaneAdded(LXComposition composition, BusClipLane lane) {}
+    public default void busLaneRemoved(LXComposition composition, BusClipLane lane) {}
+    public default void audioLaneAdded(LXComposition composition, AudioClipLane lane) {}
+    public default void audioLaneRemoved(LXComposition composition, AudioClipLane lane) {}
+    public default void notesLaneAdded(LXComposition composition, TextNoteClipLane lane) {}
+    public default void notesLaneRemoved(LXComposition composition, TextNoteClipLane lane) {}
   }
 
   private final List<Listener> listeners = new ArrayList<>();
 
-  private final Map<LXAbstractChannel, BusLane> busLanes = new HashMap<>();
-  private final List<AudioLane> audioLanes = new ArrayList<>();
-  private final List<NotesLane> notesLanes = new ArrayList<>();
+  private final Map<LXAbstractChannel, BusClipLane> busLanes = new HashMap<>();
+  private final List<AudioClipLane> audioLanes = new ArrayList<>();
+  private final List<TextNoteClipLane> notesLanes = new ArrayList<>();
 
   private final ObservableList<Locator> mutableLocators = new ObservableList<>();
   public final ObservableList<Locator> locators = this.mutableLocators.asUnmodifiableList();
 
   private final AudioPlayer audioPlayback = new AudioPlayer(this);
 
-  public Composition(LX lx) {
+  public LXComposition(LX lx) {
     super(lx, lx.engine.composition, lx.engine.composition, 0);
 
     // Maintain one lane per mixer channel
@@ -93,7 +93,7 @@ public class Composition extends LXClip {
   @Override
   protected void run(double deltaMs) {
     super.run(deltaMs);
-    for (BusLane busLane : this.busLanes.values()) {
+    for (BusClipLane busLane : this.busLanes.values()) {
       busLane.run(deltaMs);
     }
     if (!this.audioLanes.isEmpty()) {
@@ -109,7 +109,7 @@ public class Composition extends LXClip {
   private void stopAudioPlayback() {
     if (!this.audioLanes.isEmpty()) {
       this.audioPlayback.stop();
-      for (AudioLane lane : this.audioLanes) {
+      for (AudioClipLane lane : this.audioLanes) {
         lane.stopPlayback();
       }
     }
@@ -118,7 +118,7 @@ public class Composition extends LXClip {
   /**
    * Get the list of audio lanes for playback
    */
-  List<AudioLane> getAudioLanes() {
+  List<AudioClipLane> getAudioLanes() {
     return this.audioLanes;
   }
 
@@ -146,7 +146,7 @@ public class Composition extends LXClip {
   private void reorderBusLanes() {
     int i = this.audioLanes.size();
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      BusLane lane = this.busLanes.get(channel);
+      BusClipLane lane = this.busLanes.get(channel);
       if (lane != null) {
         int currentIndex = this.mutableLanes.indexOf(lane);
         if (currentIndex != i) {
@@ -191,9 +191,9 @@ public class Composition extends LXClip {
    * Create a new lane based on a mixer channel, inserting it at the
    * correct position to maintain audio-before-bus ordering.
    */
-  private BusLane addBusLane(LXAbstractChannel channel) {
+  private BusClipLane addBusLane(LXAbstractChannel channel) {
     // TODO: use command engine to add lane
-    BusLane lane = new BusLane(this, channel);
+    BusClipLane lane = new BusClipLane(this, channel);
     this.busLanes.put(channel, lane);
     int index = this.audioLanes.size() + channel.getIndex();
     this.mutableLanes.add(index, lane);
@@ -204,18 +204,18 @@ public class Composition extends LXClip {
   /**
    * Create a new lane from a serialized lane
    */
-  private BusLane addBusLane(LX lx, JsonObject laneObj) {
-    if (laneObj.has(BusLane.KEY_BUS_ID)) {
+  private BusClipLane addBusLane(LX lx, JsonObject laneObj) {
+    if (laneObj.has(BusClipLane.KEY_BUS_ID)) {
       int busId;
       try {
-        busId = laneObj.get(BusLane.KEY_BUS_ID).getAsInt();
+        busId = laneObj.get(BusClipLane.KEY_BUS_ID).getAsInt();
       } catch (NumberFormatException ex) {
-        LX.error("Cannot restore bus lane. ComponentId for bus was corrupt or missing: " + laneObj.get(BusLane.KEY_BUS_ID).toString());
+        LX.error("Cannot restore bus lane. ComponentId for bus was corrupt or missing: " + laneObj.get(BusClipLane.KEY_BUS_ID).toString());
         return null;
       }
       LXComponent component = lx.getComponent(busId);
       if (component instanceof LXAbstractChannel busComponent) {
-        BusLane lane = addBusLane(busComponent);
+        BusClipLane lane = addBusLane(busComponent);
         lane.load(lx, laneObj);
         return lane;
       } else {
@@ -235,7 +235,7 @@ public class Composition extends LXClip {
     }
   }
 
-  private void removeBusLane(BusLane lane) {
+  private void removeBusLane(BusClipLane lane) {
     // TODO: use command engine to remove lane
     LXAbstractChannel channel = (LXAbstractChannel)lane.bus;
     if (this.busLanes.remove(channel) != null) {
@@ -252,8 +252,8 @@ public class Composition extends LXClip {
    *
    * @return The newly created audio lane
    */
-  public AudioLane addAudioLane(File file) {
-    AudioLane lane = new AudioLane(this);
+  public AudioClipLane addAudioLane(File file) {
+    AudioClipLane lane = new AudioClipLane(this);
     lane.addEvent(file);
     int insertIndex = this.audioLanes.size();
     this.audioLanes.add(lane);
@@ -267,8 +267,8 @@ public class Composition extends LXClip {
    *
    * @return The newly created audio lane
    */
-  private AudioLane addAudioLane(LX lx, JsonObject laneObj) {
-    AudioLane lane = new AudioLane(this);
+  private AudioClipLane addAudioLane(LX lx, JsonObject laneObj) {
+    AudioClipLane lane = new AudioClipLane(this);
     int insertIndex = this.audioLanes.size();
     this.audioLanes.add(lane);
     this.mutableLanes.add(insertIndex, lane);
@@ -282,7 +282,7 @@ public class Composition extends LXClip {
    *
    * @param lane The lane to remove
    */
-  public void removeAudioLane(AudioLane lane) {
+  public void removeAudioLane(AudioClipLane lane) {
     if (this.audioLanes.remove(lane)) {
       this.mutableLanes.remove(lane);
       notifyAudioLaneRemoved(lane);
@@ -297,8 +297,8 @@ public class Composition extends LXClip {
    *
    * @return The newly created notes lane
    */
-  public NotesLane addNotesLane() {
-    NotesLane lane = new NotesLane(this);
+  public TextNoteClipLane addNotesLane() {
+    TextNoteClipLane lane = new TextNoteClipLane(this);
     this.notesLanes.add(lane);
     this.mutableLanes.add(lane);
     notifyNotesLaneAdded(lane);
@@ -310,8 +310,8 @@ public class Composition extends LXClip {
    *
    * @return The newly created notes lane
    */
-  private NotesLane addNotesLane(LX lx, JsonObject laneObj) {
-    NotesLane lane = new NotesLane(this);
+  private TextNoteClipLane addNotesLane(LX lx, JsonObject laneObj) {
+    TextNoteClipLane lane = new TextNoteClipLane(this);
     this.notesLanes.add(lane);
     this.mutableLanes.add(lane);
     lane.load(lx, laneObj);
@@ -324,7 +324,7 @@ public class Composition extends LXClip {
    *
    * @param lane The lane to remove
    */
-  public void removeNotesLane(NotesLane lane) {
+  public void removeNotesLane(TextNoteClipLane lane) {
     if (this.notesLanes.remove(lane)) {
       this.mutableLanes.remove(lane);
       notifyNotesLaneRemoved(lane);
@@ -398,11 +398,11 @@ public class Composition extends LXClip {
   // Lane removal
 
   @Override
-  Composition _removeLane(LXClipLane<?> lane) {
+  LXComposition _removeLane(LXClipLane<?> lane) {
     switch (lane) {
-      case BusLane busLane -> removeBusLane(busLane);
-      case AudioLane audioLane -> removeAudioLane(audioLane);
-      case NotesLane notesLane -> removeNotesLane(notesLane);
+      case BusClipLane busLane -> removeBusLane(busLane);
+      case AudioClipLane audioLane -> removeAudioLane(audioLane);
+      case TextNoteClipLane notesLane -> removeNotesLane(notesLane);
       case null, default -> super._removeLane(lane);
     }
     return this;
@@ -412,55 +412,55 @@ public class Composition extends LXClip {
    * Similar to LXClip.clearLanes(), notifies listeners of lane removal
    */
   private void clearLanes() {
-    List<BusLane> busLanesToClear = new ArrayList<>(this.busLanes.values());
-    for (BusLane lane : busLanesToClear) {
+    List<BusClipLane> busLanesToClear = new ArrayList<>(this.busLanes.values());
+    for (BusClipLane lane : busLanesToClear) {
       removeBusLane(lane);
     }
-    List<AudioLane> audioLanesToClear = new ArrayList<>(this.audioLanes);
-    for (AudioLane lane : audioLanesToClear) {
+    List<AudioClipLane> audioLanesToClear = new ArrayList<>(this.audioLanes);
+    for (AudioClipLane lane : audioLanesToClear) {
       removeAudioLane(lane);
     }
-    List<NotesLane> notesLanesToClear = new ArrayList<>(this.notesLanes);
-    for (NotesLane lane : notesLanesToClear) {
+    List<TextNoteClipLane> notesLanesToClear = new ArrayList<>(this.notesLanes);
+    for (TextNoteClipLane lane : notesLanesToClear) {
       removeNotesLane(lane);
     }
   }
 
   // Listeners
 
-  public Composition addListener(Listener listener) {
+  public LXComposition addListener(Listener listener) {
     super.addListener(listener);
     this.listeners.add(listener);
     return this;
   }
 
-  public Composition removeListener(Listener listener) {
+  public LXComposition removeListener(Listener listener) {
     super.removeListener(listener);
     this.listeners.remove(listener);
     return this;
   }
 
-  private void notifyBusLaneAdded(BusLane lane) {
+  private void notifyBusLaneAdded(BusClipLane lane) {
     this.listeners.forEach(l -> l.busLaneAdded(this, lane));
   }
 
-  private void notifyBusLaneRemoved(BusLane lane) {
+  private void notifyBusLaneRemoved(BusClipLane lane) {
     this.listeners.forEach(l -> l.busLaneRemoved(this, lane));
   }
 
-  private void notifyAudioLaneAdded(AudioLane lane) {
+  private void notifyAudioLaneAdded(AudioClipLane lane) {
     this.listeners.forEach(l -> l.audioLaneAdded(this, lane));
   }
 
-  private void notifyAudioLaneRemoved(AudioLane lane) {
+  private void notifyAudioLaneRemoved(AudioClipLane lane) {
     this.listeners.forEach(l -> l.audioLaneRemoved(this, lane));
   }
 
-  private void notifyNotesLaneAdded(NotesLane lane) {
+  private void notifyNotesLaneAdded(TextNoteClipLane lane) {
     this.listeners.forEach(l -> l.notesLaneAdded(this, lane));
   }
 
-  private void notifyNotesLaneRemoved(NotesLane lane) {
+  private void notifyNotesLaneRemoved(TextNoteClipLane lane) {
     this.listeners.forEach(l -> l.notesLaneRemoved(this, lane));
   }
 

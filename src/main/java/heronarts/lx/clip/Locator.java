@@ -32,7 +32,7 @@ public class Locator extends LXComponent {
   // TODO: change to CursorParameter
   public final Cursor cursor;
 
-  public Locator(Composition composition, Cursor cursor) {
+  public Locator(LXComposition composition, Cursor cursor) {
     super();
     setParent(composition);
     this.cursor = cursor.clone();

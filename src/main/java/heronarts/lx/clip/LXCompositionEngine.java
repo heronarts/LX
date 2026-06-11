@@ -38,13 +38,13 @@ import java.util.Objects;
 public class LXCompositionEngine extends LXComponent implements LXOscComponent, LXClipContainer {
 
   public interface Listener {
-    public void compositionChanged(Composition composition);
+    public void compositionChanged(LXComposition composition);
   }
 
   private final List<Listener> listeners = new ArrayList<>();
 
   // TODO: allow a list of compositions, not just one
-  private Composition composition;
+  private LXComposition composition;
 
   public final BooleanParameter clipExpanded =
     new BooleanParameter("Clip", true)
@@ -78,14 +78,14 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     this.arm.addListener(this::armChanged);
   }
 
-  public Composition getComposition() {
+  public LXComposition getComposition() {
     return this.composition;
   }
 
   private void clearCompositions() {
     // This will reference a list eventually...
     if (this.composition != null) {
-      Composition prior = this.composition;
+      LXComposition prior = this.composition;
       this.composition = null;
       notifyCompositionChanged();
       prior.dispose();
@@ -216,7 +216,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
       JsonArray compArr = obj.get(KEY_COMPOSITIONS).getAsJsonArray();
       for (JsonElement compElem : compArr) {
         JsonObject compObj = compElem.getAsJsonObject();
-        Composition composition = new Composition(lx);
+        LXComposition composition = new LXComposition(lx);
         composition.load(lx, compObj);
         // There's only one composition for now...
         this.composition = composition;
@@ -226,7 +226,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
 
     if (this.composition == null) {
       // New project or no composition was saved
-      this.composition = new Composition(lx);
+      this.composition = new LXComposition(lx);
     }
 
     notifyCompositionChanged();

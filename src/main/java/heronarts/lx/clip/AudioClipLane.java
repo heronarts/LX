@@ -11,21 +11,21 @@ import java.io.File;
  * Audio lane for playing back audio files on the composition.
  * Supported formats are determined by javax.sound.sampled.AudioSystem, including: WAV, AIFF
  */
-public class AudioLane extends LXClipLane<AudioLaneEvent> {
+public class AudioClipLane extends LXClipLane<AudioClipEvent> {
 
   private static final int SAMPLE_RATE = 44100;
 
-  public final Composition composition;
+  public final LXComposition composition;
 
   public final BooleanParameter mute =
     new BooleanParameter("Mute")
     .setDescription("Mutes audio playback on this lane");
 
   // Active playback state, read by audio thread
-  volatile AudioLaneEvent activeEvent = null;
+  volatile AudioClipEvent activeEvent = null;
   volatile long activeSampleOffset = 0;
 
-  AudioLane(Composition composition) {
+  AudioClipLane(LXComposition composition) {
     super(composition);
     this.composition = composition;
     this.label.setValue("Audio");
@@ -82,7 +82,7 @@ public class AudioLane extends LXClipLane<AudioLaneEvent> {
    */
   private void setActiveEventAt(Cursor to) {
     this.activeEvent = null;
-    AudioLaneEvent event = getPreviousEvent(to);
+    AudioClipEvent event = getPreviousEvent(to);
     if (event != null) {
       Cursor eventEnd = event.cursor.add(event.length);
       if (CursorOp().isBeforeOrEqual(to, eventEnd)) {
@@ -99,7 +99,7 @@ public class AudioLane extends LXClipLane<AudioLaneEvent> {
   private void findNextEvent(Cursor from, Cursor to) {
     this.activeEvent = null;
     for (int i = cursorPlayIndex(from); i < this.events.size(); i++) {
-      AudioLaneEvent event = this.events.get(i);
+      AudioClipEvent event = this.events.get(i);
       if (CursorOp().isAfterOrEqual(event.cursor, to)) {
         break;
       }
@@ -132,22 +132,22 @@ public class AudioLane extends LXClipLane<AudioLaneEvent> {
 
   // Event management
 
-  public AudioLane addEvent(File file) {
-    AudioLaneEvent event = new AudioLaneEvent(this.lx, this, file);
+  public AudioClipLane addEvent(File file) {
+    AudioClipEvent event = new AudioClipEvent(this.lx, this, file);
     this.mutableEvents.add(event);
     this.onChange.bang();
     return this;
   }
 
   @Override
-  protected AudioLaneEvent loadEvent(LX lx, JsonObject eventObj) {
-    AudioLaneEvent event = new AudioLaneEvent(this.lx, this);
+  protected AudioClipEvent loadEvent(LX lx, JsonObject eventObj) {
+    AudioClipEvent event = new AudioClipEvent(this.lx, this);
     event.load(lx, eventObj);
     return event;
   }
 
   @Override
-  protected void onRemoveEvent(AudioLaneEvent event) {
+  protected void onRemoveEvent(AudioClipEvent event) {
     event.dispose();
   }
 

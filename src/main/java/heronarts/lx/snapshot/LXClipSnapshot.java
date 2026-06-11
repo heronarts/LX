@@ -23,8 +23,8 @@ import java.util.List;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
-import heronarts.lx.clip.BusLane;
-import heronarts.lx.clip.BusLaneEvent;
+import heronarts.lx.clip.BusClipLane;
+import heronarts.lx.clip.BusClipEvent;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.command.LXCommand;
 import heronarts.lx.mixer.LXBus;
@@ -72,7 +72,7 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
 
   @Override
   public LXChannel getClipChannel() {
-    if (this.clip.getParent() instanceof BusLane busLane) {
+    if (this.clip.getParent() instanceof BusClipLane busLane) {
       if (busLane.bus instanceof LXChannel channel) {
         return channel;
       }

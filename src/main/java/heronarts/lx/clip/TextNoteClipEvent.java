@@ -26,9 +26,9 @@ import heronarts.lx.parameter.StringParameter;
 /**
  * A composition event containing a text note
  */
-public class NotesLaneEvent extends LXCompositionEvent<NotesLaneEvent> {
+public class TextNoteClipEvent extends LXCompositionEvent<TextNoteClipEvent> {
 
-  public final NotesLane lane;
+  public final TextNoteClipLane lane;
 
   public final StringParameter note =
     new StringParameter("Note")
@@ -36,11 +36,11 @@ public class NotesLaneEvent extends LXCompositionEvent<NotesLaneEvent> {
 
   private final LXParameterListener noteListener;
 
-  NotesLaneEvent(LX lx, NotesLane lane) {
+  TextNoteClipEvent(LX lx, TextNoteClipLane lane) {
     this(lx, lane, lane.clip.cursor, null);
   }
 
-  NotesLaneEvent(LX lx, NotesLane lane, Cursor cursor, Cursor length) {
+  TextNoteClipEvent(LX lx, TextNoteClipLane lane, Cursor cursor, Cursor length) {
     super(lane, cursor);
     this.lane = lane;
 

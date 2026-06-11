@@ -360,7 +360,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   public LXComponent getSnapshotParameterScope() {
     if (this.bus instanceof LXBus lxBus) {
       return lxBus;
-    } else if (getParent() instanceof BusLane lane) {
+    } else if (getParent() instanceof BusClipLane lane) {
       return lane.bus;
     } else if (getParent() instanceof LXCompositionEngine) {
       return null;
@@ -492,7 +492,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public String getPath() {
-    if (getParent() instanceof BusLane busLane) {
+    if (getParent() instanceof BusClipLane busLane) {
       return "event/" + (busLane.getIndex() + 1) + "/internalClip";
     }
     return "clip/" + (this.index + 1);

@@ -24,11 +24,11 @@ import heronarts.lx.LX;
 /**
  * A composition lane for text notes.
  */
-public class NotesLane extends LXClipLane<NotesLaneEvent> {
+public class TextNoteClipLane extends LXClipLane<TextNoteClipEvent> {
 
-  public final Composition composition;
+  public final LXComposition composition;
 
-  NotesLane(Composition composition) {
+  TextNoteClipLane(LXComposition composition) {
     super(composition);
     this.composition = composition;
     this.label.setValue("Notes");
@@ -47,26 +47,26 @@ public class NotesLane extends LXClipLane<NotesLaneEvent> {
   @Override
   void overdubCursor(Cursor from, Cursor to, boolean inclusive) {}
 
-  public NotesLaneEvent addEvent(String note) {
+  public TextNoteClipEvent addEvent(String note) {
     return addEvent(note, this.clip.cursor, null);
   }
 
-  public NotesLaneEvent addEvent(String note, Cursor cursor, Cursor length) {
-    NotesLaneEvent event = new NotesLaneEvent(this.lx, this, cursor, length);
+  public TextNoteClipEvent addEvent(String note, Cursor cursor, Cursor length) {
+    TextNoteClipEvent event = new TextNoteClipEvent(this.lx, this, cursor, length);
     this.mutableEvents.add(event);
     this.onChange.bang();
     return event;
   }
 
   @Override
-  protected NotesLaneEvent loadEvent(LX lx, JsonObject eventObj) {
-    NotesLaneEvent event = new NotesLaneEvent(this.lx, this);
+  protected TextNoteClipEvent loadEvent(LX lx, JsonObject eventObj) {
+    TextNoteClipEvent event = new TextNoteClipEvent(this.lx, this);
     event.load(lx, eventObj);
     return event;
   }
 
   @Override
-  protected void onRemoveEvent(NotesLaneEvent event) {
+  protected void onRemoveEvent(TextNoteClipEvent event) {
     event.dispose();
   }
 

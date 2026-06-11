@@ -735,11 +735,11 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_PATTERN);
     } else if (this instanceof MidiNoteClipLane) {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_MIDI_NOTE);
-    } else if (this instanceof BusLane) {
+    } else if (this instanceof BusClipLane) {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_BUS);
-    } else if (this instanceof AudioLane) {
+    } else if (this instanceof AudioClipLane) {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_AUDIO);
-    } else if (this instanceof NotesLane) {
+    } else if (this instanceof TextNoteClipLane) {
       obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_NOTES);
     }
     obj.add(KEY_EVENTS, LXSerializable.Utils.toArray(lx, this.events));

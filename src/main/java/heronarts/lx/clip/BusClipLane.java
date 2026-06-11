@@ -27,12 +27,12 @@ import heronarts.lx.parameter.LXParameterListener;
 /**
  * A composition lane representing a mixer channel
  */
-public class BusLane extends LXClipLane<BusLaneEvent> {
+public class BusClipLane extends LXClipLane<BusClipEvent> {
 
-  public final Composition composition;
+  public final LXComposition composition;
   public final LXBus bus;
 
-  BusLane(Composition composition, LXBus bus) {
+  BusClipLane(LXComposition composition, LXBus bus) {
     super(composition);
     this.composition = composition;
     this.bus = bus;
@@ -67,11 +67,11 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
     return clip.isRecording();
   }
 
-  private BusLaneEvent recordingEvent = null;
+  private BusClipEvent recordingEvent = null;
 
   private void recordRunningClipStart() {
     final LXClip original = this.bus.getRunningClip();
-    this.recordingEvent = new BusLaneEvent(this.lx, this, original);
+    this.recordingEvent = new BusClipEvent(this.lx, this, original);
     this.recordingEvent.startRecording();
     recordEvent(this.recordingEvent);
     this.onChange.bang(); // needed for ui redraw?
@@ -117,7 +117,7 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
 
   // Playback (Is delegated to the event, which could be longer than the clip if clip is looping)
 
-  BusLaneEvent playbackEvent = null;
+  BusClipEvent playbackEvent = null;
 
   /**
    * Playback started from cursor position
@@ -125,7 +125,7 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
   @Override
   void initializeCursorPlayback(Cursor from) {
     this.playbackEvent = null;
-    BusLaneEvent event = getEventContainingCursor(from);
+    BusClipEvent event = getEventContainingCursor(from);
     if (event != null) {
       this.playbackEvent = event;
       Cursor eventFrom = from.subtract(event.cursor);
@@ -147,7 +147,7 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
   }
 
   private void _jumpCursor(Cursor from, Cursor to, boolean isLoop) {
-    BusLaneEvent toEvent = getEventContainingCursor(to);
+    BusClipEvent toEvent = getEventContainingCursor(to);
     if (this.playbackEvent != toEvent) {
       // Jump crosses an event boundary
       if (this.playbackEvent != null) {
@@ -169,8 +169,8 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
     }
   }
 
-  private BusLaneEvent getEventContainingCursor(Cursor cursor) {
-    BusLaneEvent event = getPreviousEvent(cursor);
+  private BusClipEvent getEventContainingCursor(Cursor cursor) {
+    BusClipEvent event = getPreviousEvent(cursor);
     if (event != null && CursorOp().isBeforeOrEqual(cursor, event.end)) {
       return event;
     }
@@ -209,7 +209,7 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
     // Find the next event at or after "from"
     final Cursor.Operator c = CursorOp();
     for (int index = cursorPlayIndex(from); index < this.events.size(); ++index) {
-      BusLaneEvent event = this.events.get(index);
+      BusClipEvent event = this.events.get(index);
 
       // Is event beyond our range?
       if (c.isAfterOrEqual(event.cursor, to)) {
@@ -250,7 +250,7 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
   }
 
   @Override
-  protected void onRemoveEvent(BusLaneEvent event) {
+  protected void onRemoveEvent(BusClipEvent event) {
     event.dispose();
   }
 
@@ -267,7 +267,7 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
   // Serialization
 
   @Override
-  public BusLane removeEvent(BusLaneEvent event) {
+  public BusClipLane removeEvent(BusClipEvent event) {
     // Unfocus the clip so clip editor will release listeners before clip is disposed
     if (event.isFocusedClip()) {
       this.lx.engine.composition.setFocusedClip(null);
@@ -285,8 +285,8 @@ public class BusLane extends LXClipLane<BusLaneEvent> {
   }
 
   @Override
-  protected BusLaneEvent loadEvent(LX lx, JsonObject eventObj) {
-    BusLaneEvent event = new BusLaneEvent(this.lx, this);
+  protected BusClipEvent loadEvent(LX lx, JsonObject eventObj) {
+    BusClipEvent event = new BusClipEvent(this.lx, this);
     event.load(lx, eventObj);
     return event;
   }

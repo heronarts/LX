@@ -55,7 +55,7 @@ class AudioPlayer {
 
   private static final int LINE_BUFFER_FRAMES = 2;
 
-  private final Composition composition;
+  private final LXComposition composition;
   private SourceDataLine line;
   private PlaybackThread playbackThread;
 
@@ -64,7 +64,7 @@ class AudioPlayer {
   private volatile boolean closed = false;
 
   @Deprecated
-  AudioPlayer(Composition composition) {
+  AudioPlayer(LXComposition composition) {
     this.composition = composition;
   }
 
@@ -186,12 +186,12 @@ class AudioPlayer {
         Arrays.fill(this.mixBuffer, 0f);
 
         // Mix samples from all active audio lane events
-        List<AudioLane> audioLanes = composition.getAudioLanes();
-        for (AudioLane lane : audioLanes) {
+        List<AudioClipLane> audioLanes = composition.getAudioLanes();
+        for (AudioClipLane lane : audioLanes) {
           if (lane.mute.isOn()) {
             continue;
           }
-          AudioLaneEvent event = lane.activeEvent;
+          AudioClipEvent event = lane.activeEvent;
           if (event == null) {
             continue;
           }
