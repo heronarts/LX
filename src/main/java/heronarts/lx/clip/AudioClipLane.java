@@ -1,8 +1,27 @@
+/**
+ * Copyright 2025- Justin K. Belcher, Heron Arts LLC
+ *
+ * This file is part of the LX Studio software library. By using
+ * LX, you agree to the terms of the LX Studio Software License
+ * and Distribution Agreement, available at: http://lx.studio/license
+ *
+ * Please note that the LX license is not open-source. The license
+ * allows for free, non-commercial use.
+ *
+ * HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR
+ * OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF
+ * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
+ * PURPOSE, WITH RESPECT TO THE SOFTWARE.
+ *
+ * @author Justin K. Belcher <justin@jkb.studio>
+ */
+
 package heronarts.lx.clip;
 
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.audio.LXAudioTimeline;
 import heronarts.lx.parameter.BooleanParameter;
 
 import java.io.File;
@@ -13,15 +32,13 @@ import java.io.File;
  */
 public class AudioClipLane extends LXClipLane<AudioClipEvent> {
 
-  private static final int SAMPLE_RATE = 44100;
-
   public final LXComposition composition;
 
   public final BooleanParameter mute =
     new BooleanParameter("Mute")
     .setDescription("Mutes audio playback on this lane");
 
-  // Active playback state, read by audio thread
+  // Active playback state, read by audio thread via LXAudioTimeline
   private volatile AudioClipEvent activeEvent = null;
   private volatile int activeSampleOffset = 0;
 
@@ -69,12 +86,11 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
   @Override
   void playCursor(Cursor from, Cursor to, boolean inclusive) {
     if (this.activeEvent != null) {
-      Cursor eventEnd = this.activeEvent.cursor.add(this.activeEvent.length);
-      if (CursorOp().isAfter(to, eventEnd)) {
+      if (CursorOp().isAfter(to, this.activeEvent.end)) {
         // Current event has ended, find next event
-        findNextEvent(eventEnd, to);
+        findNextEvent(this.activeEvent.end, to);
       }
-      // Otherwise: audio thread is advancing the offset, nothing to do
+      // Otherwise: audio thread will carry on advancing the offset, nothing to do
     } else {
       // No active event, check if cursor has entered one
       findNextEvent(from, to);
@@ -96,36 +112,35 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
    * Find the event at the given cursor position and set it as active
    */
   private void setActiveEventAt(Cursor to) {
-    this.activeEvent = null;
-    AudioClipEvent event = getPreviousEvent(to);
-    if (event != null) {
-      Cursor eventEnd = event.cursor.add(event.length);
-      if (CursorOp().isBeforeOrEqual(to, eventEnd)) {
-        double offsetMs = to.subtract(event.cursor).getMillis() + event.playbackOffset.getMillis();
-        this.activeSampleOffset = toSampleOffsetFromMs(offsetMs);
-        this.activeEvent = event;
-      }
+    clearActiveEvent();
+    final AudioClipEvent event = getPreviousEvent(to);
+    if ((event != null) && CursorOp().isBeforeOrEqual(to, event.end)) {
+      double offsetMs = to.subtract(event.cursor).getMillis() + event.playbackOffset.getMillis();
+      this.activeSampleOffset = toSampleOffsetFromMs(offsetMs);
+      this.activeEvent = event;
     }
+
   }
 
   /**
    * Scan forward for an event starting in range [from, to) that is still active at to
    */
   private void findNextEvent(Cursor from, Cursor to) {
-    this.activeEvent = null;
+    clearActiveEvent();
     for (int i = cursorPlayIndex(from); i < this.events.size(); i++) {
       AudioClipEvent event = this.events.get(i);
       if (CursorOp().isAfterOrEqual(event.cursor, to)) {
-        break;
+        // Next event starts after the cursor, got nothing
+        return;
       }
-      Cursor eventEnd = event.cursor.add(event.length);
-      if (CursorOp().isAfterOrEqual(eventEnd, to)) {
+      if (CursorOp().isAfterOrEqual(event.end, to)) {
         double offsetMs = to.subtract(event.cursor).getMillis() + event.playbackOffset.getMillis();
         this.activeSampleOffset = toSampleOffsetFromMs(offsetMs);
         this.activeEvent = event;
         return;
       }
     }
+
   }
 
   @Override
@@ -135,21 +150,20 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
    * Convert milliseconds to a stereo interleaved sample offset
    */
   static int toSampleOffsetFromMs(double ms) {
-    return (int) (ms * SAMPLE_RATE / 1000.0) * 2;
+    return LXAudioTimeline.AUDIO_OUTPUT_FORMAT.getChannels() * (int) (ms * LXAudioTimeline.AUDIO_OUTPUT_FORMAT.getSampleRate() / 1000.0);
   }
 
   // Event management
 
   public AudioClipLane addEvent(File file) {
-    AudioClipEvent event = new AudioClipEvent(this.lx, this, file);
-    this.mutableEvents.add(event);
+    this.mutableEvents.add(new AudioClipEvent(this.lx, this, file));
     this.onChange.bang();
     return this;
   }
 
   @Override
   protected AudioClipEvent loadEvent(LX lx, JsonObject eventObj) {
-    AudioClipEvent event = new AudioClipEvent(this.lx, this);
+    final AudioClipEvent event = new AudioClipEvent(this.lx, this);
     event.load(lx, eventObj);
     return event;
   }

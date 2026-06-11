@@ -36,6 +36,8 @@ import heronarts.lx.utils.LXUtils;
 
 public class LXAudioTimeline extends LXAudioComponent {
 
+  public static final AudioFormat AUDIO_OUTPUT_FORMAT = LXAudioOutput.AUDIO_OUTPUT_FORMAT;
+
   public final BooleanParameter play = new BooleanParameter("Play", false)
     .setDescription("Play/Pause state of the composition audio");
 
@@ -70,9 +72,9 @@ public class LXAudioTimeline extends LXAudioComponent {
   private void open() {
     if (this.outputThread == null) {
       try {
-        final SourceDataLine line = (SourceDataLine) AudioSystem.getLine(getSourceLineInfo(LXAudioOutput.AUDIO_OUTPUT_FORMAT));
-        line.open(LXAudioOutput.AUDIO_OUTPUT_FORMAT, LXAudioOutput.BUFFER_FRAMES * bufferSize(LXAudioOutput.AUDIO_OUTPUT_FORMAT));
-        this.outputThread = new OutputThread(line, LXAudioOutput.AUDIO_OUTPUT_FORMAT);
+        final SourceDataLine line = (SourceDataLine) AudioSystem.getLine(getSourceLineInfo(AUDIO_OUTPUT_FORMAT));
+        line.open(AUDIO_OUTPUT_FORMAT, LXAudioOutput.BUFFER_FRAMES * bufferSize(AUDIO_OUTPUT_FORMAT));
+        this.outputThread = new OutputThread(line, AUDIO_OUTPUT_FORMAT);
         _toggle();
       } catch (Exception x) {
         LX.error(x, "Exception opening stereo output audio line");

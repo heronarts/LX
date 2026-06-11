@@ -1,10 +1,29 @@
+/**
+ * Copyright 2025- Justin K. Belcher, Heron Arts LLC
+ *
+ * This file is part of the LX Studio software library. By using
+ * LX, you agree to the terms of the LX Studio Software License
+ * and Distribution Agreement, available at: http://lx.studio/license
+ *
+ * Please note that the LX license is not open-source. The license
+ * allows for free, non-commercial use.
+ *
+ * HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR
+ * OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF
+ * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
+ * PURPOSE, WITH RESPECT TO THE SOFTWARE.
+ *
+ * @author Justin K. Belcher <justin@jkb.studio>
+ */
+
 package heronarts.lx.clip;
 
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.audio.LXAudioOutput;
+import heronarts.lx.audio.LXAudioBuffer;
+import heronarts.lx.audio.LXAudioTimeline;
 import heronarts.lx.parameter.StringParameter;
 
 import java.io.File;
@@ -25,10 +44,10 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   private final Cursor sourceLength = new Cursor();
 
   // Waveform data for UI display (original format)
-  private float[] waveform;
+  private float[] waveformData;
   private boolean waveformLoaded = false;
 
-  // Playback data, uses LXAudioOutput format
+  // Playback data, uses LXAudioTimeline format
   private float[] playbackData = null;
   private boolean playbackDataLoaded = false;
 
@@ -173,7 +192,7 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
         format.getSampleRate(),
         16,
         format.getChannels(),
-        format.getChannels() * 2,
+        format.getChannels() * 2, // 2 bytes per sample per channel (16-bit)
         format.getSampleRate(),
         false
       );
@@ -188,7 +207,7 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
    * Load file data formatted for playback (currently 44.1kHz)
    */
   private float[] loadPlaybackData() {
-    return loadAudioSamples(LXAudioOutput.AUDIO_OUTPUT_FORMAT);
+    return loadAudioSamples(LXAudioTimeline.AUDIO_OUTPUT_FORMAT);
   }
 
   private float[] loadAudioSamples(AudioFormat targetFormat) {
@@ -204,10 +223,11 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
       // Convert bytes to normalized float values
       for (int i = 0; i < numSamples; i++) {
         int sample = (audioBytes[i * 2 + 1] << 8) | (audioBytes[i * 2] & 0xFF);
-        samples[i] = sample / 32768.0f; // Normalize to -1.0 to 1.0
+        samples[i] = sample * LXAudioBuffer.INV_16_BIT; // Normalize to -1.0 to 1.0
       }
 
       return samples;
+
     } catch (UnsupportedAudioFileException | IOException e) {
       LX.error(e, "Failed to load audio data: " + this.file.getAbsolutePath());
       return null;
@@ -231,10 +251,10 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
     if (this.file == null || !this.file.exists()) {
       return null;
     }
-    if (this.waveform == null) {
-      this.waveform = loadWaveform();
+    if (this.waveformData == null) {
+      this.waveformData = loadWaveform();
     }
-    return this.waveform;
+    return this.waveformData;
   }
 
   private static final float[] NO_DATA = new float[0];
@@ -352,7 +372,7 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   private void releaseSampleData() {
     if (this.waveformLoaded) {
       this.waveformLoaded = false;
-      this.waveform = null;
+      this.waveformData = null;
     }
     if (this.playbackDataLoaded) {
       this.playbackDataLoaded = false;

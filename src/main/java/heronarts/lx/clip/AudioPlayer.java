@@ -27,14 +27,12 @@ import heronarts.lx.audio.LXAudioEngine;
 class AudioPlayer {
 
   private final LXAudioEngine audio;
-  private final LXComposition composition;
 
   private boolean playing = false;
   private boolean disposed = false;
 
-  AudioPlayer(LX lx, LXComposition composition) {
+  AudioPlayer(LX lx) {
     this.audio = lx.engine.audio;
-    this.composition = composition;
   }
 
   /**

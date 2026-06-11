@@ -77,8 +77,11 @@ public abstract class LXCompositionEvent<T extends LXCompositionEvent<T>> extend
     final Cursor.Operator c = CursorOp();
     c.constrain(start, Cursor.ZERO, this.end.subtract(Cursor.MIN_LOOP));
     Cursor newLength = this.end.subtract(start);
-    setCursor(start);
-    setLength(newLength);
+
+    // NOTE: do not use helper methods, we're not changing the end value here and
+    // do not want to generate any changes to this.end
+    super.setCursor(start);
+    this.length.set(newLength);
   }
 
   /**
@@ -88,8 +91,7 @@ public abstract class LXCompositionEvent<T extends LXCompositionEvent<T>> extend
    * @param endCursor new value for the end cursor
    */
   public void setEventEnd(Cursor endCursor) {
-    final Cursor.Operator c = CursorOp();
-    if (c.isBeforeOrEqual(endCursor, this.cursor.add(Cursor.MIN_LOOP))) {
+    if (CursorOp().isBeforeOrEqual(endCursor, this.cursor.add(Cursor.MIN_LOOP))) {
       endCursor = this.cursor.add(Cursor.MIN_LOOP);
     }
     setLength(endCursor.subtract(this.cursor));

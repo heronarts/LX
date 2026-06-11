@@ -60,7 +60,7 @@ public class LXComposition extends LXClip {
   public LXComposition(LX lx, LXCompositionEngine composition) {
     super(lx, composition, composition, 0);
 
-    this.audioPlayer = new AudioPlayer(lx, this);
+    this.audioPlayer = new AudioPlayer(lx);
 
     // Maintain one lane per mixer channel
     lx.engine.mixer.addListener(this.mixerListener);
