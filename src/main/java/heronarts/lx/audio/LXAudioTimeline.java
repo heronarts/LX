@@ -39,7 +39,7 @@ public class LXAudioTimeline extends LXAudioComponent {
   public static final AudioFormat AUDIO_OUTPUT_FORMAT = LXAudioOutput.AUDIO_OUTPUT_FORMAT;
 
   public final BooleanParameter play = new BooleanParameter("Play", false)
-    .setDescription("Play/Pause state of the composition audio");
+    .setDescription("Play/Pause state of the timeline audio");
 
   private LXComposition composition = null;
 
@@ -252,7 +252,7 @@ public class LXAudioTimeline extends LXAudioComponent {
     @Override
     public void update(LineEvent event) {
       final LineEvent.Type eventType = event.getType();
-      LX.debug("LXAudioComposition.line.update(LineEvent.Type." + eventType + ")");
+      LX.debug("LXAudioTimeline.line.update(LineEvent.Type." + eventType + ")");
       if (eventType == LineEvent.Type.START){
         this.stopped = false;
         synchronized (this) {

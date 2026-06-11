@@ -870,6 +870,16 @@ public class Cursor implements LXSerializable {
     return add ? add(that) : subtract(that);
   }
 
+  /**
+   * Destructively modifies this cursor, rewinding it by the amount specified
+   *
+   * @param that Cursor specifying amount to rewind
+   * @return This cursor, modified
+   */
+  public Cursor rewind(Cursor that) {
+    return _subtract(that);
+  }
+
   public Cursor subtract(Cursor that) {
     return clone()._subtract(that);
   }

@@ -99,6 +99,11 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
   }
 
   @Override
+  void overdubCursor(Cursor from, Cursor to, boolean inclusive) {
+    playCursor(from, to, inclusive);
+  }
+
+  @Override
   void jumpCursor(Cursor from, Cursor to) {
     setActiveEventAt(to);
   }
@@ -130,7 +135,7 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
     for (int i = cursorPlayIndex(from); i < this.events.size(); i++) {
       AudioClipEvent event = this.events.get(i);
       if (CursorOp().isAfterOrEqual(event.cursor, to)) {
-        // Next event starts after the cursor, got nothing
+        // Next event starts after the cursor, bail fast
         return;
       }
       if (CursorOp().isAfterOrEqual(event.end, to)) {
@@ -142,9 +147,6 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
     }
 
   }
-
-  @Override
-  void overdubCursor(Cursor from, Cursor to, boolean inclusive) {}
 
   /**
    * Convert milliseconds to a stereo interleaved sample offset

@@ -42,10 +42,11 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
 
   private File file;
   private final Cursor sourceLength = new Cursor();
+  public final Cursor playbackOffset = new Cursor();
 
   // Waveform data for UI display (original format)
   private float[] waveformData;
-  private boolean waveformLoaded = false;
+  private boolean waveformDataLoaded = false;
 
   // Playback data, uses LXAudioTimeline format
   private float[] playbackData = null;
@@ -59,92 +60,6 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
     new StringParameter("File Path")
     .setDescription("Absolute path to the audio file on the local machine");
 
-  /**
-   * A cursor that can be negative. Maybe make this an option on the cursor Class?
-   */
-  public static class BiCursor implements LXSerializable {
-
-    private boolean negative = false;
-    private final Cursor cursor = new Cursor();
-
-    public double getMillis() {
-      return this.negative ? -this.cursor.getMillis() : this.cursor.getMillis();
-    }
-
-    public BiCursor set(Cursor value) {
-      this.negative = false;
-      this.cursor.set(value);
-      return this;
-    }
-
-    public BiCursor set(Cursor value, boolean negative) {
-      this.negative = negative;
-      this.cursor.set(value);
-      return this;
-    }
-
-    /**
-     * Add a positive Cursor value to this BiCursor (moves toward positive).
-     * Mutates this BiCursor in place.
-     */
-    public BiCursor add(Cursor value) {
-      if (this.negative) {
-        if (value.getMillis() >= this.cursor.getMillis()) {
-          this.cursor.set(value.subtract(this.cursor));
-          this.negative = false;
-        } else {
-          this.cursor.set(this.cursor.subtract(value));
-        }
-      } else {
-        this.cursor.set(this.cursor.add(value));
-      }
-      return this;
-    }
-
-    /**
-     * Subtract a positive Cursor value from this BiCursor (moves toward negative).
-     * Mutates this BiCursor in place.
-     */
-    public BiCursor subtract(Cursor value) {
-      if (this.negative) {
-        this.cursor.set(this.cursor.add(value));
-      } else {
-        if (this.cursor.getMillis() >= value.getMillis()) {
-          this.cursor.set(this.cursor.subtract(value));
-        } else {
-          this.cursor.set(value.subtract(this.cursor));
-          this.negative = true;
-        }
-      }
-      return this;
-    }
-
-    public boolean isNegative() {
-      return this.negative && this.cursor.getMillis() > 0;
-    }
-
-    // Serialization
-
-    private static final String KEY_NEGATIVE = "negative";
-    private static final String KEY_CURSOR = "cursor";
-
-    @Override
-    public void save(LX lx, JsonObject obj) {
-      obj.addProperty(KEY_NEGATIVE, this.negative);
-      obj.add(KEY_CURSOR, LXSerializable.Utils.toObject(lx, this.cursor));
-    }
-
-    @Override
-    public void load(LX lx, JsonObject obj) {
-      this.negative = obj.has(KEY_NEGATIVE) && obj.get(KEY_NEGATIVE).getAsBoolean();
-      if (obj.has(KEY_CURSOR)) {
-        this.cursor.load(lx, obj.getAsJsonObject(KEY_CURSOR));
-      }
-    }
-  }
-
-  // TODO: convert playbackOffset to CursorParameter
-  public final BiCursor playbackOffset = new BiCursor();
 
   AudioClipEvent(LX lx, AudioClipLane lane) {
     this(lx, lane, null);
@@ -290,35 +205,18 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
    * keeping the end fixed. This aligns the event start with the audio file start.
    */
   public void resetPlaybackOffset() {
-    final Cursor.Operator c = CursorOp();
-    Cursor delta = this.playbackOffset.cursor.clone();
-    boolean wasNegative = this.playbackOffset.isNegative();
-
-    Cursor newStart;
-    if (wasNegative) {
-      newStart = this.cursor.add(delta);
+    Cursor newStart, newLength;
+    if (CursorOp().isAfter(this.playbackOffset, this.cursor)) {
+      newStart = Cursor.ZERO;
+      newLength = this.length.add(this.cursor);
     } else {
-      if (c.isAfter(delta, this.cursor)) {
-        newStart = Cursor.ZERO;
-        delta.set(this.cursor);
-      } else {
-        newStart = this.cursor.subtract(delta);
-      }
+      newStart = this.cursor.subtract(this.playbackOffset);
+      newLength = this.length.add(this.playbackOffset);
     }
 
-    Cursor newLength;
-    if (wasNegative) {
-      if (c.isAfter(delta, this.length)) {
-        newLength = Cursor.MIN_LOOP;
-      } else {
-        newLength = this.length.subtract(delta);
-      }
-    } else {
-      newLength = this.length.add(delta);
-    }
     this.playbackOffset.set(Cursor.ZERO);
-    setCursor(newStart);
-    setLength(newLength);
+    setCursor(newStart, newLength);
+
     this.lane.onChange.bang();
   }
 
@@ -331,23 +229,21 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   @Override
   public void setEventStart(Cursor start) {
     final Cursor.Operator c = CursorOp();
-    c.constrain(start, Cursor.ZERO, this.end.subtract(Cursor.MIN_LOOP));
+    c.constrain(start, this.cursor.subtract(this.playbackOffset), this.end.subtract(Cursor.MIN_LOOP));
 
     // Adjust playback offset by the same delta
     if (c.isAfter(start, this.cursor)) {
       Cursor delta = start.subtract(this.cursor);
-      this.playbackOffset.add(delta);
+      this.playbackOffset.advance(delta);
     } else if (c.isBefore(start, this.cursor)) {
       Cursor delta = this.cursor.subtract(start);
-      this.playbackOffset.subtract(delta);
+      this.playbackOffset.rewind(delta);
     }
 
     // Apply new start position
-    setCursor(start);
-
-    // Adjust length to keep end fixed
     Cursor newLength = this.end.subtract(start);
-    setLength(newLength);
+    setCursor(start, newLength);
+
     this.lane.onChange.bang();
   }
 
@@ -370,8 +266,8 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   // Disposal
 
   private void releaseSampleData() {
-    if (this.waveformLoaded) {
-      this.waveformLoaded = false;
+    if (this.waveformDataLoaded) {
+      this.waveformDataLoaded = false;
       this.waveformData = null;
     }
     if (this.playbackDataLoaded) {

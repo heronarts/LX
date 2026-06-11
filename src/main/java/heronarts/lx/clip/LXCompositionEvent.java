@@ -54,6 +54,17 @@ public abstract class LXCompositionEvent<T extends LXCompositionEvent<T>> extend
     return this;
   }
 
+  /**
+   * Updates both cursor start and length with a single update to end
+   *
+   * @param cursor Start position
+   * @param length Length
+   */
+  protected void setCursor(Cursor cursor, Cursor length) {
+    super.setCursor(cursor);
+    setLength(length);
+  }
+
   protected void setLength(Cursor length) {
     this.length.set(length);
     refreshEnd();
