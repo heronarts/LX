@@ -1416,8 +1416,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         this.snapshot.loop(deltaMs);
       }
 
+      // Ensure compositions continue progressing until their end
+      boolean keepGoing =
+        (this instanceof LXComposition) &&
+        CursorOp().isBefore(this.nextCursor, this.playEnd.cursor);
+
       // If automation and snapshot are both finished, stop
-      if (!runAutomation && !this.snapshot.isInTransition()) {
+      if (!keepGoing && !runAutomation && !this.snapshot.isInTransition()) {
         stop();
       }
     }
