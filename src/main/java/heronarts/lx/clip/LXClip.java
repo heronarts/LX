@@ -1404,7 +1404,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       boolean runAutomation = false;
 
       // Run clip automation if enabled
-      if (this.automationEnabled.isOn()) {
+      if ((this instanceof LXComposition) || this.automationEnabled.isOn()) {
         runAutomation = runAutomation(false);
       }
 
@@ -1416,13 +1416,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         this.snapshot.loop(deltaMs);
       }
 
-      // Ensure compositions continue progressing until their end
-      boolean keepGoing =
-        (this instanceof LXComposition) &&
-        CursorOp().isBefore(this.nextCursor, this.playEnd.cursor);
-
       // If automation and snapshot are both finished, stop
-      if (!keepGoing && !runAutomation && !this.snapshot.isInTransition()) {
+      if (!runAutomation && !this.snapshot.isInTransition()) {
         stop();
       }
     }
