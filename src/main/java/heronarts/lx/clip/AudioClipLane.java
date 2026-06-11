@@ -22,8 +22,8 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
     .setDescription("Mutes audio playback on this lane");
 
   // Active playback state, read by audio thread
-  volatile AudioClipEvent activeEvent = null;
-  volatile long activeSampleOffset = 0;
+  private volatile AudioClipEvent activeEvent = null;
+  private volatile int activeSampleOffset = 0;
 
   AudioClipLane(LXComposition composition) {
     super(composition);
@@ -40,6 +40,23 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
   @Override
   public String getPath() {
     return "audioLane/" + getIndex();
+  }
+
+  public AudioClipEvent getActiveEvent() {
+    return this.activeEvent;
+  }
+
+  public void clearActiveEvent() {
+    this.activeEvent = null;
+    this.activeSampleOffset = 0;
+  }
+
+  public int getActiveSampleOffset() {
+    return this.activeSampleOffset;
+  }
+
+  public void setActiveSampleOffset(int offset) {
+    this.activeSampleOffset = offset;
   }
 
   // Playback
@@ -68,13 +85,11 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
   @Override
   void jumpCursor(Cursor from, Cursor to) {
     setActiveEventAt(to);
-    this.composition.notifyAudioJump();
   }
 
   @Override
   void loopCursor(Cursor from, Cursor to) {
     setActiveEventAt(to);
-    this.composition.notifyAudioJump();
   }
 
   /**
@@ -113,21 +128,14 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
     }
   }
 
-  /**
-   * Stop audio playback, clearing the active event
-   */
-  void stopPlayback() {
-    this.activeEvent = null;
-  }
-
   @Override
   void overdubCursor(Cursor from, Cursor to, boolean inclusive) {}
 
   /**
    * Convert milliseconds to a stereo interleaved sample offset
    */
-  static long toSampleOffsetFromMs(double ms) {
-    return (long) (ms * SAMPLE_RATE / 1000.0) * 2;
+  static int toSampleOffsetFromMs(double ms) {
+    return (int) (ms * SAMPLE_RATE / 1000.0) * 2;
   }
 
   // Event management

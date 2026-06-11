@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.audio.LXAudioOutput;
 import heronarts.lx.parameter.StringParameter;
 
 import java.io.File;
@@ -27,24 +28,16 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   private float[] waveform;
   private boolean waveformLoaded = false;
 
-  // Playback data: stereo interleaved (L,R,L,R), 44.1kHz, normalized -1.0 to 1.0
-  private float[] playbackData;
+  // Playback data, uses LXAudioOutput format
+  private float[] playbackData = null;
   private boolean playbackDataLoaded = false;
 
-  private static final AudioFormat PLAYBACK_FORMAT = new AudioFormat(
-    AudioFormat.Encoding.PCM_SIGNED,
-    44100,
-    16,
-    2,
-    4,
-    44100,
-    false
-  );
-
-  public final StringParameter fileName = new StringParameter("File Name")
+  public final StringParameter fileName =
+    new StringParameter("File Name")
     .setDescription("Display name of the audio file");
 
-  public final StringParameter filePath = new StringParameter("File Path")
+  public final StringParameter filePath =
+    new StringParameter("File Path")
     .setDescription("Absolute path to the audio file on the local machine");
 
   /**
@@ -187,7 +180,7 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
       return loadAudioSamples(pcmFormat);
     } catch (UnsupportedAudioFileException | IOException e) {
       LX.error(e, "Failed to read waveform data: " + this.file.getAbsolutePath());
-      return null;
+      return NO_DATA;
     }
   }
 
@@ -195,14 +188,17 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
    * Load file data formatted for playback (currently 44.1kHz)
    */
   private float[] loadPlaybackData() {
-    return loadAudioSamples(PLAYBACK_FORMAT);
+    return loadAudioSamples(LXAudioOutput.AUDIO_OUTPUT_FORMAT);
   }
 
   private float[] loadAudioSamples(AudioFormat targetFormat) {
+    if (targetFormat.getSampleSizeInBits() != 16) {
+      throw new IllegalArgumentException("AudioClipEvent can only load 16-bit sample data");
+    }
     try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(this.file)) {
       AudioInputStream pcmStream = AudioSystem.getAudioInputStream(targetFormat, audioInputStream);
       byte[] audioBytes = pcmStream.readAllBytes();
-      int numSamples = audioBytes.length / 2; // 16-bit = 2 bytes per sample
+      int numSamples = audioBytes.length / 2; // 2 bytes per 16-bit sample
       float[] samples = new float[numSamples];
 
       // Convert bytes to normalized float values
@@ -229,29 +225,33 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   }
 
   /**
-   * Retrieve the waveform data for visual display
+   * Retrieve the waveform data for visual display.
    */
   public float[] getWaveform() {
     if (this.file == null || !this.file.exists()) {
       return null;
     }
-
-    if (!this.waveformLoaded) {
+    if (this.waveform == null) {
       this.waveform = loadWaveform();
-      this.waveformLoaded = true;
     }
     return this.waveform;
   }
+
+  private static final float[] NO_DATA = new float[0];
 
   /**
    * Retrieve the decoded playback data for this audio event. Data is stereo interleaved
    * (L,R,L,R) at 44.1kHz, normalized to -1.0 to 1.0. Lazy-loaded on first access.
    *
+   * TODO(mcslee): consider refactoring this to use some kind of seekable read or placing
+   * limits on number and size of audio lanes, this potentially loads masses of WAV data
+   * into memory
+   *
    * @return Stereo interleaved float samples, or empty array if file unavailable
    */
   public float[] getPlaybackData() {
     if (this.file == null || !this.file.exists()) {
-      return new float[0];
+      return NO_DATA;
     }
     if (!this.playbackDataLoaded) {
       this.playbackData = loadPlaybackData();

@@ -36,6 +36,7 @@ public interface LXClipContainer {
   public void onClipStart(LXClip clip);
   public void onClipStop(LXClip clip);
 
+  // TODO: doesn't seem like these should really be here?
   public List<LXEffect> getEffects();
   public void addEffectsListener(LXBus.Listener listener);
   public void removeEffectsListener(LXBus.Listener listener);

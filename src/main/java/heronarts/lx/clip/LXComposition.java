@@ -55,10 +55,12 @@ public class LXComposition extends LXClip {
   private final ObservableList<Locator> mutableLocators = new ObservableList<>();
   public final ObservableList<Locator> locators = this.mutableLocators.asUnmodifiableList();
 
-  private final AudioPlayer audioPlayback = new AudioPlayer(this);
+  private final AudioPlayer audioPlayer;
 
   public LXComposition(LX lx) {
     super(lx, lx.engine.composition, lx.engine.composition, 0);
+
+    this.audioPlayer = new AudioPlayer(lx, this);
 
     // Maintain one lane per mixer channel
     lx.engine.mixer.addListener(this.mixerListener);
@@ -97,7 +99,7 @@ public class LXComposition extends LXClip {
       busLane.run(deltaMs);
     }
     if (!this.audioLanes.isEmpty()) {
-      this.audioPlayback.ensureRunning();
+      this.audioPlayer.ensureRunning();
     }
   }
 
@@ -107,27 +109,17 @@ public class LXComposition extends LXClip {
   }
 
   private void stopAudioPlayback() {
-    if (!this.audioLanes.isEmpty()) {
-      this.audioPlayback.stop();
-      for (AudioClipLane lane : this.audioLanes) {
-        lane.stopPlayback();
-      }
+    this.audioPlayer.stop();
+    for (AudioClipLane lane : this.audioLanes) {
+      lane.clearActiveEvent();
     }
   }
 
   /**
    * Get the list of audio lanes for playback
    */
-  List<AudioClipLane> getAudioLanes() {
+  public List<AudioClipLane> getAudioLanes() {
     return this.audioLanes;
-  }
-
-  /**
-   * Notify the audio playback system that a position jump has occurred
-   */
-  void notifyAudioJump() {
-    // TODO: this is getting called once per audio lane. Would be cleaner to initiate from here, rather than from lanes.
-    this.audioPlayback.notifyJump();
   }
 
   // Bus Lanes
@@ -468,7 +460,7 @@ public class LXComposition extends LXClip {
 
   @Override
   public void dispose() {
-    this.audioPlayback.dispose();
+    this.audioPlayer.dispose();
     this.lx.engine.mixer.removeListener(this.mixerListener);
     super.dispose();
   }
