@@ -1,3 +1,21 @@
+/**
+ * Copyright 2025- Justin K. Belcher, Heron Arts LLC
+ *
+ * This file is part of the LX Studio software library. By using
+ * LX, you agree to the terms of the LX Studio Software License
+ * and Distribution Agreement, available at: http://lx.studio/license
+ *
+ * Please note that the LX license is not open-source. The license
+ * allows for free, non-commercial use.
+ *
+ * HERON ARTS MAKES NO WARRANTY, EXPRESS, IMPLIED, STATUTORY, OR
+ * OTHERWISE, AND SPECIFICALLY DISCLAIMS ANY WARRANTY OF
+ * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
+ * PURPOSE, WITH RESPECT TO THE SOFTWARE.
+ *
+ * @author Justin K. Belcher <justin@jkb.studio>
+ */
+
 package heronarts.lx.clip;
 
 import java.util.Arrays;
@@ -13,7 +31,11 @@ import heronarts.lx.LX;
  * Manages audio playback for composition audio lanes. Runs a dedicated thread that
  * mixes audio from all active audio lane events and writes to a SourceDataLine
  * at 44.1kHz for smooth, gap-free output independent of the LX engine frame rate.
+ *
+ * @deprecated This all needs to flow through LXAudioEngine, loads of code duplication
+ * with audio output here
  */
+@Deprecated
 class AudioPlayer {
 
   private static final int SAMPLE_RATE = 44100;
@@ -41,6 +63,7 @@ class AudioPlayer {
   private volatile boolean pendingJump = false;
   private volatile boolean closed = false;
 
+  @Deprecated
   AudioPlayer(Composition composition) {
     this.composition = composition;
   }
@@ -48,6 +71,7 @@ class AudioPlayer {
   /**
    * Ensure the audio output is running. Does nothing if already playing.
    */
+  @Deprecated
   void ensureRunning() {
     if (!this.playing) {
       start();
@@ -57,6 +81,7 @@ class AudioPlayer {
   /**
    * Start audio playback
    */
+  @Deprecated
   void start() {
     if (this.closed) {
       return;
@@ -77,6 +102,7 @@ class AudioPlayer {
   /**
    * Stop audio playback
    */
+  @Deprecated
   void stop() {
     this.playing = false;
     if (this.line != null) {
@@ -102,6 +128,7 @@ class AudioPlayer {
   /**
    * Notify that a jump/seek has occurred, requiring the audio line buffer to be flushed
    */
+  @Deprecated
   void notifyJump() {
     this.pendingJump = true;
   }
@@ -109,6 +136,7 @@ class AudioPlayer {
   /**
    * Close the audio line and terminate the playback thread
    */
+  @Deprecated
   public void dispose() {
     this.closed = true;
     this.playing = false;
