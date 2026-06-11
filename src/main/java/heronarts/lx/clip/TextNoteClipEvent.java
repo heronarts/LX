@@ -32,7 +32,7 @@ public class TextNoteClipEvent extends LXCompositionEvent<TextNoteClipEvent> {
 
   public final StringParameter note =
     new StringParameter("Note")
-    .setDescription("Contents of the note");
+    .setDescription("A descriptive text note");
 
   private final LXParameterListener noteListener;
 
@@ -49,7 +49,7 @@ public class TextNoteClipEvent extends LXCompositionEvent<TextNoteClipEvent> {
     }
     refreshEnd();
 
-    this.note.addListener(this.noteListener = (p) -> { this.lane.onChange.bang(); });
+    this.note.addListener(this.noteListener = p -> this.lane.onChange.bang());
   }
 
   @Override
