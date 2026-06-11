@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Queue;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXPath;
 
 /**
  * This is a parameter instance that can be listened to, meaning we are able to
@@ -169,10 +170,14 @@ public abstract class LXListenableParameter implements LXParameter {
   public void dispose() {
     for (LXParameterListener listener : this.listeners) {
       String className = listener.getClass().getName();
+      String pathStr = "";
+      if (listener instanceof LXPath path) {
+        pathStr = " " + path.getPath();
+      }
       if (className.contains(".ui.")) {
-        LX.warning("Stranded UI listener on parameter: " + getCanonicalPath() + " - " + className);
+        LX.warning("Stranded UI listener on parameter: " + getCanonicalPath() + " - " + className + pathStr);
       } else {
-        LX.error(new Exception(), "WARNING / SHOULDFIX: Stranded listener on parameter: " + getCanonicalPath() + " - " + className);
+        LX.error(new Exception(), "WARNING / SHOULDFIX: Stranded listener on parameter: " + getCanonicalPath() + " - " + className + pathStr);
       }
     }
     this.listeners.clear();
