@@ -47,8 +47,10 @@ public class LXAudioTimeline extends LXAudioComponent implements LXCompositionEn
     addParameter("play", this.play);
     audio.enabled.addListener(this.toggle);
     audio.mode.addListener(this.toggle);
+  }
 
-    lx.engine.composition.addListener(this);
+  public void registerCompositionEngine(LXCompositionEngine composition) {
+    composition.addListener(this);
   }
 
   @Override
