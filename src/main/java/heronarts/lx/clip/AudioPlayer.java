@@ -55,8 +55,7 @@ class AudioPlayer {
     }
     this.playing = true;
     this.audio.mode.setValue(LXAudioEngine.Mode.TIMELINE);
-    this.audio.composition.setComposition(this.composition);
-    this.audio.composition.play.setValue(true);
+    this.audio.timeline.play.setValue(true);
     this.audio.enabled.setValue(true);
   }
 
@@ -65,7 +64,7 @@ class AudioPlayer {
    */
   void stop() {
     this.playing = false;
-    this.audio.composition.play.setValue(false);
+    this.audio.timeline.play.setValue(false);
   }
 
   /**

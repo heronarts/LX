@@ -29,12 +29,13 @@ import heronarts.lx.LX;
 import heronarts.lx.clip.AudioClipEvent;
 import heronarts.lx.clip.AudioClipLane;
 import heronarts.lx.clip.LXComposition;
+import heronarts.lx.clip.LXCompositionEngine;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.utils.LXUtils;
 
-public class LXAudioTimeline extends LXAudioComponent {
+public class LXAudioTimeline extends LXAudioComponent implements LXCompositionEngine.Listener {
 
   public final BooleanParameter play = new BooleanParameter("Play", false)
     .setDescription("Play/Pause state of the composition audio");
@@ -46,6 +47,8 @@ public class LXAudioTimeline extends LXAudioComponent {
     addParameter("play", this.play);
     audio.enabled.addListener(this.toggle);
     audio.mode.addListener(this.toggle);
+
+    lx.engine.composition.addListener(this);
   }
 
   @Override
@@ -56,10 +59,15 @@ public class LXAudioTimeline extends LXAudioComponent {
     }
   }
 
-  public void setComposition(LXComposition composition) {
+  @Override
+  public void compositionChanged(LXComposition composition) {
     this.composition = composition;
-    if (this.play.isOn()) {
-      this.play.bang();
+    if (this.composition != null) {
+      if (this.play.isOn()) {
+        this.play.bang();
+      }
+    } else {
+      this.play.setValue(false);
     }
   }
 
@@ -266,8 +274,13 @@ public class LXAudioTimeline extends LXAudioComponent {
     }
   }
 
+  void reset() {
+    this.play.setValue(false);
+  }
+
   @Override
   public void dispose() {
+    lx.engine.composition.removeListener(this);
     this.lx.engine.audio.enabled.removeListener(this.toggle);
     this.lx.engine.audio.mode.removeListener(this.toggle);
     close();

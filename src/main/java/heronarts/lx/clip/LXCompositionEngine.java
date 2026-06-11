@@ -85,10 +85,10 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
   private void clearCompositions() {
     // This will reference a list eventually...
     if (this.composition != null) {
-      LXComposition prior = this.composition;
+      final LXComposition prior = this.composition;
       this.composition = null;
       notifyCompositionChanged();
-      prior.dispose();
+      LX.dispose(prior);
     }
   }
 
@@ -190,6 +190,8 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
   @Override
   public void dispose() {
     clearCompositions();
+    this.listeners.forEach(listener -> LX.warning("Stranded LXCompositionEngine.Listener: " + listener));
+    this.listeners.clear();
     super.dispose();
   }
 
