@@ -76,8 +76,6 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     addParameter("focusedClip", this.focusedClip);
 
     this.arm.addListener(this::armChanged);
-
-    lx.engine.audio.timeline.registerCompositionEngine(this);
   }
 
   public LXComposition getComposition() {
@@ -185,6 +183,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     for (Listener listener : this.listeners) {
       listener.compositionChanged(this.composition);
     }
+    lx.engine.audio.timeline.onCompositionChanged(this.composition);
   }
 
   // Disposal
