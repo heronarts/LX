@@ -403,6 +403,10 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addChild("clips", this.clips = new LXClipEngine(lx));
     LX.initProfiler.log("Engine: Clips");
 
+    // Composition engine
+    addChild("composition", this.composition = new LXCompositionEngine(lx));
+    LX.initProfiler.log("Engine: Composition");
+
     // Audio engine
     addChild("audio", this.audio = new LXAudioEngine(lx));
     LX.initProfiler.log("Engine: Audio");
@@ -410,10 +414,6 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Mixer engine
     addChild("mixer", this.mixer = new LXMixerEngine(lx));
     LX.initProfiler.log("Engine: Mixer");
-
-    // Composition engine
-    addChild("composition", this.composition = new LXCompositionEngine(lx));
-    LX.initProfiler.log("Engine: Composition");
 
     // Modulation matrix
     addChild(KEY_MODULATION, this.modulation = new LXModulationEngine(lx));
@@ -461,6 +461,17 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         LX.log("Rendering engine restored within license limits.");
       }
     });
+  }
+
+  void initialize() {
+    // Initialize tempo
+    this.tempo.initialize();
+
+    // Initialize composition engine
+    this.composition.initialize();
+
+    // Midi
+    this.midi.initialize();
   }
 
   public void logProfiler() {

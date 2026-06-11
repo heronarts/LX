@@ -57,8 +57,8 @@ public class LXComposition extends LXClip {
 
   private final AudioPlayer audioPlayer;
 
-  public LXComposition(LX lx) {
-    super(lx, lx.engine.composition, lx.engine.composition, 0);
+  public LXComposition(LX lx, LXCompositionEngine composition) {
+    super(lx, composition, composition, 0);
 
     this.audioPlayer = new AudioPlayer(lx, this);
 

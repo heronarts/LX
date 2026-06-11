@@ -78,12 +78,16 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     this.arm.addListener(this::armChanged);
   }
 
+  public void initialize() {
+    this.composition = new LXComposition(this.lx, this);
+  }
+
   public LXComposition getComposition() {
     return this.composition;
   }
 
   private void clearCompositions() {
-    // This will reference a list eventually...
+    // This may reference a list eventually...
     if (this.composition != null) {
       final LXComposition prior = this.composition;
       this.composition = null;
@@ -219,7 +223,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
       JsonArray compArr = obj.get(KEY_COMPOSITIONS).getAsJsonArray();
       for (JsonElement compElem : compArr) {
         JsonObject compObj = compElem.getAsJsonObject();
-        LXComposition composition = new LXComposition(lx);
+        LXComposition composition = new LXComposition(lx, this);
         composition.load(lx, compObj);
         // There's only one composition for now...
         this.composition = composition;
@@ -229,7 +233,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
 
     if (this.composition == null) {
       // New project or no composition was saved
-      this.composition = new LXComposition(lx);
+      this.composition = new LXComposition(lx, this);
     }
 
     notifyCompositionChanged();

@@ -503,16 +503,12 @@ public class LX {
     this.command = new LXCommandEngine(this);
     LX.initProfiler.log("Engine");
 
-
-    // Initialize tempo
-    this.engine.tempo.initialize();
-
-    // Midi
-    this.engine.midi.initialize();
+    // Initialize engine stuff that depends upon lx.engine being set
+    this.engine.initialize();
 
     // Initialize plugins!
-    if ((this instanceof LXPlugin) && (flags.initialize != this)) {
-      ((LXPlugin) this).initialize(this);
+    if ((this instanceof LXPlugin plugin) && (flags.initialize != this)) {
+      plugin.initialize(this);
     }
     if (this.flags.initialize != null) {
       this.flags.initialize.initialize(this);
