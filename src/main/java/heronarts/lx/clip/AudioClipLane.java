@@ -157,10 +157,11 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
 
   // Event management
 
-  public AudioClipLane addEvent(File file) {
-    this.mutableEvents.add(new AudioClipEvent(this.lx, this, file));
+  public AudioClipEvent addEvent(File file) {
+    final AudioClipEvent event = new AudioClipEvent(this.lx, this, file);
+    this.mutableEvents.add(event);
     this.onChange.bang();
-    return this;
+    return event;
   }
 
   @Override

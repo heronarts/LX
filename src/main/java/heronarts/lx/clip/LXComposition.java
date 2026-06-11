@@ -246,11 +246,15 @@ public class LXComposition extends LXClip {
    */
   public AudioClipLane addAudioLane(File file) {
     AudioClipLane lane = new AudioClipLane(this);
-    lane.addEvent(file);
+    AudioClipEvent event = lane.addEvent(file);
     int insertIndex = this.audioLanes.size();
     this.audioLanes.add(lane);
     this.mutableLanes.add(insertIndex, lane);
     notifyAudioLaneAdded(lane);
+
+    // Update composition length to at least audio length
+    onCompositionEventImport(event);
+
     return lane;
   }
 

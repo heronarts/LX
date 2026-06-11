@@ -117,11 +117,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
     private boolean inSetCursor = false;
 
-    private CursorParameter set(CursorParameter cursor) {
+    protected CursorParameter set(CursorParameter cursor) {
       return set(cursor.cursor);
     }
 
-    private CursorParameter set(Cursor cursor) {
+    protected CursorParameter set(Cursor cursor) {
       this.inSetCursor = true;
       if (!this.cursor.equals(cursor)) {
         this.millis.setValue(cursor.getMillis());
@@ -994,6 +994,21 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.snapshot.stopTransition();
 
     this.bus.onClipStop(this);
+  }
+
+  final void onCompositionEventImport(LXCompositionEvent<?> event) {
+    if (CursorOp().isAfter(event.end, this.length.cursor)) {
+      this.length.set(event.end);
+    }
+
+    // Set loop cursors if this was done pre-recording
+    if (!this.hasTimeline) {
+      this.loopStart.reset();
+      this.playStart.reset();
+      this.loopLength.set(this.length);
+      this.playEnd.set(this.length);
+      this.hasTimeline = true;
+    }
   }
 
   private void _startRecording(boolean isOverdub) {

@@ -255,8 +255,13 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   @Override
   public void setEventEnd(Cursor endCursor) {
     final Cursor.Operator c = CursorOp();
-    // Enforce minimum length
-    endCursor = c.max(endCursor, this.cursor.add(Cursor.MIN_LOOP));
+
+    // Enforce minimum length, and don't go past end of file
+    endCursor = c.constrain(
+      endCursor,
+      this.cursor.add(Cursor.MIN_LOOP),
+      this.cursor.add(this.sourceLength).subtract(this.playbackOffset)
+    );
 
     // Simply adjust the event length
     setLength(endCursor.subtract(this.cursor));
