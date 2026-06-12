@@ -197,7 +197,7 @@ public class LXComposition extends LXClip {
   /**
    * Create a new lane from a serialized lane
    */
-  private BusClipLane addBusLane(LX lx, JsonObject laneObj) {
+  private BusClipLane addBusLane(JsonObject laneObj) {
     if (laneObj.has(BusClipLane.KEY_BUS_ID)) {
       int busId;
       try {
@@ -206,10 +206,10 @@ public class LXComposition extends LXClip {
         LX.error("Cannot restore bus lane. ComponentId for bus was corrupt or missing: " + laneObj.get(BusClipLane.KEY_BUS_ID).toString());
         return null;
       }
-      LXComponent component = lx.getComponent(busId);
+      final LXComponent component = this.lx.getProjectComponent(busId);
       if (component instanceof LXAbstractChannel busComponent) {
         BusClipLane lane = addBusLane(busComponent);
-        lane.load(lx, laneObj);
+        lane.load(this.lx, laneObj);
         return lane;
       } else {
         LX.error("Unable to find bus (componentId=" + busId + ") on composition: " + getLabel());
@@ -246,14 +246,10 @@ public class LXComposition extends LXClip {
    * @return The newly created audio lane
    */
   public AudioClipLane addAudioLane(File file) {
-    AudioClipLane lane = new AudioClipLane(this);
-    AudioClipEvent event = lane.addEvent(file);
-    int insertIndex = this.audioLanes.size();
-    this.audioLanes.add(lane);
-    this.mutableLanes.add(insertIndex, lane);
-    notifyAudioLaneAdded(lane);
+    final AudioClipLane lane = addAudioLane((JsonObject) null);
 
     // Update composition length to at least audio length
+    final AudioClipEvent event = lane.addEvent(file);
     onCompositionEventImport(event);
 
     return lane;
@@ -264,12 +260,14 @@ public class LXComposition extends LXClip {
    *
    * @return The newly created audio lane
    */
-  private AudioClipLane addAudioLane(LX lx, JsonObject laneObj) {
-    AudioClipLane lane = new AudioClipLane(this);
+  public AudioClipLane addAudioLane(JsonObject laneObj) {
+    final AudioClipLane lane = new AudioClipLane(this);
+    if (laneObj != null) {
+      lane.load(this.lx, laneObj);
+    }
     int insertIndex = this.audioLanes.size();
     this.audioLanes.add(lane);
     this.mutableLanes.add(insertIndex, lane);
-    lane.load(lx, laneObj);
     notifyAudioLaneAdded(lane);
     return lane;
   }
@@ -294,24 +292,23 @@ public class LXComposition extends LXClip {
    *
    * @return The newly created notes lane
    */
-  public TextNoteClipLane addNotesLane() {
-    TextNoteClipLane lane = new TextNoteClipLane(this);
-    this.notesLanes.add(lane);
-    this.mutableLanes.add(lane);
-    notifyNotesLaneAdded(lane);
-    return lane;
+  public TextNoteClipLane addTextNoteLane() {
+    return addTextNoteLane(null);
   }
 
   /**
    * Add a notes lane from a serialized lane
    *
+   * @param laneObj The serialized lane
    * @return The newly created notes lane
    */
-  private TextNoteClipLane addNotesLane(LX lx, JsonObject laneObj) {
-    TextNoteClipLane lane = new TextNoteClipLane(this);
+  public TextNoteClipLane addTextNoteLane(JsonObject laneObj) {
+    final TextNoteClipLane lane = new TextNoteClipLane(this);
+    if (laneObj != null) {
+      lane.load(this.lx, laneObj);
+    }
     this.notesLanes.add(lane);
     this.mutableLanes.add(lane);
-    lane.load(lx, laneObj);
     notifyNotesLaneAdded(lane);
     return lane;
   }
@@ -503,13 +500,13 @@ public class LXComposition extends LXClip {
   public LXClipLane<?> loadLane(LX lx, JsonObject laneObj, int index) {
     switch (getLaneType(laneObj)) {
       case LXClipLane.VALUE_LANE_TYPE_BUS -> {
-        return addBusLane(lx, laneObj);
+        return addBusLane(laneObj);
       }
       case LXClipLane.VALUE_LANE_TYPE_AUDIO -> {
-        return addAudioLane(lx, laneObj);
+        return addAudioLane(laneObj);
       }
       case LXClipLane.VALUE_LANE_TYPE_NOTES -> {
-        return addNotesLane(lx, laneObj);
+        return addTextNoteLane(laneObj);
       }
       default -> {
         return super.loadLane(lx, laneObj, index);

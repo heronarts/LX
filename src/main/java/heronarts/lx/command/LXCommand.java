@@ -34,6 +34,7 @@ import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.AudioClipLane;
 import heronarts.lx.clip.Cursor;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
@@ -47,6 +48,7 @@ import heronarts.lx.clip.ParameterClipEvent;
 import heronarts.lx.clip.ParameterClipLane;
 import heronarts.lx.clip.PatternClipEvent;
 import heronarts.lx.clip.PatternClipLane;
+import heronarts.lx.clip.TextNoteClipLane;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXPalette;
@@ -5071,47 +5073,79 @@ public abstract class LXCommand {
       }
     }
 
-    public static class RemoveCompositionLane extends LXCommand.RemoveComponent {
-
-      private final ComponentReference<LXComposition> compositionRef;
-      private final ComponentReference<LXClipLane<?>> laneRef;
-      private final int laneIndex;
-      private final JsonObject laneObj;
+    public static class RemoveCompositionLane extends Clip.RemoveClipLane {
 
       public RemoveCompositionLane(LXClipLane<?> lane) {
         super(lane);
-        if (!(lane.clip instanceof LXComposition)) {
-          throw new IllegalArgumentException("Cannot remove lane. Parent is not composition: " + lane);
-        }
-        this.compositionRef = new ComponentReference<>((LXComposition)lane.clip);
-        this.laneRef = new ComponentReference<>(lane);
-        this.laneIndex = lane.getIndex();
-        this.laneObj = LXSerializable.Utils.toObject(lane.getLX(), lane);
       }
 
       @Override
       public String getDescription() {
         return "Remove Composition Lane";
       }
+    }
+
+    public static class AddTextNoteLane extends LXCommand {
+
+      private final ComponentReference<LXComposition> composition;
+      private ComponentReference<TextNoteClipLane> lane = null;
+      private JsonObject laneObj = null;
+
+      public AddTextNoteLane(LXComposition composition) {
+        this.composition = new ComponentReference<>(composition);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Text Notes Lane";
+      }
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        final LXClipLane<?> clipLane = this.laneRef.get();
-        clipLane.clip.removeClipLane(clipLane);
+        this.lane = new ComponentReference<>(this.composition.get().addTextNoteLane(this.laneObj));
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        final LXClipLane<?> lane = this.compositionRef.get().loadLane(lx, this.laneObj, this.laneIndex);
-        if (lane != null) {
-          super.undo(lx);
+        final TextNoteClipLane lane = this.lane.get();
+        this.laneObj = LXSerializable.Utils.toObject(lane);
+        this.composition.get().removeClipLane(lane);
+      }
+    }
+
+    public static class AddAudioLane extends LXCommand {
+
+      private final ComponentReference<LXComposition> composition;
+      private final File file;
+
+      private ComponentReference<AudioClipLane> lane = null;
+      private JsonObject laneObj = null;
+
+      public AddAudioLane(LXComposition composition, File file) {
+        this.composition = new ComponentReference<>(composition);
+        this.file = file;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Audio Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.laneObj != null) {
+          this.lane = new ComponentReference<>(this.composition.get().addAudioLane(this.laneObj));
+        } else {
+          this.lane = new ComponentReference<>(this.composition.get().addAudioLane(this.file));
         }
       }
 
-      private void move(LX lx, String fromPath, String toPath) {
-        this.compositionRef.get().moveLane(lx, this.laneObj, this.laneIndex, fromPath, toPath);
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        final AudioClipLane lane = this.lane.get();
+        this.laneObj = LXSerializable.Utils.toObject(lane);
+        this.composition.get().removeClipLane(lane);
       }
-
     }
 
   }
