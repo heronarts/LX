@@ -135,6 +135,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return this;
     }
 
+    public boolean isZero() {
+      return CursorOp().isZero(this.cursor);
+    }
+
     @Override
     public CursorParameter reset() {
       set(Cursor.ZERO);
