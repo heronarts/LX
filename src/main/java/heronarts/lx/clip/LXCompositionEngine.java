@@ -74,16 +74,6 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     return this.composition;
   }
 
-  private void clearCompositions() {
-    // This may reference a list eventually...
-    if (this.composition != null) {
-      final LXComposition prior = this.composition;
-      this.composition = null;
-      notifyCompositionChanged();
-      LX.dispose(prior);
-    }
-  }
-
   private void armChanged(LXParameter p) {
     // If "Start Transport With Record" preference is enabled, then start recording when arm is pressed.
     // TODO: update preference to project-specific location?
@@ -178,11 +168,21 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     lx.engine.audio.timeline.onCompositionChanged(this.composition);
   }
 
+  public void clear() {
+    // This may reference a list eventually...
+    if (this.composition != null) {
+      final LXComposition prior = this.composition;
+      this.composition = null;
+      notifyCompositionChanged();
+      LX.dispose(prior);
+    }
+  }
+
   // Disposal
 
   @Override
   public void dispose() {
-    clearCompositions();
+    clear();
     this.listeners.forEach(listener -> LX.warning("Stranded LXCompositionEngine.Listener: " + listener));
     this.listeners.clear();
     super.dispose();
@@ -203,7 +203,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    clearCompositions();
+    clear();
 
     super.load(lx, obj);
 

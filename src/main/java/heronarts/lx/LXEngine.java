@@ -1436,6 +1436,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.output.enabled.setValue(false);
 
     // Clear all the modulation and mixer content
+    this.composition.clear();
     this.snapshots.clear();
     this.modulation.setFlagLoadModulations(false);
     this.modulation.clear();
