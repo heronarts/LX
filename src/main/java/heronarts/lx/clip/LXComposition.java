@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LXComposition extends LXClip {
 
@@ -49,7 +50,7 @@ public class LXComposition extends LXClip {
   private final List<Listener> listeners = new ArrayList<>();
 
   private final Map<LXAbstractChannel, BusClipLane> busLanes = new HashMap<>();
-  private final List<AudioClipLane> audioLanes = new ArrayList<>();
+  private final List<AudioClipLane> audioLanes = new CopyOnWriteArrayList<>();
   private final List<TextNoteClipLane> notesLanes = new ArrayList<>();
 
   private final ObservableList<Locator> mutableLocators = new ObservableList<>();

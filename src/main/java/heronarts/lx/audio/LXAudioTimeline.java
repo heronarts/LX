@@ -179,41 +179,46 @@ public class LXAudioTimeline extends LXAudioComponent {
         // Mix samples from all active audio lane events
         if (composition != null) {
           for (AudioClipLane lane : composition.getAudioLanes()) {
-            if (lane.mute.isOn()) {
-              continue;
-            }
             final AudioClipEvent event = lane.getActiveEvent();
             if (event == null) {
               continue;
             }
 
+            // No audio data available
             final float[] pcm = event.getPlaybackData();
             if (pcm == null || pcm.length == 0) {
               continue;
             }
 
+            // We have run off the end of this event
             final int offset = lane.getActiveSampleOffset();
             if (offset >= pcm.length) {
               lane.clearActiveEvent();
               continue;
             }
 
-            int bufferStart = 0;
-            int pcmOffset = offset;
-            if (offset < 0) {
-              // Negative offset = lead-in silence, skip ahead in buffer
-              long silenceSamples = Math.min(-offset, this.mixBuffer.length);
-              bufferStart = (int) silenceSamples;
-              pcmOffset = 0;
-            }
+            // Mix audio if enabled and non-zero gain
+            if (lane.enabled.isOn() && (lane.gain.getNormalized() > 0)) {
+              final float gainf = (float) Math.pow(10., lane.gain.getValue() / 20.);
+              int bufferStart = 0;
+              int pcmOffset = offset;
+              if (offset < 0) {
+                // Negative offset = lead-in silence, skip ahead in buffer
+                long silenceSamples = Math.min(-offset, this.mixBuffer.length);
+                bufferStart = (int) silenceSamples;
+                pcmOffset = 0;
+              }
 
-            if (bufferStart < this.mixBuffer.length) {
-              int remaining = pcm.length - pcmOffset;
-              int samplesToMix = Math.min(this.mixBuffer.length - bufferStart, remaining);
-              for (int i = 0; i < samplesToMix; i++) {
-                this.mixBuffer[bufferStart + i] += pcm[pcmOffset + i];
+              if (bufferStart < this.mixBuffer.length) {
+                int remaining = pcm.length - pcmOffset;
+                int samplesToMix = Math.min(this.mixBuffer.length - bufferStart, remaining);
+                for (int i = 0; i < samplesToMix; i++) {
+                  this.mixBuffer[bufferStart + i] += gainf * pcm[pcmOffset + i];
+                }
               }
             }
+
+            // Be sure to advance the sample offset even if disabled or gain was 0
             lane.setActiveSampleOffset(offset + this.mixBuffer.length);
           }
         }
@@ -231,12 +236,12 @@ public class LXAudioTimeline extends LXAudioComponent {
         try {
           line.write(this.buffer, 0, this.buffer.length);
         } catch (Exception x) {
-          LX.error(x, "Composition audio playback write error");
+          LX.error(x, "LXAudioTimeline audio playback line.write error");
           play.setValue(false);
         }
 
         // TODO(mcslee): Need some kind of timing-fu in here so that the metering
-        // is in sync. Right now this sort of rushes ahead as the output buffer for
+        // is in sync. Right now this sort of rushes ahead if the output buffer for
         // the line is multiple frames
 
         // Put the left and right buffers

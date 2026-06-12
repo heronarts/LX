@@ -23,6 +23,7 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.audio.LXAudioTimeline;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.BoundedParameter;
 
 import java.io.File;
 
@@ -34,9 +35,14 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
 
   public final LXComposition composition;
 
-  public final BooleanParameter mute =
-    new BooleanParameter("Mute")
-    .setDescription("Mutes audio playback on this lane");
+  public final BooleanParameter enabled =
+    new BooleanParameter("On", true)
+    .setDescription("Enables audio playback on this lane");
+
+  public final BoundedParameter gain =
+    new BoundedParameter("Gain", 0, -72, 6)
+    .setUnits(BoundedParameter.Units.DECIBELS)
+    .setDescription("Gain applied to audio on this track");
 
   // Active playback state, read by audio thread via LXAudioTimeline
   private volatile AudioClipEvent activeEvent = null;
@@ -46,7 +52,8 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> {
     super(composition);
     this.composition = composition;
     this.label.setValue("Audio");
-    addParameter("mute", this.mute);
+    addParameter("enabled", this.enabled);
+    addParameter("gain", this.gain);
   }
 
   @Override
