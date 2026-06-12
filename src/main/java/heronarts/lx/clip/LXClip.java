@@ -242,7 +242,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     .setDescription("Whether snapshot transition is enabled for this clip");
 
   public final BooleanParameter automationEnabled =
-    new BooleanParameter("Automation", false)
+    new BooleanParameter("Automation", this instanceof LXComposition)
     .setDescription("Whether automation playback is enabled for this clip");
 
   public final BooleanParameter customSnapshotTransition =

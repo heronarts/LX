@@ -485,6 +485,10 @@ public class LXComposition extends LXClip {
     clearLanes();
     clearLocators();
     super.load(lx, obj);
+
+    // LXComposition always has automation playback enabled!
+    this.automationEnabled.setValue(true);
+
     createBusLanes();
     reindexBusLanes();
     if (obj.has(KEY_LOCATORS)) {
