@@ -25,7 +25,6 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.audio.LXAudioBuffer;
 import heronarts.lx.audio.LXAudioTimeline;
 import heronarts.lx.parameter.StringParameter;
-
 import java.io.File;
 import java.io.IOException;
 import javax.sound.sampled.AudioFormat;
@@ -111,7 +110,12 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
         format.getSampleRate(),
         false
       );
-      return loadAudioSamples(pcmFormat);
+
+      final float[] samples = loadAudioSamples(pcmFormat);
+      for (int i = 0; i < samples.length; ++i) {
+        samples[i] = Math.abs(samples[i]);
+      }
+      return samples;
     } catch (UnsupportedAudioFileException | IOException e) {
       LX.error(e, "Failed to read waveform data: " + this.file.getAbsolutePath());
       return NO_DATA;
