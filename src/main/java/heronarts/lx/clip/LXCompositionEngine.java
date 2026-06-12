@@ -51,16 +51,6 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
       .setMode(BooleanParameter.Mode.TOGGLE)
       .setDescription("Toggle Clip visibility in the alt window");
 
-  public final BooleanParameter deviceExpanded =
-    new BooleanParameter("Device", false)
-      .setMode(BooleanParameter.Mode.TOGGLE)
-      .setDescription("Toggle Device visibility in the alt window");
-
-  public final BooleanParameter mixerExpanded =
-    new BooleanParameter("Mixer", false)
-      .setMode(BooleanParameter.Mode.TOGGLE)
-      .setDescription("Toggle Mixer visibility in the alt window");
-
   public final BooleanParameter arm =
     new BooleanParameter("Arm")
       .setDescription("Arms the composition for recording. If the Start Transport With Record preference is enabled, recording will start immediately.");
@@ -71,8 +61,6 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     super(lx, "Composition");
 
     addParameter("clipExpanded", this.clipExpanded);
-    addParameter("deviceExpanded", this.deviceExpanded);
-    addParameter("mixerExpanded", this.mixerExpanded);
     addParameter("focusedClip", this.focusedClip);
 
     this.arm.addListener(this::armChanged);
