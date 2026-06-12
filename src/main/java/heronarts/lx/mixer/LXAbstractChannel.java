@@ -357,6 +357,10 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
     return this.index;
   }
 
+  public final String getMixerLabel() {
+    return Integer.toString(this.index + 1);
+  }
+
   int[] getColors() {
     return this.colors;
   }
