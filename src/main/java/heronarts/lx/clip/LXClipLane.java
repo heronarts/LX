@@ -62,6 +62,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     addInternalParameter("uiHeight", this.uiHeight);
     addInternalParameter("uiExpanded", this.uiExpanded);
     addInternalParameter("uiMaximized", this.uiMaximized);
+    this.onChange.addListener(p -> this.clip.onChange.bang());
   }
 
   final void resetRecordingState() {

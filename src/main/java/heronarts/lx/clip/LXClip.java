@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -230,7 +231,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new QuantizedTriggerParameter.Launch(lx, "Stop", this::_launchStop)
     .setDescription("Stop this clip");
 
-  protected final List<LXClipLane<?>> mutableLanes = new ArrayList<>();
+  protected final List<LXClipLane<?>> mutableLanes = new CopyOnWriteArrayList<>();
   public final List<LXClipLane<?>> lanes = Collections.unmodifiableList(this.mutableLanes);
 
   public final BooleanParameter snapshotEnabled =
@@ -258,6 +259,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new EnumParameter<>("Clip View", ClipView.AUTOMATION);
 
   public final MutableParameter zoom = new MutableParameter("Zoom", 1);
+
+  public final MutableParameter onChange = new MutableParameter();
 
   public final Cursor.Operator CursorOp() {
     return this.timeBase.getEnum().operator;
