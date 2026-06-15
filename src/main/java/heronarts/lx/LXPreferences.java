@@ -158,14 +158,14 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     public WindowSettings setPosition(int x, int y) {
       this.x = x;
       this.y = y;
-      this.hasPosition = true;
+      this.hasPosition = this.x > 0 && this.y > 0;
       return this;
     }
 
     public WindowSettings setSize(int width, int height) {
       this.width = width;
       this.height = height;
-      this.hasSize = true;
+      this.hasSize = this.width > 0 && this.height > 0;
       return this;
     }
 
