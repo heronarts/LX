@@ -20,11 +20,12 @@ package heronarts.lx.clip;
 
 import com.google.gson.JsonObject;
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 
 /**
  * A composition lane for text notes.
  */
-public class TextNoteClipLane extends LXClipLane<TextNoteClipEvent> {
+public class TextNoteClipLane extends LXClipLane<TextNoteClipEvent> implements LXComponent.Renamable {
 
   public final LXComposition composition;
 

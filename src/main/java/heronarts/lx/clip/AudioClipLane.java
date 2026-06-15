@@ -21,6 +21,7 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.LXComponent;
 import heronarts.lx.audio.LXAudioTimeline;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -31,7 +32,7 @@ import java.io.File;
  * Audio lane for playing back audio files on the composition.
  * Supported formats are determined by javax.sound.sampled.AudioSystem, including: WAV, AIFF
  */
-public class AudioClipLane extends LXClipLane<AudioClipEvent> {
+public class AudioClipLane extends LXClipLane<AudioClipEvent> implements LXComponent.Renamable {
 
   public final LXComposition composition;
 
