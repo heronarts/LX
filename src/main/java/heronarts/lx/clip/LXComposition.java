@@ -26,6 +26,8 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.mixer.LXAbstractChannel;
+import heronarts.lx.mixer.LXBus;
+import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.utils.ObservableList;
 
@@ -49,7 +51,7 @@ public class LXComposition extends LXClip {
 
   private final List<Listener> listeners = new ArrayList<>();
 
-  private final Map<LXAbstractChannel, BusClipLane> busLanes = new HashMap<>();
+  private final Map<LXBus, BusClipLane> busLanes = new HashMap<>();
   private final List<AudioClipLane> audioLanes = new CopyOnWriteArrayList<>();
   private final List<TextNoteClipLane> notesLanes = new ArrayList<>();
 
@@ -130,9 +132,15 @@ public class LXComposition extends LXClip {
 
   private void createBusLanes() {
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      if (!this.busLanes.containsKey(channel)) {
-        addBusLane(channel);
-      }
+      _createBusLane(channel);
+
+    }
+    _createBusLane(this.lx.engine.mixer.masterBus);
+  }
+
+  private void _createBusLane(LXBus bus) {
+    if (!this.busLanes.containsKey(bus)) {
+      addBusLane(bus);
     }
   }
 
@@ -187,12 +195,22 @@ public class LXComposition extends LXClip {
    * Create a new lane based on a mixer channel, inserting it at the
    * correct position to maintain audio-before-bus ordering.
    */
-  private BusClipLane addBusLane(LXAbstractChannel channel) {
-    // TODO: use command engine to add lane
-    BusClipLane lane = new BusClipLane(this, channel);
-    this.busLanes.put(channel, lane);
-    int index = this.audioLanes.size() + channel.getIndex();
-    this.mutableLanes.add(index, lane);
+  private BusClipLane addBusLane(LXBus bus) {
+    if (this.busLanes.containsKey(bus)) {
+      throw new IllegalStateException("Cannot create duplicate composition lane for bus: " + bus);
+    }
+
+    // TODO: use command engine to add lane?
+    // (mcslee: not sure about that... only done automatically by API, user doesn't take
+    // the action of adding bus lanes, this is an internal API)
+    BusClipLane lane = new BusClipLane(this, bus);
+    this.busLanes.put(bus, lane);
+    if (bus instanceof LXMasterBus) {
+      this.mutableLanes.add(lane);
+    } else {
+      int index = (bus instanceof LXMasterBus) ? -1 : this.audioLanes.size() + bus.getIndex();
+      this.mutableLanes.add(index, lane);
+    }
     notifyBusLaneAdded(lane);
     return lane;
   }
@@ -232,9 +250,7 @@ public class LXComposition extends LXClip {
   }
 
   private void removeBusLane(BusClipLane lane) {
-    // TODO: use command engine to remove lane
-    LXAbstractChannel channel = (LXAbstractChannel)lane.bus;
-    if (this.busLanes.remove(channel) != null) {
+    if (this.busLanes.remove(lane.bus) != null) {
       this.mutableLanes.remove(lane);
       notifyBusLaneRemoved(lane);
       LX.dispose(lane);
@@ -501,20 +517,12 @@ public class LXComposition extends LXClip {
 
   @Override
   public LXClipLane<?> loadLane(LX lx, JsonObject laneObj, int index) {
-    switch (getLaneType(laneObj)) {
-      case LXClipLane.VALUE_LANE_TYPE_BUS -> {
-        return addBusLane(laneObj);
-      }
-      case LXClipLane.VALUE_LANE_TYPE_AUDIO -> {
-        return addAudioLane(laneObj);
-      }
-      case LXClipLane.VALUE_LANE_TYPE_NOTES -> {
-        return addTextNoteLane(laneObj);
-      }
-      default -> {
-        return super.loadLane(lx, laneObj, index);
-      }
-    }
+    return switch (getLaneType(laneObj)) {
+      case LXClipLane.VALUE_LANE_TYPE_BUS -> addBusLane(laneObj);
+      case LXClipLane.VALUE_LANE_TYPE_AUDIO -> addAudioLane(laneObj);
+      case LXClipLane.VALUE_LANE_TYPE_NOTES -> addTextNoteLane(laneObj);
+      default -> super.loadLane(lx, laneObj, index);
+    };
   }
 
 }

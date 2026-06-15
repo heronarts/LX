@@ -21,8 +21,10 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.mixer.LXBus;
+import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.StringParameter;
 
 /**
  * A composition lane representing a mixer channel
@@ -38,6 +40,10 @@ public class BusClipLane extends LXClipLane<BusClipEvent> {
     this.bus = bus;
 
     this.bus.hasRunningClip.addListener(this.hasRunningClipListener);
+  }
+
+  public StringParameter getLabelParameter() {
+    return (this.bus instanceof LXMasterBus) ? null : this.bus.label;
   }
 
   @Override
