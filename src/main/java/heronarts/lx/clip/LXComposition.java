@@ -75,6 +75,11 @@ public class LXComposition extends LXClip {
     return "composition";
   }
 
+  @Override
+  public CursorParameter getLaunchPosition() {
+    return this.insertMarker;
+  }
+
   // Recording
 
   @Override

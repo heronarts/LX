@@ -213,6 +213,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new CursorParameter("Play End")
     .setDescription("Where an unlooped clip will stop playing");
 
+  public final CursorParameter insertMarker =
+    new CursorParameter("Insert Marker")
+    .setDescription("Where clip playback or editing operations begin");
+
   /**
    * Launches the clip, including both snapshot recall and automation playback
    */
@@ -337,6 +341,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("loopLength", this.loopLength);
     addParameter("playStart", this.playStart);
     addParameter("playEnd", this.playEnd);
+    addParameter("insertMarker", this.insertMarker);
 
     // Behavior configuration
     addParameter("snapshotEnabled", this.snapshotEnabled);
@@ -386,6 +391,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this.launch.pending.isOn() || this.launchAutomation.pending.isOn();
   }
 
+  protected CursorParameter getLaunchPosition() {
+    return this.playStart;
+  }
+
   /**
    * Launches the clip, subject to global launch quantization, which will also
    * trigger recall of a snapshot if enabled
@@ -393,7 +402,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return this
    */
   public LXClip launch() {
-    this.launchFromCursor.set(this.playStart.cursor);
+    this.launchFromCursor.set(getLaunchPosition().cursor);
     this.launch.trigger();
     return this;
   }
@@ -404,7 +413,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return this
    */
   public LXClip launchAutomation() {
-    return launchAutomationFrom(this.playStart.cursor);
+    return launchAutomationFrom(getLaunchPosition().cursor);
   }
 
   /**
@@ -486,7 +495,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         if (isRunning()) {
           stop();
         } else {
-          _playFrom(this.playStart.cursor);
+          _playFrom(getLaunchPosition().cursor);
         }
       } else if (isRunning()) {
         launchAutomation();
@@ -526,7 +535,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   private void _launch(boolean quantized) {
     // Grid/master launch is always from the play start position
-    this.launchFromCursor.set(this.playStart.cursor.bound(this));
+    this.launchFromCursor.set(getLaunchPosition().cursor.bound(this));
     _launchAutomation(quantized);
     if (!isArmed() && this.snapshotEnabled.isOn()) {
       this.snapshot.recall();
@@ -867,6 +876,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
+   * Safely set the insert marker to a specific value (in time units)
+   *
+   * @param insertMarker Cursor position on the timeline
+   */
+  public LXClip setInsertMarker(Cursor insertMarker) {
+    this.insertMarker.set(insertMarker.constrain(this));
+    return this;
+  }
+
+  /**
    * Performs a safety check when moving loop end or loop brace:
    * If playing, and cursor was before the end marker, don't let it escape.
    *
@@ -1037,6 +1056,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.loopStart.reset();
     this.playStart.reset();
     this.playEnd.reset();
+    this.insertMarker.reset();
     _startRecording(false);
   }
 
@@ -1155,7 +1175,6 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.isRecording = false;
     // cursor advancement will continue...
   }
-
 
   private void stopPlayback() {
     onStopPlayback();
