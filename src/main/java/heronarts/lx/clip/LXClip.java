@@ -1496,6 +1496,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       endCursor = this.loopEnd.cursor;
     } else if (isOverdub) {
       endCursor = this.length.cursor;
+    } else if (this instanceof LXComposition) {
+      // Compositions always play to their end
+      endCursor = this.length.cursor;
     }
 
     // End markers only apply when the cursor passes over them. If playback was started
