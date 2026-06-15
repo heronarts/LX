@@ -55,7 +55,7 @@ public class LXComposition extends LXClip {
   private final List<AudioClipLane> audioLanes = new CopyOnWriteArrayList<>();
   private final List<TextNoteClipLane> notesLanes = new ArrayList<>();
 
-  private final ObservableList<Locator> mutableLocators = new ObservableList<>();
+  private final ObservableList<Locator> mutableLocators = new ObservableList.CopyOnWrite<>();
   public final ObservableList<Locator> locators = this.mutableLocators.asUnmodifiableList();
 
   private final AudioPlayer audioPlayer;

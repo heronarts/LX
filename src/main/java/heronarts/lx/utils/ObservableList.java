@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ObservableList<T> implements List<T> {
 
@@ -37,6 +38,12 @@ public class ObservableList<T> implements List<T> {
   }
 
   private final List<Listener<T>> listeners;
+
+  public static class CopyOnWrite<T> extends ObservableList<T> {
+    public CopyOnWrite() {
+      super(new CopyOnWriteArrayList<>());
+    }
+  }
 
   /**
    * Create a new observable list which has an ArrayList as its inner list
