@@ -19,8 +19,6 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LXComponent;
-import heronarts.lx.effect.LXEffect;
-import heronarts.lx.mixer.LXBus;
 import heronarts.lx.parameter.BooleanParameter;
 
 import java.util.List;
@@ -30,16 +28,25 @@ import java.util.List;
  * Used on Bus and LXCompositionEngine
  */
 public interface LXClipContainer {
+
+  /**
+   * Return the parameter used to arm recording for clips
+   *
+   * @return Parameter used to arm recording for clips
+   */
   public BooleanParameter getArmParameter();
 
-  public List<LXClip> getClips();
-  public void onClipStart(LXClip clip);
-  public void onClipStop(LXClip clip);
+  static final List<LXClip> NO_CLIPS = List.of();
 
-  // TODO: doesn't seem like these should really be here?
-  public List<LXEffect> getEffects();
-  public void addEffectsListener(LXBus.Listener listener);
-  public void removeEffectsListener(LXBus.Listener listener);
+  public default List<LXClip> getClips() {
+    return NO_CLIPS;
+  }
 
-  public LXComponent getComponent();
+  public default void onClipStart(LXClip clip) {}
+
+  public default void onClipStop(LXClip clip) {}
+
+  public default LXComponent asComponent() {
+    return (LXComponent) this;
+  }
 }

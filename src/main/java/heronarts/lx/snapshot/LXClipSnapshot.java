@@ -62,9 +62,9 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
   }
 
   public LXBus getBus() {
-    // Temp:
-    if (this.clip.bus instanceof LXBus) {
-      return (LXBus) this.clip.bus;
+    // Temp: TODO
+    if (this.clip.container instanceof LXBus bus) {
+      return bus;
     }
     return null;
   }
@@ -76,14 +76,14 @@ public class LXClipSnapshot extends LXSnapshot implements LXOscComponent, LXLoop
         return channel;
       }
     }
-    return (this.clip.bus instanceof LXChannel) ? (LXChannel) this.clip.bus : null;
+    return (this.clip.container instanceof LXChannel channel) ? channel : null;
   }
 
   @Override
   protected void initializeViews() {
-    // Temp:
-    if (this.clip.bus instanceof LXBus) {
-      initializeClipBus((LXBus)this.clip.bus);
+    // Temp: TODO
+    if (this.clip.container instanceof LXBus bus ) {
+      initializeClipBus(bus);
     }
   }
 

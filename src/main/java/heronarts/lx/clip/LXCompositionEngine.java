@@ -24,8 +24,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.effect.LXEffect;
-import heronarts.lx.mixer.LXBus;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -112,36 +110,6 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
   @Override
   public BooleanParameter getArmParameter() {
     return this.arm;
-  }
-
-  private final List<LXClip> emptyClips = List.of();
-  private final List<LXEffect> emptyEffects = List.of();
-
-  @Override
-  public List<LXClip> getClips() {
-    return emptyClips;
-  }
-
-  @Override
-  public List<LXEffect> getEffects() {
-    return emptyEffects;
-  }
-
-  @Override
-  public void addEffectsListener(LXBus.Listener listener) {}
-
-  @Override
-  public void removeEffectsListener(LXBus.Listener listener) {}
-
-  @Override
-  public void onClipStart(LXClip clip) {}
-
-  @Override
-  public void onClipStop(LXClip clip) {}
-
-  @Override
-  public LXComponent getComponent() {
-    return this;
   }
 
   // Listeners

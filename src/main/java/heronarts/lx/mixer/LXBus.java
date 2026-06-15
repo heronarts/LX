@@ -19,7 +19,6 @@
 package heronarts.lx.mixer;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXComponent;
 import heronarts.lx.LXModelComponent;
 import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.LXPresetComponent;
@@ -584,11 +583,6 @@ public abstract class LXBus extends LXModelComponent implements LXPresetComponen
 
   public void removeEffectsListener(LXBus.Listener listener) {
     removeListener(listener);
-  }
-
-  @Override
-  public LXComponent getComponent() {
-    return this;
   }
 
   private static final String KEY_EFFECTS = "effects";

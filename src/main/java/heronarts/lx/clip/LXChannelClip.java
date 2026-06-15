@@ -148,14 +148,14 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
 
   private PatternClipLane addRackPatternLane(LX lx, JsonObject laneObj, int index) {
     final String rackPath = laneObj.get(PatternClipLane.KEY_RACK).getAsString();
-    final PatternRack rack = (PatternRack) LXPath.get(this.getParent(), rackPath);
-    if (rack == null) {
-      LX.error("No PatternRack found for saved patternclip lane on bus " + this.bus + " at path: " + rackPath);
-      return null;
+    final LXPath rackObj = LXPath.get(this.getParent(), rackPath);
+    if (rackObj instanceof PatternRack rack) {
+      final PatternClipLane lane = getPatternLane(rack.patternEngine, true, index);
+      lane.load(lx, laneObj);
+      return lane;
     }
-    final PatternClipLane lane = getPatternLane(rack.patternEngine, true, index);
-    lane.load(lx, laneObj);
-    return lane;
+    LX.error("No PatternRack found for saved PatternClipLane on " + this.container + " at path: " + rackPath);
+    return null;
   }
 
   @Override

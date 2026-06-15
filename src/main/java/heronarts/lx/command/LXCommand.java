@@ -3750,7 +3750,7 @@ public abstract class LXCommand {
       private final JsonObject clipObj;
 
       public Remove(LXClip clip) {
-        this.bus = new ComponentReference<LXComponent>(clip.bus.getComponent());
+        this.bus = new ComponentReference<LXComponent>(clip.container.asComponent());
         this.clipObj = LXSerializable.Utils.toObject(clip);
         this.index = clip.getIndex();
       }
@@ -3762,18 +3762,16 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        if (this.bus.get() instanceof LXBus) {
-          ((LXBus) this.bus.get()).removeClip(this.index);
+        if (this.bus.get() instanceof LXBus bus) {
+          bus.removeClip(this.index);
         }
-        // this.bus.get().removeClip(this.index);
       }
 
       @Override
       public void undo(LX lx) {
-        if (this.bus.get() instanceof LXBus) {
-          ((LXBus) this.bus.get()).addClip(this.clipObj, this.index);
+        if (this.bus.get() instanceof LXBus bus) {
+          bus.addClip(this.clipObj, this.index);
         }
-        // this.bus.get().addClip(this.clipObj, this.index);
       }
 
     }

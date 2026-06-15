@@ -270,7 +270,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this.timeBase.getEnum().operator;
   }
 
-  public final LXClipContainer bus;
+  public final LXClipContainer container;
   public final BooleanParameter armParameter;
 
   public final LXClipSnapshot snapshot;
@@ -284,7 +284,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private boolean hasTimeline = false;
 
   private int index;
-  private final boolean busListener;
+  private final boolean hasBusListener;
 
   private final LXParameterListener parameterRecorder = this::recordParameterChange;
 
@@ -306,12 +306,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this(lx, parent, bus, index, true);
   }
 
-  protected LXClip(LX lx, LXComponent parent, LXClipContainer bus, int index, boolean registerListener) {
+  protected LXClip(LX lx, LXComponent parent, LXClipContainer container, int index, boolean registerListener) {
     super(lx);
     this.label.setDescription("The name of this clip");
-    this.bus = bus;
+    this.container = container;
     this.index = index;
-    this.busListener = registerListener;
+    this.hasBusListener = registerListener;
     setParent(parent);
 
     // Use reference BPM value at time of clip creation, this is used to preserve accurate
@@ -350,23 +350,26 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this, getSnapshotParameterScope()));
     addArray("lane", this.lanes);
 
-    for (LXEffect effect : bus.getEffects()) {
-      registerComponent(effect);
+    if (container instanceof LXBus bus) {
+      for (LXEffect effect : bus.getEffects()) {
+        registerComponent(effect);
+      }
+
+      // This class is not always registered as a listener... in the case of LXChannelClip,
+      // that parent class will take care of registering as a listener and this will avoid
+      // having duplicated double-listeners
+      if (registerListener) {
+        bus.addEffectsListener(this);
+      }
     }
 
-    // This class is not always registered as a listener... in the case of LXChannelClip,
-    // that parent class will take care of registering as a listener and this will avoid
-    // having duplicated double-listeners
-    if (registerListener) {
-      bus.addEffectsListener(this);
-    }
-    this.armParameter = bus.getArmParameter();
+    this.armParameter = container.getArmParameter();
     this.armParameter.addListener(this);
   }
 
   public LXComponent getSnapshotParameterScope() {
-    if (this.bus instanceof LXBus lxBus) {
-      return lxBus;
+    if (this.container instanceof LXBus bus) {
+      return bus;
     } else if (getParent() instanceof BusClipLane lane) {
       return lane.bus;
     } else if (getParent() instanceof LXCompositionEngine) {
@@ -509,7 +512,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private Tempo.Division isQuantizedStop = null;
 
   private void _launchAutomationScheduled() {
-    for (LXClip clip : this.bus.getClips()) {
+    for (LXClip clip : this.container.getClips()) {
       if ((clip != null) && (clip != this)) {
         clip.launch.cancel();
         clip.launchAutomation.cancel();
@@ -600,11 +603,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public void dispose() {
-    for (LXEffect effect : bus.getEffects()) {
-      unregisterComponent(effect);
-    }
-    if (this.busListener) {
-      this.bus.removeEffectsListener(this);
+    if (this.container instanceof LXBus bus) {
+      for (LXEffect effect : bus.getEffects()) {
+        unregisterComponent(effect);
+      }
+      if (this.hasBusListener) {
+        bus.removeEffectsListener(this);
+      }
     }
     this.armParameter.removeListener(this);
     for (int i = this.lanes.size() - 1; i >= 0; --i) {
@@ -941,13 +946,13 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   protected final void onStart() {
     // Stop other clips on the bus
-    for (LXClip clip : this.bus.getClips()) {
+    for (LXClip clip : this.container.getClips()) {
       if ((clip != null) && (clip != this)) {
         clip.stop();
       }
     }
 
-    this.bus.onClipStart(this);
+    this.container.onClipStart(this);
 
     // Kick off the transport
     launchTransport();
@@ -981,8 +986,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Wrap up any recording/playback state
     if (this.isRecording) {
       this.isRecording = false;
-      // JKB: can't turn off Arm on the composition (from inner clip) or it will stop the entire composition. How to handle?
-      if (!(this.bus instanceof LXCompositionEngine)) {
+      // TODO JKB: can't turn off Arm on the composition (from inner clip) or it will stop the entire composition. How to handle?
+      if (!(this.container instanceof LXCompositionEngine)) {
         this.armParameter.setValue(false);
       }
       if (!this.hasTimeline) {
@@ -1000,7 +1005,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // Finish snapshot transition
     this.snapshot.stopTransition();
 
-    this.bus.onClipStop(this);
+    this.container.onClipStop(this);
   }
 
   final void onCompositionEventImport(LXCompositionEvent<?> event) {
@@ -1019,9 +1024,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void _startRecording(boolean isOverdub) {
-    if (!(this.bus instanceof LXCompositionEngine)) {
-      this.automationEnabled.setValue(true);
-    }
+    this.automationEnabled.setValue(true);
     updateParameterDefaults();
     resetRecordingState();
     onStartRecording(isOverdub);
@@ -1751,17 +1754,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       if (parameterPath.startsWith(LXPath.ROOT_PREFIX)) {
         parameter = LXPath.getParameter(this.lx, parameterPath);
       } else {
-        parameter = LXPath.getParameter(this.bus.getComponent(), parameterPath);
+        parameter = LXPath.getParameter(this.container.asComponent(), parameterPath);
       }
       if (parameter == null) {
-        LX.error("No parameter found for saved parameter clip lane on bus " + this.bus + " at path: " + parameterPath);
+        LX.error("No parameter found for saved parameter clip lane on " + this.container + " at path: " + parameterPath);
         return null;
       }
     } else {
       int componentId = laneObj.get(KEY_COMPONENT_ID).getAsInt();
       LXComponent component = lx.getProjectComponent(componentId);
       if (component == null) {
-        LX.error("No component found for saved parameter clip lane on bus " + this.bus + " with id: " + componentId);
+        LX.error("No component found for saved parameter clip lane on " + this.container + " with id: " + componentId);
         return null;
       }
       String parameterPath = laneObj.get(KEY_PARAMETER_PATH).getAsString();

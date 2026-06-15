@@ -225,7 +225,7 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     if (this.engine.component instanceof PatternRack rack) {
-      obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.bus.getComponent()));
+      obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.container.asComponent()));
     }
   }
 
