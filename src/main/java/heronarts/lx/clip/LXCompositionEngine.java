@@ -76,16 +76,14 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     // If "Start Transport With Record" preference is enabled, then start recording when arm is pressed.
     // TODO: update preference to project-specific location?
     // if (lx.preferences.startTransportWithRecord.isOn()) {
-      if (this.composition.isRunning()) {
-        // Already playing, just arm for overdub
-        return;
-      }
-      if (this.composition.hasContent()) {
-        // Existing composition: start recording from current cursor position
-        this.composition.launchAutomationFromCursor();
-      } else {
-        // New/empty composition: start from the beginning
-        this.composition.launch();
+      if (this.arm.isOn() && !this.composition.isRunning()) {
+        if (this.composition.hasContent()) {
+          // Existing composition: start recording from current cursor position
+          this.composition.launchAutomationFromCursor();
+        } else {
+          // New/empty composition: start from the beginning
+          this.composition.launch();
+        }
       }
     // }
   }

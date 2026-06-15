@@ -87,9 +87,11 @@ public class LXComposition extends LXClip {
 
   @Override
   protected void onStopRecording() {
+    super.onStopRecording();
     this.lx.engine.composition.arm.setValue(false);
-    stopAudioPlayback();
-
+    if (!isRunning()) {
+      stopAudioPlayback();
+    }
   }
 
   // Playback
