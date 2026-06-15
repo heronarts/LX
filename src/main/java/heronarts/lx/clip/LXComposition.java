@@ -89,6 +89,7 @@ public class LXComposition extends LXClip {
   protected void onStopRecording() {
     this.lx.engine.composition.arm.setValue(false);
     stopAudioPlayback();
+
   }
 
   // Playback
@@ -309,7 +310,7 @@ public class LXComposition extends LXClip {
     }
     this.notesLanes.add(lane);
     this.mutableLanes.add(lane);
-    notifyNotesLaneAdded(lane);
+    notifyTextNoteLaneAdded(lane);
     return lane;
   }
 
@@ -318,10 +319,10 @@ public class LXComposition extends LXClip {
    *
    * @param lane The lane to remove
    */
-  public void removeNotesLane(TextNoteClipLane lane) {
+  public void removeTextNoteLane(TextNoteClipLane lane) {
     if (this.notesLanes.remove(lane)) {
       this.mutableLanes.remove(lane);
-      notifyNotesLaneRemoved(lane);
+      notifyTextNoteLaneRemoved(lane);
       LX.dispose(lane);
     }
   }
@@ -396,7 +397,7 @@ public class LXComposition extends LXClip {
     switch (lane) {
       case BusClipLane busLane -> removeBusLane(busLane);
       case AudioClipLane audioLane -> removeAudioLane(audioLane);
-      case TextNoteClipLane notesLane -> removeNotesLane(notesLane);
+      case TextNoteClipLane notesLane -> removeTextNoteLane(notesLane);
       case null, default -> super._removeLane(lane);
     }
     return this;
@@ -416,7 +417,7 @@ public class LXComposition extends LXClip {
     }
     List<TextNoteClipLane> notesLanesToClear = new ArrayList<>(this.notesLanes);
     for (TextNoteClipLane lane : notesLanesToClear) {
-      removeNotesLane(lane);
+      removeTextNoteLane(lane);
     }
   }
 
@@ -450,11 +451,11 @@ public class LXComposition extends LXClip {
     this.listeners.forEach(l -> l.audioLaneRemoved(this, lane));
   }
 
-  private void notifyNotesLaneAdded(TextNoteClipLane lane) {
+  private void notifyTextNoteLaneAdded(TextNoteClipLane lane) {
     this.listeners.forEach(l -> l.notesLaneAdded(this, lane));
   }
 
-  private void notifyNotesLaneRemoved(TextNoteClipLane lane) {
+  private void notifyTextNoteLaneRemoved(TextNoteClipLane lane) {
     this.listeners.forEach(l -> l.notesLaneRemoved(this, lane));
   }
 
