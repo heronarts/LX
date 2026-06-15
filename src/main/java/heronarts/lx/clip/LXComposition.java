@@ -233,8 +233,8 @@ public class LXComposition extends LXClip {
         return null;
       }
       final LXComponent component = this.lx.getProjectComponent(busId);
-      if (component instanceof LXAbstractChannel busComponent) {
-        BusClipLane lane = addBusLane(busComponent);
+      if (component instanceof LXBus bus) {
+        BusClipLane lane = addBusLane(bus);
         lane.load(this.lx, laneObj);
         return lane;
       } else {
