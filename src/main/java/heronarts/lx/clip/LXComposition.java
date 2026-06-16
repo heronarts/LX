@@ -25,10 +25,12 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.Cursor.Operator;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
+import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.ObservableList;
 
 import java.io.File;
@@ -58,6 +60,14 @@ public class LXComposition extends LXClip {
   private final ObservableList<Locator> mutableLocators = new ObservableList<>();
   public final ObservableList<Locator> locators = this.mutableLocators.asUnmodifiableList();
 
+  public final TriggerParameter prevLocator =
+    new TriggerParameter("Previous Locator", this::goPreviousLocator)
+    .setDescription("Moves to the previous locator");
+
+  public final TriggerParameter nextLocator =
+    new TriggerParameter("Next Locator", this::goNextLocator)
+    .setDescription("Moves to the next locator");
+
   private final AudioPlayer audioPlayer;
 
   public LXComposition(LX lx, LXCompositionEngine composition) {
@@ -65,6 +75,8 @@ public class LXComposition extends LXClip {
 
     this.audioPlayer = new AudioPlayer(lx);
 
+    addParameter("prevLocator", this.prevLocator);
+    addParameter("nextLocator", this.nextLocator);
     addArray("locator", this.locators);
 
     // Maintain one lane per mixer channel
@@ -353,6 +365,40 @@ public class LXComposition extends LXClip {
   }
 
   // Locators
+
+  public void goPreviousLocator() {
+    Operator CursorOp = CursorOp();
+    Cursor from = isRunning() ? this.cursor : this.insertMarker.cursor;
+    Cursor prev = Cursor.ZERO;
+    for (Locator locator : this.locators) {
+      if (CursorOp.isAfterOrEqual(locator.position.cursor, from)) {
+        break;
+      }
+      prev = locator.position.cursor;
+    }
+    if (isRunning()) {
+      launchAutomationFrom(prev);
+    } else {
+      setInsertMarker(prev);
+    }
+  }
+
+  public void goNextLocator() {
+    Operator CursorOp = CursorOp();
+    Cursor from = isRunning() ? this.cursor : this.insertMarker.cursor;
+    Cursor next = this.length.cursor;
+    for (Locator locator : this.locators) {
+      if (CursorOp.isAfter(locator.position.cursor, from)) {
+        next = locator.position.cursor;
+        break;
+      }
+    }
+    if (isRunning()) {
+      launchAutomationFrom(next);
+    } else {
+      setInsertMarker(next);
+    }
+  }
 
   /**
    * Add a locator at the given cursor position
