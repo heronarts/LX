@@ -269,6 +269,7 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
     return !(
       (parameter == this.label) ||
       (parameter == this.midiFilter) ||
+      (parameter.getParentParameter() == this.midiFilter) ||
       (parameter == this.view) ||
       (parameter == this.viewPriority)
     );
