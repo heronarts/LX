@@ -25,6 +25,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.osc.LXOscComponent;
+import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.MutableParameter;
@@ -70,6 +71,16 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
 
   public LXComposition getComposition() {
     return this.composition;
+  }
+
+  @Override
+  public boolean handleOscMessage(OscMessage message, String[] parts, int index) {
+    // TODO(mcslee): handle this properly with compositions array or using addChild
+    // if we're sticking with singleton...
+    if ("composition".equals(parts[index]) && this.composition != null) {
+      return this.composition.handleOscMessage(message, parts, index+1);
+    }
+    return super.handleOscMessage(message, parts, index);
   }
 
   private void armChanged(LXParameter p) {
