@@ -5017,7 +5017,7 @@ public abstract class LXCommand {
       public MoveLocator(LXComposition composition, Locator locator, Cursor toCursor) {
         this.compositionRef = new ComponentReference<>(composition);
         this.locator = locator;
-        this.fromCursor = locator.cursor.clone();
+        this.fromCursor = locator.position.cursor.clone();
         this.toCursor = toCursor.clone();
       }
 
@@ -5033,12 +5033,12 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.compositionRef.get().setLocatorCursor(this.locator, this.toCursor);
+        this.compositionRef.get().moveLocator(this.locator, this.toCursor);
       }
 
       @Override
       public void undo(LX lx) {
-        this.compositionRef.get().setLocatorCursor(this.locator, this.fromCursor);
+        this.compositionRef.get().moveLocator(this.locator, this.fromCursor);
       }
     }
 

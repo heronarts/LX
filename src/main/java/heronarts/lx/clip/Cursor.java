@@ -6,6 +6,11 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.parameter.AggregateParameter;
+import heronarts.lx.parameter.BoundedParameter;
+import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXUtils;
 
 /**
@@ -13,6 +18,94 @@ import heronarts.lx.utils.LXUtils;
  * a tempo-based beat count plus position within the beat.
  */
 public class Cursor implements LXSerializable {
+
+  public static class Parameter extends AggregateParameter {
+
+    public final LXClip clip;
+
+    public final Cursor cursor = new Cursor();
+
+    public final MutableParameter millis =
+      new MutableParameter("Millis")
+      .setMinimum(0)
+      .setUnits(LXParameter.Units.MILLISECONDS);
+
+    public final DiscreteParameter beatCount =
+      new DiscreteParameter("Beat Count", 0, Integer.MAX_VALUE);
+
+    public final BoundedParameter beatBasis =
+      new BoundedParameter("Beat Basis", 0, 1);
+
+    public Parameter(LXClip clip, String label) {
+      super(label);
+      this.clip = clip;
+
+      // NOTE: critical that beatBasis comes last, highest specificity so
+      // that on load() operations the update happens when that's set
+      addSubparameter("millis", this.millis);
+      addSubparameter("beatCount", this.beatCount);
+      addSubparameter("beatBasis", this.beatBasis);
+    }
+
+    private boolean inSetCursor = false;
+
+    protected Parameter set(Cursor.Parameter cursor) {
+      return set(cursor.cursor);
+    }
+
+    protected Parameter set(Cursor cursor) {
+      this.inSetCursor = true;
+      if (!this.cursor.equals(cursor)) {
+        this.millis.setValue(cursor.getMillis());
+        this.beatCount.setValue(cursor.getBeatCount());
+        this.beatBasis.setValue(cursor.getBeatBasis());
+        this.cursor.set(cursor);
+        bang();
+      }
+      this.inSetCursor = false;
+      return this;
+    }
+
+    public boolean isZero() {
+      return this.clip.CursorOp().isZero(this.cursor);
+    }
+
+    @Override
+    public Parameter reset() {
+      set(Cursor.ZERO);
+      return this;
+    }
+
+    @Override
+    protected double onUpdateValue(double value) {
+      if (!this.inSetCursor) {
+        throw new IllegalStateException("Cannot update Cursor.Parameter with direct setValue() call");
+      }
+      return value;
+    }
+
+    @Override
+    protected void updateSubparameters(double value) {
+      // Ignored, we hold these values ourselves
+    }
+
+    @Override
+    protected void onSubparameterUpdate(LXParameter p) {
+      if (!this.inSetCursor) {
+        if (p == this.millis) {
+          set(this.clip.constructAbsoluteCursor(this.millis.getValue()));
+        } else if (p == this.beatCount || p == this.beatBasis) {
+          set(this.clip.constructTempoCursor(this.beatCount.getValuei(), this.beatBasis.getValue()));
+        }
+      }
+    }
+
+    @Override
+    public Parameter setDescription(String description) {
+      super.setDescription(description);
+      return this;
+    }
+  }
 
   // NOTE: this applies to the scenario where a previously non-grid-snapped Cursor move
   // left something *extremely* close to a grid marker, such that the user wouldn't really

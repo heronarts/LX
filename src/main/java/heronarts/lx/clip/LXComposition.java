@@ -55,7 +55,7 @@ public class LXComposition extends LXClip {
   private final List<AudioClipLane> audioLanes = new CopyOnWriteArrayList<>();
   private final List<TextNoteClipLane> notesLanes = new ArrayList<>();
 
-  private final ObservableList<Locator> mutableLocators = new ObservableList.CopyOnWrite<>();
+  private final ObservableList<Locator> mutableLocators = new ObservableList<>();
   public final ObservableList<Locator> locators = this.mutableLocators.asUnmodifiableList();
 
   private final AudioPlayer audioPlayer;
@@ -76,7 +76,7 @@ public class LXComposition extends LXClip {
   }
 
   @Override
-  public CursorParameter getLaunchPosition() {
+  public Cursor.Parameter getLaunchPosition() {
     return this.insertMarker;
   }
 
@@ -388,22 +388,19 @@ public class LXComposition extends LXClip {
   }
 
   /**
-   * Move a locator to a new cursor position and re-sort
+   * Move a locator to a new cursor position
    *
    * @param locator The locator to move
    * @param cursor New position
    */
-  public void setLocatorCursor(Locator locator, Cursor cursor) {
+  public void moveLocator(Locator locator, Cursor cursor) {
     locator.setCursor(cursor);
     sortLocators();
   }
 
   private void sortLocators() {
-    // Workaround: sorting is not implemented in ObservableList
-    List<Locator> toSort = new ArrayList<>(this.mutableLocators);
-    toSort.sort((a, b) -> CursorOp().compare(a.cursor, b.cursor));
-    this.mutableLocators.clear();
-    this.mutableLocators.addAll(toSort);
+    // NOTE: this does not notify any listeners!!
+    this.mutableLocators.sort((a, b) -> CursorOp().compare(a.position.cursor, b.position.cursor));
   }
 
   private void clearLocators() {

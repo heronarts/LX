@@ -43,10 +43,8 @@ import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
-import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
-import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -83,97 +81,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   // Internal helpers
   private final Cursor nextCursor = new Cursor();
 
-  private final List<CursorParameter> cursorParameters = new ArrayList<>();
+  private final List<Cursor.Parameter> cursorParameters = new ArrayList<>();
 
-  public class CursorParameter extends AggregateParameter {
-
-    public final LXClip clip;
-
-    public final Cursor cursor = new Cursor();
-
-    public final MutableParameter millis =
-      new MutableParameter("Millis")
-      .setMinimum(0)
-      .setUnits(LXParameter.Units.MILLISECONDS);
-
-    public final DiscreteParameter beatCount =
-      new DiscreteParameter("Beat Count", 0, Integer.MAX_VALUE);
-
-    public final BoundedParameter beatBasis =
-      new BoundedParameter("Beat Basis", 0, 1);
-
-    public CursorParameter(String label) {
-      super(label);
-
-      this.clip = LXClip.this;
-
-      // NOTE: critical that beatBasis comes last, highest specificity so
-      // that on load() operations the update happens when that's set
-      addSubparameter("millis", this.millis);
-      addSubparameter("beatCount", this.beatCount);
-      addSubparameter("beatBasis", this.beatBasis);
-
-      cursorParameters.add(this);
-    }
-
-    private boolean inSetCursor = false;
-
-    protected CursorParameter set(CursorParameter cursor) {
-      return set(cursor.cursor);
-    }
-
-    protected CursorParameter set(Cursor cursor) {
-      this.inSetCursor = true;
-      if (!this.cursor.equals(cursor)) {
-        this.millis.setValue(cursor.getMillis());
-        this.beatCount.setValue(cursor.getBeatCount());
-        this.beatBasis.setValue(cursor.getBeatBasis());
-        this.cursor.set(cursor);
-        bang();
-      }
-      this.inSetCursor = false;
-      return this;
-    }
-
-    public boolean isZero() {
-      return CursorOp().isZero(this.cursor);
-    }
-
-    @Override
-    public CursorParameter reset() {
-      set(Cursor.ZERO);
-      return this;
-    }
-
-    @Override
-    protected double onUpdateValue(double value) {
-      if (!this.inSetCursor) {
-        throw new IllegalStateException("Cannot update CursorParameter with direct setValue() call");
-      }
-      return value;
-    }
-
-    @Override
-    protected void updateSubparameters(double value) {
-      // Ignored, we hold these values ourselves
-    }
-
-    @Override
-    protected void onSubparameterUpdate(LXParameter p) {
-      if (!this.inSetCursor) {
-        if (p == this.millis) {
-          set(constructAbsoluteCursor(this.millis.getValue()));
-        } else if (p == this.beatCount || p == this.beatBasis) {
-          set(constructTempoCursor(this.beatCount.getValuei(), this.beatBasis.getValue()));
-        }
-      }
-    }
-
-    @Override
-    public CursorParameter setDescription(String description) {
-      super.setDescription(description);
-      return this;
-    }
+  private void addCursorParameter(String key, Cursor.Parameter parameter) {
+    addParameter(key, parameter);
+    this.cursorParameters.add(parameter);
   }
 
   public enum ClipView {
@@ -185,36 +97,36 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new EnumParameter<Cursor.TimeBase>("Time Base", Cursor.TimeBase.ABSOLUTE)
     .setDescription("Whether clip timing is absolute or tempo-based");
 
-  public final CursorParameter length =
-    new CursorParameter("Length")
+  public final Cursor.Parameter length =
+    new Cursor.Parameter(this, "Length")
     .setDescription("The length of the clip");
 
   public final BooleanParameter loop =
     new BooleanParameter("Loop")
     .setDescription("Whether to loop the clip");
 
-  public final CursorParameter loopStart =
-    new CursorParameter("Loop Start")
+  public final Cursor.Parameter loopStart =
+    new Cursor.Parameter(this, "Loop Start")
     .setDescription("Where the clip will loop to when loop is enabled");
 
-  public final CursorParameter loopEnd =
-    new CursorParameter("Loop End")
+  public final Cursor.Parameter loopEnd =
+    new Cursor.Parameter(this, "Loop End")
     .setDescription("End of the loop in milliseconds");
 
-  public final CursorParameter loopLength =
-    new CursorParameter("Loop Length")
+  public final Cursor.Parameter loopLength =
+    new Cursor.Parameter(this, "Loop Length")
     .setDescription("Length of the loop in milliseconds");
 
-  public final CursorParameter playStart =
-    new CursorParameter("Play Start")
+  public final Cursor.Parameter playStart =
+    new Cursor.Parameter(this, "Play Start")
     .setDescription("Where the loop will start playing when it is launched");
 
-  public final CursorParameter playEnd =
-    new CursorParameter("Play End")
+  public final Cursor.Parameter playEnd =
+    new Cursor.Parameter(this, "Play End")
     .setDescription("Where an unlooped clip will stop playing");
 
-  public final CursorParameter insertMarker =
-    new CursorParameter("Insert Marker")
+  public final Cursor.Parameter insertMarker =
+    new Cursor.Parameter(this, "Insert Marker")
     .setDescription("Where clip playback or editing operations begin");
 
   /**
@@ -325,7 +237,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.referenceBpm.setValue(lx.engine.tempo.bpm.getValue());
 
     // NOTE: crucial that referenceBpm is loaded *before*
-    // all the CursorParameters, which will need
+    // all the Cursor.Parameters, which will need
     addParameter("referenceBpm", this.referenceBpm);
 
     // Time-base defaults to the project setting
@@ -336,12 +248,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addParameter("loop", this.loop);
 
     // Cursors
-    addParameter("length", this.length);
-    addParameter("loopStart", this.loopStart);
-    addParameter("loopLength", this.loopLength);
-    addParameter("playStart", this.playStart);
-    addParameter("playEnd", this.playEnd);
-    addParameter("insertMarker", this.insertMarker);
+    addCursorParameter("length", this.length);
+    addCursorParameter("loopStart", this.loopStart);
+    addCursorParameter("loopLength", this.loopLength);
+    addCursorParameter("playStart", this.playStart);
+    addCursorParameter("playEnd", this.playEnd);
+    addCursorParameter("insertMarker", this.insertMarker);
 
     // Behavior configuration
     addParameter("snapshotEnabled", this.snapshotEnabled);
@@ -391,7 +303,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this.launch.pending.isOn() || this.launchAutomation.pending.isOn();
   }
 
-  protected CursorParameter getLaunchPosition() {
+  protected Cursor.Parameter getLaunchPosition() {
     return this.playStart;
   }
 
@@ -714,7 +626,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this;
   }
 
-  protected void setCursor(CursorParameter timestamp) {
+  protected void setCursor(Cursor.Parameter timestamp) {
     setCursor(timestamp.cursor);
   }
 
@@ -881,7 +793,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @param insertMarker Cursor position on the timeline
    */
   public LXClip setInsertMarker(Cursor insertMarker) {
-    this.insertMarker.set(insertMarker.constrain(this));
+    this.insertMarker.set(insertMarker.bound(this));
     return this;
   }
 
@@ -1718,7 +1630,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   private static final String KEY_LANES = "parameterLanes";
   public static final String KEY_INDEX = "index";
 
-  private void loadLegacyCursor(JsonObject parametersObj, CursorParameter cursor) {
+  private void loadLegacyCursor(JsonObject parametersObj, Cursor.Parameter cursor) {
     // Load legacy-mode if we find a value for the raw parameter path but not for
     // the AggregateParameter sub-field, meaning it was written as a simple double
     if (parametersObj.has(cursor.getPath()) && !parametersObj.has(cursor.millis.getPath())) {
@@ -1727,7 +1639,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
-  private void loadLegacyMarker(JsonObject parametersObj, CursorParameter marker) {
+  private void loadLegacyMarker(JsonObject parametersObj, Cursor.Parameter marker) {
     // Check that the legacy marker is missing, and that it wasn't written AggregateParameter
     if (!parametersObj.has(marker.getPath()) && !parametersObj.has(marker.millis.getPath())) {
       marker.set(this.length);
@@ -1749,7 +1661,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     // For legacy clips, restore raw values, set loop and play markers
     if (obj.has(KEY_PARAMETERS)) {
       final JsonObject parametersObj = obj.getAsJsonObject(KEY_PARAMETERS);
-      for (CursorParameter cursor : this.cursorParameters) {
+      for (Cursor.Parameter cursor : this.cursorParameters) {
         loadLegacyCursor(parametersObj, cursor);
       }
       loadLegacyMarker(parametersObj, this.loopLength);
