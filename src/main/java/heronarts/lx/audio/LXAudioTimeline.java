@@ -102,6 +102,7 @@ public class LXAudioTimeline extends LXAudioComponent {
 
   void start() {
     if (this.outputThread != null) {
+      this.outputThread.flush = true;
       this.outputThread.line.start();
       this.outputThread.setState(false, false);
     }
