@@ -65,6 +65,8 @@ public class LXComposition extends LXClip {
 
     this.audioPlayer = new AudioPlayer(lx);
 
+    addArray("locator", this.locators);
+
     // Maintain one lane per mixer channel
     lx.engine.mixer.addListener(this.mixerListener);
     createBusLanes();
@@ -401,6 +403,10 @@ public class LXComposition extends LXClip {
   private void sortLocators() {
     // NOTE: this does not notify any listeners!!
     this.mutableLocators.sort((a, b) -> CursorOp().compare(a.position.cursor, b.position.cursor));
+    int i = 0;
+    for (Locator locator : this.locators) {
+      locator.setIndex(i++);
+    }
   }
 
   private void clearLocators() {
@@ -495,7 +501,7 @@ public class LXComposition extends LXClip {
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    obj.add(KEY_LOCATORS, LXSerializable.Utils.toArray(lx, this.mutableLocators));
+    obj.add(KEY_LOCATORS, LXSerializable.Utils.toArray(lx, this.locators));
   }
 
   @Override
