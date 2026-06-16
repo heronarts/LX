@@ -52,7 +52,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
 
   public final BooleanParameter arm =
     new BooleanParameter("Arm")
-      .setDescription("Arms the composition for recording. If the Start Transport With Record preference is enabled, recording will start immediately.");
+    .setDescription("Starts the composition recording");
 
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
