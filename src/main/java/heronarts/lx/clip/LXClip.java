@@ -546,6 +546,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this.length.getValue();
   }
 
+  public ParameterClipLane createParameterLane(LXNormalizedParameter parameter) {
+    return getParameterLane(parameter, true);
+  }
+
   private ParameterClipLane getParameterLane(LXNormalizedParameter parameter, boolean create) {
     return getParameterLane(parameter, create, -1);
   }
@@ -559,7 +563,17 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
     }
     if (create) {
-      ParameterClipLane lane = ParameterClipLane.create(this, parameter, this.parameterDefaults.get(parameter));
+      Double defaultValue = this.parameterDefaults.get(parameter);
+      double defaultDouble = 0;
+      if (defaultValue == null) {
+        LX.warning("LXClip has no default value for parameter: " + parameter + " " + parameter.getCanonicalPath());
+      } else {
+        defaultDouble = defaultValue.doubleValue();
+      }
+      ParameterClipLane lane = ParameterClipLane.create(this, parameter, defaultDouble);
+      if (index < 0) {
+        index = getParameterLaneInsertIndex(parameter);
+      }
       if (index < 0) {
         this.mutableLanes.add(lane);
       } else {
@@ -571,6 +585,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return lane;
     }
     return null;
+  }
+
+  protected int getParameterLaneInsertIndex(LXNormalizedParameter parameter) {
+    return -1;
   }
 
   LXClip _removeLane(LXClipLane<?> lane) {
@@ -1222,6 +1240,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     List<LXClipLane<?>> removedLanes = null;
     for (LXClipLane<?> lane : this.mutableLanes) {
       switch (lane) {
+        case BusClipLane busLane -> {
+          if (busLane.bus == component || busLane.bus.isDescendant(component)) {
+            if (removedLanes == null) {
+              removedLanes = new ArrayList<>();
+            }
+            removedLanes.add(busLane);
+          }
+        }
         case ParameterClipLane parameterLane -> {
           if (parameterLane.parameter.isDescendant(component)) {
             if (removedLanes == null) {
@@ -1679,7 +1705,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
-  public ParameterClipLane addParameterLane(LX lx, JsonObject laneObj, int index) {
+  private ParameterClipLane addParameterLane(LX lx, JsonObject laneObj, int index) {
     LXParameter parameter;
     if (laneObj.has(LXComponent.KEY_PATH)) {
       String parameterPath = laneObj.get(KEY_PATH).getAsString();

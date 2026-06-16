@@ -30,6 +30,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
+import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.utils.ObservableList;
 
@@ -92,6 +93,16 @@ public class LXComposition extends LXClip {
   @Override
   public Cursor.Parameter getLaunchPosition() {
     return this.insertMarker;
+  }
+
+  @Override
+  protected int getParameterLaneInsertIndex(LXNormalizedParameter parameter) {
+    for (BusClipLane busLane : this.busLanes.values()) {
+      if (parameter.isDescendant(busLane.bus)) {
+        return busLane.getIndex() + 1;
+      }
+    }
+    return -1;
   }
 
   // Recording

@@ -46,6 +46,10 @@ public interface LXClipContainer {
 
   public default void onClipStop(LXClip clip) {}
 
+  public default LXComponent getClipLaneLabelRoot(LXClipLane<?> lane) {
+    return asComponent();
+  }
+
   public default LXComponent asComponent() {
     return (LXComponent) this;
   }

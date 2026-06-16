@@ -77,15 +77,12 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   static ParameterClipLane create(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
-    if (parameter instanceof TriggerParameter) {
-      return new Trigger(clip, (TriggerParameter) parameter);
-    } else if (parameter instanceof BooleanParameter) {
-      return new Boolean(clip, (BooleanParameter) parameter, initialNormalized);
-    } else if (parameter instanceof DiscreteParameter) {
-      return new Discrete(clip, (DiscreteParameter) parameter, initialNormalized);
-    } else {
-      return new Normalized(clip, parameter, initialNormalized);
-    }
+    return switch (parameter) {
+      case TriggerParameter triggerParameter -> new Trigger(clip, triggerParameter);
+      case BooleanParameter booleanParameter -> new Boolean(clip, booleanParameter, initialNormalized);
+      case DiscreteParameter discreteParameter -> new Discrete(clip, discreteParameter, initialNormalized);
+      default -> new Normalized(clip, parameter, initialNormalized);
+    };
   }
 
   public final LXNormalizedParameter parameter;
@@ -103,7 +100,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   public String getLabel() {
-    return this.parameter.getCanonicalLabel(this.clip.container.asComponent(), " | ", 3);
+    return this.parameter.getCanonicalLabel(this.clip.container.getClipLaneLabelRoot(this), " | ", 3);
   }
 
   public boolean shouldRecordParameterChange(LXNormalizedParameter p) {
