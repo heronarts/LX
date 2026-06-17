@@ -47,7 +47,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
   private LXComposition composition;
 
   public final BooleanParameter clipExpanded =
-    new BooleanParameter("Clip", true)
+    new BooleanParameter("Clip", false)
       .setMode(BooleanParameter.Mode.TOGGLE)
       .setDescription("Toggle Clip visibility in the alt window");
 
