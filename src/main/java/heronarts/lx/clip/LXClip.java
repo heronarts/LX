@@ -1139,14 +1139,14 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   protected void onStopPlayback() {}
 
-  private void clearLanes() {
+  protected void clearLanes() {
     Iterator<LXClipLane<?>> iter = this.mutableLanes.iterator();
     while (iter.hasNext()) {
       LXClipLane<?> lane = iter.next();
-      if (lane instanceof ParameterClipLane) {
+      if (lane instanceof ParameterClipLane parameterLane) {
         iter.remove();
         for (Listener listener : this.listeners) {
-          listener.parameterLaneRemoved(this, (ParameterClipLane) lane);
+          listener.parameterLaneRemoved(this, parameterLane);
         }
         LX.dispose(lane);
       } else {

@@ -31,6 +31,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand.Clip.Event.SetCursors.Operation;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXEngineThreadArrayList;
@@ -63,6 +64,18 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     addInternalParameter("uiExpanded", this.uiExpanded);
     addInternalParameter("uiMaximized", this.uiMaximized);
     this.onChange.addListener(p -> this.clip.onChange.bang());
+  }
+
+  /**
+   * Return the bus that this clip lane is associated with, if any
+   */
+  protected final LXBus getBus() {
+    return switch (this.clip) {
+    case LXChannelClip channelClip -> channelClip.channel;
+    case LXMasterClip masterClip -> lx.engine.mixer.masterBus;
+    case LXComposition composition -> composition.getLaneBus(this);
+    default -> throw new IllegalStateException("Cannot determine bus for unknown LXClip type: " + this.clip + " " + this.clip.getClass());
+    };
   }
 
   final void resetRecordingState() {

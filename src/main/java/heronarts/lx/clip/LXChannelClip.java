@@ -121,7 +121,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
       }
     }
     if (create) {
-      PatternClipLane lane = new PatternClipLane(this, engine);
+      PatternClipLane lane = new PatternClipLane(this, this.channel, engine);
       if (engine.isPlaylist()) {
         LXPattern targetPattern = engine.getTargetPattern();
         if (targetPattern != null) {

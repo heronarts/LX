@@ -14,11 +14,12 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOff;
+import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.parameter.MutableParameter;
 
 public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
 
-  public final LXAbstractChannelClip clip;
+  public final LXAbstractChannel channel;
 
   /**
    * Zoom is specified as multiple of lane height
@@ -32,8 +33,12 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     .setDescription("Scroll offset of MIDI piano roll");
 
   protected MidiNoteClipLane(LXAbstractChannelClip clip) {
+    this(clip, clip.channel);
+  }
+
+  protected MidiNoteClipLane(LXClip clip, LXAbstractChannel channel) {
     super(clip);
-    this.clip = clip;
+    this.channel = channel;
     addInternalParameter("uiZoom ", this.uiZoom);
     addInternalParameter("uiOffset", this.uiOffset);
   }
@@ -49,7 +54,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
   }
 
   private void dispatchNote(MidiNote note) {
-    this.clip.channel.midiDispatch(note);
+    this.channel.midiDispatch(note);
   }
 
   void playNote(MidiNoteClipEvent note) {
@@ -66,7 +71,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     if (noteHeld != null) {
       debug("Firing note-off for stacked playback note: " + noteOn);
       try {
-        this.clip.channel.midiDispatch(new MidiNoteOff(noteOn.midiNote.getChannel(), pitch));
+        this.channel.midiDispatch(new MidiNoteOff(noteOn.midiNote.getChannel(), pitch));
       } catch (InvalidMidiDataException imdx) {
         LX.error(imdx, "WTF invalid note-clone in MidiNoteClipLane.playNote");
       }

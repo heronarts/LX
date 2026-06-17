@@ -330,36 +330,52 @@ public abstract class LXCommand {
       _removeRemoteControls(container.getParent(), component);
     }
 
+    protected void removeCompositionChannel(LXAbstractChannel channel) {
+      _removeClipLanes(channel.getLX().engine.composition.getComposition(), channel);
+    }
+
     protected void removeClipLanes(LXBus bus, LXComponent component) {
       for (LXClip clip : bus.clips) {
-        if (clip != null) {
-          List<LXClipLane<?>> lanes = clip.findClipLanes(component);
-          if (lanes != null) {
-            for (LXClipLane<?> lane : lanes) {
-              this.removeClipLanes.add(new Clip.RemoveClipLane(lane));
-            }
-          }
+        _removeClipLanes(clip, component);
+      }
+      _removeClipLanes(component.getLX().engine.composition.getComposition(), component);
+    }
+
+    private void _removeClipLanes(LXClip clip, LXComponent component) {
+      if (clip == null) {
+        return;
+      }
+      List<LXClipLane<?>> lanes = clip.findClipLanes(component);
+      if (lanes != null) {
+        for (LXClipLane<?> lane : lanes) {
+          this.removeClipLanes.add(new Clip.RemoveClipLane(lane));
         }
       }
     }
 
     protected void removePatternClipEvents(LXPattern pattern) {
       for (LXClip clip : pattern.getMixerChannel().clips) {
-        if (clip != null) {
-          if (clip instanceof LXChannelClip channelClip) {
-            for (LXClipLane<?> clipLane : channelClip.lanes) {
-              if (clipLane instanceof PatternClipLane patternLane) {
-                if (pattern.getEngine() == patternLane.engine) {
-                  removePatternClipLaneEvents(patternLane, pattern);
-                }
-              }
+        _removePatternClipEvents(clip, pattern);
+      }
+      _removePatternClipEvents(pattern.getLX().engine.composition.getComposition(), pattern);
+    }
+
+    private void _removePatternClipEvents(LXClip clip, LXPattern pattern) {
+      if (clip == null) {
+        return;
+      }
+      if (clip instanceof LXChannelClip channelClip) {
+        for (LXClipLane<?> clipLane : channelClip.lanes) {
+          if (clipLane instanceof PatternClipLane patternLane) {
+            if (pattern.getEngine() == patternLane.engine) {
+              _removePatternClipLaneEvents(patternLane, pattern);
             }
           }
         }
       }
     }
 
-    protected void removePatternClipLaneEvents(PatternClipLane lane, LXPattern pattern) {
+    private void _removePatternClipLaneEvents(PatternClipLane lane, LXPattern pattern) {
       List<Integer> eventIndices = lane.findEventIndices(pattern);
       if (eventIndices != null) {
         this.removePatternClipEvents.add(new Clip.Event.Pattern.RemoveReferences(lane, eventIndices));
@@ -389,6 +405,9 @@ public abstract class LXCommand {
 
       // Type-specific removals
       switch (component) {
+        case LXAbstractChannel channel -> {
+          removeCompositionChannel(channel);
+        }
         case LXPattern pattern -> {
           removeClipLanes(pattern.getMixerChannel(), pattern);
           removePatternClipEvents(pattern);
