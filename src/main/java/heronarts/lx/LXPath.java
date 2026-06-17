@@ -77,6 +77,23 @@ public interface LXPath {
   }
 
   /**
+   * Finds the first ancestor the LXPath object conforming to the given class
+   *
+   * @param ancestorClass Ancestor class type
+   * @return First parent conforming to the class, or none if not found
+   */
+  public default <T extends LXComponent> T getAncestor(Class<T> ancestorClass) {
+    LXComponent candidate = (this instanceof LXComponent component) ? component : getParent();
+    while (candidate != null) {
+      if (ancestorClass.isAssignableFrom(candidate.getClass())) {
+        return ancestorClass.cast(candidate);
+      }
+      candidate = candidate.getParent();
+    }
+    return null;
+  }
+
+  /**
    * Gets the canonical path of a Path object up to a given root
    *
    * @param root Root component

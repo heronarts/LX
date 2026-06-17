@@ -418,14 +418,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   public final LXChannel getMixerChannel() {
-    LXComponent parent = getParent();
-    while (parent != null) {
-      if (parent instanceof LXChannel channel) {
-        return channel;
-      }
-      parent = parent.getParent();
-    }
-    return null;
+    return getAncestor(LXChannel.class);
   }
 
   /**
