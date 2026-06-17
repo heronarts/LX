@@ -254,7 +254,21 @@ public abstract class LXListenableParameter implements LXParameter {
     return this.value == this.defaultValue;
   }
 
-  public String getLabel() {
+  public final String getAggregateLabel() {
+    return getAggregateLabel(" | ");
+  }
+
+  public final String getAggregateLabel(String separator) {
+    String label = getLabel();
+    AggregateParameter parent = getParentParameter();
+    while (parent != null) {
+      label = parent.getLabel() + separator + label;
+      parent = parent.getParentParameter();
+    }
+    return label;
+  }
+
+  public final String getLabel() {
     return this.label;
   }
 
