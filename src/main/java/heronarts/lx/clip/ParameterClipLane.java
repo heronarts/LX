@@ -22,6 +22,8 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXEngine;
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -100,7 +102,26 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   public String getLabel() {
-    return this.parameter.getCanonicalLabel(this.clip.container.getClipLaneLabelRoot(this), " | ", 3);
+    final LXComponent root = this.clip.container.getClipLaneLabelRoot(this);
+    final String separator = " | ";
+
+    // NOTE(mcslee): feels hacky leaking this UI customization here, consider better...
+    int limit = (this.clip instanceof LXComposition) ? 4 : 3;
+
+    String label = this.parameter.getLabel();
+    AggregateParameter agg = this.parameter.getParentParameter();
+    while (limit > 0 && agg != null) {
+      label = agg.getLabel() + separator + label;
+      --limit;
+      agg = agg.getParentParameter();
+    }
+    LXComponent parent = this.parameter.getParent();
+    while (limit > 0 && parent != null && parent != root && !(parent instanceof LXEngine)) {
+      label = parent.getLabel() + separator + label;
+      --limit;
+      parent = parent.getParent();
+    }
+    return label;
   }
 
   public boolean shouldRecordParameterChange(LXNormalizedParameter p) {
