@@ -443,6 +443,8 @@ public class LXComposition extends LXClip {
   public void removeLocator(Locator locator) {
     if (this.mutableLocators.remove(locator)) {
       LX.dispose(locator);
+    } else {
+      throw new IllegalStateException("Cannot remove locator not present on LXComposition: " + locator);
     }
   }
 
@@ -546,6 +548,7 @@ public class LXComposition extends LXClip {
 
   @Override
   public void dispose() {
+    clearLocators();
     this.audioPlayer.dispose();
     this.lx.engine.mixer.removeListener(this.mixerListener);
     super.dispose();
