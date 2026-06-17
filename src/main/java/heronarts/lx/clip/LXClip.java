@@ -284,6 +284,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     this.armParameter.addListener(this);
   }
 
+  public boolean isComposition() {
+    return this instanceof LXComposition;
+  }
+
   public LXComponent getSnapshotParameterScope() {
     if (this.container instanceof LXBus bus) {
       return bus;

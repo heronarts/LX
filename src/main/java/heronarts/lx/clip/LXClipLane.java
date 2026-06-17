@@ -67,6 +67,20 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   /**
+   * Whether the lane represents an entire bus in the context of a composition
+   *
+   * @return true if the lane represents an entire bus in the context of a composition
+   */
+  public boolean isCompositionBusLane() {
+    return switch (this) {
+    case AudioClipLane l -> true;
+    case BusClipLane l -> true;
+    case TextNoteClipLane l -> true;
+    default -> false;
+    };
+  }
+
+  /**
    * Return the bus that this clip lane is associated with, if any
    */
   protected final LXBus getBus() {
