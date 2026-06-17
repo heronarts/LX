@@ -151,7 +151,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new QuantizedTriggerParameter.Launch(lx, "Stop", this::_launchStop)
     .setDescription("Stop this clip");
 
+  // CopyOnWrite because UICompositionEditor.CompositionOverview iterates on UI thread
   protected final List<LXClipLane<?>> mutableLanes = new CopyOnWriteArrayList<>();
+
   public final List<LXClipLane<?>> lanes = Collections.unmodifiableList(this.mutableLanes);
 
   public final BooleanParameter snapshotEnabled =
@@ -595,15 +597,18 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return -1;
   }
 
-  LXClip _removeLane(LXClipLane<?> lane) {
+  private void _removeLane(LXClipLane<?> lane) {
     this.mutableLanes.remove(lane);
+    _onRemoveLane(lane);
+    LX.dispose(lane);
+  }
+
+  protected void _onRemoveLane(LXClipLane<?> lane) {
     switch (lane) {
     case ParameterClipLane parameterLane -> this.listeners.forEach(l -> l.parameterLaneRemoved(this, parameterLane));
     case PatternClipLane patternLane -> this.listeners.forEach(l -> l.patternLaneRemoved(this, patternLane));
     default -> {}
     };
-    LX.dispose(lane);
-    return this;
   }
 
   public LXClip removeParameterLane(ParameterClipLane lane) {
@@ -619,7 +624,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         throw new IllegalArgumentException("May not remove master LXChannelClip PatternClipLane");
       }
     }
-    return _removeLane(lane);
+    _removeLane(lane);
+    return this;
   }
 
   public LXClip moveClipLane(LXClipLane<? >lane, int index) {

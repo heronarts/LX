@@ -295,7 +295,7 @@ public class LXComposition extends LXClip {
 
   private void unregisterBus(LXAbstractChannel channel) {
     if (this.busLanes.containsKey(channel)) {
-      removeBusLane(this.busLanes.get(channel));
+      removeClipLane(this.busLanes.get(channel));
     } else {
       throw new IllegalStateException("Unable to remove lane, does not exist for channel: " + channel.getLabel());
     }
@@ -311,14 +311,6 @@ public class LXComposition extends LXClip {
     }
     for (LXClipLane<?> lane : toRemove) {
       removeClipLane(lane);
-    }
-  }
-
-  private void removeBusLane(BusClipLane lane) {
-    if (this.busLanes.remove(lane.bus) != null) {
-      this.mutableLanes.remove(lane);
-      notifyBusLaneRemoved(lane);
-      LX.dispose(lane);
     }
   }
 
@@ -356,19 +348,6 @@ public class LXComposition extends LXClip {
     return lane;
   }
 
-  /**
-   * Remove an audio lane from the composition
-   *
-   * @param lane The lane to remove
-   */
-  public void removeAudioLane(AudioClipLane lane) {
-    if (this.audioLanes.remove(lane)) {
-      this.mutableLanes.remove(lane);
-      notifyAudioLaneRemoved(lane);
-      LX.dispose(lane);
-    }
-  }
-
   // Notes Lanes
 
   /**
@@ -395,19 +374,6 @@ public class LXComposition extends LXClip {
     this.mutableLanes.add(lane);
     notifyTextNoteLaneAdded(lane);
     return lane;
-  }
-
-  /**
-   * Remove a notes lane from the composition
-   *
-   * @param lane The lane to remove
-   */
-  public void removeTextNoteLane(TextNoteClipLane lane) {
-    if (this.notesLanes.remove(lane)) {
-      this.mutableLanes.remove(lane);
-      notifyTextNoteLaneRemoved(lane);
-      LX.dispose(lane);
-    }
   }
 
   // Locators
@@ -513,14 +479,25 @@ public class LXComposition extends LXClip {
   // Lane removal
 
   @Override
-  LXComposition _removeLane(LXClipLane<?> lane) {
+  protected void _onRemoveLane(LXClipLane<?> lane) {
     switch (lane) {
-      case BusClipLane busLane -> removeBusLane(busLane);
-      case AudioClipLane audioLane -> removeAudioLane(audioLane);
-      case TextNoteClipLane notesLane -> removeTextNoteLane(notesLane);
-      case null, default -> super._removeLane(lane);
+      case BusClipLane busLane -> {
+        if (this.busLanes.remove(busLane.bus) != null) {
+          notifyBusLaneRemoved(busLane);
+        }
+      }
+      case AudioClipLane audioLane -> {
+        if (this.audioLanes.remove(audioLane)) {
+          notifyAudioLaneRemoved(audioLane);
+        }
+      }
+      case TextNoteClipLane notesLane -> {
+        if (this.notesLanes.remove(notesLane)) {
+          notifyTextNoteLaneRemoved(notesLane);
+        }
+      }
+      default -> super._onRemoveLane(lane);
     }
-    return this;
   }
 
   /**
@@ -530,15 +507,15 @@ public class LXComposition extends LXClip {
   protected void clearLanes() {
     List<BusClipLane> busLanesToClear = new ArrayList<>(this.busLanes.values());
     for (BusClipLane lane : busLanesToClear) {
-      removeBusLane(lane);
+      removeClipLane(lane);
     }
     List<AudioClipLane> audioLanesToClear = new ArrayList<>(this.audioLanes);
     for (AudioClipLane lane : audioLanesToClear) {
-      removeAudioLane(lane);
+      removeClipLane(lane);
     }
     List<TextNoteClipLane> notesLanesToClear = new ArrayList<>(this.notesLanes);
     for (TextNoteClipLane lane : notesLanesToClear) {
-      removeTextNoteLane(lane);
+      removeClipLane(lane);
     }
     super.clearLanes();
   }

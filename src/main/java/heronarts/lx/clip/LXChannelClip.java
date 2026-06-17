@@ -97,7 +97,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
       }
       PatternClipLane lane = getPatternLane(rack.patternEngine, false);
       if (lane != null) {
-        removePatternLane(lane);
+        removeClipLane(lane);
       }
       rack.patternEngine.removeListener(this.rackPatternListener);
     }
@@ -139,11 +139,6 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
       return lane;
     }
     return null;
-  }
-
-  public LXChannelClip removePatternLane(PatternClipLane lane) {
-    _removeLane(lane);
-    return this;
   }
 
   private PatternClipLane addRackPatternLane(LX lx, JsonObject laneObj, int index) {

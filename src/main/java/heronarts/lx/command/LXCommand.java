@@ -3708,6 +3708,14 @@ public abstract class LXCommand {
 
   public static class Clip {
 
+    public static String getTypeLabel(LXClipLane<?> lane) {
+      return getTypeLabel(lane.clip);
+    }
+
+    public static String getTypeLabel(LXClip clip) {
+      return clip.isComposition() ? "Composition" : "Clip";
+    }
+
     public static class Add extends LXCommand {
 
       private final ComponentReference<LXBus> bus;
@@ -3797,18 +3805,20 @@ public abstract class LXCommand {
 
     public static class Record extends LXCommand {
 
+      private final String label;
       private final ComponentReference<LXClip> clip;
       private final JsonObject clipObjPre;
       private JsonObject clipObjPost = null;
 
       public Record(LXClip clip) {
+        this.label = Clip.getTypeLabel(clip);
         this.clip = new ComponentReference<LXClip>(clip);
         this.clipObjPre = LXSerializable.Utils.toObject(clip.getLX(), clip);
       }
 
       @Override
       public String getDescription() {
-        return "Record Clip";
+        return "Record " + this.label;
       }
 
       @Override
@@ -3884,11 +3894,13 @@ public abstract class LXCommand {
       public final Marker marker;
       private final Cursor fromCursor;
       private Cursor toCursor;
+      private final String label;
 
       /**
        * Move clip marker to a new value (in time units)
        */
       public SetMarker(LXClip clip, Marker marker, Cursor toCursor) {
+        this.label = Clip.getTypeLabel(clip);
         this.clip = new ComponentReference<LXClip>(clip);
         this.marker = marker;
         this.fromCursor = this.marker.getCursor(clip).clone();
@@ -3897,7 +3909,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Move Clip " + this.marker.label;
+        return "Move " + this.label + " " + this.marker.label;
       }
 
       public SetMarker update(Cursor toCursor) {
@@ -3945,10 +3957,12 @@ public abstract class LXCommand {
 
     public static class MoveLane extends LXCommand {
 
+      private final String label;
       private final ComponentReference<LXClipLane<?>> lane;
       private final int fromIndex, toIndex;
 
       public MoveLane(LXClipLane<?> lane, int index) {
+        this.label = Clip.getTypeLabel(lane);
         this.lane = new ComponentReference<>(lane);
         this.fromIndex = lane.getIndex();
         this.toIndex = index;
@@ -3956,7 +3970,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Move Clip Lane";
+        return "Move " + this.label + " Lane";
       }
 
       @Override
@@ -3975,26 +3989,28 @@ public abstract class LXCommand {
     public static class RemoveClipLane extends RemoveComponent {
 
       private final ComponentReference<LXClip> clip;
-      private final ComponentReference<LXClipLane<?>> parameterLane;
+      private final ComponentReference<LXClipLane<?>> clipLane;
       private final int laneIndex;
       private final JsonObject laneObj;
+      private final String label;
 
-      public RemoveClipLane(LXClipLane<?> parameterLane) {
-        super(parameterLane);
-        this.clip = new ComponentReference<>(parameterLane.clip);
-        this.parameterLane = new ComponentReference<>(parameterLane);
-        this.laneIndex = parameterLane.getIndex();
-        this.laneObj = LXSerializable.Utils.toObject(parameterLane.getLX(), parameterLane);
+      public RemoveClipLane(LXClipLane<?> clipLane) {
+        super(clipLane);
+        this.label = Clip.getTypeLabel(clipLane);
+        this.clip = new ComponentReference<>(clipLane.clip);
+        this.clipLane = new ComponentReference<>(clipLane);
+        this.laneIndex = clipLane.getIndex();
+        this.laneObj = LXSerializable.Utils.toObject(clipLane.getLX(), clipLane);
       }
 
       @Override
       public String getDescription() {
-        return "Remove Clip Lane";
+        return "Remove " + this.label + " Lane";
       }
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        final LXClipLane<?> clipLane = this.parameterLane.get();
+        final LXClipLane<?> clipLane = this.clipLane.get();
         clipLane.clip.removeClipLane(clipLane);
       }
 
@@ -4830,143 +4846,6 @@ public abstract class LXCommand {
 
   public static class Composition {
 
-    public static class Record extends LXCommand {
-
-      private final ComponentReference<LXComposition> compositionRef;
-      private final JsonObject compObjPre;
-      private JsonObject compObjPost = null;
-
-      public Record(LXComposition composition) {
-        this.compositionRef = new ComponentReference<>(composition);
-        this.compObjPre = LXSerializable.Utils.toObject(composition.getLX(), composition);
-      }
-
-      @Override
-      public String getDescription() {
-        return "Record Composition";
-      }
-
-      @Override
-      public void perform(LX lx) {
-        LXComposition composition = this.compositionRef.get();
-        if (this.compObjPost == null) {
-          this.compObjPost = LXSerializable.Utils.toObject(lx, composition);
-        } else {
-          composition.load(lx, this.compObjPost);
-        }
-      }
-
-      @Override
-      public void undo(LX lx) {
-        this.compositionRef.get().load(lx, this.compObjPre);
-      }
-
-    }
-
-    public enum Marker {
-
-      LOOP_START("Loop Start"),
-      LOOP_BRACE("Loop"),
-      LOOP_END("Loop End"),
-      LENGTH("Length");
-
-      public Cursor getCursor(LXComposition composition) {
-        return switch (this) {
-          case LOOP_BRACE, LOOP_START -> composition.loopStart.cursor;
-          case LOOP_END -> composition.loopEnd.cursor;
-          case LENGTH -> composition.playEnd.cursor;
-        };
-      }
-
-      public void setCursor(LXComposition composition, Cursor cursor) {
-        switch (this) {
-          case LOOP_BRACE:
-            composition.setLoopBrace(cursor);
-            break;
-          case LOOP_END:
-            composition.setLoopEnd(cursor);
-            break;
-          case LOOP_START:
-            composition.setLoopStart(cursor);
-            break;
-          case LENGTH:
-            composition.setPlayEnd(cursor);
-            break;
-        }
-      }
-
-      private final String label;
-
-      private Marker(String label) {
-        this.label = label;
-      }
-    }
-
-    public static class SetMarker extends LXCommand {
-
-      private final ComponentReference<LXComposition> compositionRef;
-      public final Composition.Marker marker;
-      private final Cursor fromCursor;
-      private final Cursor toCursor;
-
-      /**
-       * Move composition marker to a new value (in time units)
-       */
-      public SetMarker(LXComposition composition, Composition.Marker marker, Cursor toCursor) {
-        this.compositionRef = new ComponentReference<>(composition);
-        this.marker = marker;
-        this.fromCursor = this.marker.getCursor(composition).clone();
-        this.toCursor = toCursor.clone();
-      }
-
-      @Override
-      public String getDescription() {
-        return "Move Composition " + this.marker.label;
-      }
-
-      public Composition.SetMarker update(Cursor toCursor) {
-        this.toCursor.set(toCursor);
-        return this;
-      }
-
-      @Override
-      public void perform(LX lx) {
-        this.marker.setCursor(this.compositionRef.get(), this.toCursor);
-      }
-
-      @Override
-      public void undo(LX lx) {
-        LXComposition composition = this.compositionRef.get();
-        this.marker.setCursor(composition, this.fromCursor);
-      }
-    }
-
-    public static class MoveMarker extends Composition.SetMarker {
-
-      public enum Operation {
-        ADD,
-        SUBTRACT;
-
-        private Cursor perform(Cursor cursor, Cursor increment) {
-          return switch (this) {
-            case SUBTRACT -> cursor.subtract(increment);
-            default -> cursor.add(increment);
-          };
-        }
-      }
-
-      /**
-       * Move composition marker by a given amount
-       */
-      public MoveMarker(LXComposition composition, Composition.Marker marker, Cursor increment) {
-        this(composition, marker, increment, Composition.MoveMarker.Operation.ADD);
-      }
-
-      public MoveMarker(LXComposition composition, Composition.Marker marker, Cursor increment, Composition.MoveMarker.Operation op) {
-        super(composition, marker, op.perform(marker.getCursor(composition), increment));
-      }
-    }
-
     public static class AddLocator extends LXCommand {
 
       private final ComponentReference<LXComposition> compositionRef;
@@ -5058,47 +4937,6 @@ public abstract class LXCommand {
       @Override
       public void undo(LX lx) {
         this.compositionRef.get().moveLocator(this.locator, this.fromCursor);
-      }
-    }
-
-    public static class MoveLane extends LXCommand {
-
-      private final ComponentReference<LXClipLane<?>> laneRef;
-      private final int fromIndex, toIndex;
-
-      public MoveLane(LXClipLane<?> lane, int index) {
-        this.laneRef = new ComponentReference<>(lane);
-        this.fromIndex = lane.getIndex();
-        this.toIndex = index;
-      }
-
-      @Override
-      public String getDescription() {
-        return "Move Composition Lane";
-      }
-
-      @Override
-      public void perform(LX lx) throws InvalidCommandException {
-        LXClipLane<?> lane = this.laneRef.get();
-        lane.clip.moveClipLane(lane, this.toIndex);
-      }
-
-      @Override
-      public void undo(LX lx) throws InvalidCommandException {
-        LXClipLane<?> lane = this.laneRef.get();
-        lane.clip.moveClipLane(lane, this.fromIndex);
-      }
-    }
-
-    public static class RemoveCompositionLane extends Clip.RemoveClipLane {
-
-      public RemoveCompositionLane(LXClipLane<?> lane) {
-        super(lane);
-      }
-
-      @Override
-      public String getDescription() {
-        return "Remove Composition Lane";
       }
     }
 
