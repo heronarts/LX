@@ -85,7 +85,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   /**
    * Return the bus that this clip lane is associated with, if any
    */
-  protected final LXBus getBus() {
+  public final LXBus getBus() {
     return switch (this.clip) {
     case LXChannelClip channelClip -> channelClip.channel;
     case LXMasterClip masterClip -> lx.engine.mixer.masterBus;
