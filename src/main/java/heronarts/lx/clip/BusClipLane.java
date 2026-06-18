@@ -283,10 +283,12 @@ public class BusClipLane extends LXClipLane<BusClipEvent> {
   }
 
   public static final String KEY_BUS_ID = "busId";
+  public static final String KEY_BUS = "bus";
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
+    obj.addProperty(KEY_BUS, this.bus.getCanonicalPath());
     obj.addProperty(KEY_BUS_ID, this.bus.getId());
   }
 

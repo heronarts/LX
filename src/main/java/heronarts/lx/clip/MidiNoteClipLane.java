@@ -38,6 +38,9 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
 
   protected MidiNoteClipLane(LXClip clip, LXAbstractChannel channel) {
     super(clip);
+    if (channel == null) {
+      throw new IllegalArgumentException("MidiNoteClipLane must specify channel");
+    }
     this.channel = channel;
     addInternalParameter("uiZoom ", this.uiZoom);
     addInternalParameter("uiOffset", this.uiOffset);
@@ -639,6 +642,14 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
 
   private static void debug(String str) {
     LX.debug(str);
+  }
+
+  public final static String KEY_BUS = "bus";
+
+  @Override
+  public void save(LX lx, JsonObject obj) {
+    super.save(lx, obj);
+    obj.addProperty(KEY_BUS, this.channel.getCanonicalPath());
   }
 
 }

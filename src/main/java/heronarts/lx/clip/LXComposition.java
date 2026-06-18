@@ -24,6 +24,7 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.Cursor.Operator;
 import heronarts.lx.mixer.LXAbstractChannel;
@@ -297,9 +298,64 @@ public class LXComposition extends LXClip {
         onClipLaneAdded(patternLane);
       }
     }
-
-
     return lane;
+  }
+
+  private PatternClipLane findPatternLane(LXChannel channel) {
+    for (LXClipLane<?> lane : this.lanes) {
+      if (lane instanceof PatternClipLane patternLane && patternLane.channel == channel) {
+        return patternLane;
+      }
+    }
+    return null;
+  }
+
+  private PatternClipLane loadPatternLane(JsonObject laneObj, int index) {
+    if (laneObj.has(PatternClipLane.KEY_CHANNEL)) {
+      String channelPath = laneObj.get(PatternClipLane.KEY_CHANNEL).getAsString();
+      if (channelPath.startsWith(LXPath.ROOT_PREFIX)) {
+        LXComponent channelObj = LXPath.getComponent(this.lx, channelPath);
+        if (channelObj instanceof LXChannel channel) {
+          PatternClipLane patternLane = findPatternLane(channel);
+          if (patternLane != null) {
+            patternLane.load(this.lx, laneObj);
+            return patternLane;
+          }
+        }
+      }
+      LX.error("Could not find pattern lane for channel " + channelPath);
+    } else if (laneObj.has(PatternClipLane.KEY_RACK)) {
+      // TODO(mcslee): implement loading of rack pattern lanes in composition
+    } else {
+      LX.error("Cannot load pattern lane, no channel or rack specified");
+    }
+    return null;
+  }
+
+  private MidiNoteClipLane findMidiLane(LXAbstractChannel bus) {
+    for (LXClipLane<?> lane : this.lanes) {
+      if (lane instanceof MidiNoteClipLane midiLane && midiLane.channel == bus) {
+        return midiLane;
+      }
+    }
+    return null;
+  }
+
+  private MidiNoteClipLane loadMidiNoteLane(JsonObject laneObj) {
+    if (laneObj.has(MidiNoteClipLane.KEY_BUS)) {
+      String busPath = laneObj.get(MidiNoteClipLane.KEY_BUS).getAsString();
+      if (busPath.startsWith(LXPath.ROOT_PREFIX)) {
+        LXComponent busObj = LXPath.getComponent(this.lx, busPath);
+        if (busObj instanceof LXAbstractChannel bus) {
+          MidiNoteClipLane midiLane = findMidiLane(bus);
+          if (midiLane != null) {
+            midiLane.load(this.lx, laneObj);
+            return midiLane;
+          }
+        }
+      }
+    }
+    return null;
   }
 
   @Override
@@ -619,6 +675,8 @@ public class LXComposition extends LXClip {
       case LXClipLane.VALUE_LANE_TYPE_BUS -> loadBusLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_AUDIO -> addAudioLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_NOTES -> addTextNoteLane(laneObj, index);
+      case LXClipLane.VALUE_LANE_TYPE_PATTERN -> loadPatternLane(laneObj, index);
+      case LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE -> loadMidiNoteLane(laneObj);
       default -> super.loadClipLane(lx, laneObj, index);
     };
   }

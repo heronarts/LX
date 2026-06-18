@@ -223,12 +223,15 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   }
 
   public static final String KEY_RACK = "rack";
+  public static final String KEY_CHANNEL = "channel";
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     if (this.engine.component instanceof PatternRack rack) {
       obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.container.asComponent()));
+    } else {
+      obj.addProperty(KEY_CHANNEL, this.channel.getCanonicalPath());
     }
   }
 
