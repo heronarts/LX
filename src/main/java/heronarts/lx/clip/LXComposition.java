@@ -33,6 +33,7 @@ import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.TriggerParameter;
+import heronarts.lx.utils.LXUtils;
 import heronarts.lx.utils.ObservableList;
 
 import java.io.File;
@@ -214,7 +215,6 @@ public class LXComposition extends LXClip {
         moveClipLane(move, toIndex-1);
       }
     }
-
   }
 
   private final LXMixerEngine.Listener mixerListener = new LXMixerEngine.Listener() {
@@ -300,6 +300,35 @@ public class LXComposition extends LXClip {
 
 
     return lane;
+  }
+
+  @Override
+  protected int validateMoveClipLaneIndex(LXClipLane<?> lane, int index) {
+    if (lane.isCompositionMajorLane()) {
+      if (index < lane.getIndex()) {
+        while (index > 0 && !this.lanes.get(index).isCompositionMajorLane()) {
+          --index;
+        }
+        return index;
+      } else if (index > lane.getIndex()) {
+        while (index < this.lanes.size() - 1 && !this.lanes.get(index+1).isCompositionMajorLane()) {
+          ++index;
+        }
+        return index;
+      }
+    } else {
+      // Minor lanes can only move within their parameter holder
+      BusClipLane busLane = this.busLanes.get(lane.getBus());
+      int minIndex = busLane.getIndex() + 1;
+      int maxIndex = minIndex;
+      while (++maxIndex < this.lanes.size()) {
+        if (this.lanes.get(maxIndex).isCompositionMajorLane()) {
+          break;
+        }
+      }
+      return LXUtils.constrain(index, minIndex, maxIndex-1);
+    }
+    return -1;
   }
 
   /**

@@ -613,7 +613,22 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this;
   }
 
-  public LXClip moveClipLane(LXClipLane<? >lane, int index) {
+  protected int validateMoveClipLaneIndex(LXClipLane<?> lane, int index) {
+    return index;
+  }
+
+  public LXClip moveClipLane(LXClipLane<?> lane, int index) {
+    if (lane instanceof BusClipLane) {
+      LX.error("Cannot directly move BusClipLane, reorder via the mixer");
+      return this;
+    }
+
+    index = validateMoveClipLaneIndex(lane, index);
+    if (index < 0) {
+      LX.error("Could not determine valid move position for lane: " + lane);
+      return this;
+    }
+
     this.mutableLanes.remove(lane);
     this.mutableLanes.add(index, lane);
     for (Listener listener : this.listeners) {
