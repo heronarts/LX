@@ -21,7 +21,6 @@ package heronarts.lx.clip;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -58,11 +57,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   public interface Listener {
     public default void cursorChanged(LXClip clip, Cursor cursor) {}
+    public default void clipLaneAdded(LXClip clip, LXClipLane<?> lane) {}
+    public default void clipLaneRemoved(LXClip clip, LXClipLane<?> lane) {}
     public default void clipLaneMoved(LXClip clip, LXClipLane<?> lane, int index) {}
-    public default void parameterLaneAdded(LXClip clip, ParameterClipLane lane) {}
-    public default void parameterLaneRemoved(LXClip clip, ParameterClipLane lane) {}
-    public default void patternLaneAdded(LXClip clip, PatternClipLane lane) {}
-    public default void patternLaneRemoved(LXClip clip, PatternClipLane lane) {}
   }
 
   final List<Listener> listeners = new ArrayList<Listener>();
@@ -585,9 +582,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       } else {
         this.mutableLanes.add(index, lane);
       }
-      for (Listener listener : this.listeners) {
-        listener.parameterLaneAdded(this, lane);
-      }
+      onClipLaneAdded(lane);
       return lane;
     }
     return null;
@@ -599,20 +594,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private void _removeLane(LXClipLane<?> lane) {
     this.mutableLanes.remove(lane);
-    _onRemoveLane(lane);
+    onClipLaneRemoved(lane);
     LX.dispose(lane);
   }
 
-  protected void _onRemoveLane(LXClipLane<?> lane) {
-    switch (lane) {
-    case ParameterClipLane parameterLane -> this.listeners.forEach(l -> l.parameterLaneRemoved(this, parameterLane));
-    case PatternClipLane patternLane -> this.listeners.forEach(l -> l.patternLaneRemoved(this, patternLane));
-    default -> {}
-    };
+  protected void onClipLaneAdded(LXClipLane<?> lane) {
+    this.listeners.forEach(l -> l.clipLaneAdded(this, lane));
   }
 
-  public LXClip removeParameterLane(ParameterClipLane lane) {
-    return removeClipLane(lane);
+  protected void onClipLaneRemoved(LXClipLane<?> lane) {
+    this.listeners.forEach(l -> l.clipLaneRemoved(this, lane));
   }
 
   public LXClip removeClipLane(LXClipLane<?> lane) {
@@ -1149,18 +1140,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   protected void onStopPlayback() {}
 
+  protected boolean isPermanentClipLane(LXClipLane<?> lane) {
+    return false;
+  }
+
   protected void clearLanes() {
-    Iterator<LXClipLane<?>> iter = this.mutableLanes.iterator();
-    while (iter.hasNext()) {
-      LXClipLane<?> lane = iter.next();
-      if (lane instanceof ParameterClipLane parameterLane) {
-        iter.remove();
-        for (Listener listener : this.listeners) {
-          listener.parameterLaneRemoved(this, parameterLane);
-        }
-        LX.dispose(lane);
-      } else {
+    for (int i = this.lanes.size() - 1; i >= 0; --i) {
+      LXClipLane<?> lane = this.lanes.get(i);
+      if (isPermanentClipLane(lane)) {
         lane.clear();
+      } else {
+        this.mutableLanes.remove(i);
+        onClipLaneRemoved(lane);
+        LX.dispose(lane);
       }
     }
   }
@@ -1288,7 +1280,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
         unregisterParameter(parameter);
         ParameterClipLane lane = getParameterLane(parameter, false);
         if (lane != null) {
-          removeParameterLane(lane);
+          removeClipLane(lane);
         }
       }
     }
@@ -1710,7 +1702,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (obj.has(KEY_LANES)) {
       JsonArray lanesArr = obj.get(KEY_LANES).getAsJsonArray();
       for (JsonElement laneElement : lanesArr) {
-        loadLane(lx, laneElement.getAsJsonObject(), -1);
+        loadClipLane(lx, laneElement.getAsJsonObject(), -1);
       }
     }
   }
@@ -1749,12 +1741,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return lane;
   }
 
-  protected String getLaneType(JsonObject laneObj) {
+  protected String getClipLaneType(JsonObject laneObj) {
     return laneObj.get(LXClipLane.KEY_LANE_TYPE).getAsString();
   }
 
-  public LXClipLane<?> loadLane(LX lx, JsonObject laneObj, int index) {
-    final String laneType = getLaneType(laneObj);
+  public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {
+    final String laneType = getClipLaneType(laneObj);
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
       return addParameterLane(lx, laneObj, index);
     }
@@ -1762,8 +1754,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return null;
   }
 
-  public LXClipLane<?> moveLane(LX lx, JsonObject laneObj, int index, String fromPath, String toPath) {
-    final String laneType = getLaneType(laneObj);
+  public LXClipLane<?> moveClipLane(LX lx, JsonObject laneObj, int index, String fromPath, String toPath) {
+    final String laneType = getClipLaneType(laneObj);
     if (laneType.equals(LXClipLane.VALUE_LANE_TYPE_PARAMETER)) {
       final JsonObject moveObj = laneObj.deepCopy();
       final String lanePath = moveObj.get(LXComponent.KEY_PATH).getAsString();

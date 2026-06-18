@@ -52,6 +52,13 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     }
   }
 
+  @Override
+  protected boolean isPermanentClipLane(LXClipLane<?> lane) {
+    return
+      (lane == this.patternLane) ||
+      super.isPermanentClipLane(lane);
+  }
+
   private final LXPattern.Listener patternEffectListener = new LXPattern.Listener() {
     public void effectAdded(LXPattern pattern, LXEffect effect) {
       registerComponent(effect);
@@ -133,9 +140,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
       } else {
         this.mutableLanes.add(index, lane);
       }
-      for (Listener listener : this.listeners) {
-        listener.patternLaneAdded(this, lane);
-      }
+      onClipLaneAdded(lane);
       return lane;
     }
     return null;
@@ -195,8 +200,8 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   }
 
   @Override
-  public LXClipLane<?> loadLane(LX lx, JsonObject laneObj, int index) {
-    switch (getLaneType(laneObj)) {
+  public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {
+    switch (getClipLaneType(laneObj)) {
       case LXClipLane.VALUE_LANE_TYPE_PATTERN -> {
         if (laneObj.has(PatternClipLane.KEY_RACK)) {
           return addRackPatternLane(lx, laneObj, index);
@@ -205,12 +210,8 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
           return this.patternLane;
         }
       }
-      case LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE -> {
-        this.midiNoteLane.load(lx, laneObj);
-        return this.midiNoteLane;
-      }
       default -> {
-        return super.loadLane(lx, laneObj, index);
+        return super.loadClipLane(lx, laneObj, index);
       }
     }
   }

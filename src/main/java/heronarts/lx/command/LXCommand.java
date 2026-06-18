@@ -4016,14 +4016,14 @@ public abstract class LXCommand {
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        final LXClipLane<?> lane = this.clip.get().loadLane(lx, this.laneObj, this.laneIndex);
+        final LXClipLane<?> lane = this.clip.get().loadClipLane(lx, this.laneObj, this.laneIndex);
         if (lane != null) {
           super.undo(lx);
         }
       }
 
       private void move(LX lx, String fromPath, String toPath) {
-        this.clip.get().moveLane(lx, this.laneObj, this.laneIndex, fromPath, toPath);
+        this.clip.get().moveClipLane(lx, this.laneObj, this.laneIndex, fromPath, toPath);
       }
 
     }

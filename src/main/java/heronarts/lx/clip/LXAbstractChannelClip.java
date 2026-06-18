@@ -18,6 +18,8 @@
 
 package heronarts.lx.clip;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.midi.LXShortMessage;
@@ -40,6 +42,13 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
   }
 
   @Override
+  protected boolean isPermanentClipLane(LXClipLane<?> lane) {
+    return
+      (lane == this.midiNoteLane) ||
+      super.isPermanentClipLane(lane);
+  }
+
+  @Override
   protected void onStopPlayback() {
     super.onStopPlayback();
     this.midiNoteLane.onStopPlayback();
@@ -56,6 +65,19 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
     if (message instanceof MidiNote note) {
       if (isRecording()) {
         this.midiNoteLane.recordNote(note);
+      }
+    }
+  }
+
+  @Override
+  public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {
+    switch (getClipLaneType(laneObj)) {
+      case LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE -> {
+        this.midiNoteLane.load(lx, laneObj);
+        return this.midiNoteLane;
+      }
+      default -> {
+        return super.loadClipLane(lx, laneObj, index);
       }
     }
   }
