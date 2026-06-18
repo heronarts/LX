@@ -40,7 +40,6 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
-import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -607,13 +606,8 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   public LXClip removeClipLane(LXClipLane<?> lane) {
-    if (lane instanceof MidiNoteClipLane) {
-      throw new IllegalArgumentException("May not remove the MidiNoteClipLane");
-    }
-    if (lane instanceof PatternClipLane patternLane) {
-      if (patternLane.engine.component instanceof LXChannel) {
-        throw new IllegalArgumentException("May not remove master LXChannelClip PatternClipLane");
-      }
+    if (isPermanentClipLane(lane)) {
+      throw new IllegalArgumentException("May not remove permanent clip lane: " + lane + " from clip: " + this);
     }
     _removeLane(lane);
     return this;
