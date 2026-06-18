@@ -89,6 +89,12 @@ public class LXComposition extends LXClip {
     };
   }
 
+  public void toggleBusLaneVisibility(BusClipLane busLane, boolean expanded) {
+    for (LXClipLane<?> lane : findAllBusLanes(busLane.bus, false)) {
+      lane.uiVisible.setValue(expanded);
+    }
+  }
+
   @Override
   public Cursor.Parameter getLaunchPosition() {
     return this.insertMarker;
@@ -180,28 +186,35 @@ public class LXComposition extends LXClip {
     }
   }
 
+  private List<LXClipLane<?>> findAllBusLanes(LXBus bus, boolean includeMainBusLane) {
+    List<LXClipLane<?>> lanes = new ArrayList<>();
+    for (LXClipLane<?> lane : this.lanes) {
+      if ((lane.getBus() == bus) && (includeMainBusLane || !(lane instanceof BusClipLane))) {
+        lanes.add(lane);
+      }
+    }
+    return lanes;
+  }
+
   /**
    * Re-sort bus lanes to match current mixer channel order.
    */
   private void moveBusLanes(LXAbstractChannel bus) {
-    BusClipLane lane = this.busLanes.get(bus);
-    int fromIndex = lane.getIndex();
-
-    List<LXClipLane<?>> toMove = new ArrayList<>();
-    toMove.add(lane);
-    for (int i = fromIndex + 1; i < this.lanes.size(); ++i) {
-      LXClipLane<?> candidate = this.lanes.get(i);
-      if (candidate.isCompositionBusLane()) {
-        break;
-      }
-      toMove.add(candidate);
-    }
-
+    int fromIndex = this.busLanes.get(bus).getIndex();
     int toIndex = getBusLaneInsertIndex(bus);
 
-    for (LXClipLane<?> move : toMove) {
-      moveClipLane(move, toIndex++);
+    if (toIndex < fromIndex) {
+      // Moving to the left, increment toIndex as we go
+      for (LXClipLane<?> move : findAllBusLanes(bus, true)) {
+        moveClipLane(move, toIndex++);
+      }
+    } else {
+      // Moving to the right, sequentially insert before target position
+      for (LXClipLane<?> move : findAllBusLanes(bus, true)) {
+        moveClipLane(move, toIndex-1);
+      }
     }
+
   }
 
   private final LXMixerEngine.Listener mixerListener = new LXMixerEngine.Listener() {
@@ -232,17 +245,11 @@ public class LXComposition extends LXClip {
 
   private int getBusLaneInsertIndex(LXBus bus) {
     int index = 0;
-    boolean next = false;
     for (LXClipLane<?> lane : this.lanes) {
-      if (next && lane.isCompositionBusLane()) {
-        return index;
-      }
       if (lane instanceof BusClipLane busLane) {
-        if (busLane.bus instanceof LXMasterBus) {
+        if (busLane.bus instanceof LXMasterBus ||
+            (busLane.bus.getIndex() == bus.getIndex() + 1)) {
           return index;
-        }
-        if (busLane.bus.getIndex() == bus.getIndex() - 1) {
-          next = true;
         }
       }
       ++index;

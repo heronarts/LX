@@ -40,6 +40,7 @@ import heronarts.lx.utils.LXUtils;
 public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   public final MutableParameter uiHeight = new MutableParameter("UI Height");
+  public final BooleanParameter uiVisible = new BooleanParameter("UI Visible", true);
   public final BooleanParameter uiExpanded = new BooleanParameter("UI Expanded", true);
   public final BooleanParameter uiMaximized = new BooleanParameter("UI Maximized", false);
 
