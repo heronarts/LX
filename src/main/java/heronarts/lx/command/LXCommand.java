@@ -3961,6 +3961,7 @@ public abstract class LXCommand {
       private final ParameterReference<LXNormalizedParameter> parameter;
       private ComponentReference<ParameterClipLane> parameterLane;
       private JsonObject laneObj;
+      private boolean ignored = false;
 
       public AddLane(LXClip clip, LXNormalizedParameter parameter) {
         this.clip = new ComponentReference<LXClip>(clip);
@@ -3973,7 +3974,17 @@ public abstract class LXCommand {
       }
 
       @Override
+      public boolean isIgnored() {
+        return this.ignored;
+      }
+
+      @Override
       public void perform(LX lx) throws InvalidCommandException {
+        if (this.clip.get().getParameterLane(this.parameter.get()) != null) {
+          this.ignored = true;
+          return;
+        }
+
         ParameterClipLane parameterLane = this.clip.get().createParameterLane(this.parameter.get());
         this.parameterLane = new ComponentReference<ParameterClipLane>(parameterLane);
         if (this.laneObj != null) {

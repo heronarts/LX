@@ -552,6 +552,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return getParameterLane(parameter, true);
   }
 
+  public ParameterClipLane getParameterLane(LXNormalizedParameter parameter) {
+    return getParameterLane(parameter, false);
+  }
+
   private ParameterClipLane getParameterLane(LXNormalizedParameter parameter, boolean create) {
     return getParameterLane(parameter, create, -1);
   }
