@@ -105,7 +105,7 @@ public class LXComposition extends LXClip {
     boolean next = false;
     int index = 0;
     for (LXClipLane<?> lane : this.lanes) {
-      if (next && lane.isCompositionBusLane()) {
+      if (next && lane.isCompositionMajorLane()) {
         return index;
       }
       if (lane instanceof BusClipLane busLane) {

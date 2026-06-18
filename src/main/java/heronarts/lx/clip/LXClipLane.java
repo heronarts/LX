@@ -68,11 +68,12 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   }
 
   /**
-   * Whether the lane represents an entire bus in the context of a composition
+   * Whether the lane represents a major lane in the composition view. These are lanes
+   * with their own section divider, such as an audio track, a BusClipLane, or text notes
    *
-   * @return true if the lane represents an entire bus in the context of a composition
+   * @return true if the lane represents an entire section in the context of a composition
    */
-  public boolean isCompositionBusLane() {
+  public boolean isCompositionMajorLane() {
     return switch (this) {
     case AudioClipLane l -> true;
     case BusClipLane l -> true;
