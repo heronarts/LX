@@ -3955,6 +3955,41 @@ public abstract class LXCommand {
       }
     }
 
+    public static class AddLane extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      private final ParameterReference<LXNormalizedParameter> parameter;
+      private ComponentReference<ParameterClipLane> parameterLane;
+      private JsonObject laneObj;
+
+      public AddLane(LXClip clip, LXNormalizedParameter parameter) {
+        this.clip = new ComponentReference<LXClip>(clip);
+        this.parameter = new ParameterReference<>(parameter);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Parameter Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        ParameterClipLane parameterLane = this.clip.get().createParameterLane(this.parameter.get());
+        this.parameterLane = new ComponentReference<ParameterClipLane>(parameterLane);
+        if (this.laneObj != null) {
+          parameterLane.load(lx, this.laneObj);
+        } else {
+          this.laneObj = LXSerializable.Utils.toObject(parameterLane);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.clip.get().removeClipLane(this.parameterLane.get());
+      }
+    }
+
+
     public static class MoveLane extends LXCommand {
 
       private final String label;
