@@ -318,7 +318,11 @@ public class LXComposition extends LXClip {
       }
     } else {
       // Minor lanes can only move within their parameter holder
-      BusClipLane busLane = this.busLanes.get(lane.getBus());
+      LXBus bus = lane.getBus();
+      if (bus == null) {
+        return -1;
+      }
+      BusClipLane busLane = this.busLanes.get(bus);
       int minIndex = busLane.getIndex() + 1;
       int maxIndex = minIndex;
       while (++maxIndex < this.lanes.size()) {
