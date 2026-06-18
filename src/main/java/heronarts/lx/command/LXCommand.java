@@ -331,14 +331,14 @@ public abstract class LXCommand {
     }
 
     protected void removeCompositionChannel(LXAbstractChannel channel) {
-      _removeClipLanes(channel.getLX().engine.composition.getComposition(), channel);
+      _removeClipLanes(channel.getLX().engine.timeline.getComposition(), channel);
     }
 
     protected void removeClipLanes(LXBus bus, LXComponent component) {
       for (LXClip clip : bus.clips) {
         _removeClipLanes(clip, component);
       }
-      _removeClipLanes(component.getLX().engine.composition.getComposition(), component);
+      _removeClipLanes(component.getLX().engine.timeline.getComposition(), component);
     }
 
     private void _removeClipLanes(LXClip clip, LXComponent component) {
@@ -357,7 +357,7 @@ public abstract class LXCommand {
       for (LXClip clip : pattern.getMixerChannel().clips) {
         _removePatternClipEvents(clip, pattern);
       }
-      _removePatternClipEvents(pattern.getLX().engine.composition.getComposition(), pattern);
+      _removePatternClipEvents(pattern.getLX().engine.timeline.getComposition(), pattern);
     }
 
     private void _removePatternClipEvents(LXClip clip, LXPattern pattern) {

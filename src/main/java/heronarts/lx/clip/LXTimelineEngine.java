@@ -35,7 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class LXCompositionEngine extends LXComponent implements LXOscComponent, LXClipContainer {
+public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXClipContainer {
 
   public interface Listener {
     public void compositionChanged(LXComposition composition);
@@ -57,7 +57,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
 
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
-  public LXCompositionEngine(LX lx) {
+  public LXTimelineEngine(LX lx) {
     super(lx, "Composition");
 
     addParameter("clipExpanded", this.clipExpanded);
@@ -124,7 +124,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
     return this.focusedClip.getClip();
   }
 
-  public LXCompositionEngine setFocusedClip(LXClip clip) {
+  public LXTimelineEngine setFocusedClip(LXClip clip) {
     this.focusedClip.setClip(clip);
     return this;
   }
@@ -139,16 +139,16 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
   // Listeners
 
   public final void addListener(Listener listener) {
-    Objects.requireNonNull(listener, "May not add null LXCompositionEngine.Listener");
+    Objects.requireNonNull(listener, "May not add null LXTimelineEngine.Listener");
     if (this.listeners.contains(listener)) {
-      throw new IllegalStateException("May not add duplicate LXCompositionEngine.Listener: " + listener);
+      throw new IllegalStateException("May not add duplicate LXTimelineEngine.Listener: " + listener);
     }
     this.listeners.add(listener);
   }
 
   public final void removeListener(Listener listener) {
     if (!this.listeners.contains(listener)) {
-      throw new IllegalStateException("May not remove non-registered LXCompositionEngine.Listener: " + listener);
+      throw new IllegalStateException("May not remove non-registered LXTimelineEngine.Listener: " + listener);
     }
     this.listeners.remove(listener);
   }
@@ -175,7 +175,7 @@ public class LXCompositionEngine extends LXComponent implements LXOscComponent, 
   @Override
   public void dispose() {
     clear();
-    this.listeners.forEach(listener -> LX.warning("Stranded LXCompositionEngine.Listener: " + listener));
+    this.listeners.forEach(listener -> LX.warning("Stranded LXTimelineEngine.Listener: " + listener));
     this.listeners.clear();
     super.dispose();
   }

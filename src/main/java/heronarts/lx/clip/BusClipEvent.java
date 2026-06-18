@@ -51,11 +51,11 @@ public class BusClipEvent extends LXCompositionEvent<BusClipEvent> {
 
     // The clip's index is zero because it is the only clip within the event. The relevant index is the event's index.
     if (bus instanceof LXChannel channel) {
-      this.internalClip = new LXChannelClip(lx, channel, lane, lx.engine.composition, 0);
+      this.internalClip = new LXChannelClip(lx, channel, lane, lx.engine.timeline, 0);
     } else if (bus instanceof LXGroup group) {
-      this.internalClip = new LXGroupClip(lx, group, lane, lx.engine.composition, 0);
+      this.internalClip = new LXGroupClip(lx, group, lane, lx.engine.timeline, 0);
     } else if (bus == lx.engine.mixer.masterBus) {
-      this.internalClip = new LXMasterClip(lx, lane, lx.engine.composition, 0);
+      this.internalClip = new LXMasterClip(lx, lane, lx.engine.timeline, 0);
     } else {
       throw new UnsupportedOperationException("BusLaneEvent cannot be created. Bus type not recognized: " + bus.getClass().getSimpleName());
     }
@@ -357,11 +357,11 @@ public class BusClipEvent extends LXCompositionEvent<BusClipEvent> {
   // Composition window clip editor
 
   public void focusClip() {
-    this.lx.engine.composition.setFocusedClip(this.internalClip);
+    this.lx.engine.timeline.setFocusedClip(this.internalClip);
   }
 
   public boolean isFocusedClip() {
-    return this.internalClip != null && this.internalClip == this.lx.engine.composition.focusedClip.getClip();
+    return this.internalClip != null && this.internalClip == this.lx.engine.timeline.focusedClip.getClip();
   }
 
   // Disposal

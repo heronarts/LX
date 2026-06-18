@@ -19,7 +19,7 @@
 package heronarts.lx;
 
 import heronarts.lx.audio.LXAudioEngine;
-import heronarts.lx.clip.LXCompositionEngine;
+import heronarts.lx.clip.LXTimelineEngine;
 import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXPalette;
@@ -81,7 +81,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final LXClipEngine clips;
 
-  public final LXCompositionEngine composition;
+  public final LXTimelineEngine timeline;
 
   public final LXMixerEngine mixer;
 
@@ -412,8 +412,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     LX.initProfiler.log("Engine: Mixer");
 
     // Composition engine
-    addChild("composition", this.composition = new LXCompositionEngine(lx));
-    LX.initProfiler.log("Engine: Composition");
+    addChild("timeline", this.timeline = new LXTimelineEngine(lx));
+    LX.initProfiler.log("Engine: Timeline");
 
     // Modulation matrix
     addChild(KEY_MODULATION, this.modulation = new LXModulationEngine(lx));
@@ -468,7 +468,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.tempo.initialize();
 
     // Initialize composition engine
-    this.composition.initialize();
+    this.timeline.initialize();
 
     // Midi
     this.midi.initialize();
@@ -1147,7 +1147,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.lx.engine.palette.loop(deltaMs);
 
     // Run the composition
-    this.composition.loop(deltaMs);
+    this.timeline.loop(deltaMs);
 
     // Run top-level loop tasks, take care to handle removals that
     // are scheduled from within the loop tasks themselves
@@ -1436,7 +1436,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.output.enabled.setValue(false);
 
     // Clear all the modulation and mixer content
-    this.composition.clear();
+    this.timeline.clear();
     this.snapshots.clear();
     this.modulation.setFlagLoadModulations(false);
     this.modulation.clear();
@@ -1484,7 +1484,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.lx.registry.disposePlugins();
 
     // And now remove core engine components
-    LX.dispose(this.composition);
+    LX.dispose(this.timeline);
     LX.dispose(this.clips);
     LX.dispose(this.modulation);
     LX.dispose(this.mixer);

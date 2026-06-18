@@ -291,7 +291,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       return bus;
     } else if (getParent() instanceof BusClipLane lane) {
       return lane.bus;
-    } else if (getParent() instanceof LXCompositionEngine) {
+    } else if (getParent() instanceof LXTimelineEngine) {
       return null;
     }
     throw new IllegalStateException("Could not find snapshot scope for LXClip. Unexpected parent type: " + getParent().getClass());
@@ -946,7 +946,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     if (this.isRecording) {
       this.isRecording = false;
       // TODO JKB: can't turn off Arm on the composition (from inner clip) or it will stop the entire composition. How to handle?
-      if (!(this.container instanceof LXCompositionEngine)) {
+      if (!(this.container instanceof LXTimelineEngine)) {
         this.armParameter.setValue(false);
       }
       if (!this.hasTimeline) {

@@ -276,7 +276,7 @@ public class BusClipLane extends LXClipLane<BusClipEvent> {
   public BusClipLane removeEvent(BusClipEvent event) {
     // Unfocus the clip so clip editor will release listeners before clip is disposed
     if (event.isFocusedClip()) {
-      this.lx.engine.composition.setFocusedClip(null);
+      this.lx.engine.timeline.setFocusedClip(null);
     }
     super.removeEvent(event);
     return this;

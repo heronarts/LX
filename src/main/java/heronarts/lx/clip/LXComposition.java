@@ -61,8 +61,8 @@ public class LXComposition extends LXClip {
 
   private final AudioPlayer audioPlayer;
 
-  public LXComposition(LX lx, LXCompositionEngine composition) {
-    super(lx, composition, composition, 0);
+  public LXComposition(LX lx, LXTimelineEngine timeline) {
+    super(lx, timeline, timeline, 0);
 
     this.audioPlayer = new AudioPlayer(lx);
 
@@ -134,7 +134,7 @@ public class LXComposition extends LXClip {
   @Override
   protected void onStopRecording() {
     super.onStopRecording();
-    this.lx.engine.composition.arm.setValue(false);
+    this.lx.engine.timeline.arm.setValue(false);
     if (!isRunning()) {
       stopAudioPlayback();
     }
