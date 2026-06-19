@@ -670,7 +670,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   protected boolean isLaneRecording(LXParameter p) {
-    return isLaneRecording(p.getAncestor(LXBus.class));
+    return isLaneRecording(getParameterLaneBus(p));
+  }
+
+  protected LXBus getParameterLaneBus(LXParameter p) {
+    // NOTE(mcslee): kind of a HORRENDOUS hack here, but not sure what else to do...
+    final LX lx = p.getParent().getLX();
+    if (p == lx.engine.mixer.crossfader) {
+      return lx.engine.mixer.masterBus;
+    }
+    return p.getAncestor(LXBus.class);
   }
 
   /**

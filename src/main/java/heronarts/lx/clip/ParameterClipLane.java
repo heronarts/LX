@@ -95,7 +95,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   private ParameterClipLane(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
     super(clip);
     this.parameter = parameter;
-    this.bus = parameter.getAncestor(LXBus.class);
+    this.bus = clip.getParameterLaneBus(parameter);
     this.initialNormalized = initialNormalized;
   }
 

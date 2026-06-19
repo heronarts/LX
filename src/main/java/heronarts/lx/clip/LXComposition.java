@@ -113,12 +113,14 @@ public class LXComposition extends LXClip {
   protected int getParameterLaneInsertIndex(LXNormalizedParameter parameter) {
     boolean next = false;
     int index = 0;
+    LXBus parameterBus = getParameterLaneBus(parameter);
+
     for (LXClipLane<?> lane : this.lanes) {
       if (next && lane.isCompositionMajorLane()) {
         return index;
       }
       if (lane instanceof BusClipLane busLane) {
-        if (parameter.isDescendant(busLane.bus)) {
+        if (parameterBus == busLane.bus) {
           next = true;
         }
       }
@@ -187,6 +189,7 @@ public class LXComposition extends LXClip {
       registerBus(channel);
     }
     registerBus(lx.engine.mixer.masterBus);
+    registerParameter(lx.engine.mixer.crossfader);
   }
 
   private void initializeUnregister() {
@@ -194,6 +197,7 @@ public class LXComposition extends LXClip {
       unregisterBus(channel);
     }
     unregisterBus(lx.engine.mixer.masterBus);
+    unregisterParameter(lx.engine.mixer.crossfader);
   }
 
   private List<LXClipLane<?>> findAllBusLanes(LXBus bus, boolean includeMainBusLane) {
