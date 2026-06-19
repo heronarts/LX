@@ -40,6 +40,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
+import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -1219,18 +1220,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return list;
   }
 
-  private boolean isEligibleParameter(LXComponent component, LXListenableNormalizedParameter parameter) {
-    if (component instanceof LXDeviceComponent device) {
-      return device.isClipAutomationControl(parameter);
-    }
-    return true;
+  public static boolean isAutomationParameter(LXComponent component, LXListenableNormalizedParameter parameter) {
+    return switch (component) {
+      case LXDeviceComponent device -> device.isClipAutomationControl(parameter);
+      case LXModulator modulator -> modulator.isClipAutomationControl(parameter);
+      default -> true;
+    };
   }
 
   protected void registerComponent(LXComponent component) {
     final List<LXListenableNormalizedParameter> registeredParameters = _registeredParameters(component);
     for (LXParameter p : component.getParameters()) {
       if (p instanceof LXListenableNormalizedParameter listenable) {
-        if (isEligibleParameter(component, listenable)) {
+        if (isAutomationParameter(component, listenable)) {
           registeredParameters.add(listenable);
           registerParameter(listenable);
         }

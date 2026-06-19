@@ -173,6 +173,21 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
     addParameter("midiFilter", this.midiFilter);
   }
 
+  /**
+   * Returns whether this parameter is recorded in clip automation
+   *
+   * @param parameter Parameter
+   * @return true if this can be included in clip automation
+   */
+  public boolean isClipAutomationControl(LXParameter parameter) {
+    return !(
+      (parameter == this.midiFilter) ||
+      (parameter.getParentParameter() == this.midiFilter) ||
+      (parameter == this.midiSource) ||
+      (parameter.getParentParameter() == this.midiSource)
+    );
+  }
+
   public Throwable getCrash() {
     return this.crash;
   }
