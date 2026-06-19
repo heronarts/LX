@@ -21,11 +21,9 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.midi.LXShortMessage;
-import heronarts.lx.midi.MidiNote;
 import heronarts.lx.mixer.LXAbstractChannel;
 
-public abstract class LXAbstractChannelClip extends LXGridClip implements LXAbstractChannel.MidiListener {
+public abstract class LXAbstractChannelClip extends LXGridClip  {
 
   public final LXAbstractChannel channel;
   public final MidiNoteClipLane midiNoteLane;
@@ -36,7 +34,6 @@ public abstract class LXAbstractChannelClip extends LXGridClip implements LXAbst
     this.midiNoteLane = new MidiNoteClipLane(this);
     this.mutableLanes.add(this.midiNoteLane);
     registerParameter(channel.enabled);
-    channel.addMidiListener(this);
   }
 
   @Override
@@ -59,15 +56,6 @@ public abstract class LXAbstractChannelClip extends LXGridClip implements LXAbst
   }
 
   @Override
-  public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
-    if (message instanceof MidiNote note) {
-      if (isRecording()) {
-        this.midiNoteLane.recordNote(note);
-      }
-    }
-  }
-
-  @Override
   public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {
     switch (getClipLaneType(laneObj)) {
       case LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE -> {
@@ -83,7 +71,6 @@ public abstract class LXAbstractChannelClip extends LXGridClip implements LXAbst
   @Override
   public void dispose() {
     unregisterParameter(this.channel.enabled);
-    this.channel.removeMidiListener(this);
     super.dispose();
   }
 

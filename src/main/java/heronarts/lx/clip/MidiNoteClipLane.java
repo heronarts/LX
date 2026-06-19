@@ -12,12 +12,13 @@ import javax.sound.midi.ShortMessage;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
+import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.midi.MidiNoteOff;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.parameter.MutableParameter;
 
-public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
+public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> implements LXAbstractChannel.MidiListener {
 
   public final LXAbstractChannel channel;
 
@@ -42,9 +43,20 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
       throw new IllegalArgumentException("MidiNoteClipLane must specify channel");
     }
     this.channel = channel;
+    this.channel.addMidiListener(this);
     addInternalParameter("uiZoom ", this.uiZoom);
     addInternalParameter("uiOffset", this.uiOffset);
   }
+
+  @Override
+  public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
+    if (message instanceof MidiNote note) {
+      if (this.clip.isRecording() && this.clip.isLaneRecording(this)) {
+        recordNote(note);
+      }
+    }
+  }
+
 
   @Override
   public String getPath() {
@@ -652,4 +664,9 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> {
     obj.addProperty(KEY_BUS, this.channel.getCanonicalPath());
   }
 
+  @Override
+  public void dispose() {
+    this.channel.removeMidiListener(this);
+    super.dispose();
+  }
 }
