@@ -21,24 +21,28 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXComponent;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiNote;
 import heronarts.lx.mixer.LXAbstractChannel;
 
-public abstract class LXAbstractChannelClip extends LXClip implements LXAbstractChannel.MidiListener {
+public abstract class LXAbstractChannelClip extends LXGridClip implements LXAbstractChannel.MidiListener {
 
   public final LXAbstractChannel channel;
   public final MidiNoteClipLane midiNoteLane;
 
-  protected LXAbstractChannelClip(LX lx, LXAbstractChannel channel, LXComponent parent, LXClipContainer clipContainer, int index, boolean registerListener) {
-    super(lx, parent, clipContainer, index, registerListener);
+  protected LXAbstractChannelClip(LX lx, LXAbstractChannel channel, int index, boolean registerListener) {
+    super(lx, channel, index, registerListener);
     this.channel = channel;
     this.midiNoteLane = new MidiNoteClipLane(this);
     this.mutableLanes.add(this.midiNoteLane);
     registerParameter(channel.fader);
     registerParameter(channel.enabled);
     channel.addMidiListener(this);
+  }
+
+  @Override
+  protected boolean isLaneRecording(LXClipLane<?> lane) {
+    return true;
   }
 
   @Override

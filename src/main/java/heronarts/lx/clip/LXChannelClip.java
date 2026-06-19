@@ -21,7 +21,6 @@ package heronarts.lx.clip;
 import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
@@ -35,11 +34,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   public final PatternClipLane patternLane;
 
   public LXChannelClip(LX lx, LXChannel channel, int index) {
-    this(lx, channel, channel, channel, index);
-  }
-
-  public LXChannelClip(LX lx, LXChannel channel, LXComponent parent, LXClipContainer clipContainer, int index) {
-    super(lx, channel, parent, clipContainer, index, false);
+    super(lx, channel, index, false);
     this.channel = channel;
     this.mutableLanes.add(this.patternLane = new PatternClipLane(this, channel));
 

@@ -63,7 +63,7 @@ public class LXComposition extends LXClip {
   private final AudioPlayer audioPlayer;
 
   public LXComposition(LX lx, LXTimelineEngine timeline) {
-    super(lx, timeline, timeline, 0);
+    super(lx, timeline, 0);
 
     this.audioPlayer = new AudioPlayer(lx);
 
@@ -79,6 +79,15 @@ public class LXComposition extends LXClip {
   @Override
   public String getPath() {
     return "composition";
+  }
+
+  @Override
+  protected boolean isLaneRecording(LXClipLane<?> lane) {
+    LXBus bus = getLaneBus(lane);
+    if (bus != null) {
+      return bus.arm.isOn();
+    }
+    return false;
   }
 
   protected LXBus getLaneBus(LXClipLane<?> lane) {

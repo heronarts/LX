@@ -19,11 +19,7 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXComponent;
 import com.google.gson.JsonObject;
-import heronarts.lx.mixer.LXBus;
-import heronarts.lx.mixer.LXChannel;
-import heronarts.lx.mixer.LXGroup;
 import heronarts.lx.parameter.LXParameterListener;
 
 /**
@@ -47,8 +43,11 @@ public class BusClipEvent extends LXCompositionEvent<BusClipEvent> {
     super(lane);
     this.lx = lx;
     this.lane = lane;
-    LXBus bus = lane.bus;
+    // LXBus bus = lane.bus;
 
+    throw new UnsupportedOperationException("BusLaneEvent is being deprecated");
+
+    /*
     // The clip's index is zero because it is the only clip within the event. The relevant index is the event's index.
     if (bus instanceof LXChannel channel) {
       this.internalClip = new LXChannelClip(lx, channel, lane, lx.engine.timeline, 0);
@@ -91,6 +90,7 @@ public class BusClipEvent extends LXCompositionEvent<BusClipEvent> {
     this.internalClip.playStart.addListener(this.internalClipListener);
     this.internalClip.playEnd.addListener(this.internalClipListener);
     this.internalClip.loop.addListener(this.internalClipListener);
+    */
   }
 
   // Accessors

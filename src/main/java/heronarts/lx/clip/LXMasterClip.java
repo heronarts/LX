@@ -19,18 +19,19 @@
 package heronarts.lx.clip;
 
 import heronarts.lx.LX;
-import heronarts.lx.LXComponent;
 
-public class LXMasterClip extends LXClip {
+public class LXMasterClip extends LXGridClip {
+
   public LXMasterClip(LX lx, int index) {
-    this(lx, lx.engine.mixer.masterBus, lx.engine.mixer.masterBus, index);
-  }
-
-  public LXMasterClip(LX lx, LXComponent parent, LXClipContainer clipContainer, int index) {
-    super(lx, parent, clipContainer, index);
+    super(lx, lx.engine.mixer.masterBus, index, true);
     registerParameter(lx.engine.mixer.masterBus.fader);
     registerParameter(lx.engine.mixer.crossfader);
     registerComponent(lx.engine.palette);
+  }
+
+  @Override
+  protected boolean isLaneRecording(LXClipLane<?> lane) {
+    return true;
   }
 
   @Override
