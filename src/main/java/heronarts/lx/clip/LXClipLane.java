@@ -87,7 +87,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    */
   public final LXBus getBus() {
     return switch (this.clip) {
-    case LXChannelClip channelClip -> channelClip.channel;
+    case LXAbstractChannelClip channelClip -> channelClip.channel;
     case LXMasterClip masterClip -> lx.engine.mixer.masterBus;
     case LXComposition composition -> composition.getLaneBus(this);
     default -> throw new IllegalStateException("Cannot determine bus for unknown LXClip type: " + this.clip + " " + this.clip.getClass());
