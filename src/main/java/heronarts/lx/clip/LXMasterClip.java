@@ -31,6 +31,7 @@ public class LXMasterClip extends LXGridClip {
   @Override
   public void dispose() {
     unregisterParameter(lx.engine.mixer.crossfader);
+    unregisterComponent(lx.engine.palette);
     super.dispose();
   }
 }
