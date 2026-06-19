@@ -335,8 +335,10 @@ public abstract class LXCommand {
     }
 
     protected void removeClipLanes(LXBus bus, LXComponent component) {
-      for (LXClip clip : bus.clips) {
-        _removeClipLanes(clip, component);
+      if (bus != null) {
+        for (LXClip clip : bus.clips) {
+          _removeClipLanes(clip, component);
+        }
       }
       _removeClipLanes(component.getLX().engine.timeline.getComposition(), component);
     }
@@ -405,6 +407,11 @@ public abstract class LXCommand {
 
       // Type-specific removals
       switch (component) {
+        case LXModulator modulator -> {
+          if (modulator.getParent() instanceof LXModulationEngine engine) {
+            removeClipLanes(engine.getMixerBus(), modulator);
+          }
+        }
         case LXAbstractChannel channel -> {
           removeCompositionChannel(channel);
         }
