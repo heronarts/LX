@@ -35,14 +35,8 @@ public abstract class LXAbstractChannelClip extends LXGridClip implements LXAbst
     this.channel = channel;
     this.midiNoteLane = new MidiNoteClipLane(this);
     this.mutableLanes.add(this.midiNoteLane);
-    registerParameter(channel.fader);
     registerParameter(channel.enabled);
     channel.addMidiListener(this);
-  }
-
-  @Override
-  protected boolean isLaneRecording(LXClipLane<?> lane) {
-    return true;
   }
 
   @Override
@@ -88,7 +82,6 @@ public abstract class LXAbstractChannelClip extends LXGridClip implements LXAbst
 
   @Override
   public void dispose() {
-    unregisterParameter(this.channel.fader);
     unregisterParameter(this.channel.enabled);
     this.channel.removeMidiListener(this);
     super.dispose();

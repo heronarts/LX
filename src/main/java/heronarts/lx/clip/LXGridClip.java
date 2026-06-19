@@ -21,6 +21,7 @@ package heronarts.lx.clip;
 import heronarts.lx.LX;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
+import heronarts.lx.parameter.LXParameter;
 
 /**
  * Clips that live on the mixer grid, always associated with a fixed mixer bus
@@ -41,19 +42,30 @@ public abstract class LXGridClip extends LXClip {
         bus.addEffectsListener(this);
       }
     }
-    for (LXEffect effect : bus.getEffects()) {
+    for (LXEffect effect : bus.effects) {
       registerComponent(effect);
     }
+    registerParameter(bus.fader);
   }
 
   @Override
-  protected boolean isLaneRecording(LXClipLane<?> lane) {
-    // TODO Auto-generated method stub
-    return false;
+  protected final boolean isLaneRecording(LXBus bus) {
+    return true;
+  }
+
+  @Override
+  protected final boolean isLaneRecording(LXClipLane<?> lane) {
+    return true;
+  }
+
+  @Override
+  protected final boolean isLaneRecording(LXParameter p) {
+    return true;
   }
 
   @Override
   public void dispose() {
+    unregisterParameter(bus.fader);
     for (LXEffect effect : this.bus.getEffects()) {
       unregisterComponent(effect);
     }

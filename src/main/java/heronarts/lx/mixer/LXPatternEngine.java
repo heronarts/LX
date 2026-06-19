@@ -267,6 +267,10 @@ public class LXPatternEngine implements LXParameterListener, LXSerializable {
     this.compositeMode.addListener(this);
   }
 
+  public LXChannel getMixerChannel() {
+    return this.component.getAncestor(LXChannel.class);
+  }
+
   private void addParameter(String path, LXListenableParameter parameter) {
     this.parameters.add(path, parameter);
   }

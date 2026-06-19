@@ -1,5 +1,5 @@
 /**
- * Copyright 2025- Justin K. Belcher, Heron Arts LLC
+ * Copyright 2025- Justin K. Belcher, Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -14,6 +14,7 @@
  * PURPOSE, WITH RESPECT TO THE SOFTWARE.
  *
  * @author Justin K. Belcher <justin@jkb.studio>
+ * @author Mark C. Slee <mark@heronarts.com>
  */
 
 package heronarts.lx.clip;
@@ -27,6 +28,7 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.Cursor.Operator;
+import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
@@ -34,6 +36,7 @@ import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.TriggerParameter;
+import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.utils.LXUtils;
 import heronarts.lx.utils.ObservableList;
 
@@ -71,9 +74,8 @@ public class LXComposition extends LXClip {
     addParameter("nextLocator", this.nextLocator);
     addArray("locator", this.locators);
 
-    // Maintain one lane per mixer channel
     lx.engine.mixer.addListener(this.mixerListener);
-    initializeBusLanes();
+    initializeRegister();
   }
 
   @Override
@@ -82,19 +84,15 @@ public class LXComposition extends LXClip {
   }
 
   @Override
-  protected boolean isLaneRecording(LXClipLane<?> lane) {
-    LXBus bus = getLaneBus(lane);
-    if (bus != null) {
-      return bus.arm.isOn();
-    }
-    return false;
+  protected boolean isLaneRecording(LXBus bus) {
+    return (bus != null) && bus.arm.isOn();
   }
 
   protected LXBus getLaneBus(LXClipLane<?> lane) {
     return switch(lane) {
     case BusClipLane busLane -> busLane.bus;
     case MidiNoteClipLane midiLane -> midiLane.channel;
-    case ParameterClipLane parameterLane -> parameterLane.parameter.getAncestor(LXBus.class);
+    case ParameterClipLane parameterLane -> parameterLane.bus;
     case PatternClipLane patternLane -> patternLane.channel;
     default -> null;
     };
@@ -184,17 +182,18 @@ public class LXComposition extends LXClip {
 
   // Bus Lanes
 
-  private void initializeBusLanes() {
-    for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
-      _createBusLane(channel);
+  private void initializeRegister() {
+    for (LXAbstractChannel channel : lx.engine.mixer.channels) {
+      registerBus(channel);
     }
-    _createBusLane(this.lx.engine.mixer.masterBus);
+    registerBus(lx.engine.mixer.masterBus);
   }
 
-  private void _createBusLane(LXBus bus) {
-    if (!this.busLanes.containsKey(bus)) {
-      addBusLanes(bus, -1);
+  private void initializeUnregister() {
+    for (LXAbstractChannel channel : lx.engine.mixer.channels) {
+      unregisterBus(channel);
     }
+    unregisterBus(lx.engine.mixer.masterBus);
   }
 
   private List<LXClipLane<?>> findAllBusLanes(LXBus bus, boolean includeMainBusLane) {
@@ -244,8 +243,91 @@ public class LXComposition extends LXClip {
     }
   };
 
+  private final LXChannel.Listener channelListener = new LXChannel.Listener() {
+    @Override
+    public void patternAdded(LXChannel channel, LXPattern pattern) {
+      registerPattern(pattern);
+    }
+
+    @Override
+    public void patternRemoved(LXChannel channel, LXPattern pattern) {
+      unregisterPattern(pattern);
+    }
+
+    @Override
+    public void patternWillChange(LXChannel channel, LXPattern pattern, LXPattern nextPattern) {
+      if (isRecording() && channel.arm.isOn()) {
+        getPatternLane(pattern.getEngine(), true).recordPatternEvent(nextPattern);
+      }
+    }
+
+    @Override
+    public void effectAdded(LXBus channel, LXEffect effect) {
+      registerComponent(effect);
+    }
+
+    @Override
+    public void effectRemoved(LXBus channel, LXEffect effect) {
+      unregisterComponent(effect);
+    }
+  };
+
   private void registerBus(LXBus bus) {
-    addBusLanes(bus, -1);
+    // This will create the bus if needed, but it's potentially already happened
+    // from the load() method restoring saved lanes
+    findBusLane(bus, -1);
+
+    if (bus instanceof LXChannel channel) {
+      channel.addListener(this.channelListener);
+      for (LXPattern pattern : channel.patterns) {
+        registerPattern(pattern);
+      }
+    } else {
+      bus.addListener(this.channelListener);
+    }
+    if (bus instanceof LXAbstractChannel channel) {
+      registerParameter(channel.enabled);
+    }
+    registerParameter(bus.fader);
+    for (LXEffect effect : bus.effects) {
+      registerComponent(effect);
+    }
+  }
+
+  private void unregisterBus(LXBus bus) {
+    switch (bus) {
+      case LXChannel channel -> {
+        channel.removeListener(this.channelListener);
+        for (LXPattern pattern : channel.patterns) {
+          unregisterPattern(pattern);
+        }
+      }
+      default -> bus.removeListener(this.channelListener);
+    }
+    for (LXEffect effect : bus.effects) {
+      unregisterComponent(effect);
+    }
+    if (bus instanceof LXAbstractChannel channel) {
+      unregisterParameter(channel.enabled);
+    }
+    unregisterParameter(bus.fader);
+
+    if (this.busLanes.containsKey(bus)) {
+      removeClipLane(this.busLanes.get(bus));
+    } else {
+      throw new IllegalStateException("Unable to remove lane, does not exist for channel: " + bus.getLabel());
+    }
+
+    // Remove any lanes associated with this bus
+    List<LXClipLane<?>> toRemove = new ArrayList<>();
+    for (LXClipLane<?> lane : this.lanes) {
+      if (lane.getBus() == bus) {
+        toRemove.add(lane);
+      }
+    }
+    for (LXClipLane<?> lane : toRemove) {
+      removeClipLane(lane);
+    }
   }
 
   private BusClipLane findBusLane(LXBus bus, int index) {
@@ -427,27 +509,6 @@ public class LXComposition extends LXClip {
       LX.error("Unable to find bus (componentId=" + busId + ") on composition: " + getLabel());
     }
     return null;
-  }
-
-  private void unregisterBus(LXAbstractChannel channel) {
-    if (this.busLanes.containsKey(channel)) {
-      removeClipLane(this.busLanes.get(channel));
-    } else {
-      throw new IllegalStateException("Unable to remove lane, does not exist for channel: " + channel.getLabel());
-    }
-
-    // Remove any lanes associated with this bus
-    // TODO(mcslee): this should be handled more elegantly using a system like
-    // LXClip.registerComponent/unregsiterComponent
-    List<LXClipLane<?>> toRemove = new ArrayList<>();
-    for (LXClipLane<?> lane : this.lanes) {
-      if (lane.getBus() == channel) {
-        toRemove.add(lane);
-      }
-    }
-    for (LXClipLane<?> lane : toRemove) {
-      removeClipLane(lane);
-    }
   }
 
   // Audio Lanes
@@ -645,6 +706,7 @@ public class LXComposition extends LXClip {
   @Override
   public void dispose() {
     clearLocators();
+    initializeUnregister();
     this.audioPlayer.dispose();
     this.lx.engine.mixer.removeListener(this.mixerListener);
     super.dispose();
@@ -662,14 +724,18 @@ public class LXComposition extends LXClip {
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    clearLanes();
     clearLocators();
+
+    initializeUnregister();
+
+    // Note: super.load() will call clearLanes()
     super.load(lx, obj);
 
     // LXComposition always has automation playback enabled!
     this.automationEnabled.setValue(true);
 
-    initializeBusLanes();
+    initializeRegister();
+
     if (obj.has(KEY_LOCATORS)) {
       JsonArray locatorsArr = obj.get(KEY_LOCATORS).getAsJsonArray();
       for (JsonElement locatorElement : locatorsArr) {

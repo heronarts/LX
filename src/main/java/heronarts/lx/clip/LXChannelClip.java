@@ -22,7 +22,6 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXPath;
-import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.pattern.LXPattern;
@@ -52,93 +51,6 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     return
       (lane == this.patternLane) ||
       super.isPermanentClipLane(lane);
-  }
-
-  private final LXPattern.Listener patternEffectListener = new LXPattern.Listener() {
-    public void effectAdded(LXPattern pattern, LXEffect effect) {
-      registerComponent(effect);
-    }
-    public void effectRemoved(LXPattern pattern, LXEffect effect) {
-      unregisterComponent(effect);
-    }
-    public void effectMoved(LXPattern pattern, LXEffect effect) {}
-  };
-
-  private final LXPatternEngine.Listener rackPatternListener = new LXPatternEngine.Listener() {
-    public void patternAdded(LXPatternEngine engine, LXPattern pattern) {
-      registerPattern(pattern);
-    }
-    public void patternRemoved(LXPatternEngine engine, LXPattern pattern) {
-      unregisterPattern(pattern);
-    }
-    public void patternWillChange(LXPatternEngine engine, LXPattern pattern, LXPattern nextPattern) {
-      if (isRecording()) {
-        getPatternLane(engine, true).recordPatternEvent(nextPattern);
-      }
-    }
-  };
-
-  protected void registerPattern(LXPattern pattern) {
-    registerComponent(pattern);
-    for (LXEffect effect : pattern.effects) {
-      registerComponent(effect);
-    }
-    pattern.addListener(this.patternEffectListener);
-    if (pattern instanceof PatternRack rack) {
-      for (LXPattern rackPattern : rack.patterns) {
-        registerPattern(rackPattern);
-      }
-      rack.patternEngine.addListener(this.rackPatternListener);
-    }
-  }
-
-  protected void unregisterPattern(LXPattern pattern) {
-    if (pattern instanceof PatternRack rack) {
-      for (LXPattern rackPattern : rack.patterns) {
-        unregisterPattern(rackPattern);
-      }
-      PatternClipLane lane = getPatternLane(rack.patternEngine, false);
-      if (lane != null) {
-        removeClipLane(lane);
-      }
-      rack.patternEngine.removeListener(this.rackPatternListener);
-    }
-    unregisterComponent(pattern);
-    for (LXEffect effect : pattern.effects) {
-      unregisterComponent(effect);
-    }
-    pattern.removeListener(this.patternEffectListener);
-  }
-
-  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create) {
-    return getPatternLane(engine, create, -1);
-  }
-
-  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create, int index) {
-    for (LXClipLane<?> lane : this.lanes) {
-      if (lane instanceof PatternClipLane patternLane) {
-        if (patternLane.engine == engine) {
-          return patternLane;
-        }
-      }
-    }
-    if (create) {
-      PatternClipLane lane = new PatternClipLane(this, this.channel, engine);
-      if (engine.isPlaylist()) {
-        LXPattern targetPattern = engine.getTargetPattern();
-        if (targetPattern != null) {
-          lane.insertEvent(new PatternClipEvent(lane, Cursor.ZERO, targetPattern));
-        }
-      }
-      if (index < 0) {
-        this.mutableLanes.add(lane);
-      } else {
-        this.mutableLanes.add(index, lane);
-      }
-      onClipLaneAdded(lane);
-      return lane;
-    }
-    return null;
   }
 
   private PatternClipLane addRackPatternLane(LX lx, JsonObject laneObj, int index) {

@@ -25,7 +25,6 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
-import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.pattern.LXPattern;
@@ -34,7 +33,7 @@ import heronarts.lx.utils.LXUtils;
 
 public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXPatternEngine.Listener {
 
-  public final LXAbstractChannel channel;
+  public final LXChannel channel;
   public final LXPatternEngine engine;
 
   PatternClipLane(LXClip clip, LXChannel channel) {
@@ -42,10 +41,10 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   }
 
   PatternClipLane(LXClip clip, PatternRack rack) {
-    this(clip, rack.getAncestor(LXAbstractChannel.class), rack.patternEngine);
+    this(clip, rack.getMixerChannel(), rack.patternEngine);
   }
 
-  PatternClipLane(LXClip clip, LXAbstractChannel channel, LXPatternEngine engine) {
+  PatternClipLane(LXClip clip, LXChannel channel, LXPatternEngine engine) {
     super(clip);
     this.channel = channel;
     this.engine = engine;

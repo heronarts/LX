@@ -24,19 +24,12 @@ public class LXMasterClip extends LXGridClip {
 
   public LXMasterClip(LX lx, int index) {
     super(lx, lx.engine.mixer.masterBus, index, true);
-    registerParameter(lx.engine.mixer.masterBus.fader);
     registerParameter(lx.engine.mixer.crossfader);
     registerComponent(lx.engine.palette);
   }
 
   @Override
-  protected boolean isLaneRecording(LXClipLane<?> lane) {
-    return true;
-  }
-
-  @Override
   public void dispose() {
-    unregisterParameter(lx.engine.mixer.masterBus.fader);
     unregisterParameter(lx.engine.mixer.crossfader);
     super.dispose();
   }

@@ -40,6 +40,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.Tempo;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
+import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
@@ -51,6 +52,8 @@ import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.QuantizedTriggerParameter;
+import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.snapshot.LXClipSnapshot;
 
 public abstract class LXClip extends LXRunnableComponent implements LXOscComponent, LXComponent.Renamable, LXBus.Listener {
@@ -200,17 +203,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private int index;
 
-  private final LXParameterListener parameterRecorder = this::recordParameterChange;
-
-  private void recordParameterChange(LXParameter p) {
-    if (isRecording()) {
+  private final LXParameterListener parameterRecorder = p -> {
+    if (isRecording() && isLaneRecording(p)) {
       LXListenableNormalizedParameter parameter = (LXListenableNormalizedParameter) p;
       ParameterClipLane lane = getParameterLane(parameter, true);
       if (!lane.isInPlayback() && lane.shouldRecordParameterChange(parameter)) {
         lane.recordParameterEvent(new ParameterClipEvent(lane));
       }
     }
-  }
+  };
 
   protected LXClip(LX lx, LXClipContainer container, int index) {
     super(lx);
@@ -508,9 +509,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   @Override
   public void dispose() {
     this.armParameter.removeListener(this);
-    for (int i = this.lanes.size() - 1; i >= 0; --i) {
-      _removeLane(this.lanes.get(i));
-    }
+    clearLanes(true);
     LX.dispose(this.snapshot);
     super.dispose();
     this.listeners.forEach(listener -> LX.warning("Stranded LXClip.Listener: " + listener));
@@ -659,12 +658,20 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   /**
-   * Whether individual lanes are armed for recording
+   * Whether individual bus lanes are armed for recording
    *
-   * @param lane Lane to check
+   * @param bus Mixer bus to check
    * @return Whether lane should be recording
    */
-  protected abstract boolean isLaneRecording(LXClipLane<?> lane);
+  protected abstract boolean isLaneRecording(LXBus bus);
+
+  protected boolean isLaneRecording(LXClipLane<?> lane) {
+    return isLaneRecording(lane.getBus());
+  }
+
+  protected boolean isLaneRecording(LXParameter p) {
+    return isLaneRecording(p.getAncestor(LXBus.class));
+  }
 
   /**
    * Whether the clip is actively recording.
@@ -1138,10 +1145,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return false;
   }
 
-  protected void clearLanes() {
+  protected void clearLanes(boolean dispose) {
     for (int i = this.lanes.size() - 1; i >= 0; --i) {
       LXClipLane<?> lane = this.lanes.get(i);
-      if (isPermanentClipLane(lane)) {
+      if (!dispose && isPermanentClipLane(lane)) {
         lane.clear();
       } else {
         this.mutableLanes.remove(i);
@@ -1285,6 +1292,93 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       registeredChildren.forEach(child -> unregisterComponent(child));
     }
   }
+
+  protected void registerPattern(LXPattern pattern) {
+    registerComponent(pattern);
+    for (LXEffect effect : pattern.effects) {
+      registerComponent(effect);
+    }
+    pattern.addListener(this.patternEffectListener);
+    if (pattern instanceof PatternRack rack) {
+      for (LXPattern rackPattern : rack.patterns) {
+        registerPattern(rackPattern);
+      }
+      rack.patternEngine.addListener(this.rackPatternListener);
+    }
+  }
+
+  protected void unregisterPattern(LXPattern pattern) {
+    if (pattern instanceof PatternRack rack) {
+      for (LXPattern rackPattern : rack.patterns) {
+        unregisterPattern(rackPattern);
+      }
+      PatternClipLane lane = getPatternLane(rack.patternEngine, false);
+      if (lane != null) {
+        removeClipLane(lane);
+      }
+      rack.patternEngine.removeListener(this.rackPatternListener);
+    }
+    unregisterComponent(pattern);
+    for (LXEffect effect : pattern.effects) {
+      unregisterComponent(effect);
+    }
+    pattern.removeListener(this.patternEffectListener);
+  }
+
+  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create) {
+    return getPatternLane(engine, create, -1);
+  }
+
+  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create, int index) {
+    for (LXClipLane<?> lane : this.lanes) {
+      if (lane instanceof PatternClipLane patternLane) {
+        if (patternLane.engine == engine) {
+          return patternLane;
+        }
+      }
+    }
+    if (create) {
+      PatternClipLane lane = new PatternClipLane(this, engine.getMixerChannel(), engine);
+      if (engine.isPlaylist()) {
+        LXPattern targetPattern = engine.getTargetPattern();
+        if (targetPattern != null) {
+          lane.insertEvent(new PatternClipEvent(lane, Cursor.ZERO, targetPattern));
+        }
+      }
+      if (index < 0) {
+        this.mutableLanes.add(lane);
+      } else {
+        this.mutableLanes.add(index, lane);
+      }
+      onClipLaneAdded(lane);
+      return lane;
+    }
+    return null;
+  }
+
+  private final LXPattern.Listener patternEffectListener = new LXPattern.Listener() {
+    public void effectAdded(LXPattern pattern, LXEffect effect) {
+      registerComponent(effect);
+    }
+    public void effectRemoved(LXPattern pattern, LXEffect effect) {
+      unregisterComponent(effect);
+    }
+    public void effectMoved(LXPattern pattern, LXEffect effect) {}
+  };
+
+  private final LXPatternEngine.Listener rackPatternListener = new LXPatternEngine.Listener() {
+    public void patternAdded(LXPatternEngine engine, LXPattern pattern) {
+      registerPattern(pattern);
+    }
+    public void patternRemoved(LXPatternEngine engine, LXPattern pattern) {
+      unregisterPattern(pattern);
+    }
+    public void patternWillChange(LXPatternEngine engine, LXPattern pattern, LXPattern nextPattern) {
+      if (isRecording() && isLaneRecording(pattern.getMixerChannel())) {
+        getPatternLane(engine, true).recordPatternEvent(nextPattern);
+      }
+    }
+  };
 
   public int getIndex() {
     return this.index;
@@ -1650,7 +1744,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public void load(LX lx, JsonObject obj) {
-    clearLanes();
+    clearLanes(false);
 
     // Load parameters before lanes, which need to know clip timing mode
     this.inLoad = true;
