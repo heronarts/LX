@@ -680,6 +680,10 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
   }
 
+  private boolean flagRegenerateModel = false;
+  private boolean flagRegenerateOutputs = false;
+  private boolean flagRegenerateGeometry = false;
+
   private void fixtureRemoved() {
     // When a fixture is removed we need to rebuild just as if any generational
     // change occurred
@@ -688,27 +692,42 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
   @Override
   public void fixtureGenerationChanged(LXFixture fixture) {
-    regenerateModel(false);
-    regenerateOutputs();
+    this.flagRegenerateModel = true;
+    this.flagRegenerateOutputs = true;
   }
 
   @Override
   public void fixtureGeometryChanged(LXFixture fixture) {
-    // We need to re-normalize our model, things have changed
-    this.model.update(true, true);
-    this.modelListener.structureGenerationChanged(this.model);
-    setDirty();
+    this.flagRegenerateGeometry = true;
   }
 
   @Override
   public void fixtureOutputChanged(LXFixture fixture) {
-    regenerateOutputs();
-    setDirty();
+    this.flagRegenerateOutputs = true;
   }
 
   @Override
   public void fixtureTagsChanged(LXFixture fixture) {
-    regenerateModel(false);
+    this.flagRegenerateModel = true;
+  }
+
+  public void beforeEngineRun() {
+    if (this.flagRegenerateModel) {
+      regenerateModel(false);
+      this.flagRegenerateModel = false;
+    }
+    if (this.flagRegenerateOutputs) {
+      regenerateOutputs();
+      setDirty();
+      this.flagRegenerateOutputs = false;
+    }
+    if (this.flagRegenerateGeometry) {
+      this.flagRegenerateGeometry = false;
+      // We need to re-normalize our model, things have changed
+      this.model.update(true, true);
+      this.modelListener.structureGenerationChanged(this.model);
+      setDirty();
+    }
   }
 
   private void setDirty() {
