@@ -1102,7 +1102,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Process input events, unless we're running on the engine thread
     // which uses timing in its main loop to do this. Note that these input
     // events can trigger all sorts of LX API calls, which may result in
-    // parameter changes, model rebuilds, etc.
+    // parameter changes, scheduling model rebuilds, etc.
     if (!fromEngineThread) {
       processInputEvents();
     }
@@ -1123,6 +1123,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.lx.scheduler.loop(deltaMs);
 
     // Initialize the model context for this render frame
+    this.lx.structure.beforeEngineRun();
     this.buffer.render.setModel(this.lx.model);
 
     // Check render and output state based upon this model
