@@ -220,12 +220,12 @@ public class LXComposition extends LXClip {
     if (toIndex < fromIndex) {
       // Moving to the left, increment toIndex as we go
       for (LXClipLane<?> move : findAllBusLanes(bus, true)) {
-        moveClipLane(move, toIndex++);
+        moveClipLane(move, toIndex++, true);
       }
     } else {
       // Moving to the right, sequentially insert before target position
       for (LXClipLane<?> move : findAllBusLanes(bus, true)) {
-        moveClipLane(move, toIndex-1);
+        moveClipLane(move, toIndex-1, true);
       }
     }
   }
