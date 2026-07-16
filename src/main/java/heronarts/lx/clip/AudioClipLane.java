@@ -167,8 +167,7 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> implements LXCompo
 
   public AudioClipEvent addEvent(File file) {
     final AudioClipEvent event = new AudioClipEvent(this.lx, this, file);
-    this.mutableEvents.add(event);
-    this.onChange.bang();
+    insertEvent(event);
     return event;
   }
 
