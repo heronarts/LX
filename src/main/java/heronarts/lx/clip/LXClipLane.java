@@ -173,7 +173,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * @return Iterator over events equal to or after the cursor, plus offset
    */
   public ListIterator<T> eventIterator(List<T> events, Cursor fromCursor, int offset) {
-    int index = LXUtils.constrain(cursorPlayIndex(fromCursor) + offset, 0, events.size());
+    int index = LXUtils.constrain(cursorPlayIndex(events, fromCursor) + offset, 0, events.size());
     return events.listIterator(index);
   }
 
