@@ -18,6 +18,8 @@
 
 package heronarts.lx.clip;
 
+import java.util.List;
+
 import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
@@ -53,9 +55,8 @@ public class TextNoteClipLane extends LXClipLane<TextNoteClipEvent> implements L
   }
 
   public TextNoteClipEvent addEvent(String note, Cursor cursor, Cursor length) {
-    TextNoteClipEvent event = new TextNoteClipEvent(this.lx, this, cursor, length);
-    this.mutableEvents.add(event);
-    this.onChange.bang();
+    final TextNoteClipEvent event = new TextNoteClipEvent(this.lx, this, cursor, length);
+    insertEvent(event);
     return event;
   }
 
@@ -64,6 +65,12 @@ public class TextNoteClipLane extends LXClipLane<TextNoteClipEvent> implements L
     TextNoteClipEvent event = new TextNoteClipEvent(this.lx, this);
     event.load(lx, eventObj);
     return event;
+  }
+
+  @Override
+  protected void endLoadEvents(List<TextNoteClipEvent> loadEvents) {
+    // Ensure that these are sorted properly if project data was bad
+    loadEvents.sort(this.clip.cursorComparator);
   }
 
   @Override

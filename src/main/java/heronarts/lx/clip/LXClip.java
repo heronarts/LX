@@ -20,6 +20,7 @@ package heronarts.lx.clip;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -188,6 +189,15 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   public final Cursor.Operator CursorOp() {
     return this.timeBase.getEnum().operator;
   }
+
+  public final Comparator<LXClipEvent<?>> cursorComparator = new Comparator<>() {
+
+    @Override
+    public int compare(LXClipEvent<?> o1, LXClipEvent<?> o2) {
+      return CursorOp().compare(o1.cursor, o2.cursor);
+    }
+
+  };
 
   public final LXClipContainer container;
   public final BooleanParameter armParameter;
