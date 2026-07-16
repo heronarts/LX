@@ -548,6 +548,20 @@ public class LX {
     return pushError(new Error(exception, message));
   }
 
+  public LX pushError(Throwable exception, String message, boolean log) {
+    if (log) {
+      LX.error(exception, message);
+    }
+    return pushError(exception, message);
+  }
+
+  public LX pushError(String message, boolean log) {
+    if (log) {
+      LX.error(message);
+    }
+    return pushError(message);
+  }
+
   public LX pushError(String message) {
     return pushError(new Error(message));
   }
