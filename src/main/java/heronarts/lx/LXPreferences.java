@@ -158,7 +158,7 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
     public WindowSettings setPosition(int x, int y) {
       this.x = x;
       this.y = y;
-      this.hasPosition = this.x > 0 && this.y > 0;
+      this.hasPosition = true;
       return this;
     }
 
@@ -250,7 +250,11 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
      * @return True if these bounds go past the container bounds
      */
     public boolean exceeds(WindowSettings that) {
-      return (getXMax() > that.getXMax()) || (getYMax() > that.getYMax());
+      return
+        (this.x < that.x) ||
+        (getXMax() > that.getXMax()) ||
+        (this.y < that.y) ||
+        (getYMax() > that.getYMax());
     }
 
     /**
@@ -260,12 +264,21 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
      * @return These bounds, updated to fit within the container
      */
     public WindowSettings constrain(WindowSettings that) {
-      int width = LXUtils.min(getWidth(), that.getWidth());
-      int x = that.getXMax() - width;
-
-      int height = LXUtils.min(getHeight(), that.getHeight());
-      int y = that.getYMax() - height;
-
+      int x = this.x, y = this.y, width = this.width, height = this.height;
+      if (this.x < that.x) {
+        width = LXUtils.min(getWidth(), that.getWidth());
+        x = that.x;
+      } else if (getXMax() > that.getXMax()) {
+        width = LXUtils.min(getWidth(), that.getWidth());
+        x = that.getXMax() - width;
+      }
+      if (this.y < that.y) {
+        height = LXUtils.min(getHeight(), that.getHeight());
+        y = that.y;
+      } else if (getYMax() > that.getYMax()) {
+        height = LXUtils.min(getHeight(), that.getHeight());
+        y = that.getYMax() - height;
+      }
       setPosition(x, y);
       setSize(width, height);
       return this;
