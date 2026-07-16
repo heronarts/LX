@@ -181,6 +181,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     new EnumParameter<>("Clip View", ClipView.AUTOMATION);
 
   public final MutableParameter zoom = new MutableParameter("Zoom", 1);
+  public final MutableParameter uiPosition = new MutableParameter("UI Position");
 
   public final MutableParameter onChange = new MutableParameter();
 
@@ -254,6 +255,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     addInternalParameter("clipView", this.clipView);
     addInternalParameter("launchAutomation", this.launchAutomation);
     addInternalParameter("zoom", this.zoom);
+    addInternalParameter("uiPosition", this.uiPosition);
 
     // TODO(mcslee): Not for compositions!
     addChild("snapshot", this.snapshot = new LXClipSnapshot(lx, this, getSnapshotParameterScope()));
