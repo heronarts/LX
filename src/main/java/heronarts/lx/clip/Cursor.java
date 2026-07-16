@@ -740,9 +740,20 @@ public class Cursor implements LXSerializable {
      */
     public final Operator operator;
 
+    /**
+     * A comparator to compare clip events by their cursor position
+     */
+    public final Comparator<LXClipEvent<?>> comparator;
+
     private TimeBase(String label, Operator operations) {
       this.label = label;
       this.operator = operations;
+      this.comparator = new Comparator<>() {
+        @Override
+        public int compare(LXClipEvent<?> o1, LXClipEvent<?> o2) {
+          return operator.compare(o1.cursor, o2.cursor);
+        }
+      };
     }
 
     @Override

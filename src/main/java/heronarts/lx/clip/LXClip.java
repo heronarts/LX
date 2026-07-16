@@ -190,14 +190,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return this.timeBase.getEnum().operator;
   }
 
-  public final Comparator<LXClipEvent<?>> cursorComparator = new Comparator<>() {
-
-    @Override
-    public int compare(LXClipEvent<?> o1, LXClipEvent<?> o2) {
-      return CursorOp().compare(o1.cursor, o2.cursor);
-    }
-
-  };
+  public final Comparator<LXClipEvent<?>> EventComparator() {
+    return this.timeBase.getEnum().comparator;
+  }
 
   public final LXClipContainer container;
   public final BooleanParameter armParameter;

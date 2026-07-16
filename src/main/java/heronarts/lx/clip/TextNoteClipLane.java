@@ -70,7 +70,7 @@ public class TextNoteClipLane extends LXClipLane<TextNoteClipEvent> implements L
   @Override
   protected void endLoadEvents(List<TextNoteClipEvent> loadEvents) {
     // Ensure that these are sorted properly if project data was bad
-    loadEvents.sort(this.clip.cursorComparator);
+    loadEvents.sort(this.clip.EventComparator());
   }
 
   @Override
