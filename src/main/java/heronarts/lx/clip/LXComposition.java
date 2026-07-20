@@ -170,9 +170,6 @@ public class LXComposition extends LXClip {
   @Override
   protected void run(double deltaMs) {
     super.run(deltaMs);
-    for (BusClipLane busLane : this.busLanes.values()) {
-      busLane.run(deltaMs);
-    }
     if (!this.audioLanes.isEmpty()) {
       this.audioPlayer.ensureRunning();
     }
