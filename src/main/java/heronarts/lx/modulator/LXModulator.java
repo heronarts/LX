@@ -38,6 +38,7 @@ import heronarts.lx.midi.MidiFilterParameter;
 import heronarts.lx.midi.MidiSelector;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 
 /**
@@ -179,13 +180,13 @@ public abstract class LXModulator extends LXRunnableComponent implements LXCompo
    * @param parameter Parameter
    * @return true if this can be included in clip automation
    */
-  public boolean isClipAutomationControl(LXParameter parameter) {
-    return !(
-      (parameter == this.midiFilter) ||
-      (parameter.getParentParameter() == this.midiFilter) ||
-      (parameter == this.midiSource) ||
-      (parameter.getParentParameter() == this.midiSource)
-    );
+  @Override
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
+    final LXParameter parent = parameter.getParentParameter();
+    return
+      (parent != this.midiFilter) &&
+      (parent != this.midiSource) &&
+      super.isClipAutomationControl(parameter);
   }
 
   public Throwable getCrash() {

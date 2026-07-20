@@ -29,6 +29,8 @@ import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -225,6 +227,12 @@ public class LXChannel extends LXAbstractChannel implements LXPatternEngine.Cont
       _processReentrantListenerChanges();
     }
   };
+
+  @Override
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
+    return !this.patternEngine.parameters.containsValue(parameter) &&
+      super.isClipAutomationControl(parameter);
+  }
 
   @Override
   public boolean handleOscMessage(OscMessage message, String[] parts, int index) {

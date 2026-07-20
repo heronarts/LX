@@ -38,6 +38,7 @@ import heronarts.lx.midi.MidiSelector;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.EnumParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.ObjectParameter;
 import heronarts.lx.structure.view.LXViewDefinition;
@@ -234,6 +235,15 @@ public abstract class LXAbstractChannel extends LXBus implements LXComponent.Ren
   @Override
   public String getPath() {
     return LXMixerEngine.PATH_CHANNEL + "/" + (this.index+1);
+  }
+
+  @Override
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
+    final LXParameter parent = parameter.getParentParameter();
+    return
+      (parent != this.midiFilter) &&
+      (parent != this.midiSource) &&
+      super.isClipAutomationControl(parameter);
   }
 
   @Override

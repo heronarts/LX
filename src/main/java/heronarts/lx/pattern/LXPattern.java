@@ -45,6 +45,7 @@ import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.ObjectParameter;
@@ -316,7 +317,7 @@ public abstract class LXPattern extends LXDeviceComponent implements LXComponent
   }
 
   @Override
-  public boolean isClipAutomationControl(LXParameter parameter) {
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
     return !(
       parameter == this.recall ||
       parameter == this.launch ||
