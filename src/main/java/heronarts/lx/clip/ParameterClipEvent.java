@@ -12,8 +12,8 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   public enum Curve {
     POWER_EASE("Power Ease"),
     POWER_S_CURVE("S-Curve"),
-    SINUSOIDAL("Sinusoidal"),
-    SMOOTHSTEP("Smoothstep");
+    SMOOTHSTEP("Smoothstep"),
+    SINUSOIDAL("Sinusoidal");
 
     public final String label;
 
