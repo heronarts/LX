@@ -742,15 +742,11 @@ public class LXComposition extends LXClip {
   public void load(LX lx, JsonObject obj) {
     clearLocators();
 
-    initializeUnregister();
-
     // Note: super.load() will call clearLanes()
     super.load(lx, obj);
 
     // LXComposition always has automation playback enabled!
     this.automationEnabled.setValue(true);
-
-    initializeRegister();
 
     if (obj.has(KEY_LOCATORS)) {
       JsonArray locatorsArr = obj.get(KEY_LOCATORS).getAsJsonArray();
