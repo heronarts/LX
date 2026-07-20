@@ -46,11 +46,6 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
   // TODO: allow a list of compositions, not just one
   private LXComposition composition;
 
-  public final BooleanParameter clipExpanded =
-    new BooleanParameter("Clip", false)
-      .setMode(BooleanParameter.Mode.TOGGLE)
-      .setDescription("Toggle Clip visibility in the alt window");
-
   public final BooleanParameter arm =
     new BooleanParameter("Arm")
     .setDescription("Starts the composition recording");
@@ -60,7 +55,6 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
   public LXTimelineEngine(LX lx) {
     super(lx, "Composition");
 
-    addParameter("clipExpanded", this.clipExpanded);
     addParameter("focusedClip", this.focusedClip);
 
     this.arm.addListener(this::armChanged);
