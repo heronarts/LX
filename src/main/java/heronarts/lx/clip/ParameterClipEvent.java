@@ -92,13 +92,6 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     return this;
   }
 
-  public boolean hasShape() {
-    return switch (this.curve) {
-    case POWER_EASE, POWER_S_CURVE -> true;
-    default -> false;
-    };
-  }
-
   public ParameterClipEvent setShape(double shape) {
     shape = LXUtils.constrain(shape, -1, 1);
     if (this.shape != shape) {
@@ -156,23 +149,33 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
 
   private double interpolateSCurve(double from, double lerpFactor) {
     double midpoint = LXUtils.lerp(from, this.normalized, .5);
-    if (lerpFactor <= 0.5) {
-      return _interpolatePowerEase(from, midpoint, -this.shape, 2*lerpFactor);
-    } else {
-      return _interpolatePowerEase(midpoint, this.normalized, this.shape, 2*(lerpFactor-.5));
-    }
+    return (lerpFactor <= 0.5) ?
+      _interpolatePowerEase(from, midpoint, -this.shape, 2*lerpFactor) :
+      _interpolatePowerEase(midpoint, this.normalized, this.shape, 2*(lerpFactor-.5));
+  }
+
+  private static double shapeLerpFactor(double lerpFactor, double shape) {
+    return (shape == 0) ? lerpFactor :
+      (lerpFactor <= 0.5) ?
+        _interpolatePowerEase(0, 0.5, -shape, 2*lerpFactor) :
+        _interpolatePowerEase(0.5, 1, shape, 2*(lerpFactor-.5));
   }
 
   private double interpolateSmoothstep(double from, double lerpFactor) {
+    lerpFactor = shapeLerpFactor(lerpFactor, this.shape);
     return LXUtils.lerp(from, this.normalized, lerpFactor * lerpFactor * (3. - 2. * lerpFactor));
   }
 
   private double interpolateSinusoidal(double from, double lerpFactor) {
+    lerpFactor = shapeLerpFactor(lerpFactor, this.shape);
     return LXUtils.lerp(from, this.normalized, .5 - .5 * Math.cos(lerpFactor*Math.PI));
   }
 
   public boolean isLinear() {
-    return (this.curve == Curve.POWER_EASE) && (this.shape == 0);
+    return switch (this.curve) {
+    case POWER_EASE, POWER_S_CURVE -> (this.shape == 0);
+    default -> false;
+    };
   }
 
   @Override
