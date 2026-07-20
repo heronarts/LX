@@ -152,6 +152,11 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   }
 
   @Override
+  void scrubCursor(Cursor to) {
+    triggerPatternAtCursor(to);
+  }
+
+  @Override
   void initializeCursorPlayback(Cursor to) {
     triggerPatternAtCursor(to);
   }

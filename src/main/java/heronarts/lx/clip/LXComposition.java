@@ -83,6 +83,21 @@ public class LXComposition extends LXClip {
     return "composition";
   }
 
+  /**
+   * Safely set the insert marker to a specific value (in time units)
+   *
+   * @param insertMarker Cursor position on the timeline
+   */
+  @Override
+  public LXClip setInsertMarker(Cursor insertMarker) {
+    super.setInsertMarker(insertMarker);
+    if (!isRunning()) {
+      this.lanes.forEach(lane -> lane.scrubCursor(this.insertMarker.cursor));
+    }
+    return this;
+  }
+
+
   @Override
   protected boolean isLaneRecording(LXBus bus) {
     return (bus != null) && bus.arm.isOn();

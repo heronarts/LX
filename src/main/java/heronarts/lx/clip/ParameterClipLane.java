@@ -422,6 +422,13 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   @Override
+  void scrubCursor(Cursor to) {
+    if (!(this instanceof Trigger)) {
+      evaluateCursor(to);
+    }
+  }
+
+  @Override
   void loopCursor(Cursor from, Cursor to) {
     if (this.overdubActive && hasStitching()) {
       // Stitch what was before the start of the loop to the value at the end of the loop
@@ -444,14 +451,17 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   void playCursor(Cursor from, Cursor to, boolean inclusive) {
     // Set a flag so we these don't trigger recording events
     this.inPlayback = true;
-
     if (this instanceof Trigger) {
-
       // Trigger events just fire in a basic way, no interpolated or stepped value stuff
       super.playCursor(from, to, inclusive);
+    } else {
+      evaluateCursor(to);
+    }
+    this.inPlayback = false;
+  }
 
-    } else if (!this.events.isEmpty()) {
-
+  private void evaluateCursor(Cursor to) {
+    if (!this.events.isEmpty()) {
       // Boolean/Discrete/Normalized events always set value based upon envelope shape
       int toIndex = LXUtils.min(cursorPlayIndex(to), this.events.size()-1);
       ParameterClipEvent next = this.events.get(toIndex);
@@ -468,8 +478,6 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         this.parameter.setNormalized(prior.getNormalized());
       }
     }
-
-    this.inPlayback = false;
   }
 
   @Override

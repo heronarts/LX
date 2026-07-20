@@ -607,6 +607,14 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public abstract String getLabel();
 
   /**
+   * Subclasses should implement appropriate action to restore state at this point when
+   * the cursor is scrubbed in a non-playbvack setting
+   *
+   * @param to Cursor position to restore state at
+   */
+  void scrubCursor(Cursor to) {}
+
+  /**
    * Subclasses may override to take action when playback starts from a cursor position
    *
    * @param to Cursor position to start playback from
