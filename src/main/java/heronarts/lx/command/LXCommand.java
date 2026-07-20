@@ -4893,6 +4893,96 @@ public abstract class LXCommand {
             this.clipLane.get().load(lx, this.preState);
           }
         }
+
+        public static class SetCurve extends LXCommand {
+          private final ComponentReference<ParameterClipLane> clipLane;
+          private final int eventIndex;
+          private final ParameterClipEvent.Curve fromCurve;
+          private final ParameterClipEvent.Curve toCurve;
+
+          public SetCurve(ParameterClipLane lane, ParameterClipEvent clipEvent, ParameterClipEvent.Curve curve) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.eventIndex = lane.events.indexOf(clipEvent);
+            this.fromCurve = clipEvent.getCurve();
+            this.toCurve = curve;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Adjust Curve";
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            _setCurve(this.toCurve);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            _setCurve(this.fromCurve);
+          }
+
+          private void _setCurve(ParameterClipEvent.Curve curve) throws InvalidCommandException  {
+            try {
+              this.clipLane.get().events.get(this.eventIndex).setCurve(curve);
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+        }
+
+        public static class SetShape extends LXCommand {
+          private final ComponentReference<ParameterClipLane> clipLane;
+          private final int eventIndex;
+          private final double fromShape;
+          private double toShape;
+
+          public SetShape(ParameterClipLane lane, ParameterClipEvent clipEvent) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.eventIndex = lane.events.indexOf(clipEvent);
+            this.fromShape = clipEvent.getShape();
+          }
+
+          @Override
+          public String getDescription() {
+            return "Adjust Shape";
+          }
+
+          public SetShape update(double toShape) {
+            this.toShape = toShape;
+            return this;
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            _setShape(this.toShape);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            _setShape(this.fromShape);
+          }
+
+          private void _setShape(double shape) throws InvalidCommandException  {
+            try {
+              this.clipLane.get().events.get(this.eventIndex).setShape(shape);
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+        }
+
+        public static class ResetShape extends SetShape {
+          public ResetShape(ParameterClipLane lane, ParameterClipEvent clipEvent) {
+            super(lane, clipEvent);
+            update(0);
+          }
+
+          @Override
+          public String getDescription() {
+            return "Reset Shape";
+          }
+        }
       }
     }
   }

@@ -10,10 +10,21 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   public static final double MAX_POWER_EXPONENT = 18;
 
   public enum Curve {
-    POWER_EASE,
-    POWER_S_CURVE,
-    SMOOTHSTEP,
-    SINUSOIDAL;
+    POWER_EASE("Power Ease"),
+    POWER_S_CURVE("S-Curve"),
+    SINUSOIDAL("Sinusoidal"),
+    SMOOTHSTEP("Smoothstep");
+
+    public final String label;
+
+    private Curve(String label) {
+      this.label = label;
+    }
+
+    @Override
+    public final String toString() {
+      return this.label;
+    }
   }
 
   public final ParameterClipLane lane;
@@ -81,6 +92,13 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     return this;
   }
 
+  public boolean hasShape() {
+    return switch (this.curve) {
+    case POWER_EASE, POWER_S_CURVE -> true;
+    default -> false;
+    };
+  }
+
   public ParameterClipEvent setShape(double shape) {
     shape = LXUtils.constrain(shape, -1, 1);
     if (this.shape != shape) {
@@ -139,9 +157,9 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   private double interpolateSCurve(double from, double lerpFactor) {
     double midpoint = LXUtils.lerp(from, this.normalized, .5);
     if (lerpFactor <= 0.5) {
-      return _interpolatePowerEase(from, midpoint, this.shape, 2*lerpFactor);
+      return _interpolatePowerEase(from, midpoint, -this.shape, 2*lerpFactor);
     } else {
-      return _interpolatePowerEase(midpoint, this.normalized, -this.shape, 2*(lerpFactor-.5));
+      return _interpolatePowerEase(midpoint, this.normalized, this.shape, 2*(lerpFactor-.5));
     }
   }
 
