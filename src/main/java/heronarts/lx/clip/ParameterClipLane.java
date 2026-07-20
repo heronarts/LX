@@ -180,13 +180,13 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       return null;
     }
     if (hasInterpolation()) {
-      return new ParameterClipEvent(this, cursor, LXUtils.lerp(
-        prior.getNormalized(),
-        next.getNormalized(),
-        CursorOp().getLerpFactor(cursor, prior.cursor, next.cursor)
-      ));
+      return new ParameterClipEvent(this, cursor, interpolateValue(prior, next, cursor));
     }
     return new ParameterClipEvent(this, cursor, CursorOp().isAfterOrEqual(cursor, next.cursor) ? next.getNormalized() : prior.getNormalized());
+  }
+
+  public double interpolateValue(ParameterClipEvent from, ParameterClipEvent to, Cursor cursor) {
+    return to.interpolateFrom(from, CursorOp().getLerpFactor(cursor, from.cursor, to.cursor));
   }
 
   @Override
@@ -401,12 +401,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         if (cursorIndex < this.events.size()) {
           // If there's an event ahead of the previous event, preserve the interpolation between
           // the two
-          final ParameterClipEvent nextEvent = this.events.get(cursorIndex);
-          normalized = LXUtils.lerp(
-            previousEvent.getNormalized(),
-            nextEvent.getNormalized(),
-            CursorOp().getLerpFactor(this.clip.cursor, previousEvent.cursor, nextEvent.cursor)
-          );
+          normalized = interpolateValue(previousEvent, this.events.get(cursorIndex), this.clip.cursor);
         } else {
           normalized = previousEvent.getNormalized();
         }
@@ -467,11 +462,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         this.parameter.setNormalized(next.getNormalized());
       } else if (hasInterpolation()) {
         // Interpolate value between the two events surrounding us
-        this.parameter.setNormalized(LXUtils.lerp(
-          prior.getNormalized(),
-          next.getNormalized(),
-          CursorOp().getLerpFactor(to, prior.cursor, next.cursor)
-        ));
+        this.parameter.setNormalized(interpolateValue(prior, next, to));
       } else {
         // Stick with the prior value until next is actually reached
         this.parameter.setNormalized(prior.getNormalized());
