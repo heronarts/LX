@@ -23,3 +23,5 @@ jobs:
           cache: 'maven'
       - name: Verify Tests Pass
         run: mvn --batch-mode --update-snapshots verify
+      - name: Catalog staleness report (informational)
+        run: ./scripts/check-catalog-staleness.sh
