@@ -131,89 +131,59 @@ public abstract class LXProtocolFixture extends LXFixture {
     return null;
   }
 
-  protected Transport getProtocolTransport() {
-    switch (this.protocol.getEnum()) {
-    case OPC:
-      return this.transport.getEnum();
-    default:
-      return Transport.UDP;
-    }
+  public Transport getProtocolTransport() {
+    return switch (this.protocol.getEnum()) {
+      case OPC -> this.transport.getEnum();
+      default -> Transport.UDP;
+    };
   }
 
-  protected int getProtocolPort() {
-    Protocol protocol = this.protocol.getEnum();
-    switch (protocol) {
-    case OPC:
-      return this.port.getValuei();
-    case ARTNET:
-    case SACN:
-    case DDP:
-    case KINET:
-    case NONE:
-    default:
-      return protocol.defaultPort;
-    }
+  public int getProtocolPort() {
+    final Protocol protocol = this.protocol.getEnum();
+    return switch (protocol) {
+      case OPC -> this.port.getValuei();
+      default -> protocol.defaultPort;
+    };
   }
 
-  protected int getProtocolUniverse() {
-    switch (this.protocol.getEnum()) {
-    case ARTNET:
-    case SACN:
-      return this.artNetUniverse.getValuei();
-    case DDP:
-      return this.ddpDataOffset.getValuei();
-    case KINET:
-      return this.kinetPort.getValuei();
-    case OPC:
-      return this.opcChannel.getValuei();
-    case NONE:
-    default:
-      return 0;
-    }
+  public int getProtocolUniverse() {
+    return switch (this.protocol.getEnum()) {
+      case ARTNET, SACN -> this.artNetUniverse.getValuei();
+      case DDP -> this.ddpDataOffset.getValuei();
+      case KINET -> this.kinetPort.getValuei();
+      case OPC -> this.opcChannel.getValuei();
+      default -> 0;
+    };
   }
 
-  protected int getProtocolChannel() {
-    switch (this.protocol.getEnum()) {
-    case ARTNET:
-    case SACN:
-    case KINET:
-      return this.dmxChannel.getValuei();
-    case OPC:
-      return this.opcOffset.getValuei();
-    case DDP:
-      // DDP packets are always sent individually with data offset
-      return 0;
-    case NONE:
-    default:
-      return 0;
-    }
+  public int getProtocolChannel() {
+    return switch (this.protocol.getEnum()) {
+      case ARTNET, SACN, KINET -> this.dmxChannel.getValuei();
+      case OPC -> this.opcOffset.getValuei();
+      case DDP -> 0; // DDP packets are always sent individually with data offset
+      default -> 0;
+    };
   }
 
-  protected boolean getProtocolSequenceEnabled() {
-    switch (this.protocol.getEnum()) {
-    case ARTNET:
-      return this.artNetSequenceEnabled.isOn();
-    default:
-      return false;
-    }
+  public boolean getProtocolSequenceEnabled() {
+    return switch (this.protocol.getEnum()) {
+      case ARTNET -> this.artNetSequenceEnabled.isOn();
+      default -> false;
+    };
   }
 
-  protected KinetDatagram.Version getProtocolKinetVersion() {
-    switch (this.protocol.getEnum()) {
-    case KINET:
-      return this.kinetVersion.getEnum();
-    default:
-      return KinetDatagram.Version.PORTOUT;
-    }
+  public KinetDatagram.Version getProtocolKinetVersion() {
+    return switch (this.protocol.getEnum()) {
+      case KINET -> this.kinetVersion.getEnum();
+      default -> KinetDatagram.Version.PORTOUT;
+    };
   }
 
-  protected int getProtocolPriority() {
-    switch (this.protocol.getEnum()) {
-    case SACN:
-      return this.sacnPriority.getValuei();
-    default:
-      return 0;
-    }
+  public int getProtocolPriority() {
+    return switch (this.protocol.getEnum()) {
+      case SACN -> this.sacnPriority.getValuei();
+      default -> 0;
+    };
   }
 
   @Override

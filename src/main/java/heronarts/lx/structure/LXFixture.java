@@ -403,7 +403,7 @@ public abstract class LXFixture extends LXComponent implements LXFixtureContaine
 
   final List<LXFixture> mutableChildren = new ArrayList<LXFixture>();
 
-  protected final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
+  public final List<LXFixture> children = Collections.unmodifiableList(this.mutableChildren);
 
   private final List<LXOutput> mutableOutputsDirect = new ArrayList<LXOutput>();
 
