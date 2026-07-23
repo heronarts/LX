@@ -511,12 +511,12 @@ public class LXClipEngine extends LXComponent implements LXOscComponent {
     for (LXAbstractChannel channel : this.lx.engine.mixer.channels) {
       clip = channel.getClip(index);
       if (clip != null) {
-        clip.trigger();
+        clip._launch(false);
       }
     }
     clip = this.lx.engine.mixer.masterBus.getClip(index);
     if (clip != null) {
-      clip.trigger();
+      clip._launch(false);
     }
     return this;
   }

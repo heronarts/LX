@@ -435,7 +435,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * Invoked when we launch from the main launch() function or grid trigger. In this case
    * we also recall snapshots.
    */
-  private void _launch(boolean quantized) {
+  void _launch(boolean quantized) {
     // Grid/master launch is always from the play start position
     this.launchFromCursor.set(getLaunchPosition().cursor.bound(this));
     _launchAutomation(quantized);
