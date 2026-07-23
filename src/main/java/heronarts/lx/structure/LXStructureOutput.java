@@ -22,6 +22,7 @@ import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import heronarts.lx.LX;
@@ -258,6 +259,10 @@ public class LXStructureOutput extends LXOutput {
     super(lx);
     this.structure = structure;
     this.gammaMode.setValue(GammaMode.DIRECT);
+  }
+
+  public List<LXOutput> getOutputs() {
+    return Collections.unmodifiableList(this.generatedOutputs);
   }
 
   void clear() {

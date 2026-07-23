@@ -118,7 +118,7 @@ public abstract class LXBufferOutput extends LXOutput {
     }
   };
 
-  protected final IndexBuffer indexBuffer;
+  public final IndexBuffer indexBuffer;
 
   protected LXBufferOutput(LX lx, IndexBuffer indexBuffer) {
     super(lx);
