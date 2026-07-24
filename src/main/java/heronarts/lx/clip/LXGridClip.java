@@ -43,9 +43,10 @@ public abstract class LXGridClip extends LXClip {
       }
     }
     for (LXEffect effect : bus.effects) {
-      registerComponent(effect);
+      registerDevice(effect);
     }
     registerParameter(bus.fader);
+    registerModulation(this.bus.modulation);
   }
 
   @Override
@@ -67,8 +68,9 @@ public abstract class LXGridClip extends LXClip {
   public void dispose() {
     unregisterParameter(bus.fader);
     for (LXEffect effect : this.bus.getEffects()) {
-      unregisterComponent(effect);
+      unregisterDevice(effect);
     }
+    unregisterModulation(this.bus.modulation);
     if (this.hasBusListener) {
       this.bus.removeEffectsListener(this);
     }

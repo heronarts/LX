@@ -35,8 +35,6 @@ import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.modulation.LXGlobalModulationEngine;
-import heronarts.lx.modulation.LXModulationEngine;
-import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.pattern.PatternRack;
@@ -194,7 +192,7 @@ public class LXComposition extends LXClip {
     }
     registerBus(lx.engine.mixer.masterBus);
     registerParameter(lx.engine.mixer.crossfader);
-    registerModulation(lx.engine.modulation);
+    registerGlobalModulation(lx.engine.modulation);
   }
 
   private void initializeUnregister() {
@@ -203,7 +201,7 @@ public class LXComposition extends LXClip {
     }
     unregisterBus(lx.engine.mixer.masterBus);
     unregisterParameter(lx.engine.mixer.crossfader);
-    unregisterModulation(lx.engine.modulation);
+    unregisterGlobalModulation(lx.engine.modulation);
   }
 
   private List<LXClipLane<?>> findAllBusLanes(LXClipBus bus, boolean includeMainBusLane) {
@@ -308,12 +306,12 @@ public class LXComposition extends LXClip {
 
     @Override
     public void effectAdded(LXBus channel, LXEffect effect) {
-      registerComponent(effect);
+      registerDevice(effect);
     }
 
     @Override
     public void effectRemoved(LXBus channel, LXEffect effect) {
-      unregisterComponent(effect);
+      unregisterDevice(effect);
     }
   };
 
@@ -335,8 +333,9 @@ public class LXComposition extends LXClip {
     }
     registerParameter(bus.fader);
     for (LXEffect effect : bus.effects) {
-      registerComponent(effect);
+      registerDevice(effect);
     }
+    registerModulation(bus.modulation);
   }
 
   private void unregisterBus(LXBus bus) {
@@ -350,12 +349,13 @@ public class LXComposition extends LXClip {
       default -> bus.removeListener(this.channelListener);
     }
     for (LXEffect effect : bus.effects) {
-      unregisterComponent(effect);
+      unregisterDevice(effect);
     }
     if (bus instanceof LXAbstractChannel channel) {
       unregisterParameter(channel.enabled);
     }
     unregisterParameter(bus.fader);
+    unregisterModulation(bus.modulation);
 
     if (this.busLanes.containsKey(bus)) {
       removeClipLane(this.busLanes.get(bus));
@@ -375,27 +375,16 @@ public class LXComposition extends LXClip {
     }
   }
 
-  private final LXModulationEngine.Listener modulationListener = new LXModulationEngine.Listener.Default() {
-    public void modulatorAdded(LXModulationEngine engine, LXModulator modulator) {
-      registerComponent(modulator);
-    }
-
-    public void modulatorRemoved(LXModulationEngine engine, LXModulator modulator) {
-      unregisterComponent(modulator);
-    }
-  };
-
-  private void registerModulation(LXGlobalModulationEngine modulation) {
-    modulation.modulators.forEach(modulator -> registerComponent(modulator));
-    modulation.addListener(this.modulationListener);
-    findModulationLane(-1);
+  private void registerGlobalModulation(LXGlobalModulationEngine modulation) {
+    registerModulation(modulation);
+    findGlobalModulationLane(-1);
   }
 
-  private void unregisterModulation(LXModulationEngine modulation) {
-    modulation.removeListener(this.modulationListener);
+  private void unregisterGlobalModulation(LXGlobalModulationEngine modulation) {
+    unregisterModulation(modulation);
   }
 
-  private GlobalModulationClipLane findModulationLane(int index) {
+  private GlobalModulationClipLane findGlobalModulationLane(int index) {
     for (LXClipLane<?> lane : this.lanes) {
       if (lane instanceof GlobalModulationClipLane modulationLane) {
         return modulationLane;
@@ -604,7 +593,7 @@ public class LXComposition extends LXClip {
   }
 
   private GlobalModulationClipLane loadGlobalModulationLane(JsonObject laneObj, int index) {
-    return findModulationLane(index);
+    return findGlobalModulationLane(index);
   }
 
   // Audio Lanes

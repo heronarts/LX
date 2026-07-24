@@ -42,6 +42,8 @@ import heronarts.lx.Tempo;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXPatternEngine;
+import heronarts.lx.modulation.LXModulationEngine;
+import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
@@ -1305,10 +1307,39 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     }
   }
 
+  protected void registerDevice(LXDeviceComponent device) {
+    registerComponent(device);
+    registerModulation(device.modulation);
+  }
+
+  protected void unregisterDevice(LXDeviceComponent device) {
+    unregisterComponent(device);
+    unregisterModulation(device.modulation);
+  }
+
+  private final LXModulationEngine.Listener modulationListener = new LXModulationEngine.Listener.Default() {
+    public void modulatorAdded(LXModulationEngine engine, LXModulator modulator) {
+      registerComponent(modulator);
+    }
+
+    public void modulatorRemoved(LXModulationEngine engine, LXModulator modulator) {
+      unregisterComponent(modulator);
+    }
+  };
+
+  protected void registerModulation(LXModulationEngine modulation) {
+    modulation.modulators.forEach(modulator -> registerComponent(modulator));
+    modulation.addListener(this.modulationListener);
+  }
+
+  protected void unregisterModulation(LXModulationEngine modulation) {
+    modulation.removeListener(this.modulationListener);
+  }
+
   protected void registerPattern(LXPattern pattern) {
-    registerComponent(pattern);
+    registerDevice(pattern);
     for (LXEffect effect : pattern.effects) {
-      registerComponent(effect);
+      registerDevice(effect);
     }
     pattern.addListener(this.patternEffectListener);
     if (pattern instanceof PatternRack rack) {
@@ -1330,9 +1361,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
       rack.patternEngine.removeListener(this.rackPatternListener);
     }
-    unregisterComponent(pattern);
+    unregisterDevice(pattern);
     for (LXEffect effect : pattern.effects) {
-      unregisterComponent(effect);
+      unregisterDevice(effect);
     }
     pattern.removeListener(this.patternEffectListener);
   }
@@ -1374,10 +1405,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   private final LXPattern.Listener patternEffectListener = new LXPattern.Listener() {
     public void effectAdded(LXPattern pattern, LXEffect effect) {
-      registerComponent(effect);
+      registerDevice(effect);
     }
     public void effectRemoved(LXPattern pattern, LXEffect effect) {
-      unregisterComponent(effect);
+      unregisterDevice(effect);
     }
     public void effectMoved(LXPattern pattern, LXEffect effect) {}
   };
@@ -1633,12 +1664,12 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   @Override
   public void effectAdded(LXBus channel, LXEffect effect) {
-    registerComponent(effect);
+    registerDevice(effect);
   }
 
   @Override
   public void effectRemoved(LXBus channel, LXEffect effect) {
-    unregisterComponent(effect);
+    unregisterDevice(effect);
   }
 
   /**
