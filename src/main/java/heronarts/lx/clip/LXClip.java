@@ -1334,6 +1334,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
 
   protected void unregisterModulation(LXModulationEngine modulation) {
     modulation.removeListener(this.modulationListener);
+    modulation.modulators.forEach(modulator -> unregisterComponent(modulator));
   }
 
   protected void registerPattern(LXPattern pattern) {
