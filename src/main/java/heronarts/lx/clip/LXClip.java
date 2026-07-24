@@ -1368,11 +1368,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     pattern.removeListener(this.patternEffectListener);
   }
 
-  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create) {
+  public PatternClipLane getPatternLane(LXPatternEngine engine, boolean create) {
     return getPatternLane(engine, create, -1);
   }
 
-  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create, int index) {
+  public PatternClipLane getPatternLane(LXPatternEngine engine, boolean create, int index) {
     for (LXClipLane<?> lane : this.lanes) {
       if (lane instanceof PatternClipLane patternLane) {
         if (patternLane.engine == engine) {

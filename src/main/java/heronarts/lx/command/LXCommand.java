@@ -4007,6 +4007,56 @@ public abstract class LXCommand {
       }
     }
 
+    public static class AddPatternLane extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      private final ComponentReference<LXComponent> patternEngine;
+      private ComponentReference<PatternClipLane> patternLane;
+      private JsonObject laneObj;
+      private boolean ignored = false;
+
+      public AddPatternLane(LXClip clip, LXPatternEngine patternEngine) {
+        this.clip = new ComponentReference<LXClip>(clip);
+        this.patternEngine = new ComponentReference<>(patternEngine.component);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Pattern Lane";
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return this.ignored;
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          LXPatternEngine patternEngine = ((LXPatternEngine.Container) this.patternEngine.get()).getPatternEngine();
+          if (this.clip.get().getPatternLane(patternEngine, false) != null) {
+            this.ignored = true;
+            return;
+          }
+
+          PatternClipLane patternLane = this.clip.get().getPatternLane(patternEngine, true);
+          this.patternLane = new ComponentReference<PatternClipLane>(patternLane);
+          if (this.laneObj != null) {
+            patternLane.load(lx, this.laneObj);
+          } else {
+            this.laneObj = LXSerializable.Utils.toObject(patternLane);
+          }
+        } catch (Exception x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.clip.get().removeClipLane(this.patternLane.get());
+      }
+    }
+
 
     public static class MoveLane extends LXCommand {
 
