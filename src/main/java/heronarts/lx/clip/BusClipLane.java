@@ -27,7 +27,7 @@ import heronarts.lx.parameter.StringParameter;
 /**
  * A composition lane representing a mixer channel
  */
-public class BusClipLane extends LXClipLane<BusClipEvent> {
+public class BusClipLane extends LXClipLane<NullClipEvent> {
 
   public final LXComposition composition;
   public final LXBus bus;
@@ -66,7 +66,7 @@ public class BusClipLane extends LXClipLane<BusClipEvent> {
   }
 
   @Override
-  protected BusClipEvent loadEvent(LX lx, JsonObject eventObj) {
+  protected NullClipEvent loadEvent(LX lx, JsonObject eventObj) {
     throw new UnsupportedOperationException("No events on BusClipLane");
   }
 

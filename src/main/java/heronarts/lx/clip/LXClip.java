@@ -1821,7 +1821,9 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   protected String getClipLaneType(JsonObject laneObj) {
-    return laneObj.get(LXClipLane.KEY_LANE_TYPE).getAsString();
+    return laneObj.has(LXClipLane.KEY_LANE_TYPE) ?
+      laneObj.get(LXClipLane.KEY_LANE_TYPE).getAsString() :
+        LXClipLane.VALUE_LANE_TYPE_UNKNOWN;
   }
 
   public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {

@@ -412,13 +412,13 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addChild("mixer", this.mixer = new LXMixerEngine(lx));
     LX.initProfiler.log("Engine: Mixer");
 
-    // Composition engine
-    addChild("timeline", this.timeline = new LXTimelineEngine(lx));
-    LX.initProfiler.log("Engine: Timeline");
-
     // Modulation matrix
     addChild(KEY_MODULATION, this.modulation = new LXGlobalModulationEngine(lx));
     LX.initProfiler.log("Engine: Modulation");
+
+    // Composition engine (after global modulation, since modulation can be automated!)
+    addChild("timeline", this.timeline = new LXTimelineEngine(lx));
+    LX.initProfiler.log("Engine: Timeline");
 
     // Master output
     addChild("output", this.output = new Output(lx));

@@ -25,6 +25,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.mixer.LXBus;
+import heronarts.lx.modulation.LXGlobalModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
@@ -74,6 +75,9 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
       LXComponent parent = parameterLane.parameter.getParent();
       while (parent != null) {
         if (parent instanceof LXBus) {
+          return parent;
+        }
+        if (parent instanceof LXGlobalModulationEngine) {
           return parent;
         }
         parent = parent.getParent();

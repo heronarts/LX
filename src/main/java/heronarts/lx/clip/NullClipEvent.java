@@ -1,5 +1,5 @@
 /**
- * Copyright 2025- Justin K. Belcher, Heron Arts LLC
+ * Copyright 2025- Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -13,23 +13,23 @@
  * MERCHANTABILITY, NON-INFRINGEMENT, OR FITNESS FOR A PARTICULAR
  * PURPOSE, WITH RESPECT TO THE SOFTWARE.
  *
- * @author Justin K. Belcher <justin@jkb.studio>
+ * @author Mark C. Slee <mark@heronarts.com>
  */
 
 package heronarts.lx.clip;
 
 /**
- * A composition bus lane event is a light container around... a clip! What fun!
+ * A null clip event, that does nothing
  */
-public class BusClipEvent extends LXCompositionEvent<BusClipEvent> {
+public class NullClipEvent extends LXClipEvent<NullClipEvent> {
 
-  BusClipEvent(BusClipLane lane) {
+  NullClipEvent(LXClipLane<NullClipEvent> lane) {
     super(lane);
-    throw new UnsupportedOperationException("Cannot construct BusClipEvent");
+    throw new UnsupportedOperationException("Cannot construct NullClipEvent");
   }
 
   @Override
   public void execute() {
-    throw new UnsupportedOperationException("Cannot execute BusClipEvent");
+    throw new UnsupportedOperationException("Cannot execute NullClipEvent");
   }
 }

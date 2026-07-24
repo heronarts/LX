@@ -34,6 +34,9 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
+import heronarts.lx.modulation.LXGlobalModulationEngine;
+import heronarts.lx.modulation.LXModulationEngine;
+import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.pattern.LXPattern;
 import heronarts.lx.pattern.PatternRack;
@@ -103,8 +106,8 @@ public class LXComposition extends LXClip {
     return (bus != null) && bus.getArmParameter().isOn();
   }
 
-  public void toggleBusLaneVisibility(BusClipLane busLane, boolean expanded) {
-    for (LXClipLane<?> lane : findAllBusLanes(busLane.bus, false)) {
+  public void toggleBusLaneVisibility(LXClipLane<?> busLane, boolean expanded) {
+    for (LXClipLane<?> lane : findAllBusLanes(busLane.clipBus, false)) {
       lane.uiVisible.setValue(expanded);
     }
   }
@@ -191,6 +194,7 @@ public class LXComposition extends LXClip {
     }
     registerBus(lx.engine.mixer.masterBus);
     registerParameter(lx.engine.mixer.crossfader);
+    registerModulation(lx.engine.modulation);
   }
 
   private void initializeUnregister() {
@@ -199,12 +203,13 @@ public class LXComposition extends LXClip {
     }
     unregisterBus(lx.engine.mixer.masterBus);
     unregisterParameter(lx.engine.mixer.crossfader);
+    unregisterModulation(lx.engine.modulation);
   }
 
-  private List<LXClipLane<?>> findAllBusLanes(LXBus bus, boolean includeMainBusLane) {
+  private List<LXClipLane<?>> findAllBusLanes(LXClipBus bus, boolean includeMainBusLane) {
     List<LXClipLane<?>> lanes = new ArrayList<>();
     for (LXClipLane<?> lane : this.lanes) {
-      if ((lane.clipBus == bus) && (includeMainBusLane || !(lane instanceof BusClipLane))) {
+      if ((lane.clipBus == bus) && (includeMainBusLane || !lane.isCompositionBusLane())) {
         lanes.add(lane);
       }
     }
@@ -229,6 +234,41 @@ public class LXComposition extends LXClip {
         moveClipLane(move, toIndex-1, true);
       }
     }
+  }
+
+  @Override
+  public LXClip moveClipLane(LXClipLane<?> lane, int index) {
+    if (lane instanceof GlobalModulationClipLane modulationLane) {
+      return moveGlobalModulationLane(modulationLane, index);
+    } else {
+      return super.moveClipLane(lane, index, false);
+    }
+  }
+
+  private LXComposition moveGlobalModulationLane(GlobalModulationClipLane modulationLane, int toIndex) {
+    int fromIndex = modulationLane.getIndex();
+
+    if (toIndex < fromIndex) {
+      while (toIndex > 0 && !this.lanes.get(toIndex).isCompositionBusLane()) {
+        --toIndex;
+      }
+      // Moving to the left, increment toIndex as we go
+      for (LXClipLane<?> move : findAllBusLanes(modulationLane.clipBus, true)) {
+        moveClipLane(move, toIndex++, true);
+      }
+
+    } else {
+      while (toIndex < this.lanes.size() - 1 && !this.lanes.get(toIndex+1).isCompositionBusLane()) {
+        ++toIndex;
+      }
+
+      // Moving to the right, sequentially insert before target position
+      for (LXClipLane<?> move : findAllBusLanes(modulationLane.clipBus, true)) {
+        moveClipLane(move, toIndex, true);
+
+      }
+    }
+    return this;
   }
 
   private final LXMixerEngine.Listener mixerListener = new LXMixerEngine.Listener() {
@@ -333,6 +373,42 @@ public class LXComposition extends LXClip {
     for (LXClipLane<?> lane : toRemove) {
       removeClipLane(lane);
     }
+  }
+
+  private final LXModulationEngine.Listener modulationListener = new LXModulationEngine.Listener.Default() {
+    public void modulatorAdded(LXModulationEngine engine, LXModulator modulator) {
+      registerComponent(modulator);
+    }
+
+    public void modulatorRemoved(LXModulationEngine engine, LXModulator modulator) {
+      unregisterComponent(modulator);
+    }
+  };
+
+  private void registerModulation(LXGlobalModulationEngine modulation) {
+    modulation.modulators.forEach(modulator -> registerComponent(modulator));
+    modulation.addListener(this.modulationListener);
+    findModulationLane(-1);
+  }
+
+  private void unregisterModulation(LXModulationEngine modulation) {
+    modulation.removeListener(this.modulationListener);
+  }
+
+  private GlobalModulationClipLane findModulationLane(int index) {
+    for (LXClipLane<?> lane : this.lanes) {
+      if (lane instanceof GlobalModulationClipLane modulationLane) {
+        return modulationLane;
+      }
+    }
+    final GlobalModulationClipLane lane = new GlobalModulationClipLane(this, this.lx.engine.modulation);
+    if (index < 0) {
+      this.mutableLanes.add(lane);
+    } else {
+      this.mutableLanes.add(index, lane);
+    }
+    onClipLaneAdded(lane);
+    return lane;
   }
 
   private BusClipLane findBusLane(LXBus bus, int index) {
@@ -525,6 +601,10 @@ public class LXComposition extends LXClip {
       LX.error("Unable to find bus (componentId=" + busId + ") on composition: " + getLabel());
     }
     return null;
+  }
+
+  private GlobalModulationClipLane loadGlobalModulationLane(JsonObject laneObj, int index) {
+    return findModulationLane(index);
   }
 
   // Audio Lanes
@@ -760,6 +840,7 @@ public class LXComposition extends LXClip {
   public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {
     return switch (getClipLaneType(laneObj)) {
       case LXClipLane.VALUE_LANE_TYPE_BUS -> loadBusLane(laneObj, index);
+      case LXClipLane.VALUE_LANE_TYPE_GLOBAL_MODULATION -> loadGlobalModulationLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_AUDIO -> addAudioLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_NOTES -> addTextNoteLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_PATTERN -> loadPatternLane(laneObj, index);

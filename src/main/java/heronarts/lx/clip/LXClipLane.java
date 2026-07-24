@@ -79,6 +79,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     case AudioClipLane l -> true;
     case BusClipLane l -> true;
     case TextNoteClipLane l -> true;
+    case GlobalModulationClipLane l -> true;
     default -> false;
     };
   }
@@ -720,8 +721,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected static final String VALUE_LANE_TYPE_PATTERN = "pattern";
   protected static final String VALUE_LANE_TYPE_MIDI_NOTE = "midiNote";
   protected static final String VALUE_LANE_TYPE_BUS = "bus";
+  protected static final String VALUE_LANE_TYPE_GLOBAL_MODULATION = "modulation";
   protected static final String VALUE_LANE_TYPE_AUDIO = "audio";
   protected static final String VALUE_LANE_TYPE_NOTES = "notes";
+  protected static final String VALUE_LANE_TYPE_UNKNOWN = "unknown";
 
   @Override
   public void load(LX lx, JsonObject obj) {
@@ -753,24 +756,29 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   protected abstract T loadEvent(LX lx, JsonObject eventObj);
 
+  private final String getJsonLaneType() {
+    return switch (this) {
+    case ParameterClipLane l -> VALUE_LANE_TYPE_PARAMETER;
+    case PatternClipLane l -> VALUE_LANE_TYPE_PATTERN;
+    case MidiNoteClipLane l -> VALUE_LANE_TYPE_MIDI_NOTE;
+    case BusClipLane l -> VALUE_LANE_TYPE_BUS;
+    case GlobalModulationClipLane l -> VALUE_LANE_TYPE_GLOBAL_MODULATION;
+    case AudioClipLane l -> VALUE_LANE_TYPE_AUDIO;
+    case TextNoteClipLane l -> VALUE_LANE_TYPE_NOTES;
+    default -> null;
+    };
+  }
+
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    if (this instanceof ParameterClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_PARAMETER);
-    } else if (this instanceof PatternClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_PATTERN);
-    } else if (this instanceof MidiNoteClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_MIDI_NOTE);
-    } else if (this instanceof BusClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_BUS);
-    } else if (this instanceof AudioClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_AUDIO);
-    } else if (this instanceof TextNoteClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_NOTES);
+    final String jsonLaneType = getJsonLaneType();
+    if (jsonLaneType != null) {
+      obj.addProperty(KEY_LANE_TYPE, jsonLaneType);
+    } else {
+      LX.error("Cannot serialize unknown clip lane type: " + this.getClass().getName());
     }
     obj.add(KEY_EVENTS, LXSerializable.Utils.toArray(lx, this.events));
   }
-
 
 }
