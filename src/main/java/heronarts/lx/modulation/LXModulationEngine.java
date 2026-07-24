@@ -383,7 +383,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   @Override
   public String getLabel() {
-    return "Modulation";
+    return "Mod";
   }
 
   private static final String KEY_MODULATORS = "modulators";
