@@ -34,9 +34,9 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXMasterBus;
 import heronarts.lx.mixer.LXMixerEngine;
-import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.TriggerParameter;
 import heronarts.lx.pattern.LXPattern;
+import heronarts.lx.pattern.PatternRack;
 import heronarts.lx.utils.LXUtils;
 import heronarts.lx.utils.ObservableList;
 
@@ -49,7 +49,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class LXComposition extends LXClip {
 
-  private final Map<LXBus, BusClipLane> busLanes = new HashMap<>();
+  private final Map<LXClipBus, LXClipLane<?>> busLanes = new HashMap<>();
   private final List<AudioClipLane> audioLanes = new CopyOnWriteArrayList<>();
 
   private final ObservableList<Locator> mutableLocators = new ObservableList<>();
@@ -99,18 +99,8 @@ public class LXComposition extends LXClip {
 
 
   @Override
-  protected boolean isLaneRecording(LXBus bus) {
-    return (bus != null) && bus.arm.isOn();
-  }
-
-  protected LXBus getLaneBus(LXClipLane<?> lane) {
-    return switch(lane) {
-    case BusClipLane busLane -> busLane.bus;
-    case MidiNoteClipLane midiLane -> midiLane.channel;
-    case ParameterClipLane parameterLane -> parameterLane.bus;
-    case PatternClipLane patternLane -> patternLane.channel;
-    default -> null;
-    };
+  protected boolean isLaneRecording(LXClipBus bus) {
+    return (bus != null) && bus.getArmParameter().isOn();
   }
 
   public void toggleBusLaneVisibility(BusClipLane busLane, boolean expanded) {
@@ -125,17 +115,16 @@ public class LXComposition extends LXClip {
   }
 
   @Override
-  protected int getParameterLaneInsertIndex(LXNormalizedParameter parameter) {
+  protected int getLaneInsertIndex(LXClipLane<?> insertLane) {
     boolean next = false;
     int index = 0;
-    LXBus parameterBus = getParameterLaneBus(parameter);
 
     for (LXClipLane<?> lane : this.lanes) {
-      if (next && lane.isCompositionMajorLane()) {
-        return index;
-      }
-      if (lane instanceof BusClipLane busLane) {
-        if (parameterBus == busLane.bus) {
+      if (lane.isCompositionBusLane()) {
+        if (next) {
+          return index;
+        }
+        if (insertLane.clipBus == lane.clipBus) {
           next = true;
         }
       }
@@ -215,7 +204,7 @@ public class LXComposition extends LXClip {
   private List<LXClipLane<?>> findAllBusLanes(LXBus bus, boolean includeMainBusLane) {
     List<LXClipLane<?>> lanes = new ArrayList<>();
     for (LXClipLane<?> lane : this.lanes) {
-      if ((lane.getBus() == bus) && (includeMainBusLane || !(lane instanceof BusClipLane))) {
+      if ((lane.clipBus == bus) && (includeMainBusLane || !(lane instanceof BusClipLane))) {
         lanes.add(lane);
       }
     }
@@ -337,7 +326,7 @@ public class LXComposition extends LXClip {
     // Remove any lanes associated with this bus
     List<LXClipLane<?>> toRemove = new ArrayList<>();
     for (LXClipLane<?> lane : this.lanes) {
-      if (lane.getBus() == bus) {
+      if (lane.clipBus == bus) {
         toRemove.add(lane);
       }
     }
@@ -347,8 +336,8 @@ public class LXComposition extends LXClip {
   }
 
   private BusClipLane findBusLane(LXBus bus, int index) {
-    BusClipLane lane = this.busLanes.get(bus);
-    return (lane != null) ? lane : addBusLanes(bus, index);
+    final LXClipLane<?> lane = this.busLanes.get(bus);
+    return (lane != null) ? (BusClipLane) lane : addBusLanes(bus, index);
   }
 
   private int getBusLaneInsertIndex(LXBus bus) {
@@ -432,7 +421,14 @@ public class LXComposition extends LXClip {
       }
       LX.error("Could not find pattern lane for channel " + channelPath);
     } else if (laneObj.has(PatternClipLane.KEY_RACK)) {
-      // TODO(mcslee): implement loading of rack pattern lanes in composition
+      String rackPath = laneObj.get(PatternClipLane.KEY_RACK).getAsString();
+      LXComponent rackObj = LXPath.getComponent(this.lx, rackPath);
+      if (rackObj instanceof PatternRack rack) {
+        final PatternClipLane lane = getPatternLane(rack.patternEngine, true, index);
+        lane.load(this.lx, laneObj);
+        return lane;
+      }
+      LX.error("Could not find pattern lane for rack " + rackPath);
     } else {
       LX.error("Cannot load pattern lane, no channel or rack specified");
     }
@@ -467,29 +463,33 @@ public class LXComposition extends LXClip {
 
   @Override
   protected int validateMoveClipLaneIndex(LXClipLane<?> lane, int index) {
-    if (lane.isCompositionMajorLane()) {
+    if (lane.isCompositionBusLane()) {
       if (index < lane.getIndex()) {
-        while (index > 0 && !this.lanes.get(index).isCompositionMajorLane()) {
+        while (index > 0 && !this.lanes.get(index).isCompositionBusLane()) {
           --index;
         }
         return index;
       } else if (index > lane.getIndex()) {
-        while (index < this.lanes.size() - 1 && !this.lanes.get(index+1).isCompositionMajorLane()) {
+        while (index < this.lanes.size() - 1 && !this.lanes.get(index+1).isCompositionBusLane()) {
           ++index;
         }
         return index;
       }
     } else {
       // Minor lanes can only move within their parameter holder
-      LXBus bus = lane.getBus();
-      if (bus == null) {
+      if (lane.clipBus == null) {
         return -1;
       }
-      BusClipLane busLane = this.busLanes.get(bus);
+      LXClipLane<?> busLane = this.busLanes.get(lane.clipBus);
       int minIndex = busLane.getIndex() + 1;
+      if (lane.getIndex() < busLane.getIndex()) {
+        // NOTE(mcslee): hack for when parameter lanes being moved to
+        // the right to follow the bus lane move
+        --minIndex;
+      }
       int maxIndex = minIndex;
       while (++maxIndex < this.lanes.size()) {
-        if (this.lanes.get(maxIndex).isCompositionMajorLane()) {
+        if (this.lanes.get(maxIndex).isCompositionBusLane()) {
           break;
         }
       }

@@ -31,7 +31,6 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.command.LXCommand.Clip.Event.SetCursors.Operation;
-import heronarts.lx.mixer.LXBus;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.utils.LXEngineThreadArrayList;
@@ -47,6 +46,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public final MutableParameter onChange = new MutableParameter();
 
   public final LXClip clip;
+  public final LXClipBus clipBus;
 
   protected boolean overdubActive = false;
 
@@ -58,9 +58,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this.clip.CursorOp();
   }
 
-  protected LXClipLane(LXClip clip) {
+  protected LXClipLane(LXClip clip, LXClipBus clipBus) {
     setParent(clip);
     this.clip = clip;
+    this.clipBus = clipBus;
     addInternalParameter("uiHeight", this.uiHeight);
     addInternalParameter("uiExpanded", this.uiExpanded);
     addInternalParameter("uiMaximized", this.uiMaximized);
@@ -73,24 +74,12 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    *
    * @return true if the lane represents an entire section in the context of a composition
    */
-  public boolean isCompositionMajorLane() {
+  public boolean isCompositionBusLane() {
     return switch (this) {
     case AudioClipLane l -> true;
     case BusClipLane l -> true;
     case TextNoteClipLane l -> true;
     default -> false;
-    };
-  }
-
-  /**
-   * Return the bus that this clip lane is associated with, if any
-   */
-  public final LXBus getBus() {
-    return switch (this.clip) {
-    case LXAbstractChannelClip channelClip -> channelClip.channel;
-    case LXMasterClip masterClip -> lx.engine.mixer.masterBus;
-    case LXComposition composition -> composition.getLaneBus(this);
-    default -> throw new IllegalStateException("Cannot determine bus for unknown LXClip type: " + this.clip + " " + this.clip.getClass());
     };
   }
 

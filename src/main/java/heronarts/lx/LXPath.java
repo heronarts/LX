@@ -82,7 +82,7 @@ public interface LXPath {
    * @param ancestorClass Ancestor class type
    * @return First parent conforming to the class, or none if not found
    */
-  public default <T extends LXComponent> T getAncestor(Class<T> ancestorClass) {
+  public default <T> T getAncestor(Class<T> ancestorClass) {
     LXComponent candidate = (this instanceof LXComponent component) ? component : getParent();
     while (candidate != null) {
       if (ancestorClass.isAssignableFrom(candidate.getClass())) {

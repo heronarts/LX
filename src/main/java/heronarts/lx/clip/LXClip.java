@@ -556,7 +556,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
       }
       ParameterClipLane lane = ParameterClipLane.create(this, parameter, defaultDouble);
       if (index < 0) {
-        index = getParameterLaneInsertIndex(parameter);
+        index = getLaneInsertIndex(lane);
       }
       if (index < 0) {
         this.mutableLanes.add(lane);
@@ -569,7 +569,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     return null;
   }
 
-  protected int getParameterLaneInsertIndex(LXNormalizedParameter parameter) {
+  protected int getLaneInsertIndex(LXClipLane<?> lane) {
     return -1;
   }
 
@@ -604,15 +604,16 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   protected LXClip moveClipLane(LXClipLane<?> lane, int index, boolean internal) {
-    if (!internal && (lane instanceof BusClipLane)) {
-      LX.error("Cannot directly move BusClipLane, reorder via the mixer");
-      return this;
-    }
-
-    index = validateMoveClipLaneIndex(lane, index);
-    if (index < 0) {
-      LX.error("Could not determine valid move position for lane: " + lane);
-      return this;
+    if (!internal) {
+      if (lane instanceof BusClipLane) {
+        LX.error("Cannot directly move BusClipLane, reorder via the mixer");
+        return this;
+      }
+      index = validateMoveClipLaneIndex(lane, index);
+      if (index < 0) {
+        LX.error("Could not determine valid move position for lane: " + lane);
+        return this;
+      }
     }
 
     this.mutableLanes.remove(lane);
@@ -673,23 +674,23 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @param bus Mixer bus to check
    * @return Whether lane should be recording
    */
-  protected abstract boolean isLaneRecording(LXBus bus);
+  protected abstract boolean isLaneRecording(LXClipBus bus);
 
   protected boolean isLaneRecording(LXClipLane<?> lane) {
-    return isLaneRecording(lane.getBus());
+    return isLaneRecording(lane.clipBus);
   }
 
   protected boolean isLaneRecording(LXParameter p) {
-    return isLaneRecording(getParameterLaneBus(p));
+    return isLaneRecording(getParameterClipBus(p));
   }
 
-  protected LXBus getParameterLaneBus(LXParameter p) {
+  protected LXClipBus getParameterClipBus(LXParameter p) {
     // NOTE(mcslee): kind of a HORRENDOUS hack here, but not sure what else to do...
     final LX lx = p.getParent().getLX();
     if (p == lx.engine.mixer.crossfader) {
       return lx.engine.mixer.masterBus;
     }
-    return p.getAncestor(LXBus.class);
+    return p.getAncestor(LXClipBus.class);
   }
 
   /**
@@ -1356,6 +1357,10 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
           lane.insertEvent(new PatternClipEvent(lane, Cursor.ZERO, targetPattern));
         }
       }
+      if (index < 0) {
+        index = getLaneInsertIndex(lane);
+      }
+
       if (index < 0) {
         this.mutableLanes.add(lane);
       } else {

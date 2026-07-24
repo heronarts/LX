@@ -33,7 +33,7 @@ public class BusClipLane extends LXClipLane<BusClipEvent> {
   public final LXBus bus;
 
   BusClipLane(LXComposition composition, LXBus bus) {
-    super(composition);
+    super(composition, bus);
     this.composition = composition;
     this.bus = bus;
   }

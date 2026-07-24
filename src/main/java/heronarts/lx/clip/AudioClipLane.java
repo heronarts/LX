@@ -50,7 +50,7 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> implements LXCompo
   private volatile int activeSampleOffset = 0;
 
   AudioClipLane(LXComposition composition) {
-    super(composition);
+    super(composition, null);
     this.composition = composition;
     this.label.setValue("Audio");
     addParameter("enabled", this.enabled);

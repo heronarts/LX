@@ -32,7 +32,7 @@ public class TextNoteClipLane extends LXClipLane<TextNoteClipEvent> implements L
   public final LXComposition composition;
 
   TextNoteClipLane(LXComposition composition) {
-    super(composition);
+    super(composition, null);
     this.composition = composition;
     this.label.setValue("Notes");
   }

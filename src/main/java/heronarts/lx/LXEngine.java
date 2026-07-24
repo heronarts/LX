@@ -31,6 +31,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.modulation.LXGlobalModulationEngine;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -131,7 +132,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     new BooleanParameter("Restricted", false)
     .setDescription("Whether rendering is disabled due to license restrictions");
 
-  public final LXModulationEngine modulation;
+  public final LXGlobalModulationEngine modulation;
 
   public final LXSnapshotEngine snapshots;
 
@@ -416,7 +417,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     LX.initProfiler.log("Engine: Timeline");
 
     // Modulation matrix
-    addChild(KEY_MODULATION, this.modulation = new LXModulationEngine(lx));
+    addChild(KEY_MODULATION, this.modulation = new LXGlobalModulationEngine(lx));
     LX.initProfiler.log("Engine: Modulation");
 
     // Master output

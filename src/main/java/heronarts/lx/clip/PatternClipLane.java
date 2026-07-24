@@ -45,7 +45,7 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   }
 
   PatternClipLane(LXClip clip, LXChannel channel, LXPatternEngine engine) {
-    super(clip);
+    super(clip, channel);
     this.channel = channel;
     this.engine = engine;
     this.engine.addListener(this);

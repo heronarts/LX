@@ -26,6 +26,7 @@ import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.LXClipContainer;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEngine;
+import heronarts.lx.clip.LXClipBus;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
@@ -49,7 +50,7 @@ import com.google.gson.JsonObject;
  * Abstract representation of a channel, which could be a normal channel with patterns
  * or the master channel.
  */
-public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent, LXModulationContainer, LXEffect.Container, LXClipContainer {
+public abstract class LXBus extends LXModelComponent implements LXPresetComponent, LXOscComponent, LXModulationContainer, LXEffect.Container, LXClipContainer, LXClipBus {
 
   /**
    * Listener interface for objects which want to be notified when the internal

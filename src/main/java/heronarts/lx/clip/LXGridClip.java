@@ -49,7 +49,7 @@ public abstract class LXGridClip extends LXClip {
   }
 
   @Override
-  protected final boolean isLaneRecording(LXBus bus) {
+  protected final boolean isLaneRecording(LXClipBus bus) {
     return true;
   }
 

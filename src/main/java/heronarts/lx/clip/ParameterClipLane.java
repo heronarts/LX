@@ -23,7 +23,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXEngine;
-import heronarts.lx.mixer.LXBus;
 import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
@@ -88,14 +87,15 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     };
   }
 
-  public final LXBus bus;
   public final LXNormalizedParameter parameter;
   private double initialNormalized;
 
   private ParameterClipLane(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
-    super(clip);
+    super(clip, clip.getParameterClipBus(parameter));
+    if (this.clipBus == null) {
+      throw new IllegalStateException("Cannot create ParameterClipLane for parameter not on any LXClipBus");
+    }
     this.parameter = parameter;
-    this.bus = clip.getParameterLaneBus(parameter);
     this.initialNormalized = initialNormalized;
   }
 

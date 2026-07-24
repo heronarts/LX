@@ -38,7 +38,7 @@ public class MidiNoteClipLane extends LXClipLane<MidiNoteClipEvent> implements L
   }
 
   protected MidiNoteClipLane(LXClip clip, LXAbstractChannel channel) {
-    super(clip);
+    super(clip, channel);
     if (channel == null) {
       throw new IllegalArgumentException("MidiNoteClipLane must specify channel");
     }
