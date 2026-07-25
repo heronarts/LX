@@ -28,6 +28,8 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.clip.Cursor.Operator;
+import heronarts.lx.color.LXPalette;
+import heronarts.lx.color.LXSwatch;
 import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXBus;
@@ -193,6 +195,7 @@ public class LXComposition extends LXClip {
     registerBus(lx.engine.mixer.masterBus);
     registerParameter(lx.engine.mixer.crossfader);
     registerGlobalModulation(lx.engine.modulation);
+    registerColorPalette(lx.engine.palette);
   }
 
   private void initializeUnregister() {
@@ -202,6 +205,7 @@ public class LXComposition extends LXClip {
     unregisterBus(lx.engine.mixer.masterBus);
     unregisterParameter(lx.engine.mixer.crossfader);
     unregisterGlobalModulation(lx.engine.modulation);
+    unregisterColorPalette(lx.engine.palette);
   }
 
   private List<LXClipLane<?>> findAllBusLanes(LXClipBus bus, boolean includeMainBusLane) {
@@ -236,22 +240,22 @@ public class LXComposition extends LXClip {
 
   @Override
   public LXClip moveClipLane(LXClipLane<?> lane, int index) {
-    if (lane instanceof GlobalModulationClipLane modulationLane) {
-      return moveGlobalModulationLane(modulationLane, index);
+    if (lane instanceof GlobalClipLane modulationLane) {
+      return moveGlobalLane(modulationLane, index);
     } else {
       return super.moveClipLane(lane, index, false);
     }
   }
 
-  private LXComposition moveGlobalModulationLane(GlobalModulationClipLane modulationLane, int toIndex) {
-    int fromIndex = modulationLane.getIndex();
+  private LXComposition moveGlobalLane(GlobalClipLane globalLane, int toIndex) {
+    int fromIndex = globalLane.getIndex();
 
     if (toIndex < fromIndex) {
       while (toIndex > 0 && !this.lanes.get(toIndex).isCompositionBusLane()) {
         --toIndex;
       }
       // Moving to the left, increment toIndex as we go
-      for (LXClipLane<?> move : findAllBusLanes(modulationLane.clipBus, true)) {
+      for (LXClipLane<?> move : findAllBusLanes(globalLane.clipBus, true)) {
         moveClipLane(move, toIndex++, true);
       }
 
@@ -261,7 +265,7 @@ public class LXComposition extends LXClip {
       }
 
       // Moving to the right, sequentially insert before target position
-      for (LXClipLane<?> move : findAllBusLanes(modulationLane.clipBus, true)) {
+      for (LXClipLane<?> move : findAllBusLanes(globalLane.clipBus, true)) {
         moveClipLane(move, toIndex, true);
 
       }
@@ -384,6 +388,29 @@ public class LXComposition extends LXClip {
     unregisterModulation(modulation);
   }
 
+  private final LXPalette.Listener paletteListener = new LXPalette.Listener() {
+    public void swatchAdded(LXPalette palette, LXSwatch swatch) {
+      registerComponent(swatch);
+    }
+    public void swatchRemoved(LXPalette palette, LXSwatch swatch) {
+      unregisterComponent(swatch);
+    }
+    public void swatchMoved(LXPalette palette, LXSwatch swatch) {}
+  };
+
+  private void registerColorPalette(LXPalette palette) {
+    registerComponent(palette);
+    palette.addListener(this.paletteListener);
+    palette.swatches.forEach(swatch -> registerComponent(swatch));
+    findColorPaletteLane(-1);
+  }
+
+  private void unregisterColorPalette(LXPalette palette) {
+    palette.removeListener(this.paletteListener);
+    palette.swatches.forEach(swatch -> unregisterComponent(swatch));
+    unregisterComponent(palette);
+  }
+
   private GlobalModulationClipLane findGlobalModulationLane(int index) {
     for (LXClipLane<?> lane : this.lanes) {
       if (lane instanceof GlobalModulationClipLane modulationLane) {
@@ -391,6 +418,24 @@ public class LXComposition extends LXClip {
       }
     }
     final GlobalModulationClipLane lane = new GlobalModulationClipLane(this, this.lx.engine.modulation);
+    this.busLanes.put(this.lx.engine.modulation, lane);
+    if (index < 0) {
+      this.mutableLanes.add(lane);
+    } else {
+      this.mutableLanes.add(index, lane);
+    }
+    onClipLaneAdded(lane);
+    return lane;
+  }
+
+  private ColorPaletteClipLane findColorPaletteLane(int index) {
+    for (LXClipLane<?> lane : this.lanes) {
+      if (lane instanceof ColorPaletteClipLane paletteLane) {
+        return paletteLane;
+      }
+    }
+    final ColorPaletteClipLane lane = new ColorPaletteClipLane(this, this.lx.engine.palette);
+    this.busLanes.put(this.lx.engine.palette, lane);
     if (index < 0) {
       this.mutableLanes.add(lane);
     } else {
@@ -596,6 +641,10 @@ public class LXComposition extends LXClip {
     return findGlobalModulationLane(index);
   }
 
+  private ColorPaletteClipLane loadColorPaletteLane(JsonObject laneObj, int index) {
+    return findColorPaletteLane(index);
+  }
+
   // Audio Lanes
 
   /**
@@ -780,6 +829,7 @@ public class LXComposition extends LXClip {
   protected void onClipLaneRemoved(LXClipLane<?> lane) {
     switch (lane) {
       case BusClipLane busLane -> this.busLanes.remove(busLane.bus);
+      case GlobalClipLane globalLane -> this.busLanes.remove(globalLane.clipBus);
       case AudioClipLane audioLane -> this.audioLanes.remove(audioLane);
       default -> {}
     }
@@ -814,6 +864,14 @@ public class LXComposition extends LXClip {
     // Note: super.load() will call clearLanes()
     super.load(lx, obj);
 
+    // Ensure default lanes exist
+    for (LXBus bus : lx.engine.mixer.channels) {
+      findBusLane(bus, -1);
+    }
+    findBusLane(lx.engine.mixer.masterBus, -1);
+    findGlobalModulationLane(-1);
+    findColorPaletteLane(-1);
+
     // LXComposition always has automation playback enabled!
     this.automationEnabled.setValue(true);
 
@@ -830,6 +888,7 @@ public class LXComposition extends LXClip {
     return switch (getClipLaneType(laneObj)) {
       case LXClipLane.VALUE_LANE_TYPE_BUS -> loadBusLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_GLOBAL_MODULATION -> loadGlobalModulationLane(laneObj, index);
+      case LXClipLane.VALUE_LANE_TYPE_COLOR_PALETTE -> loadColorPaletteLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_AUDIO -> addAudioLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_NOTES -> addTextNoteLane(laneObj, index);
       case LXClipLane.VALUE_LANE_TYPE_PATTERN -> loadPatternLane(laneObj, index);

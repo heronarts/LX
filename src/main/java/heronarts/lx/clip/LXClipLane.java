@@ -80,6 +80,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     case BusClipLane l -> true;
     case TextNoteClipLane l -> true;
     case GlobalModulationClipLane l -> true;
+    case ColorPaletteClipLane l -> true;
     default -> false;
     };
   }
@@ -722,6 +723,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected static final String VALUE_LANE_TYPE_MIDI_NOTE = "midiNote";
   protected static final String VALUE_LANE_TYPE_BUS = "bus";
   protected static final String VALUE_LANE_TYPE_GLOBAL_MODULATION = "modulation";
+  protected static final String VALUE_LANE_TYPE_COLOR_PALETTE = "colorPalette";
   protected static final String VALUE_LANE_TYPE_AUDIO = "audio";
   protected static final String VALUE_LANE_TYPE_NOTES = "notes";
   protected static final String VALUE_LANE_TYPE_UNKNOWN = "unknown";
@@ -763,6 +765,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     case MidiNoteClipLane l -> VALUE_LANE_TYPE_MIDI_NOTE;
     case BusClipLane l -> VALUE_LANE_TYPE_BUS;
     case GlobalModulationClipLane l -> VALUE_LANE_TYPE_GLOBAL_MODULATION;
+    case ColorPaletteClipLane l -> VALUE_LANE_TYPE_COLOR_PALETTE;
     case AudioClipLane l -> VALUE_LANE_TYPE_AUDIO;
     case TextNoteClipLane l -> VALUE_LANE_TYPE_NOTES;
     default -> null;

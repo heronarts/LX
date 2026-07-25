@@ -105,7 +105,10 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   public String getLabel() {
-    final LXComponent root = this.clip.container.getClipLaneLabelRoot(this);
+    final LXComponent root = (this.clip instanceof LXComposition) ?
+      (LXComponent) this.clipBus :
+      this.clip.container.asComponent();
+
     final String separator = " | ";
 
     // NOTE(mcslee): feels hacky leaking this UI customization here, consider better...

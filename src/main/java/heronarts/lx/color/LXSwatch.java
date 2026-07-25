@@ -98,6 +98,18 @@ public class LXSwatch extends LXComponent implements LXLoopTask, LXOscComponent,
     }
   }
 
+  boolean didSetSwatch = false;
+
+  /**
+   * Horrible hack for the command engine to determine if a swatch operation did something
+   * that should go into the undo stack
+   *
+   * @return whether swatch operation did anything
+   */
+  public boolean didSetSwatch() {
+    return this.didSetSwatch;
+  }
+
   static Static staticCopy(LXSwatch that) {
     return new Static(that);
   }

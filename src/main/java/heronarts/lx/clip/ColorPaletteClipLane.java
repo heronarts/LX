@@ -18,17 +18,18 @@
 
 package heronarts.lx.clip;
 
-import heronarts.lx.modulation.LXGlobalModulationEngine;
+import heronarts.lx.color.LXPalette;
 
-public class GlobalModulationClipLane extends GlobalClipLane {
+public class ColorPaletteClipLane extends GlobalClipLane {
 
-  protected GlobalModulationClipLane(LXComposition composition, LXGlobalModulationEngine engine) {
-    super(composition, engine);
+  protected ColorPaletteClipLane(LXComposition composition, LXPalette palette) {
+    super(composition, palette);
   }
 
   @Override
   public String getLabel() {
-    return "Modulation";
+    return "Color Palette";
   }
 
 }
+

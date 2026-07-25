@@ -24,8 +24,6 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXSerializable;
-import heronarts.lx.mixer.LXBus;
-import heronarts.lx.modulation.LXGlobalModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
 import heronarts.lx.parameter.BooleanParameter;
@@ -67,23 +65,6 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
 
   public LXComposition getComposition() {
     return this.composition;
-  }
-
-  @Override
-  public LXComponent getClipLaneLabelRoot(LXClipLane<?> lane) {
-    if (lane instanceof ParameterClipLane parameterLane) {
-      LXComponent parent = parameterLane.parameter.getParent();
-      while (parent != null) {
-        if (parent instanceof LXBus) {
-          return parent;
-        }
-        if (parent instanceof LXGlobalModulationEngine) {
-          return parent;
-        }
-        parent = parent.getParent();
-      }
-    }
-    return this.lx.engine.mixer;
   }
 
   @Override

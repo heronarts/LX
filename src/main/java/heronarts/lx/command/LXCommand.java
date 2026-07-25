@@ -415,6 +415,9 @@ public abstract class LXCommand {
         case LXAbstractChannel channel -> {
           removeCompositionChannel(channel);
         }
+        case LXSwatch swatch -> {
+          removeClipLanes(null, swatch);
+        }
         case LXPattern pattern -> {
           removeClipLanes(pattern.getMixerChannel(), pattern);
           removePatternClipEvents(pattern);
@@ -2770,7 +2773,9 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         this.originalSwatch = LXSerializable.Utils.toObject(lx.engine.palette.swatch, true);
-        this.set = lx.engine.palette.setSwatch(this.swatch.get());
+        final LXSwatch swatch = this.swatch.get();
+        swatch.recall.trigger();
+        this.set = swatch.didSetSwatch();
       }
 
       @Override

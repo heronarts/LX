@@ -18,17 +18,25 @@
 
 package heronarts.lx.clip;
 
-import heronarts.lx.modulation.LXGlobalModulationEngine;
+import com.google.gson.JsonObject;
 
-public class GlobalModulationClipLane extends GlobalClipLane {
+import heronarts.lx.LX;
 
-  protected GlobalModulationClipLane(LXComposition composition, LXGlobalModulationEngine engine) {
-    super(composition, engine);
+public abstract class GlobalClipLane extends LXClipLane<NullClipEvent> {
+
+  public final LXComposition composition;
+
+  protected GlobalClipLane(LXComposition composition, LXClipBus clipBus) {
+    super(composition, clipBus);
+    this.composition = composition;
   }
 
   @Override
-  public String getLabel() {
-    return "Modulation";
+  void overdubCursor(Cursor from, Cursor to, boolean inclusive) {}
+
+  @Override
+  protected NullClipEvent loadEvent(LX lx, JsonObject eventObj) {
+    throw new UnsupportedOperationException("No events on GlobalClipLane");
   }
 
 }
