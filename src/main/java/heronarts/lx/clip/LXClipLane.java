@@ -644,6 +644,26 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     }
   }
 
+  private final List<T> EMPTY_LIST = List.of();
+
+  /**
+   * Get a list of events in the given cursor range
+   *
+   * @param from From cursor
+   * @param to To cursor, inclusive
+   * @return List of events in range
+   */
+  public List<T> getEventsInRange(Cursor from, Cursor to) {
+    if (!this.mutableEvents.isEmpty()) {
+      int fromIndex = cursorPlayIndex(from);
+      int toIndex = cursorInsertIndex(to);
+      if (toIndex > fromIndex) {
+        return Collections.unmodifiableList(this.mutableEvents.subList(fromIndex, toIndex));
+      }
+    }
+    return this.EMPTY_LIST;
+  }
+
   public boolean removeRange(Cursor from, Cursor to) {
     return removeRange(from, to, true);
   }
@@ -657,6 +677,19 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
         if (notify) {
           this.onChange.bang();
         }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean collapseRange(Cursor from, Cursor to) {
+    if (!this.mutableEvents.isEmpty()) {
+      int fromIndex = cursorPlayIndex(from);
+      int toIndex = cursorInsertIndex(to);
+      if (toIndex - fromIndex > 2) {
+        this.mutableEvents.removeRange(fromIndex+1, toIndex-1);
+        this.onChange.bang();
         return true;
       }
     }

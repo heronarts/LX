@@ -4172,22 +4172,16 @@ public abstract class LXCommand {
 
       }
 
-      public static class RemoveRange extends LXCommand {
+      private static abstract class EditRange extends LXCommand {
+        protected final ComponentReference<LXClipLane<?>> clipLane;
+        protected final Cursor from, to;
+        protected boolean didRemove = false;
+        protected JsonObject preState = null;
 
-        private final ComponentReference<LXClipLane<?>> clipLane;
-        private final Cursor from, to;
-        private boolean didRemove = false;
-        private JsonObject preState = null;
-
-        public RemoveRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+        public EditRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.from = from.clone();
           this.to = to.clone();
-        }
-
-        @Override
-        public String getDescription() {
-          return "Delete Range";
         }
 
         @Override
@@ -4196,15 +4190,52 @@ public abstract class LXCommand {
         }
 
         @Override
-        public void perform(LX lx) throws InvalidCommandException {
-          LXClipLane<?> clipLane = this.clipLane.get();
+        public final void perform(LX lx) throws InvalidCommandException {
+          final LXClipLane<?> clipLane = this.clipLane.get();
           this.preState = LXSerializable.Utils.toObject(clipLane, true);
-          this.didRemove = clipLane.removeRange(this.from, this.to);
+          this.didRemove = editRange(clipLane, this.from, this.to);
         }
+
+        protected abstract boolean editRange(LXClipLane<?> clipLane, Cursor from, Cursor to);
 
         @Override
         public void undo(LX lx) throws InvalidCommandException {
           this.clipLane.get().load(lx, this.preState);
+        }
+      }
+
+      public static class RemoveRange extends EditRange {
+
+        public RemoveRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          super(clipLane, from, to);
+        }
+
+        @Override
+        public String getDescription() {
+          return "Delete Range";
+        }
+
+        @Override
+        protected boolean editRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          return clipLane.removeRange(from, to);
+        }
+
+      }
+
+      public static class CollapseRange extends EditRange {
+
+        public CollapseRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          super(clipLane, from, to);
+        }
+
+        @Override
+        public String getDescription() {
+          return "Collapse Envelope";
+        }
+
+        @Override
+        protected boolean editRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          return clipLane.collapseRange(from, to);
         }
 
       }
