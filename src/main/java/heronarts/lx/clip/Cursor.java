@@ -351,6 +351,15 @@ public class Cursor implements LXSerializable {
     }
 
     /**
+     * Get the cursor position in millis relative to a tempo
+     *
+     * @param cursor Cursor to get millis value for
+     * @param bpm BPM to reference
+     * @return Millis value of the cursor
+     */
+    public double getMillis(Cursor cursor, double bpm);
+
+    /**
      * Snap this cursor's value to the nearest interval
      *
      * @param clip Clip context
@@ -493,6 +502,10 @@ public class Cursor implements LXSerializable {
 
     private void _setBeatCountBasisFromMillis(Cursor cursor, LXClip clip) {
       cursor._setBeatCountBasis(cursor.millis * clip.referenceBpm.getValue() / 60000);
+    }
+
+    public double getMillis(Cursor cursor, double bpm) {
+      return cursor.getMillis();
     }
 
     @Override
@@ -638,8 +651,12 @@ public class Cursor implements LXSerializable {
     }
 
     private void _setMillisFromTempo(Cursor cursor, LXClip clip) {
-      double millisPerBeat = 60000 / clip.referenceBpm.getValue();
-      cursor.millis = (cursor.beatCount + cursor.beatBasis) * millisPerBeat;
+      cursor.millis = getMillis(cursor, clip.referenceBpm.getValue());
+    }
+
+    public double getMillis(Cursor cursor, double bpm) {
+      double millisPerBeat = 60000 / bpm;
+      return (cursor.beatCount + cursor.beatBasis) * millisPerBeat;
     }
 
     @Override

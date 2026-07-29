@@ -127,8 +127,11 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> implements LXCompo
   private void setActiveEventAt(Cursor to) {
     clearActiveEvent();
     final AudioClipEvent event = getPreviousEvent(to);
-    if ((event != null) && CursorOp().isBeforeOrEqual(to, event.end)) {
-      double offsetMs = to.subtract(event.cursor).getMillis() + event.playbackOffset.getMillis();
+    final Cursor.Operator CursorOp = CursorOp();
+    final double bpm = lx.engine.tempo.bpm.getValue();
+
+    if ((event != null) && CursorOp.isBeforeOrEqual(to, event.end)) {
+      double offsetMs = CursorOp.getMillis(to, bpm) - CursorOp.getMillis(event.cursor, bpm) + CursorOp.getMillis(event.playbackOffset, bpm);
       this.activeSampleOffset = toSampleOffsetFromMs(offsetMs);
       this.activeEvent = event;
     }
@@ -140,14 +143,18 @@ public class AudioClipLane extends LXClipLane<AudioClipEvent> implements LXCompo
    */
   private void findNextEvent(Cursor from, Cursor to) {
     clearActiveEvent();
+
+    final Cursor.Operator CursorOp = CursorOp();
+    final double bpm = lx.engine.tempo.bpm.getValue();
+
     for (int i = cursorPlayIndex(from); i < this.events.size(); i++) {
       AudioClipEvent event = this.events.get(i);
-      if (CursorOp().isAfterOrEqual(event.cursor, to)) {
+      if (CursorOp.isAfterOrEqual(event.cursor, to)) {
         // Next event starts after the cursor, bail fast
         return;
       }
-      if (CursorOp().isAfterOrEqual(event.end, to)) {
-        double offsetMs = to.subtract(event.cursor).getMillis() + event.playbackOffset.getMillis();
+      if (CursorOp.isAfterOrEqual(event.end, to)) {
+        double offsetMs = CursorOp.getMillis(to, bpm) - CursorOp.getMillis(event.cursor, bpm) + CursorOp.getMillis(event.playbackOffset, bpm);
         this.activeSampleOffset = toSampleOffsetFromMs(offsetMs);
         this.activeEvent = event;
         return;

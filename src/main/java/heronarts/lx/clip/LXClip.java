@@ -1720,7 +1720,19 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    * @return Cursor for given time using clip's reference BPM
    */
   public Cursor constructAbsoluteCursor(double millis) {
-    final double beatCountBasis = millis * this.referenceBpm.getValue() / 60000;
+    return constructAbsoluteCursor(millis, this.referenceBpm.getValue());
+  }
+
+  /**
+   * Constructs a cursor using absolute-timing, with the beat fields
+   * computed using a provided BPM value
+   *
+   * @param millis Absolute cursor time
+   * @param bpm BPM value to reference
+   * @return Cursor for given time
+   */
+  public Cursor constructAbsoluteCursor(double millis, double bpm) {
+    final double beatCountBasis = millis * bpm / 60000;
     return new Cursor(
       millis,
       (int) beatCountBasis,

@@ -23,7 +23,10 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.LXSerializable;
 import heronarts.lx.audio.LXAudioBuffer;
+import heronarts.lx.audio.LXAudioComponent;
 import heronarts.lx.audio.LXAudioTimeline;
+import heronarts.lx.parameter.LXParameter;
+import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.StringParameter;
 import java.io.File;
 import java.io.IOException;
@@ -37,9 +40,12 @@ import javax.sound.sampled.UnsupportedAudioFileException;
  */
 public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
 
+  private final LX lx;
   public final AudioClipLane lane;
 
   private File file;
+  private long sourceFrames = 0;
+  private AudioFormat sourceFormat = null;
   private final Cursor sourceLength = new Cursor();
   public final Cursor playbackOffset = new Cursor();
 
@@ -65,12 +71,23 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   }
 
   AudioClipEvent(LX lx, AudioClipLane lane, File file) {
-    super(lane);
+    super(lane, Cursor.ZERO);
+    this.lx = lx;
     this.lane = lane;
     if (file != null) {
       setFile(file);
     }
+    lx.engine.tempo.bpm.addListener(this.onTempoChange = this::onTempoChange);
   }
+
+  private final LXParameterListener onTempoChange;
+
+  private void onTempoChange(LXParameter p) {
+    setSourceLength();
+    setLength(this.lane.clip.constructAbsoluteCursor(this.length.getMillis(), lx.engine.tempo.bpm.getValue()));
+    this.playbackOffset.set(this.lane.clip.constructAbsoluteCursor(this.playbackOffset.getMillis(), lx.engine.tempo.bpm.getValue()));
+    this.lane.onChange.bang();
+  };
 
   // Initialization
 
@@ -81,18 +98,22 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
     this.fileName.setValue(this.file.getName());
 
     try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(this.file)) {
-      AudioFormat format = audioInputStream.getFormat();
-      long frames = audioInputStream.getFrameLength();
-      double durationMs = (frames / format.getFrameRate()) * 1000;
-
-      this.sourceLength.set(this.lane.clip.constructAbsoluteCursor(durationMs));
+      this.sourceFormat = audioInputStream.getFormat();
+      this.sourceFrames = audioInputStream.getFrameLength();
+      setSourceLength();
       setLength(this.sourceLength);
     } catch (UnsupportedAudioFileException | IOException e) {
-      LX.error(e,
-        "Failed to read audio file duration: " + this.file.getAbsolutePath());
+      LX.error(e, "Failed to read audio file duration: " + this.file.getAbsolutePath());
     }
 
     return this;
+  }
+
+  private void setSourceLength() {
+    if (this.sourceFormat != null) {
+      double durationMs = (this.sourceFrames / this.sourceFormat.getFrameRate()) * 1000;
+      this.sourceLength.set(this.lane.clip.constructAbsoluteCursor(durationMs, this.lx.engine.tempo.bpm.getValue()));
+    }
   }
 
   /**
@@ -100,18 +121,18 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
    */
   private float[] loadWaveform() {
     try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(this.file)) {
-      AudioFormat format = audioInputStream.getFormat();
-      AudioFormat pcmFormat = new AudioFormat(
+      AudioFormat inputFormat = audioInputStream.getFormat();
+      AudioFormat waveformFormat = new AudioFormat(
         AudioFormat.Encoding.PCM_SIGNED,
-        format.getSampleRate(),
-        16,
-        format.getChannels(),
-        format.getChannels() * 2, // 2 bytes per sample per channel (16-bit)
-        format.getSampleRate(),
+        inputFormat.getSampleRate(),
+        LXAudioComponent.BITS_PER_SAMPLE_16,
+        inputFormat.getChannels(),
+        inputFormat.getChannels() * 2, // 2 bytes per sample per channel (16-bit)
+        inputFormat.getSampleRate(),
         false
       );
 
-      final float[] samples = loadAudioSamples(pcmFormat);
+      final float[] samples = loadAudioSamples(waveformFormat);
       for (int i = 0; i < samples.length; ++i) {
         samples[i] = Math.abs(samples[i]);
       }
@@ -130,7 +151,7 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   }
 
   private float[] loadAudioSamples(AudioFormat targetFormat) {
-    if (targetFormat.getSampleSizeInBits() != 16) {
+    if (targetFormat.getSampleSizeInBits() != LXAudioComponent.BITS_PER_SAMPLE_16) {
       throw new IllegalArgumentException("AudioClipEvent can only load 16-bit sample data");
     }
     try (AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(this.file)) {
@@ -287,6 +308,7 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
 
   public void dispose() {
     releaseSampleData();
+    this.lx.engine.tempo.bpm.removeListener(this.onTempoChange);
   }
 
   // Serialization
