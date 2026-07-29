@@ -552,6 +552,11 @@ public class LXPreferences implements LXSerializable, LXParameterListener {
   }
 
   private void save() {
+    // Don't save in initial window bootstrap
+    if (this.lx == null) {
+      LX.error("Skipping LXPreferences.save() in bootstrap");
+    }
+
     // Don't re-save the file on updates caused by loading it...
     if (this.inLoad) {
       return;
