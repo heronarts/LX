@@ -27,6 +27,7 @@ import heronarts.lx.audio.LXAudioComponent;
 import heronarts.lx.audio.LXAudioTimeline;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
+import heronarts.lx.parameter.MediaPathParameter;
 import heronarts.lx.parameter.StringParameter;
 import java.io.File;
 import java.io.IOException;
@@ -61,10 +62,7 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
     new StringParameter("File Name")
     .setDescription("Display name of the audio file");
 
-  public final StringParameter filePath =
-    new StringParameter("File Path")
-    .setDescription("Absolute path to the audio file on the local machine");
-
+  public final MediaPathParameter filePath;
 
   AudioClipEvent(LX lx, AudioClipLane lane) {
     this(lx, lane, null);
@@ -73,6 +71,9 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
   AudioClipEvent(LX lx, AudioClipLane lane, File file) {
     super(lane, Cursor.ZERO);
     this.lx = lx;
+    this.filePath =
+      new MediaPathParameter(this.lx, "File Path")
+      .setDescription("Path to the audio file on the local machine");
     this.lane = lane;
     if (file != null) {
       setFile(file);
@@ -334,11 +335,9 @@ public class AudioClipEvent extends LXCompositionEvent<AudioClipEvent> {
     if (obj.has(KEY_FILE_PATH)) {
       String path = obj.get(KEY_FILE_PATH).getAsString();
       this.filePath.setValue(path);
-      if (path != null && !path.isEmpty()) {
-        File file = new File(path);
-        if (file.exists()) {
-          setFile(file);
-        }
+      File file = this.filePath.getMediaFile();
+      if (file != null && file.exists()) {
+        setFile(file);
       }
     }
     if (obj.has(KEY_PLAYBACK_OFFSET)) {
