@@ -22,7 +22,6 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXPath;
-import heronarts.lx.effect.LXEffect;
 import heronarts.lx.mixer.LXChannel;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.pattern.LXPattern;
@@ -36,7 +35,7 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   public LXChannelClip(LX lx, LXChannel channel, int index) {
     super(lx, channel, index, false);
     this.channel = channel;
-    this.mutableLanes.add(this.patternLane = new PatternClipLane(this));
+    this.mutableLanes.add(this.patternLane = new PatternClipLane(this, channel));
 
     // Note that we passed false to the parent class's register listener, because
     // we're going to do it here ourselves, and a channel listener supersedes
@@ -47,110 +46,23 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
     }
   }
 
-  private final LXPattern.Listener patternEffectListener = new LXPattern.Listener() {
-    public void effectAdded(LXPattern pattern, LXEffect effect) {
-      registerComponent(effect);
-    }
-    public void effectRemoved(LXPattern pattern, LXEffect effect) {
-      unregisterComponent(effect);
-    }
-    public void effectMoved(LXPattern pattern, LXEffect effect) {}
-  };
-
-  private final LXPatternEngine.Listener rackPatternListener = new LXPatternEngine.Listener() {
-    public void patternAdded(LXPatternEngine engine, LXPattern pattern) {
-      registerPattern(pattern);
-    }
-    public void patternRemoved(LXPatternEngine engine, LXPattern pattern) {
-      unregisterPattern(pattern);
-    }
-    public void patternWillChange(LXPatternEngine engine, LXPattern pattern, LXPattern nextPattern) {
-      if (isRecording()) {
-        getPatternLane(engine, true).recordPatternEvent(nextPattern);
-      }
-    }
-  };
-
-  protected void registerPattern(LXPattern pattern) {
-    registerComponent(pattern);
-    for (LXEffect effect : pattern.effects) {
-      registerComponent(effect);
-    }
-    pattern.addListener(this.patternEffectListener);
-    if (pattern instanceof PatternRack rack) {
-      for (LXPattern rackPattern : rack.patterns) {
-        registerPattern(rackPattern);
-      }
-      rack.patternEngine.addListener(this.rackPatternListener);
-    }
-  }
-
-  protected void unregisterPattern(LXPattern pattern) {
-    if (pattern instanceof PatternRack rack) {
-      for (LXPattern rackPattern : rack.patterns) {
-        unregisterPattern(rackPattern);
-      }
-      PatternClipLane lane = getPatternLane(rack.patternEngine, false);
-      if (lane != null) {
-        removePatternLane(lane);
-      }
-      rack.patternEngine.removeListener(this.rackPatternListener);
-    }
-    unregisterComponent(pattern);
-    for (LXEffect effect : pattern.effects) {
-      unregisterComponent(effect);
-    }
-    pattern.removeListener(this.patternEffectListener);
-  }
-
-  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create) {
-    return getPatternLane(engine, create, -1);
-  }
-
-  protected PatternClipLane getPatternLane(LXPatternEngine engine, boolean create, int index) {
-    for (LXClipLane<?> lane : this.lanes) {
-      if (lane instanceof PatternClipLane patternLane) {
-        if (patternLane.engine == engine) {
-          return patternLane;
-        }
-      }
-    }
-    if (create) {
-      PatternClipLane lane = new PatternClipLane(this, engine);
-      if (engine.isPlaylist()) {
-        LXPattern targetPattern = engine.getTargetPattern();
-        if (targetPattern != null) {
-          lane.insertEvent(new PatternClipEvent(lane, Cursor.ZERO, targetPattern));
-        }
-      }
-      if (index < 0) {
-        this.mutableLanes.add(lane);
-      } else {
-        this.mutableLanes.add(index, lane);
-      }
-      for (Listener listener : this.listeners) {
-        listener.patternLaneAdded(this, lane);
-      }
-      return lane;
-    }
-    return null;
-  }
-
-  public LXChannelClip removePatternLane(PatternClipLane lane) {
-    _removeLane(lane);
-    return this;
+  @Override
+  protected boolean isPermanentClipLane(LXClipLane<?> lane) {
+    return
+      (lane == this.patternLane) ||
+      super.isPermanentClipLane(lane);
   }
 
   private PatternClipLane addRackPatternLane(LX lx, JsonObject laneObj, int index) {
     final String rackPath = laneObj.get(PatternClipLane.KEY_RACK).getAsString();
-    final PatternRack rack = (PatternRack) LXPath.get(this.bus, rackPath);
-    if (rack == null) {
-      LX.error("No PatternRack found for saved patternclip lane on bus " + this.bus + " at path: " + rackPath);
-      return null;
+    final LXPath rackObj = LXPath.get(this.getParent(), rackPath);
+    if (rackObj instanceof PatternRack rack) {
+      final PatternClipLane lane = getPatternLane(rack.patternEngine, true, index);
+      lane.load(lx, laneObj);
+      return lane;
     }
-    final PatternClipLane lane = getPatternLane(rack.patternEngine, true, index);
-    lane.load(lx, laneObj);
-    return lane;
+    LX.error("No PatternRack found for saved PatternClipLane on " + this.container + " at path: " + rackPath);
+    return null;
   }
 
   @Override
@@ -195,8 +107,8 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
   }
 
   @Override
-  public LXClipLane<?> loadLane(LX lx, JsonObject laneObj, int index) {
-    switch (getLaneType(laneObj)) {
+  public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {
+    switch (getClipLaneType(laneObj)) {
       case LXClipLane.VALUE_LANE_TYPE_PATTERN -> {
         if (laneObj.has(PatternClipLane.KEY_RACK)) {
           return addRackPatternLane(lx, laneObj, index);
@@ -205,12 +117,8 @@ public class LXChannelClip extends LXAbstractChannelClip implements LXChannel.Li
           return this.patternLane;
         }
       }
-      case LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE -> {
-        this.midiNoteLane.load(lx, laneObj);
-        return this.midiNoteLane;
-      }
       default -> {
-        return super.loadLane(lx, laneObj, index);
+        return super.loadClipLane(lx, laneObj, index);
       }
     }
   }

@@ -18,23 +18,29 @@
 
 package heronarts.lx.clip;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
-import heronarts.lx.midi.LXShortMessage;
-import heronarts.lx.midi.MidiNote;
 import heronarts.lx.mixer.LXAbstractChannel;
 
-public abstract class LXAbstractChannelClip extends LXClip implements LXAbstractChannel.MidiListener {
+public abstract class LXAbstractChannelClip extends LXGridClip  {
 
   public final LXAbstractChannel channel;
-  public final MidiNoteClipLane midiNoteLane = new MidiNoteClipLane(this);
+  public final MidiNoteClipLane midiNoteLane;
 
   protected LXAbstractChannelClip(LX lx, LXAbstractChannel channel, int index, boolean registerListener) {
     super(lx, channel, index, registerListener);
     this.channel = channel;
+    this.midiNoteLane = new MidiNoteClipLane(this);
     this.mutableLanes.add(this.midiNoteLane);
-    registerParameter(channel.fader);
     registerParameter(channel.enabled);
-    channel.addMidiListener(this);
+  }
+
+  @Override
+  protected boolean isPermanentClipLane(LXClipLane<?> lane) {
+    return
+      (lane == this.midiNoteLane) ||
+      super.isPermanentClipLane(lane);
   }
 
   @Override
@@ -50,19 +56,21 @@ public abstract class LXAbstractChannelClip extends LXClip implements LXAbstract
   }
 
   @Override
-  public void midiReceived(LXAbstractChannel channel, LXShortMessage message) {
-    if (message instanceof MidiNote note) {
-      if (isRecording()) {
-        this.midiNoteLane.recordNote(note);
+  public LXClipLane<?> loadClipLane(LX lx, JsonObject laneObj, int index) {
+    switch (getClipLaneType(laneObj)) {
+      case LXClipLane.VALUE_LANE_TYPE_MIDI_NOTE -> {
+        this.midiNoteLane.load(lx, laneObj);
+        return this.midiNoteLane;
+      }
+      default -> {
+        return super.loadClipLane(lx, laneObj, index);
       }
     }
   }
 
   @Override
   public void dispose() {
-    unregisterParameter(this.channel.fader);
     unregisterParameter(this.channel.enabled);
-    this.channel.removeMidiListener(this);
     super.dispose();
   }
 

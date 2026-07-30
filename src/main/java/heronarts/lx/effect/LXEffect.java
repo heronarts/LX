@@ -32,6 +32,7 @@ import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.LXParameterListener;
 import heronarts.lx.parameter.MutableParameter;
@@ -204,6 +205,13 @@ public abstract class LXEffect extends LXDeviceComponent implements LXComponent.
       (parameter == this.enabled) ||
       (parameter == this.locked) ||
       super.isHiddenControl(parameter);
+  }
+
+  @Override
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
+    return
+      (parameter != this.locked) &&
+      super.isClipAutomationControl(parameter);
   }
 
   /**

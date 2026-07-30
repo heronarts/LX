@@ -277,7 +277,7 @@ public class LXMixerEngine extends LXComponent implements LXOscComponent {
       }
     } else if (this.focusedChannel == p) {
       LXClip clip = this.lx.engine.clips.getFocusedClip();
-      if (clip != null && clip.bus != getFocusedChannel()) {
+      if (clip != null && clip.container != getFocusedChannel()) {
         this.lx.engine.clips.setFocusedClip(null);
       }
     }

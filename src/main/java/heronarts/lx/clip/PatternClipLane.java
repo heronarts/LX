@@ -33,18 +33,20 @@ import heronarts.lx.utils.LXUtils;
 
 public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXPatternEngine.Listener {
 
+  public final LXChannel channel;
   public final LXPatternEngine engine;
 
-  PatternClipLane(LXClip clip) {
-    this(clip, ((LXChannel) clip.bus).patternEngine);
+  PatternClipLane(LXClip clip, LXChannel channel) {
+    this(clip, channel, channel.patternEngine);
   }
 
   PatternClipLane(LXClip clip, PatternRack rack) {
-    this(clip, rack.patternEngine);
+    this(clip, rack.getMixerChannel(), rack.patternEngine);
   }
 
-  PatternClipLane(LXClip clip, LXPatternEngine engine) {
-    super(clip);
+  PatternClipLane(LXClip clip, LXChannel channel, LXPatternEngine engine) {
+    super(clip, channel);
+    this.channel = channel;
     this.engine = engine;
     this.engine.addListener(this);
   }
@@ -150,6 +152,11 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   }
 
   @Override
+  void scrubCursor(Cursor to) {
+    triggerPatternAtCursor(to);
+  }
+
+  @Override
   void initializeCursorPlayback(Cursor to) {
     triggerPatternAtCursor(to);
   }
@@ -220,12 +227,15 @@ public class PatternClipLane extends LXClipLane<PatternClipEvent> implements LXP
   }
 
   public static final String KEY_RACK = "rack";
+  public static final String KEY_CHANNEL = "channel";
 
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
     if (this.engine.component instanceof PatternRack rack) {
-      obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.bus));
+      obj.addProperty(KEY_RACK, rack.getCanonicalPath(this.clip.container.asComponent()));
+    } else {
+      obj.addProperty(KEY_CHANNEL, this.channel.getCanonicalPath());
     }
   }
 

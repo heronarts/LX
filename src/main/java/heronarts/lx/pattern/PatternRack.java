@@ -29,6 +29,7 @@ import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiPanic;
 import heronarts.lx.mixer.LXPatternEngine;
 import heronarts.lx.osc.OscMessage;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 
 @LXCategory(LXCategory.OTHER)
@@ -48,7 +49,7 @@ public class PatternRack extends LXPattern implements LXPatternEngine.Container,
   }
 
   @Override
-  public boolean isClipAutomationControl(LXParameter parameter) {
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
     return !(this.patternEngine.parameters.containsValue(parameter)) &&
       super.isClipAutomationControl(parameter);
   }

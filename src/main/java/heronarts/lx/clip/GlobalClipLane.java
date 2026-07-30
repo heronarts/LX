@@ -1,5 +1,5 @@
 /**
- * Copyright 2018- Mark C. Slee, Heron Arts LLC
+ * Copyright 2026- Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -18,16 +18,25 @@
 
 package heronarts.lx.clip;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
-import heronarts.lx.mixer.LXGroup;
 
-public class LXGroupClip extends LXAbstractChannelClip {
+public abstract class GlobalClipLane extends LXClipLane<NullClipEvent> {
 
-  public final LXGroup group;
+  public final LXComposition composition;
 
-  public LXGroupClip(LX lx, LXGroup group, int index) {
-    super(lx, group, index, true);
-    this.group = group;
+  protected GlobalClipLane(LXComposition composition, LXClipBus clipBus) {
+    super(composition, clipBus);
+    this.composition = composition;
+  }
+
+  @Override
+  void overdubCursor(Cursor from, Cursor to, boolean inclusive) {}
+
+  @Override
+  protected NullClipEvent loadEvent(LX lx, JsonObject eventObj) {
+    throw new UnsupportedOperationException("No events on GlobalClipLane");
   }
 
 }

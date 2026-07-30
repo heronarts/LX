@@ -28,6 +28,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
+import heronarts.lx.parameter.MediaPathParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
@@ -503,16 +504,12 @@ public class LX {
     this.command = new LXCommandEngine(this);
     LX.initProfiler.log("Engine");
 
-
-    // Initialize tempo
-    this.engine.tempo.initialize();
-
-    // Midi
-    this.engine.midi.initialize();
+    // Initialize engine stuff that depends upon lx.engine being set
+    this.engine.initialize();
 
     // Initialize plugins!
-    if ((this instanceof LXPlugin) && (flags.initialize != this)) {
-      ((LXPlugin) this).initialize(this);
+    if ((this instanceof LXPlugin plugin) && (flags.initialize != this)) {
+      plugin.initialize(this);
     }
     if (this.flags.initialize != null) {
       this.flags.initialize.initialize(this);
@@ -550,6 +547,20 @@ public class LX {
 
   public LX pushError(Throwable exception, String message) {
     return pushError(new Error(exception, message));
+  }
+
+  public LX pushError(Throwable exception, String message, boolean log) {
+    if (log) {
+      LX.error(exception, message);
+    }
+    return pushError(exception, message);
+  }
+
+  public LX pushError(String message, boolean log) {
+    if (log) {
+      LX.error(message);
+    }
+    return pushError(message);
   }
 
   public LX pushError(String message) {
@@ -1307,6 +1318,20 @@ public class LX {
   }
 
   /**
+   * Gets the path to a file relative to the base media path, or absolute if the file lies outside of
+   * the Chromatik media folder
+   *
+   * @param file File
+   * @return Path to this file, relative to Chromatik media folder or absolute if outside
+   */
+  public String getMediaPath(File file) {
+    if (file.isAbsolute()) {
+      return new File(getMediaPath()).getAbsoluteFile().toURI().relativize(file.getAbsoluteFile().toURI()).getPath();
+    }
+    return file.getPath();
+  }
+
+  /**
    * Retrieves a file handle to the folder used to store the given type of media
    *
    * @param type Media type
@@ -1396,6 +1421,26 @@ public class LX {
       deviceFolder.mkdir();
     }
     return deviceFolder;
+  }
+
+  public void consolidateProjectMedia() {
+    if (this.file == null) {
+      pushError("Cannot consolidate project media, no project file found.", true);
+      return;
+    }
+    File mediaFolder = new File(this.file + ".media");
+    if (mediaFolder.exists() && !mediaFolder.isDirectory()) {
+      pushError("Cannot consolidate project media, media folder exists: " + mediaFolder, true);
+      return;
+    }
+    if (!mediaFolder.exists()) {
+      if (!mediaFolder.mkdir()) {
+        pushError("Could not create project media folder: " + mediaFolder);
+        return;
+      }
+    }
+    MediaPathParameter.consolidateProjectMedia(this, mediaFolder, this.engine);
+    pushStatusMessage("Consolidated project media to: " + mediaFolder);
   }
 
   public File getPresetFile(LXComponent device, String name) {

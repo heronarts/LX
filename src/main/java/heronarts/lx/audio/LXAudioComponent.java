@@ -30,11 +30,11 @@ public class LXAudioComponent extends LXComponent {
 
   protected static final int SAMPLE_BUFFER_SIZE = 512;
 
-  protected static final int SAMPLE_RATE_44K = 44100;
-  protected static final int SAMPLE_RATE_48K = 48000;
+  public static final int SAMPLE_RATE_44K = 44100;
+  public static final int SAMPLE_RATE_48K = 48000;
 
-  protected static final int BITS_PER_SAMPLE_16 = 16;
-  protected static final int BYTES_PER_SAMPLE_16 = BITS_PER_SAMPLE_16 / Byte.SIZE;
+  public static final int BITS_PER_SAMPLE_16 = 16;
+  public static final int BYTES_PER_SAMPLE_16 = BITS_PER_SAMPLE_16 / Byte.SIZE;
 
   protected static final int MONO_FRAME_SIZE_16 = BYTES_PER_SAMPLE_16;
   protected static final int STEREO_FRAME_SIZE_16 = BYTES_PER_SAMPLE_16 * 2;

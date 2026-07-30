@@ -22,6 +22,8 @@ import com.google.gson.JsonObject;
 
 import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
+import heronarts.lx.LXEngine;
+import heronarts.lx.parameter.AggregateParameter;
 import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
@@ -77,22 +79,22 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   }
 
   static ParameterClipLane create(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
-    if (parameter instanceof TriggerParameter) {
-      return new Trigger(clip, (TriggerParameter) parameter);
-    } else if (parameter instanceof BooleanParameter) {
-      return new Boolean(clip, (BooleanParameter) parameter, initialNormalized);
-    } else if (parameter instanceof DiscreteParameter) {
-      return new Discrete(clip, (DiscreteParameter) parameter, initialNormalized);
-    } else {
-      return new Normalized(clip, parameter, initialNormalized);
-    }
+    return switch (parameter) {
+      case TriggerParameter triggerParameter -> new Trigger(clip, triggerParameter);
+      case BooleanParameter booleanParameter -> new Boolean(clip, booleanParameter, initialNormalized);
+      case DiscreteParameter discreteParameter -> new Discrete(clip, discreteParameter, initialNormalized);
+      default -> new Normalized(clip, parameter, initialNormalized);
+    };
   }
 
   public final LXNormalizedParameter parameter;
   private double initialNormalized;
 
   private ParameterClipLane(LXClip clip, LXNormalizedParameter parameter, double initialNormalized) {
-    super(clip);
+    super(clip, clip.getParameterClipBus(parameter));
+    if (this.clipBus == null) {
+      throw new IllegalStateException("Cannot create ParameterClipLane for parameter not on any LXClipBus");
+    }
     this.parameter = parameter;
     this.initialNormalized = initialNormalized;
   }
@@ -103,7 +105,29 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   @Override
   public String getLabel() {
-    return this.parameter.getCanonicalLabel(this.clip.bus, " | ", 3);
+    final LXComponent root = (this.clip instanceof LXComposition) ?
+      (LXComponent) this.clipBus :
+      this.clip.container.asComponent();
+
+    final String separator = " | ";
+
+    // NOTE(mcslee): feels hacky leaking this UI customization here, consider better...
+    int limit = (this.clip instanceof LXComposition) ? 4 : 3;
+
+    String label = this.parameter.getLabel();
+    AggregateParameter agg = this.parameter.getParentParameter();
+    while (limit > 0 && agg != null) {
+      label = agg.getLabel() + separator + label;
+      --limit;
+      agg = agg.getParentParameter();
+    }
+    LXComponent parent = this.parameter.getParent();
+    while (limit > 0 && parent != null && parent != root && !(parent instanceof LXEngine)) {
+      label = parent.getLabel() + separator + label;
+      --limit;
+      parent = parent.getParent();
+    }
+    return label;
   }
 
   public boolean shouldRecordParameterChange(LXNormalizedParameter p) {
@@ -159,13 +183,13 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       return null;
     }
     if (hasInterpolation()) {
-      return new ParameterClipEvent(this, cursor, LXUtils.lerp(
-        prior.getNormalized(),
-        next.getNormalized(),
-        CursorOp().getLerpFactor(cursor, prior.cursor, next.cursor)
-      ));
+      return new ParameterClipEvent(this, cursor, interpolateValue(prior, next, cursor));
     }
     return new ParameterClipEvent(this, cursor, CursorOp().isAfterOrEqual(cursor, next.cursor) ? next.getNormalized() : prior.getNormalized());
+  }
+
+  public double interpolateValue(ParameterClipEvent from, ParameterClipEvent to, Cursor cursor) {
+    return to.interpolateFrom(from, CursorOp().getLerpFactor(cursor, from.cursor, to.cursor));
   }
 
   @Override
@@ -380,12 +404,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         if (cursorIndex < this.events.size()) {
           // If there's an event ahead of the previous event, preserve the interpolation between
           // the two
-          final ParameterClipEvent nextEvent = this.events.get(cursorIndex);
-          normalized = LXUtils.lerp(
-            previousEvent.getNormalized(),
-            nextEvent.getNormalized(),
-            CursorOp().getLerpFactor(this.clip.cursor, previousEvent.cursor, nextEvent.cursor)
-          );
+          normalized = interpolateValue(previousEvent, this.events.get(cursorIndex), this.clip.cursor);
         } else {
           normalized = previousEvent.getNormalized();
         }
@@ -403,6 +422,13 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
   public boolean isInPlayback() {
     return this.inPlayback;
+  }
+
+  @Override
+  void scrubCursor(Cursor to) {
+    if (!(this instanceof Trigger)) {
+      evaluateCursor(to);
+    }
   }
 
   @Override
@@ -428,14 +454,17 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   void playCursor(Cursor from, Cursor to, boolean inclusive) {
     // Set a flag so we these don't trigger recording events
     this.inPlayback = true;
-
     if (this instanceof Trigger) {
-
       // Trigger events just fire in a basic way, no interpolated or stepped value stuff
       super.playCursor(from, to, inclusive);
+    } else {
+      evaluateCursor(to);
+    }
+    this.inPlayback = false;
+  }
 
-    } else if (!this.events.isEmpty()) {
-
+  private void evaluateCursor(Cursor to) {
+    if (!this.events.isEmpty()) {
       // Boolean/Discrete/Normalized events always set value based upon envelope shape
       int toIndex = LXUtils.min(cursorPlayIndex(to), this.events.size()-1);
       ParameterClipEvent next = this.events.get(toIndex);
@@ -446,18 +475,12 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         this.parameter.setNormalized(next.getNormalized());
       } else if (hasInterpolation()) {
         // Interpolate value between the two events surrounding us
-        this.parameter.setNormalized(LXUtils.lerp(
-          prior.getNormalized(),
-          next.getNormalized(),
-          CursorOp().getLerpFactor(to, prior.cursor, next.cursor)
-        ));
+        this.parameter.setNormalized(interpolateValue(prior, next, to));
       } else {
         // Stick with the prior value until next is actually reached
         this.parameter.setNormalized(prior.getNormalized());
       }
     }
-
-    this.inPlayback = false;
   }
 
   @Override
@@ -532,7 +555,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    obj.addProperty(LXComponent.KEY_PATH, this.parameter.getCanonicalPath(this.clip.bus));
+    obj.addProperty(LXComponent.KEY_PATH, this.parameter.getCanonicalPath(this.clip.container.asComponent()));
     obj.addProperty(LXComponent.KEY_COMPONENT_ID, this.parameter.getParent().getId());
     obj.addProperty(LXComponent.KEY_PARAMETER_PATH, this.parameter.getPath());
   }

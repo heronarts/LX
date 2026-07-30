@@ -265,13 +265,13 @@ public abstract class LXDeviceComponent extends LXLayeredComponent implements LX
    * @param parameter Parameter
    * @return true if this can be included in clip automation
    */
-  public boolean isClipAutomationControl(LXParameter parameter) {
-    return !(
-      (parameter == this.label) ||
-      (parameter == this.midiFilter) ||
-      (parameter == this.view) ||
-      (parameter == this.viewPriority)
-    );
+  @Override
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
+    return
+      (parameter.getParentParameter() != this.midiFilter) &&
+      (parameter != this.view) &&
+      (parameter != this.viewPriority) &&
+      super.isClipAutomationControl(parameter);
   }
 
   /**

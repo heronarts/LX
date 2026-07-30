@@ -628,6 +628,15 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
       this.output.clear();
     }
 
+    this.normalizationMode.reset();
+    this.normalizationX.reset();
+    this.normalizationY.reset();
+    this.normalizationZ.reset();
+    this.normalizationWidth.reset();
+    this.normalizationHeight.reset();
+    this.normalizationDepth.reset();
+    this.showNormalizationBounds.reset();
+
     return this;
   }
 
@@ -765,8 +774,8 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
 
     this.isLoading = true;
     for (LXFixture fixture : this.fixtures) {
-      if (fixture instanceof JsonFixture) {
-        ((JsonFixture) fixture).reload();
+      if (fixture instanceof JsonFixture jsonFixture) {
+        jsonFixture.reload();
       }
     }
     this.isLoading = false;

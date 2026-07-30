@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.modulator.LXTriggerSource;
 import heronarts.lx.modulator.LinearEnvelope;
@@ -1087,6 +1089,14 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
   @Override
   public BooleanParameter getTriggerSource() {
     return this.trigger;
+  }
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    super.load(lx, obj);
+    if (obj.has(LXComponent.KEY_RESET)) {
+      this.launchQuantization.reset();
+    }
   }
 
   @Override

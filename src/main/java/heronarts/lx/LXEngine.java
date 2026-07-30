@@ -19,6 +19,7 @@
 package heronarts.lx;
 
 import heronarts.lx.audio.LXAudioEngine;
+import heronarts.lx.clip.LXTimelineEngine;
 import heronarts.lx.clip.LXClipEngine;
 import heronarts.lx.color.LXColor;
 import heronarts.lx.color.LXPalette;
@@ -30,6 +31,7 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.mixer.LXMixerEngine;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.model.LXPoint;
+import heronarts.lx.modulation.LXGlobalModulationEngine;
 import heronarts.lx.modulation.LXModulationContainer;
 import heronarts.lx.modulation.LXModulationEngine;
 import heronarts.lx.osc.LXOscComponent;
@@ -80,6 +82,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
 
   public final LXClipEngine clips;
 
+  public final LXTimelineEngine timeline;
+
   public final LXMixerEngine mixer;
 
   public final LXMidiEngine midi;
@@ -120,11 +124,15 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     new BooleanParameter("Performance", false)
     .setDescription("Whether performance mode UI is enabled");
 
+  public final BooleanParameter showCompositionWindow =
+    new BooleanParameter("Show Composition Window", false)
+    .setDescription("Whether the composition window is visible");
+
   public final BooleanParameter restricted =
     new BooleanParameter("Restricted", false)
     .setDescription("Whether rendering is disabled due to license restrictions");
 
-  public final LXModulationEngine modulation;
+  public final LXGlobalModulationEngine modulation;
 
   public final LXSnapshotEngine snapshots;
 
@@ -405,8 +413,12 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     LX.initProfiler.log("Engine: Mixer");
 
     // Modulation matrix
-    addChild(KEY_MODULATION, this.modulation = new LXModulationEngine(lx));
+    addChild(KEY_MODULATION, this.modulation = new LXGlobalModulationEngine(lx));
     LX.initProfiler.log("Engine: Modulation");
+
+    // Composition engine (after global modulation, since modulation can be automated!)
+    addChild("timeline", this.timeline = new LXTimelineEngine(lx));
+    LX.initProfiler.log("Engine: Timeline");
 
     // Master output
     addChild("output", this.output = new Output(lx));
@@ -437,6 +449,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     addParameter("framesPerSecond", this.framesPerSecond);
     addParameter("speed", this.speed);
     addParameter("performanceMode", this.performanceMode);
+    addParameter("showCompositionWindow", this.showCompositionWindow);
 
     // Add utility parameters
     addParameters(this.utilities.parameters);
@@ -449,6 +462,17 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
         LX.log("Rendering engine restored within license limits.");
       }
     });
+  }
+
+  void initialize() {
+    // Initialize tempo
+    this.tempo.initialize();
+
+    // Initialize composition engine
+    this.timeline.initialize();
+
+    // Midi
+    this.midi.initialize();
   }
 
   public void logProfiler() {
@@ -1124,6 +1148,9 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // Run the color control
     this.lx.engine.palette.loop(deltaMs);
 
+    // Run the composition
+    this.timeline.loop(deltaMs);
+
     // Run top-level loop tasks, take care to handle removals that
     // are scheduled from within the loop tasks themselves
     this.inLoopTasks = true;
@@ -1401,6 +1428,8 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     // TODO(mcslee): remove loop tasks that other things might have added? maybe
     // need to separate application-owned loop tasks from project-specific ones...
 
+    this.showCompositionWindow.reset();
+
     // These need to be explicitly enabled per-project
     this.isCompositorMultithreaded.setValue(false);
     this.isNetworkMultithreaded.setValue(false);
@@ -1409,6 +1438,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.output.enabled.setValue(false);
 
     // Clear all the modulation and mixer content
+    this.timeline.clear();
     this.snapshots.clear();
     this.modulation.setFlagLoadModulations(false);
     this.modulation.clear();
@@ -1456,6 +1486,7 @@ public class LXEngine extends LXComponent implements LXOscComponent, LXModulatio
     this.lx.registry.disposePlugins();
 
     // And now remove core engine components
+    LX.dispose(this.timeline);
     LX.dispose(this.clips);
     LX.dispose(this.modulation);
     LX.dispose(this.mixer);

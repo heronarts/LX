@@ -39,12 +39,14 @@ import heronarts.lx.utils.LXUtils;
 public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   public final MutableParameter uiHeight = new MutableParameter("UI Height");
+  public final BooleanParameter uiVisible = new BooleanParameter("UI Visible", true);
   public final BooleanParameter uiExpanded = new BooleanParameter("UI Expanded", true);
   public final BooleanParameter uiMaximized = new BooleanParameter("UI Maximized", false);
 
   public final MutableParameter onChange = new MutableParameter();
 
   public final LXClip clip;
+  public final LXClipBus clipBus;
 
   protected boolean overdubActive = false;
 
@@ -56,12 +58,31 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return this.clip.CursorOp();
   }
 
-  protected LXClipLane(LXClip clip) {
+  protected LXClipLane(LXClip clip, LXClipBus clipBus) {
     setParent(clip);
     this.clip = clip;
+    this.clipBus = clipBus;
     addInternalParameter("uiHeight", this.uiHeight);
     addInternalParameter("uiExpanded", this.uiExpanded);
     addInternalParameter("uiMaximized", this.uiMaximized);
+    this.onChange.addListener(p -> this.clip.onChange.bang());
+  }
+
+  /**
+   * Whether the lane represents a major lane in the composition view. These are lanes
+   * with their own section divider, such as an audio track, a BusClipLane, or text notes
+   *
+   * @return true if the lane represents an entire section in the context of a composition
+   */
+  public boolean isCompositionBusLane() {
+    return switch (this) {
+    case AudioClipLane l -> true;
+    case BusClipLane l -> true;
+    case TextNoteClipLane l -> true;
+    case GlobalModulationClipLane l -> true;
+    case ColorPaletteClipLane l -> true;
+    default -> false;
+    };
   }
 
   final void resetRecordingState() {
@@ -143,7 +164,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    * @return Iterator over events equal to or after the cursor, plus offset
    */
   public ListIterator<T> eventIterator(List<T> events, Cursor fromCursor, int offset) {
-    int index = LXUtils.constrain(cursorPlayIndex(fromCursor) + offset, 0, events.size());
+    int index = LXUtils.constrain(cursorPlayIndex(events, fromCursor) + offset, 0, events.size());
     return events.listIterator(index);
   }
 
@@ -317,8 +338,10 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       entry.getKey().setCursor(entry.getValue());
     }
     // NOTE(mcslee): very tricky case... full explanation in ParameterClipLane.reverseEvents
-    for (Map.Entry<T, Double> entry : fromValues.entrySet()) {
-      setEventNormalized(entry.getKey(), entry.getValue());
+    if (fromValues != null) {
+      for (Map.Entry<T, Double> entry : fromValues.entrySet()) {
+        setEventNormalized(entry.getKey(), entry.getValue());
+      }
     }
 
     // Was this a non-edit? Bail fast after restoring original state
@@ -575,11 +598,19 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   public abstract String getLabel();
 
   /**
+   * Subclasses should implement appropriate action to restore state at this point when
+   * the cursor is scrubbed in a non-playbvack setting
+   *
+   * @param to Cursor position to restore state at
+   */
+  void scrubCursor(Cursor to) {}
+
+  /**
    * Subclasses may override to take action when playback starts from a cursor position
    *
    * @param to Cursor position to start playback from
    */
-  void initializeCursorPlayback(Cursor to) {}
+  void initializeCursorPlayback(Cursor to) { /* TODO: use "from" as parameter name? */ }
 
   /**
    * Subclasses may override to take action when cursor position jumps mid-playback
@@ -613,6 +644,26 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     }
   }
 
+  private final List<T> EMPTY_LIST = List.of();
+
+  /**
+   * Get a list of events in the given cursor range
+   *
+   * @param from From cursor
+   * @param to To cursor, inclusive
+   * @return List of events in range
+   */
+  public List<T> getEventsInRange(Cursor from, Cursor to) {
+    if (!this.mutableEvents.isEmpty()) {
+      int fromIndex = cursorPlayIndex(from);
+      int toIndex = cursorInsertIndex(to);
+      if (toIndex > fromIndex) {
+        return Collections.unmodifiableList(this.mutableEvents.subList(fromIndex, toIndex));
+      }
+    }
+    return this.EMPTY_LIST;
+  }
+
   public boolean removeRange(Cursor from, Cursor to) {
     return removeRange(from, to, true);
   }
@@ -632,6 +683,19 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
     return false;
   }
 
+  public boolean collapseRange(Cursor from, Cursor to) {
+    if (!this.mutableEvents.isEmpty()) {
+      int fromIndex = cursorPlayIndex(from);
+      int toIndex = cursorInsertIndex(to);
+      if (toIndex - fromIndex > 2) {
+        this.mutableEvents.removeRange(fromIndex+1, toIndex-1);
+        this.onChange.bang();
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Remove the given event from this clip lane
    *
@@ -640,6 +704,7 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
    */
   public LXClipLane<T> removeEvent(T event) {
     this.mutableEvents.remove(event);
+    onRemoveEvent(event);
     this.onChange.bang();
     return this;
   }
@@ -659,14 +724,29 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
       // Use removeAll to avoid N array-shifting operations on the
       // underlying ArrayList
       this.mutableEvents.removeAll(toRemove);
+      for (T event : toRemove) {
+        onRemoveEvent(event);
+      }
       this.onChange.bang();
     }
     return this;
   }
 
   void clear() {
+    List<T> toRemove = new ArrayList<>(this.mutableEvents);
     this.mutableEvents.clear();
+    for (T event : toRemove) {
+      onRemoveEvent(event);
+    }
     this.onChange.bang();
+  }
+
+  protected void onRemoveEvent(T event) { }
+
+  @Override
+  public void dispose() {
+    clear();
+    super.dispose();
   }
 
   private static final String KEY_EVENTS = "events";
@@ -674,6 +754,12 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
   protected static final String VALUE_LANE_TYPE_PARAMETER = "parameter";
   protected static final String VALUE_LANE_TYPE_PATTERN = "pattern";
   protected static final String VALUE_LANE_TYPE_MIDI_NOTE = "midiNote";
+  protected static final String VALUE_LANE_TYPE_BUS = "bus";
+  protected static final String VALUE_LANE_TYPE_GLOBAL_MODULATION = "modulation";
+  protected static final String VALUE_LANE_TYPE_COLOR_PALETTE = "colorPalette";
+  protected static final String VALUE_LANE_TYPE_AUDIO = "audio";
+  protected static final String VALUE_LANE_TYPE_NOTES = "notes";
+  protected static final String VALUE_LANE_TYPE_UNKNOWN = "unknown";
 
   @Override
   public void load(LX lx, JsonObject obj) {
@@ -705,18 +791,30 @@ public abstract class LXClipLane<T extends LXClipEvent<?>> extends LXComponent {
 
   protected abstract T loadEvent(LX lx, JsonObject eventObj);
 
+  private final String getJsonLaneType() {
+    return switch (this) {
+    case ParameterClipLane l -> VALUE_LANE_TYPE_PARAMETER;
+    case PatternClipLane l -> VALUE_LANE_TYPE_PATTERN;
+    case MidiNoteClipLane l -> VALUE_LANE_TYPE_MIDI_NOTE;
+    case BusClipLane l -> VALUE_LANE_TYPE_BUS;
+    case GlobalModulationClipLane l -> VALUE_LANE_TYPE_GLOBAL_MODULATION;
+    case ColorPaletteClipLane l -> VALUE_LANE_TYPE_COLOR_PALETTE;
+    case AudioClipLane l -> VALUE_LANE_TYPE_AUDIO;
+    case TextNoteClipLane l -> VALUE_LANE_TYPE_NOTES;
+    default -> null;
+    };
+  }
+
   @Override
   public void save(LX lx, JsonObject obj) {
     super.save(lx, obj);
-    if (this instanceof ParameterClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_PARAMETER);
-    } else if (this instanceof PatternClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_PATTERN);
-    } else if (this instanceof MidiNoteClipLane) {
-      obj.addProperty(KEY_LANE_TYPE, VALUE_LANE_TYPE_MIDI_NOTE);
+    final String jsonLaneType = getJsonLaneType();
+    if (jsonLaneType != null) {
+      obj.addProperty(KEY_LANE_TYPE, jsonLaneType);
+    } else {
+      LX.error("Cannot serialize unknown clip lane type: " + this.getClass().getName());
     }
     obj.add(KEY_EVENTS, LXSerializable.Utils.toArray(lx, this.events));
   }
-
 
 }

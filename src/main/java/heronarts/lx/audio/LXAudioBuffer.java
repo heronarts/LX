@@ -25,7 +25,7 @@ import heronarts.lx.LX;
 
 public class LXAudioBuffer {
 
-  protected static final float INV_16_BIT = 1 / 32768.0f;
+  public static final float INV_16_BIT = 1 / 32768.0f;
 
   final float[] samples;
   private float rms;

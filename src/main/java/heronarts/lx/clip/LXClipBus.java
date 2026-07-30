@@ -1,5 +1,5 @@
 /**
- * Copyright 2018- Mark C. Slee, Heron Arts LLC
+ * Copyright 2026- Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -18,16 +18,13 @@
 
 package heronarts.lx.clip;
 
-import heronarts.lx.LX;
-import heronarts.lx.mixer.LXGroup;
+import heronarts.lx.parameter.BooleanParameter;
 
-public class LXGroupClip extends LXAbstractChannelClip {
-
-  public final LXGroup group;
-
-  public LXGroupClip(LX lx, LXGroup group, int index) {
-    super(lx, group, index, true);
-    this.group = group;
-  }
-
+/**
+ * Marker interface for a component that groups modulation lanes, typically these are
+ * LXBus strips on the mixer, but for global compositions can also be containers like the
+ * modulation engine or the color palette
+ */
+public interface LXClipBus {
+  public BooleanParameter getArmParameter();
 }

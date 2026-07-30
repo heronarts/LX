@@ -32,9 +32,12 @@ import heronarts.lx.LXComponent;
 import heronarts.lx.LXEngine;
 import heronarts.lx.LXModulatorComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.LXClip;
+import heronarts.lx.clip.LXClipLane;
 import heronarts.lx.midi.LXMidiListener;
 import heronarts.lx.midi.LXShortMessage;
 import heronarts.lx.midi.MidiPanic;
+import heronarts.lx.mixer.LXBus;
 import heronarts.lx.modulator.LXMacroModulator;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.osc.LXOscComponent;
@@ -82,6 +85,10 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     super(lx, "Modulation");
     addArray("modulation", this.modulations);
     addArray("trigger", this.triggers);
+  }
+
+  public LXBus getMixerBus() {
+    return getAncestor(LXBus.class);
   }
 
   public LXModulationEngine setFlagLoadModulations(boolean flagLoadModulations) {
@@ -300,11 +307,32 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
     // NOTE(mcslee): this may not be strictly necessary? The dispose() call in
     // super.removeModulator is probably going to do it again...
     removeModulations(modulator);
+    _removeModulatorClipReferences(modulator);
     for (Listener listener : this.listeners) {
       listener.modulatorRemoved(this, modulator);
     }
     super.removeModulator(modulator);
     return modulator;
+  }
+
+  private void _removeModulatorClipReferences(LXModulator modulator) {
+    // TODO(mcslee): is there a more sensible place to package this logic?
+    LXBus bus = getMixerBus();
+    if (bus != null) {
+      for (LXClip clip : bus.clips) {
+        _removeModulatorClipLanes(clip, modulator);
+      }
+    }
+    _removeModulatorClipLanes(lx.engine.timeline.getComposition(), modulator);
+  }
+
+  private void _removeModulatorClipLanes(LXClip clip, LXModulator modulator) {
+    if (clip != null) {
+      List<LXClipLane<?>> removedLanes = clip.findClipLanes(modulator);
+      if (removedLanes != null) {
+        removedLanes.forEach(lane -> clip.removeClipLane(lane));
+      }
+    }
   }
 
   @Override
@@ -355,7 +383,7 @@ public class LXModulationEngine extends LXModulatorComponent implements LXOscCom
 
   @Override
   public String getLabel() {
-    return "Modulation";
+    return "Mod";
   }
 
   private static final String KEY_MODULATORS = "modulators";

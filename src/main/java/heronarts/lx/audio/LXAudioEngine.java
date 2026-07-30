@@ -57,6 +57,8 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   public final LXAudioOutput output;
 
+  public final LXAudioTimeline timeline;
+
   public final Meter meter;
 
   public final SoundStage soundStage;
@@ -69,7 +71,8 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   public enum Mode {
     INPUT("Input"),
-    OUTPUT("Output");
+    OUTPUT("Output"),
+    TIMELINE("Timeline");
 
     public final String label;
 
@@ -83,7 +86,9 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     }
   };
 
-  public final EnumParameter<Mode> mode = new EnumParameter<Mode>("Mode", Mode.INPUT);
+  public final EnumParameter<Mode> mode =
+    new EnumParameter<Mode>("Mode", Mode.INPUT)
+    .setDescription("Whether the audio engine processes audio input or playback output");
 
   public final BooleanParameter ioExpanded =
     new BooleanParameter("I/O Expanded", false)
@@ -151,6 +156,7 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
     addChild("input", this.input = new LXAudioInput(lx));
     addChild("output", this.output = new LXAudioOutput(lx, this));
+    addChild("composition", this.timeline = new LXAudioTimeline(lx, this));
     addChild("soundStage", this.soundStage = new SoundStage(lx));
     addChild("adm", this.adm = new ADM(lx));
     addChild("envelop", this.envelop = new Envelop(lx));
@@ -170,12 +176,19 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
     switch (this.mode.getEnum()) {
       case INPUT -> {
         this.output.stop();
+        this.timeline.stop();
         this.input.open();
         this.input.start();
       }
       case OUTPUT -> {
         this.input.stop(false);
+        this.timeline.stop();
         this.output.start();
+      }
+      case TIMELINE -> {
+        this.input.stop(false);
+        this.output.stop();
+        this.timeline.start();
       }
     }
   }
@@ -188,12 +201,14 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
       } else {
         this.input.stop(false);
         this.output.stop();
+        this.timeline.stop();
       }
       this.meter.running.setValue(this.enabled.isOn());
     } else if (p == this.mode) {
       switch (this.mode.getEnum()) {
         case INPUT -> this.meter.setBuffer(this.input);
         case OUTPUT -> this.meter.setBuffer(this.output);
+        case TIMELINE -> this.meter.setBuffer(this.timeline);
       }
       if (this.enabled.isOn()) {
         toggleMode();
@@ -212,13 +227,15 @@ public class LXAudioEngine extends LXModulatorComponent implements LXOscComponen
 
   @Override
   public void dispose() {
-    this.input.dispose();
-    this.output.dispose();
+    LX.dispose(this.input);
+    LX.dispose(this.output);
+    LX.dispose(this.timeline);
     super.dispose();
   }
 
   @Override
   public void load(LX lx, JsonObject obj) {
+    this.timeline.reset();
     this.output.reset();
     this.numSoundObjects.setValue(0);
 

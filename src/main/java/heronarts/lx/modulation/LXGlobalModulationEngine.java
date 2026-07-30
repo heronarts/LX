@@ -1,5 +1,5 @@
 /**
- * Copyright 2018- Mark C. Slee, Heron Arts LLC
+ * Copyright 2026- Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -16,18 +16,26 @@
  * @author Mark C. Slee <mark@heronarts.com>
  */
 
-package heronarts.lx.clip;
+package heronarts.lx.modulation;
 
 import heronarts.lx.LX;
-import heronarts.lx.mixer.LXGroup;
+import heronarts.lx.clip.LXClipBus;
+import heronarts.lx.parameter.BooleanParameter;
 
-public class LXGroupClip extends LXAbstractChannelClip {
+public class LXGlobalModulationEngine extends LXModulationEngine implements LXClipBus {
 
-  public final LXGroup group;
+  public final BooleanParameter arm =
+    new BooleanParameter("Arm", false)
+    .setDescription("Arms the modulation engine for composition recording");
 
-  public LXGroupClip(LX lx, LXGroup group, int index) {
-    super(lx, group, index, true);
-    this.group = group;
+  public LXGlobalModulationEngine(LX lx) {
+    super(lx);
+    addParameter("arm", this.arm);
+  }
+
+  @Override
+  public BooleanParameter getArmParameter() {
+    return this.arm;
   }
 
 }

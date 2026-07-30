@@ -1,5 +1,5 @@
 /**
- * Copyright 2018- Mark C. Slee, Heron Arts LLC
+ * Copyright 2026- Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -18,16 +18,17 @@
 
 package heronarts.lx.clip;
 
-import heronarts.lx.LX;
-import heronarts.lx.mixer.LXGroup;
+import heronarts.lx.modulation.LXGlobalModulationEngine;
 
-public class LXGroupClip extends LXAbstractChannelClip {
+public class GlobalModulationClipLane extends GlobalClipLane {
 
-  public final LXGroup group;
+  protected GlobalModulationClipLane(LXComposition composition, LXGlobalModulationEngine engine) {
+    super(composition, engine);
+  }
 
-  public LXGroupClip(LX lx, LXGroup group, int index) {
-    super(lx, group, index, true);
-    this.group = group;
+  @Override
+  public String getLabel() {
+    return "Modulation";
   }
 
 }

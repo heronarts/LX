@@ -34,17 +34,21 @@ import heronarts.lx.LXDeviceComponent;
 import heronarts.lx.LXPath;
 import heronarts.lx.LXPresetComponent;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.AudioClipLane;
 import heronarts.lx.clip.Cursor;
 import heronarts.lx.clip.LXChannelClip;
 import heronarts.lx.clip.LXClip;
 import heronarts.lx.clip.LXClipEvent;
 import heronarts.lx.clip.LXClipLane;
+import heronarts.lx.clip.LXComposition;
+import heronarts.lx.clip.Locator;
 import heronarts.lx.clip.MidiNoteClipEvent;
 import heronarts.lx.clip.MidiNoteClipLane;
 import heronarts.lx.clip.ParameterClipEvent;
 import heronarts.lx.clip.ParameterClipLane;
 import heronarts.lx.clip.PatternClipEvent;
 import heronarts.lx.clip.PatternClipLane;
+import heronarts.lx.clip.TextNoteClipLane;
 import heronarts.lx.color.ColorParameter;
 import heronarts.lx.color.LXDynamicColor;
 import heronarts.lx.color.LXPalette;
@@ -326,36 +330,54 @@ public abstract class LXCommand {
       _removeRemoteControls(container.getParent(), component);
     }
 
+    protected void removeCompositionChannel(LXAbstractChannel channel) {
+      _removeClipLanes(channel.getLX().engine.timeline.getComposition(), channel);
+    }
+
     protected void removeClipLanes(LXBus bus, LXComponent component) {
-      for (LXClip clip : bus.clips) {
-        if (clip != null) {
-          List<LXClipLane<?>> lanes = clip.findClipLanes(component);
-          if (lanes != null) {
-            for (LXClipLane<?> lane : lanes) {
-              this.removeClipLanes.add(new Clip.RemoveClipLane(lane));
-            }
-          }
+      if (bus != null) {
+        for (LXClip clip : bus.clips) {
+          _removeClipLanes(clip, component);
+        }
+      }
+      _removeClipLanes(component.getLX().engine.timeline.getComposition(), component);
+    }
+
+    private void _removeClipLanes(LXClip clip, LXComponent component) {
+      if (clip == null) {
+        return;
+      }
+      List<LXClipLane<?>> lanes = clip.findClipLanes(component);
+      if (lanes != null) {
+        for (LXClipLane<?> lane : lanes) {
+          this.removeClipLanes.add(new Clip.RemoveClipLane(lane));
         }
       }
     }
 
     protected void removePatternClipEvents(LXPattern pattern) {
       for (LXClip clip : pattern.getMixerChannel().clips) {
-        if (clip != null) {
-          if (clip instanceof LXChannelClip channelClip) {
-            for (LXClipLane<?> clipLane : channelClip.lanes) {
-              if (clipLane instanceof PatternClipLane patternLane) {
-                if (pattern.getEngine() == patternLane.engine) {
-                  removePatternClipLaneEvents(patternLane, pattern);
-                }
-              }
+        _removePatternClipEvents(clip, pattern);
+      }
+      _removePatternClipEvents(pattern.getLX().engine.timeline.getComposition(), pattern);
+    }
+
+    private void _removePatternClipEvents(LXClip clip, LXPattern pattern) {
+      if (clip == null) {
+        return;
+      }
+      if (clip instanceof LXChannelClip channelClip) {
+        for (LXClipLane<?> clipLane : channelClip.lanes) {
+          if (clipLane instanceof PatternClipLane patternLane) {
+            if (pattern.getEngine() == patternLane.engine) {
+              _removePatternClipLaneEvents(patternLane, pattern);
             }
           }
         }
       }
     }
 
-    protected void removePatternClipLaneEvents(PatternClipLane lane, LXPattern pattern) {
+    private void _removePatternClipLaneEvents(PatternClipLane lane, LXPattern pattern) {
       List<Integer> eventIndices = lane.findEventIndices(pattern);
       if (eventIndices != null) {
         this.removePatternClipEvents.add(new Clip.Event.Pattern.RemoveReferences(lane, eventIndices));
@@ -385,6 +407,17 @@ public abstract class LXCommand {
 
       // Type-specific removals
       switch (component) {
+        case LXModulator modulator -> {
+          if (modulator.getParent() instanceof LXModulationEngine engine) {
+            removeClipLanes(engine.getMixerBus(), modulator);
+          }
+        }
+        case LXAbstractChannel channel -> {
+          removeCompositionChannel(channel);
+        }
+        case LXSwatch swatch -> {
+          removeClipLanes(null, swatch);
+        }
         case LXPattern pattern -> {
           removeClipLanes(pattern.getMixerChannel(), pattern);
           removePatternClipEvents(pattern);
@@ -2740,7 +2773,9 @@ public abstract class LXCommand {
       @Override
       public void perform(LX lx) throws InvalidCommandException {
         this.originalSwatch = LXSerializable.Utils.toObject(lx.engine.palette.swatch, true);
-        this.set = lx.engine.palette.setSwatch(this.swatch.get());
+        final LXSwatch swatch = this.swatch.get();
+        swatch.recall.trigger();
+        this.set = swatch.didSetSwatch();
       }
 
       @Override
@@ -3685,6 +3720,14 @@ public abstract class LXCommand {
 
   public static class Clip {
 
+    public static String getTypeLabel(LXClipLane<?> lane) {
+      return getTypeLabel(lane.clip);
+    }
+
+    public static String getTypeLabel(LXClip clip) {
+      return clip.isComposition() ? "Composition" : "Clip";
+    }
+
     public static class Add extends LXCommand {
 
       private final ComponentReference<LXBus> bus;
@@ -3741,12 +3784,12 @@ public abstract class LXCommand {
 
     public static class Remove extends LXCommand {
 
-      private final ComponentReference<LXBus> bus;
+      private final ComponentReference<LXComponent> bus;
       private final int index;
       private final JsonObject clipObj;
 
       public Remove(LXClip clip) {
-        this.bus = new ComponentReference<LXBus>(clip.bus);
+        this.bus = new ComponentReference<LXComponent>(clip.container.asComponent());
         this.clipObj = LXSerializable.Utils.toObject(clip);
         this.index = clip.getIndex();
       }
@@ -3758,30 +3801,36 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.bus.get().removeClip(this.index);
+        if (this.bus.get() instanceof LXBus bus) {
+          bus.removeClip(this.index);
+        }
       }
 
       @Override
       public void undo(LX lx) {
-        this.bus.get().addClip(this.clipObj, this.index);
+        if (this.bus.get() instanceof LXBus bus) {
+          bus.addClip(this.clipObj, this.index);
+        }
       }
 
     }
 
     public static class Record extends LXCommand {
 
+      private final String label;
       private final ComponentReference<LXClip> clip;
       private final JsonObject clipObjPre;
       private JsonObject clipObjPost = null;
 
       public Record(LXClip clip) {
+        this.label = Clip.getTypeLabel(clip);
         this.clip = new ComponentReference<LXClip>(clip);
         this.clipObjPre = LXSerializable.Utils.toObject(clip.getLX(), clip);
       }
 
       @Override
       public String getDescription() {
-        return "Record Clip";
+        return "Record " + this.label;
       }
 
       @Override
@@ -3857,11 +3906,13 @@ public abstract class LXCommand {
       public final Marker marker;
       private final Cursor fromCursor;
       private Cursor toCursor;
+      private final String label;
 
       /**
        * Move clip marker to a new value (in time units)
        */
       public SetMarker(LXClip clip, Marker marker, Cursor toCursor) {
+        this.label = Clip.getTypeLabel(clip);
         this.clip = new ComponentReference<LXClip>(clip);
         this.marker = marker;
         this.fromCursor = this.marker.getCursor(clip).clone();
@@ -3870,7 +3921,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Move Clip " + this.marker.label;
+        return "Move " + this.label + " " + this.marker.label;
       }
 
       public SetMarker update(Cursor toCursor) {
@@ -3916,12 +3967,110 @@ public abstract class LXCommand {
       }
     }
 
+    public static class AddLane extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      private final ParameterReference<LXNormalizedParameter> parameter;
+      private ComponentReference<ParameterClipLane> parameterLane;
+      private JsonObject laneObj;
+      private boolean ignored = false;
+
+      public AddLane(LXClip clip, LXNormalizedParameter parameter) {
+        this.clip = new ComponentReference<LXClip>(clip);
+        this.parameter = new ParameterReference<>(parameter);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Parameter Lane";
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return this.ignored;
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.clip.get().getParameterLane(this.parameter.get()) != null) {
+          this.ignored = true;
+          return;
+        }
+
+        ParameterClipLane parameterLane = this.clip.get().createParameterLane(this.parameter.get());
+        this.parameterLane = new ComponentReference<ParameterClipLane>(parameterLane);
+        if (this.laneObj != null) {
+          parameterLane.load(lx, this.laneObj);
+        } else {
+          this.laneObj = LXSerializable.Utils.toObject(parameterLane);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.clip.get().removeClipLane(this.parameterLane.get());
+      }
+    }
+
+    public static class AddPatternLane extends LXCommand {
+
+      private final ComponentReference<LXClip> clip;
+      private final ComponentReference<LXComponent> patternEngine;
+      private ComponentReference<PatternClipLane> patternLane;
+      private JsonObject laneObj;
+      private boolean ignored = false;
+
+      public AddPatternLane(LXClip clip, LXPatternEngine patternEngine) {
+        this.clip = new ComponentReference<LXClip>(clip);
+        this.patternEngine = new ComponentReference<>(patternEngine.component);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Pattern Lane";
+      }
+
+      @Override
+      public boolean isIgnored() {
+        return this.ignored;
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        try {
+          LXPatternEngine patternEngine = ((LXPatternEngine.Container) this.patternEngine.get()).getPatternEngine();
+          if (this.clip.get().getPatternLane(patternEngine, false) != null) {
+            this.ignored = true;
+            return;
+          }
+
+          PatternClipLane patternLane = this.clip.get().getPatternLane(patternEngine, true);
+          this.patternLane = new ComponentReference<PatternClipLane>(patternLane);
+          if (this.laneObj != null) {
+            patternLane.load(lx, this.laneObj);
+          } else {
+            this.laneObj = LXSerializable.Utils.toObject(patternLane);
+          }
+        } catch (Exception x) {
+          throw new InvalidCommandException(x);
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        this.clip.get().removeClipLane(this.patternLane.get());
+      }
+    }
+
+
     public static class MoveLane extends LXCommand {
 
+      private final String label;
       private final ComponentReference<LXClipLane<?>> lane;
       private final int fromIndex, toIndex;
 
       public MoveLane(LXClipLane<?> lane, int index) {
+        this.label = Clip.getTypeLabel(lane);
         this.lane = new ComponentReference<>(lane);
         this.fromIndex = lane.getIndex();
         this.toIndex = index;
@@ -3929,7 +4078,7 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Move Clip Lane";
+        return "Move " + this.label + " Lane";
       }
 
       @Override
@@ -3948,39 +4097,41 @@ public abstract class LXCommand {
     public static class RemoveClipLane extends RemoveComponent {
 
       private final ComponentReference<LXClip> clip;
-      private final ComponentReference<LXClipLane<?>> parameterLane;
+      private final ComponentReference<LXClipLane<?>> clipLane;
       private final int laneIndex;
       private final JsonObject laneObj;
+      private final String label;
 
-      public RemoveClipLane(LXClipLane<?> parameterLane) {
-        super(parameterLane);
-        this.clip = new ComponentReference<>(parameterLane.clip);
-        this.parameterLane = new ComponentReference<>(parameterLane);
-        this.laneIndex = parameterLane.getIndex();
-        this.laneObj = LXSerializable.Utils.toObject(parameterLane.getLX(), parameterLane);
+      public RemoveClipLane(LXClipLane<?> clipLane) {
+        super(clipLane);
+        this.label = Clip.getTypeLabel(clipLane);
+        this.clip = new ComponentReference<>(clipLane.clip);
+        this.clipLane = new ComponentReference<>(clipLane);
+        this.laneIndex = clipLane.getIndex();
+        this.laneObj = LXSerializable.Utils.toObject(clipLane.getLX(), clipLane);
       }
 
       @Override
       public String getDescription() {
-        return "Remove Clip Lane";
+        return "Remove " + this.label + " Lane";
       }
 
       @Override
       public void perform(LX lx) throws InvalidCommandException {
-        final LXClipLane<?> clipLane = this.parameterLane.get();
+        final LXClipLane<?> clipLane = this.clipLane.get();
         clipLane.clip.removeClipLane(clipLane);
       }
 
       @Override
       public void undo(LX lx) throws InvalidCommandException {
-        final LXClipLane<?> lane = this.clip.get().loadLane(lx, this.laneObj, this.laneIndex);
+        final LXClipLane<?> lane = this.clip.get().loadClipLane(lx, this.laneObj, this.laneIndex);
         if (lane != null) {
           super.undo(lx);
         }
       }
 
       private void move(LX lx, String fromPath, String toPath) {
-        this.clip.get().moveLane(lx, this.laneObj, this.laneIndex, fromPath, toPath);
+        this.clip.get().moveClipLane(lx, this.laneObj, this.laneIndex, fromPath, toPath);
       }
 
     }
@@ -4021,22 +4172,16 @@ public abstract class LXCommand {
 
       }
 
-      public static class RemoveRange extends LXCommand {
+      private static abstract class EditRange extends LXCommand {
+        protected final ComponentReference<LXClipLane<?>> clipLane;
+        protected final Cursor from, to;
+        protected boolean didRemove = false;
+        protected JsonObject preState = null;
 
-        private final ComponentReference<LXClipLane<?>> clipLane;
-        private final Cursor from, to;
-        private boolean didRemove = false;
-        private JsonObject preState = null;
-
-        public RemoveRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+        public EditRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
           this.clipLane = new ComponentReference<>(clipLane);
           this.from = from.clone();
           this.to = to.clone();
-        }
-
-        @Override
-        public String getDescription() {
-          return "Delete Range";
         }
 
         @Override
@@ -4045,15 +4190,52 @@ public abstract class LXCommand {
         }
 
         @Override
-        public void perform(LX lx) throws InvalidCommandException {
-          LXClipLane<?> clipLane = this.clipLane.get();
+        public final void perform(LX lx) throws InvalidCommandException {
+          final LXClipLane<?> clipLane = this.clipLane.get();
           this.preState = LXSerializable.Utils.toObject(clipLane, true);
-          this.didRemove = clipLane.removeRange(this.from, this.to);
+          this.didRemove = editRange(clipLane, this.from, this.to);
         }
+
+        protected abstract boolean editRange(LXClipLane<?> clipLane, Cursor from, Cursor to);
 
         @Override
         public void undo(LX lx) throws InvalidCommandException {
           this.clipLane.get().load(lx, this.preState);
+        }
+      }
+
+      public static class RemoveRange extends EditRange {
+
+        public RemoveRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          super(clipLane, from, to);
+        }
+
+        @Override
+        public String getDescription() {
+          return "Delete Range";
+        }
+
+        @Override
+        protected boolean editRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          return clipLane.removeRange(from, to);
+        }
+
+      }
+
+      public static class CollapseRange extends EditRange {
+
+        public CollapseRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          super(clipLane, from, to);
+        }
+
+        @Override
+        public String getDescription() {
+          return "Collapse Envelope";
+        }
+
+        @Override
+        protected boolean editRange(LXClipLane<?> clipLane, Cursor from, Cursor to) {
+          return clipLane.collapseRange(from, to);
         }
 
       }
@@ -4797,8 +4979,259 @@ public abstract class LXCommand {
             this.clipLane.get().load(lx, this.preState);
           }
         }
+
+        public static class SetCurve extends LXCommand {
+          private final ComponentReference<ParameterClipLane> clipLane;
+          private final int eventIndex;
+          private final ParameterClipEvent.Curve fromCurve;
+          private final ParameterClipEvent.Curve toCurve;
+
+          public SetCurve(ParameterClipLane lane, ParameterClipEvent clipEvent, ParameterClipEvent.Curve curve) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.eventIndex = lane.events.indexOf(clipEvent);
+            this.fromCurve = clipEvent.getCurve();
+            this.toCurve = curve;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Adjust Curve";
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            _setCurve(this.toCurve);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            _setCurve(this.fromCurve);
+          }
+
+          private void _setCurve(ParameterClipEvent.Curve curve) throws InvalidCommandException  {
+            try {
+              this.clipLane.get().events.get(this.eventIndex).setCurve(curve);
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+        }
+
+        public static class SetShape extends LXCommand {
+          private final ComponentReference<ParameterClipLane> clipLane;
+          private final int eventIndex;
+          private final double fromShape;
+          private double toShape;
+
+          public SetShape(ParameterClipLane lane, ParameterClipEvent clipEvent) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.eventIndex = lane.events.indexOf(clipEvent);
+            this.fromShape = clipEvent.getShape();
+          }
+
+          @Override
+          public String getDescription() {
+            return "Adjust Shape";
+          }
+
+          public SetShape update(double toShape) {
+            this.toShape = toShape;
+            return this;
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            _setShape(this.toShape);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            _setShape(this.fromShape);
+          }
+
+          private void _setShape(double shape) throws InvalidCommandException  {
+            try {
+              this.clipLane.get().events.get(this.eventIndex).setShape(shape);
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+        }
+
+        public static class ResetShape extends SetShape {
+          public ResetShape(ParameterClipLane lane, ParameterClipEvent clipEvent) {
+            super(lane, clipEvent);
+            update(0);
+          }
+
+          @Override
+          public String getDescription() {
+            return "Reset Shape";
+          }
+        }
       }
     }
+  }
+
+  public static class Composition {
+
+    public static class AddLocator extends LXCommand {
+
+      private final ComponentReference<LXComposition> compositionRef;
+      private final Cursor cursor;
+      private Locator locator;
+
+      public AddLocator(LXComposition composition, Cursor cursor) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.cursor = cursor.clone();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Locator";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.locator = this.compositionRef.get().addLocator(this.cursor);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        if (this.locator != null) {
+          this.compositionRef.get().removeLocator(this.locator);
+        }
+      }
+    }
+
+    public static class RemoveLocator extends LXCommand {
+
+      private final ComponentReference<LXComposition> compositionRef;
+      private ComponentReference<Locator> locatorRef;
+      private final JsonObject locatorObj;
+
+      public RemoveLocator(LXComposition composition, Locator locator) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.locatorRef = new ComponentReference<>(locator);
+        this.locatorObj = LXSerializable.Utils.toObject(composition.getLX(), locator);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Remove Locator";
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.compositionRef.get().removeLocator(this.locatorRef.get());
+      }
+
+      @Override
+      public void undo(LX lx) {
+        LXComposition composition = this.compositionRef.get();
+        Locator locator = composition.addLocator(composition.getLX(), locatorObj);
+        this.locatorRef = new ComponentReference<>(locator);
+      }
+    }
+
+    public static class MoveLocator extends LXCommand {
+
+      private final ComponentReference<LXComposition> compositionRef;
+      private Locator locator;
+      private final Cursor fromCursor;
+      private final Cursor toCursor;
+
+      public MoveLocator(LXComposition composition, Locator locator, Cursor toCursor) {
+        this.compositionRef = new ComponentReference<>(composition);
+        this.locator = locator;
+        this.fromCursor = locator.position.cursor.clone();
+        this.toCursor = toCursor.clone();
+      }
+
+      @Override
+      public String getDescription() {
+        return "Move Locator";
+      }
+
+      public MoveLocator update(Cursor toCursor) {
+        this.toCursor.set(toCursor);
+        return this;
+      }
+
+      @Override
+      public void perform(LX lx) {
+        this.compositionRef.get().moveLocator(this.locator, this.toCursor);
+      }
+
+      @Override
+      public void undo(LX lx) {
+        this.compositionRef.get().moveLocator(this.locator, this.fromCursor);
+      }
+    }
+
+    public static class AddTextNoteLane extends LXCommand {
+
+      private final ComponentReference<LXComposition> composition;
+      private ComponentReference<TextNoteClipLane> lane = null;
+      private JsonObject laneObj = null;
+
+      public AddTextNoteLane(LXComposition composition) {
+        this.composition = new ComponentReference<>(composition);
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Text Notes Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        this.lane = new ComponentReference<>(this.composition.get().addTextNoteLane(this.laneObj));
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        final TextNoteClipLane lane = this.lane.get();
+        this.laneObj = LXSerializable.Utils.toObject(lane);
+        this.composition.get().removeClipLane(lane);
+      }
+    }
+
+    public static class AddAudioLane extends LXCommand {
+
+      private final ComponentReference<LXComposition> composition;
+      private final File file;
+
+      private ComponentReference<AudioClipLane> lane = null;
+      private JsonObject laneObj = null;
+
+      public AddAudioLane(LXComposition composition, File file) {
+        this.composition = new ComponentReference<>(composition);
+        this.file = file;
+      }
+
+      @Override
+      public String getDescription() {
+        return "Add Audio Lane";
+      }
+
+      @Override
+      public void perform(LX lx) throws InvalidCommandException {
+        if (this.laneObj != null) {
+          this.lane = new ComponentReference<>(this.composition.get().addAudioLane(this.laneObj));
+        } else {
+          this.lane = new ComponentReference<>(this.composition.get().addAudioLane(this.file));
+        }
+      }
+
+      @Override
+      public void undo(LX lx) throws InvalidCommandException {
+        final AudioClipLane lane = this.lane.get();
+        this.laneObj = LXSerializable.Utils.toObject(lane);
+        this.composition.get().removeClipLane(lane);
+      }
+    }
+
   }
 
   public static class Osc {

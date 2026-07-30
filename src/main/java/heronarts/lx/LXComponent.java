@@ -55,6 +55,7 @@ import heronarts.lx.parameter.BooleanParameter;
 import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.CompoundParameter;
 import heronarts.lx.parameter.DiscreteParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXListenableParameter;
 import heronarts.lx.parameter.LXNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
@@ -1370,6 +1371,16 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
       return this.internalParameters.get(path.substring(INTERNAL_PREFIX.length()));
     }
     return this.parameters.get(path);
+  }
+
+  /**
+   * Returns whether a component parameter is eligible for clip automation
+   *
+   * @param parameter Parameter to test
+   * @return True if this parameter can be automated in clips
+   */
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter parameter) {
+    return true;
   }
 
   // OSC internal implementation, catches parameter value changes and sends OSC messages

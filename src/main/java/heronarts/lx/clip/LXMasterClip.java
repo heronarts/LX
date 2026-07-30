@@ -20,18 +20,18 @@ package heronarts.lx.clip;
 
 import heronarts.lx.LX;
 
-public class LXMasterClip extends LXClip {
+public class LXMasterClip extends LXGridClip {
+
   public LXMasterClip(LX lx, int index) {
-    super(lx, lx.engine.mixer.masterBus, index);
-    registerParameter(lx.engine.mixer.masterBus.fader);
+    super(lx, lx.engine.mixer.masterBus, index, true);
     registerParameter(lx.engine.mixer.crossfader);
     registerComponent(lx.engine.palette);
   }
 
   @Override
   public void dispose() {
-    unregisterParameter(lx.engine.mixer.masterBus.fader);
     unregisterParameter(lx.engine.mixer.crossfader);
+    unregisterComponent(lx.engine.palette);
     super.dispose();
   }
 }

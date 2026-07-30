@@ -1,5 +1,5 @@
 /**
- * Copyright 2018- Mark C. Slee, Heron Arts LLC
+ * Copyright 2025- Mark C. Slee, Heron Arts LLC
  *
  * This file is part of the LX Studio software library. By using
  * LX, you agree to the terms of the LX Studio Software License
@@ -18,16 +18,18 @@
 
 package heronarts.lx.clip;
 
-import heronarts.lx.LX;
-import heronarts.lx.mixer.LXGroup;
+/**
+ * A null clip event, that does nothing
+ */
+public class NullClipEvent extends LXClipEvent<NullClipEvent> {
 
-public class LXGroupClip extends LXAbstractChannelClip {
-
-  public final LXGroup group;
-
-  public LXGroupClip(LX lx, LXGroup group, int index) {
-    super(lx, group, index, true);
-    this.group = group;
+  NullClipEvent(LXClipLane<NullClipEvent> lane) {
+    super(lane);
+    throw new UnsupportedOperationException("Cannot construct NullClipEvent");
   }
 
+  @Override
+  public void execute() {
+    throw new UnsupportedOperationException("Cannot execute NullClipEvent");
+  }
 }

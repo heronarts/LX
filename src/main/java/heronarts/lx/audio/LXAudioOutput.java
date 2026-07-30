@@ -43,8 +43,8 @@ import heronarts.lx.parameter.TriggerParameter;
 
 public class LXAudioOutput extends LXAudioComponent implements LXOscComponent {
 
-  private static final int BUFFER_FRAMES = 2;
-  private static final AudioFormat AUDIO_OUTPUT_FORMAT = AUDIO_FORMAT_STEREO_44K;
+  static final int BUFFER_FRAMES = 2;
+  public static final AudioFormat AUDIO_OUTPUT_FORMAT = AUDIO_FORMAT_STEREO_44K;
 
   private AudioInputStream inputStream;
 

@@ -38,6 +38,7 @@ import heronarts.lx.LX;
 import heronarts.lx.LXComponent;
 import heronarts.lx.LXLoopTask;
 import heronarts.lx.LXSerializable;
+import heronarts.lx.clip.LXClipBus;
 import heronarts.lx.modulator.LinearEnvelope;
 import heronarts.lx.osc.LXOscComponent;
 import heronarts.lx.osc.OscMessage;
@@ -46,6 +47,7 @@ import heronarts.lx.parameter.BoundedParameter;
 import heronarts.lx.parameter.DiscreteParameter;
 import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FunctionalParameter;
+import heronarts.lx.parameter.LXListenableNormalizedParameter;
 import heronarts.lx.parameter.LXParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.parameter.TriggerParameter;
@@ -56,7 +58,7 @@ import heronarts.lx.utils.LXUtils;
  * set modes of color computation. Though its use is not required, it is very useful for
  * creating coherent color schemes across patterns.
  */
-public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent {
+public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent, LXClipBus {
 
   private static final int NO_SWATCH_INDEX = -1;
 
@@ -84,6 +86,10 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
    * The primary active color value
    */
   public final LXDynamicColor color;
+
+  public final BooleanParameter arm =
+    new BooleanParameter("Arm", false)
+    .setDescription("Arms the color palette for composition recording");
 
   public final BooleanParameter autoCycleEnabled =
     new BooleanParameter("Auto-Cycle", false)
@@ -208,6 +214,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     super(lx, "Color Palette");
     addChild("swatch", this.swatch = new LXSwatch(this, false));
     addArray("swatches", this.swatches);
+    addParameter("arm", this.arm);
     addParameter("transitionEnabled", this.transitionEnabled);
     addParameter("transitionTimeSecs", this.transitionTimeSecs);
     addParameter("transitionMode", this.transitionMode);
@@ -223,6 +230,20 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     addParameter("label4", this.label4);
     addParameter("label5", this.label5);
     this.color = swatch.colors.get(0);
+  }
+
+  @Override
+  public BooleanParameter getArmParameter() {
+    return this.arm;
+  }
+
+  @Override
+  public boolean isClipAutomationControl(LXListenableNormalizedParameter p) {
+    return
+      (p != this.arm) &&
+      (p != this.expandedPerformance) &&
+      (p != this.autoCycleCursor) &&
+      super.isClipAutomationControl(p);
   }
 
   private void updateSelectors() {
@@ -430,7 +451,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
   public boolean setSwatch(LXSwatch swatch) {
     if (this.inTransition == swatch) {
       finishTransition();
-      return false;
+      return swatch.didSetSwatch = false;
     }
 
     JsonObject swatchObj = toJsonSwatch(swatch);
@@ -463,7 +484,7 @@ public class LXPalette extends LXComponent implements LXLoopTask, LXOscComponent
     } else {
       this.swatch.load(this.lx, swatchObj);
     }
-    return true;
+    return swatch.didSetSwatch = true;
   }
 
   public double getTransitionProgress() {
