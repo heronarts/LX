@@ -49,11 +49,16 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
     new BooleanParameter("Arm")
     .setDescription("Starts the composition recording");
 
+  public final BooleanParameter sync =
+    new BooleanParameter("Sync", false)
+    .setDescription("Syncs the internal clock from timeline position");
+
   public final FocusedClipParameter focusedClip = new FocusedClipParameter();
 
   public LXTimelineEngine(LX lx) {
     super(lx, "Composition");
 
+    addParameter("sync", this.sync);
     addParameter("focusedClip", this.focusedClip);
 
     this.arm.addListener(this::armChanged);
@@ -106,6 +111,12 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
   public LXTimelineEngine setFocusedClip(LXClip clip) {
     this.focusedClip.setClip(clip);
     return this;
+  }
+
+  void syncTransport(LXComposition composition, Cursor cursor) {
+    if (this.sync.isOn() && (composition.timeBase.getEnum() == Cursor.TimeBase.TEMPO)) {
+      this.lx.engine.tempo.sync(cursor);
+    }
   }
 
   // LXClipContainer
@@ -177,6 +188,9 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
     clear();
 
     super.load(lx, obj);
+    if (obj.has(LXComponent.KEY_RESET)) {
+      this.sync.reset();
+    }
 
     if (obj.has(KEY_COMPOSITIONS)) {
       JsonArray compArr = obj.get(KEY_COMPOSITIONS).getAsJsonArray();

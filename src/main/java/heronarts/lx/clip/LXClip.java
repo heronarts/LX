@@ -493,7 +493,11 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
   }
 
   private void launchTransport() {
-    setCursor(this.launchFromCursor.constrain(this));
+    this.launchFromCursor.constrain(this);
+    if (this instanceof LXComposition composition) {
+      this.lx.engine.timeline.syncTransport(composition, this.launchFromCursor);
+    }
+    setCursor(this.launchFromCursor);
     setTransportReference(this.isQuantizedLaunch);
     this.isQuantizedLaunch = false;
   }

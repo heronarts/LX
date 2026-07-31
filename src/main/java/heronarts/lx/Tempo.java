@@ -188,6 +188,10 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     MIDI,
     OSC;
 
+    public boolean isInternal() {
+      return this == INTERNAL;
+    }
+
     public boolean isExternal() {
       return this != INTERNAL;
     }
@@ -206,6 +210,8 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
     public default void onBeat(Tempo tempo, int beat) {};
 
     public default void onBar(Tempo tempo, int bar) { onMeasure(tempo); }
+
+    public default void onSync(Tempo tempo) {}
 
     @Deprecated
     public default void onMeasure(Tempo tempo) {};
@@ -337,6 +343,12 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       this.basis = that.basis;
       this.beatCount = that.beatCount;
       this.isBeat = that.isBeat;
+    }
+
+    private void sync(heronarts.lx.clip.Cursor cursor) {
+      this.basis = cursor.getBeatBasis();
+      this.beatCount = cursor.getBeatCount();
+      this.isBeat = false;
     }
 
     private int barCount() {
@@ -962,6 +974,20 @@ public class Tempo extends LXModulatorComponent implements LXOscComponent, LXTri
       setBpm(MS_PER_MINUTE / beatPeriodMs);
     }
     trigger(this.tapCount - 1);
+  }
+
+  /**
+   * Sync the main timeline to a composition cursor
+   *
+   * @param cursor Composition cursor
+   */
+  public void sync(heronarts.lx.clip.Cursor cursor) {
+    if (this.clockSource.getEnum().isInternal()) {
+      this.target.sync(cursor);
+      this.smooth.sync(cursor);
+      this.slew.sync(cursor);
+      this.listeners.forEach(listener -> listener.onSync(this));
+    }
   }
 
   /**
