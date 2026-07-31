@@ -111,17 +111,42 @@ public class MediaPathParameter extends StringParameter {
       LX.error("Media file does not exist: " + source + " - " + media.getCanonicalPath());
       return;
     }
-    final File target = new File(mediaFolder, source.getName());
-    if (target.exists()) {
-      LX.error("Cannot consolidate media file, already exists: " + target);
-    } else {
+    final String sourceName = source.getName();
+    File target = new File(mediaFolder, sourceName);
+    boolean needsCopy = true;
+    int counter = 1;
+    while (target.exists()) {
       try {
-        Files.copy(source.toPath(), target.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+        if (Files.mismatch(source.toPath(), target.toPath()) < 0) {
+          // Use this target, it's the same file, no need to copy again
+          LX.log("Re-using media file: " + target);
+          needsCopy = false;
+          break;
+        }
+        target = new File(mediaFolder, fileNameVersioned(sourceName, counter++));
+      } catch (Exception x) {
+        LX.error("Failed to compare target file: " + target);
+        target = null;
+        break;
+      }
+    }
+    if (target != null) {
+      try {
+        if (needsCopy) {
+          Files.copy(source.toPath(), target.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+          LX.log("Copied media file: " + target);
+        }
         media.setValue(target.getPath());
-        LX.log("Copied media file: " + target);
       } catch (Exception x) {
         lx.pushError(x, "Could not copy media file: " + source, true);
       }
     }
+  }
+
+  private static String fileNameVersioned(String name, int version) {
+    final int dot = name.lastIndexOf(".");
+    return (dot < 0) ?
+      (name + "." + version) :
+      (name.substring(0, dot) + "." + version + name.substring(dot));
   }
 }
