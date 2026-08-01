@@ -848,6 +848,7 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
    */
   public LXClip setLength(Cursor length) {
     this.length.set(length);
+    this.insertMarker.set(this.insertMarker.cursor.bound(this));
     return this;
   }
 

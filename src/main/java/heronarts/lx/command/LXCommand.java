@@ -3858,7 +3858,8 @@ public abstract class LXCommand {
       LOOP_END("Loop End"),
       LOOP_LENGTH("Loop Length"),
       PLAY_START("Start"),
-      PLAY_END("End");
+      PLAY_END("End"),
+      TRUNCATE("Length");
 
       public Cursor getCursor(LXClip clip) {
         return switch (this) {
@@ -3868,6 +3869,7 @@ public abstract class LXCommand {
         case LOOP_LENGTH -> clip.loopLength.cursor;
         case PLAY_END -> clip.playEnd.cursor;
         case PLAY_START -> clip.playStart.cursor;
+        case TRUNCATE -> clip.length.cursor;
         default -> null;
         };
       }
@@ -3881,6 +3883,7 @@ public abstract class LXCommand {
         case LOOP_LENGTH -> clip.setLoopLength(cursor);
         case PLAY_END -> clip.setPlayEnd(cursor);
         case PLAY_START -> clip.setPlayStart(cursor);
+        case TRUNCATE -> clip.setLength(cursor);
         }
       }
 
@@ -3898,7 +3901,7 @@ public abstract class LXCommand {
       private final Cursor fromCursor;
       private Cursor toCursor;
       private Cursor fromLength;
-      private final String label;
+      protected final String label;
 
       /**
        * Move clip marker to a new value (in time units)
@@ -3913,7 +3916,10 @@ public abstract class LXCommand {
 
       @Override
       public String getDescription() {
-        return "Move " + this.label + " " + this.marker.label;
+        return switch (this.marker) {
+        case TRUNCATE -> "Truncate " + this.label;
+        default -> "Move " + this.label + " " + this.marker.label;
+        };
       }
 
       public SetMarker update(Cursor toCursor) {
