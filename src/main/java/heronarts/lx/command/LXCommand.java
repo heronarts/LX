@@ -3852,48 +3852,39 @@ public abstract class LXCommand {
 
     public enum Marker {
 
+      INSERT_MARKER("Insert Marker"),
       LOOP_START("Loop Start"),
       LOOP_BRACE("Loop"),
       LOOP_END("Loop End"),
+      LOOP_LENGTH("Loop Length"),
       PLAY_START("Start"),
       PLAY_END("End");
 
       public Cursor getCursor(LXClip clip) {
-        switch (this) {
-        case LOOP_BRACE:
-        case LOOP_START:
-          return clip.loopStart.cursor;
-        case LOOP_END:
-          return clip.loopEnd.cursor;
-        case PLAY_END:
-          return clip.playEnd.cursor;
-        case PLAY_START:
-          return clip.playStart.cursor;
-        }
-        return null;
+        return switch (this) {
+        case INSERT_MARKER -> clip.insertMarker.cursor;
+        case LOOP_BRACE, LOOP_START -> clip.loopStart.cursor;
+        case LOOP_END -> clip.loopEnd.cursor;
+        case LOOP_LENGTH -> clip.loopLength.cursor;
+        case PLAY_END -> clip.playEnd.cursor;
+        case PLAY_START -> clip.playStart.cursor;
+        default -> null;
+        };
       }
 
       public void setCursor(LXClip clip, Cursor cursor) {
         switch (this) {
-        case LOOP_BRACE:
-          clip.setLoopBrace(cursor);
-          break;
-        case LOOP_END:
-          clip.setLoopEnd(cursor);
-          break;
-        case LOOP_START:
-          clip.setLoopStart(cursor);
-          break;
-        case PLAY_END:
-          clip.setPlayEnd(cursor);
-          break;
-        case PLAY_START:
-          clip.setPlayStart(cursor);
-          break;
+        case INSERT_MARKER -> clip.setInsertMarker(cursor);
+        case LOOP_BRACE ->  clip.setLoopBrace(cursor);
+        case LOOP_END -> clip.setLoopEnd(cursor);
+        case LOOP_START -> clip.setLoopStart(cursor);
+        case LOOP_LENGTH -> clip.setLoopLength(cursor);
+        case PLAY_END -> clip.setPlayEnd(cursor);
+        case PLAY_START -> clip.setPlayStart(cursor);
         }
       }
 
-      private final String label;
+      public final String label;
 
       private Marker(String label) {
         this.label = label;
@@ -3906,6 +3897,7 @@ public abstract class LXCommand {
       public final Marker marker;
       private final Cursor fromCursor;
       private Cursor toCursor;
+      private Cursor fromLength;
       private final String label;
 
       /**
@@ -3931,13 +3923,18 @@ public abstract class LXCommand {
 
       @Override
       public void perform(LX lx) {
-        this.marker.setCursor(this.clip.get(), this.toCursor);
+        final LXClip clip = this.clip.get();
+        this.fromLength = clip.length.cursor.clone();
+        this.marker.setCursor(clip, this.toCursor);
       }
 
       @Override
       public void undo(LX lx) {
-        LXClip clip = this.clip.get();
+        final LXClip clip = this.clip.get();
         this.marker.setCursor(clip, this.fromCursor);
+        if (this.marker == Marker.PLAY_END) {
+          clip.setLength(this.fromLength);
+        }
       }
     }
 

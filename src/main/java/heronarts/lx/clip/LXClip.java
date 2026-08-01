@@ -824,12 +824,30 @@ public abstract class LXClip extends LXRunnableComponent implements LXOscCompone
     playEnd = CursorOp().max(this.playStart.cursor.add(Cursor.MIN_LOOP), playEnd);
     this.playEnd.set(playEnd);
 
+    // Auto-grow the clip if playEnd is manually edited past length
+    if (CursorOp().isAfter(this.playEnd.cursor, this.length.cursor)) {
+      this.length.set(this.playEnd);
+      // This is akin to having created a recording
+      this.hasTimeline = true;
+    }
+
     // If we cross the cursor going left, while we are the relevant marker, stop playback
     if (!this.loop.isOn() && isRunning() && !isArmed()) {
       if (CursorOp().isBefore(this.cursor, oldEnd) && CursorOp().isAfter(this.cursor, this.playEnd.cursor)) {
         stop();
       }
     }
+    return this;
+  }
+
+  /**
+   * Not for public consumption, only used by the LXCommand stack
+   *
+   * @param length Length
+   * @return this
+   */
+  public LXClip setLength(Cursor length) {
+    this.length.set(length);
     return this;
   }
 
