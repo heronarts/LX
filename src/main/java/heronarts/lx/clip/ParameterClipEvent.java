@@ -31,6 +31,7 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   private double normalized;
   private Curve curve = Curve.POWER_EASE;
   private double shape = 0;
+  private int wraps = 0;
 
   ParameterClipEvent(ParameterClipLane lane) {
     this(lane, lane.parameter.getBaseNormalized());
@@ -101,6 +102,21 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     return this;
   }
 
+  boolean _setWraps(int wraps) {
+    if (this.wraps != wraps) {
+      this.wraps = wraps;
+      return true;
+    }
+    return false;
+  }
+
+  public ParameterClipEvent setWraps(int wraps) {
+    if (_setWraps(wraps)) {
+      this.lane.onChange.bang();
+    }
+    return this;
+  }
+
   /**
    * Curve type to this point
    *
@@ -119,21 +135,51 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     return this.shape;
   }
 
+  /**
+   * Number of wraps since prior event
+   *
+   * @return Number of wraps to this point
+   */
+  public int getWraps() {
+    return this.wraps;
+  }
+
   public double interpolateFrom(ParameterClipEvent from, double lerpFactor) {
     return interpolateFrom(from.normalized, lerpFactor);
   }
 
   public double interpolateFrom(double from, double lerpFactor) {
+    if (this.wraps == 0) {
+      return interpolateUnwrapped(from, lerpFactor);
+    }
+    return LXUtils.wrapn(interpolateUnwrapped(from, lerpFactor));
+  }
+
+  public double interpolateUnwrapped(ParameterClipEvent from, double lerpFactor) {
+    return interpolateUnwrapped(from.normalized, lerpFactor);
+  }
+
+  /**
+   * Interpolates the segment arriving at this event *without* wrapping the result.
+   * When wraps are set, the interpolation target is offset by the wrap count
+   * and the result may fall outside of [0,1].
+   *
+   * @param from Value interpolating from
+   * @param lerpFactor Interpolation amount
+   * @return Interpolated value in unwrapped space
+   */
+  public double interpolateUnwrapped(double from, double lerpFactor) {
+    final double to = this.normalized + this.wraps;
     return switch (this.curve) {
-    case POWER_EASE -> interpolatePowerEase(from, lerpFactor);
-    case POWER_S_CURVE -> interpolateSCurve(from, lerpFactor);
-    case SMOOTHSTEP -> interpolateSmoothstep(from, lerpFactor);
-    case SINUSOIDAL -> interpolateSinusoidal(from, lerpFactor);
+    case POWER_EASE -> interpolatePowerEase(from, to, lerpFactor);
+    case POWER_S_CURVE -> interpolateSCurve(from, to, lerpFactor);
+    case SMOOTHSTEP -> interpolateSmoothstep(from, to, lerpFactor);
+    case SINUSOIDAL -> interpolateSinusoidal(from, to, lerpFactor);
     };
   }
 
-  private double interpolatePowerEase(double from, double lerpFactor) {
-    return _interpolatePowerEase(from, this.normalized, this.shape, lerpFactor);
+  private double interpolatePowerEase(double from, double to, double lerpFactor) {
+    return _interpolatePowerEase(from, to, this.shape, lerpFactor);
   }
 
   private static double _interpolatePowerEase(double from, double to, double shape, double lerpFactor) {
@@ -147,11 +193,11 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     return LXUtils.lerp(from, to, lerpFactor);
   }
 
-  private double interpolateSCurve(double from, double lerpFactor) {
-    double midpoint = LXUtils.lerp(from, this.normalized, .5);
+  private double interpolateSCurve(double from, double to, double lerpFactor) {
+    double midpoint = LXUtils.lerp(from, to, .5);
     return (lerpFactor <= 0.5) ?
       _interpolatePowerEase(from, midpoint, -this.shape, 2*lerpFactor) :
-      _interpolatePowerEase(midpoint, this.normalized, this.shape, 2*(lerpFactor-.5));
+      _interpolatePowerEase(midpoint, to, this.shape, 2*(lerpFactor-.5));
   }
 
   private static double shapeLerpFactor(double lerpFactor, double shape) {
@@ -161,17 +207,20 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
         _interpolatePowerEase(0.5, 1, shape, 2*(lerpFactor-.5));
   }
 
-  private double interpolateSmoothstep(double from, double lerpFactor) {
+  private double interpolateSmoothstep(double from, double to, double lerpFactor) {
     lerpFactor = shapeLerpFactor(lerpFactor, this.shape);
-    return LXUtils.lerp(from, this.normalized, lerpFactor * lerpFactor * (3. - 2. * lerpFactor));
+    return LXUtils.lerp(from, to, lerpFactor * lerpFactor * (3. - 2. * lerpFactor));
   }
 
-  private double interpolateSinusoidal(double from, double lerpFactor) {
+  private double interpolateSinusoidal(double from, double to, double lerpFactor) {
     lerpFactor = shapeLerpFactor(lerpFactor, this.shape);
-    return LXUtils.lerp(from, this.normalized, .5 - .5 * Math.cos(lerpFactor*Math.PI));
+    return LXUtils.lerp(from, to, .5 - .5 * Math.cos(lerpFactor*Math.PI));
   }
 
   public boolean isLinear() {
+    if (this.wraps != 0) {
+      return false;
+    }
     return switch (this.curve) {
     case POWER_EASE, POWER_S_CURVE -> (this.shape == 0);
     default -> false;
@@ -191,6 +240,7 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   protected static final String KEY_NORMALIZED = "normalized";
   protected static final String KEY_CURVE = "curve";
   protected static final String KEY_SHAPE = "shape";
+  protected static final String KEY_WRAPS = "wraps";
 
   @Override
   public void load(LX lx, JsonObject obj) {
@@ -207,6 +257,7 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
       this.curve = Curve.POWER_EASE;
     }
     this.shape = obj.has(KEY_SHAPE) ? obj.get(KEY_SHAPE).getAsDouble() : 0;
+    this.wraps = obj.has(KEY_WRAPS) ? obj.get(KEY_WRAPS).getAsInt() : 0;
   }
 
   @Override
@@ -218,6 +269,9 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     }
     if (this.shape != 0) {
       obj.addProperty(KEY_SHAPE, this.shape);
+    }
+    if (this.wraps != 0) {
+      obj.addProperty(KEY_WRAPS, this.wraps);
     }
   }
 }

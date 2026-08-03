@@ -5072,6 +5072,43 @@ public abstract class LXCommand {
             return "Reset Shape";
           }
         }
+
+        public static class SetWraps extends LXCommand {
+          private final ComponentReference<ParameterClipLane> clipLane;
+          private final int eventIndex;
+          private final int fromWraps;
+          private final int toWraps;
+
+          public SetWraps(ParameterClipLane lane, ParameterClipEvent clipEvent, int wraps) {
+            this.clipLane = new ComponentReference<>(lane);
+            this.eventIndex = lane.events.indexOf(clipEvent);
+            this.fromWraps = clipEvent.getWraps();
+            this.toWraps = wraps;
+          }
+
+          @Override
+          public String getDescription() {
+            return "Adjust Wraps";
+          }
+
+          @Override
+          public void perform(LX lx) throws InvalidCommandException {
+            _setWraps(this.toWraps);
+          }
+
+          @Override
+          public void undo(LX lx) throws InvalidCommandException {
+            _setWraps(this.fromWraps);
+          }
+
+          private void _setWraps(int wraps) throws InvalidCommandException  {
+            try {
+              this.clipLane.get().events.get(this.eventIndex).setWraps(wraps);
+            } catch (Exception x) {
+              throw new InvalidCommandException(x);
+            }
+          }
+        }
       }
     }
   }
