@@ -28,7 +28,6 @@ import heronarts.lx.mixer.LXAbstractChannel;
 import heronarts.lx.model.LXModel;
 import heronarts.lx.modulator.LXModulator;
 import heronarts.lx.output.LXOutput;
-import heronarts.lx.parameter.MediaPathParameter;
 import heronarts.lx.parameter.MutableParameter;
 import heronarts.lx.parameter.StringParameter;
 import heronarts.lx.pattern.LXPattern;
@@ -1421,26 +1420,6 @@ public class LX {
       deviceFolder.mkdir();
     }
     return deviceFolder;
-  }
-
-  public void consolidateProjectMedia() {
-    if (this.file == null) {
-      pushError("Cannot consolidate project media, no project file found.", true);
-      return;
-    }
-    File mediaFolder = new File(this.file + ".media");
-    if (mediaFolder.exists() && !mediaFolder.isDirectory()) {
-      pushError("Cannot consolidate project media, media folder exists: " + mediaFolder, true);
-      return;
-    }
-    if (!mediaFolder.exists()) {
-      if (!mediaFolder.mkdir()) {
-        pushError("Could not create project media folder: " + mediaFolder);
-        return;
-      }
-    }
-    MediaPathParameter.consolidateProjectMedia(this, mediaFolder, this.engine);
-    pushStatusMessage("Consolidated project media to: " + mediaFolder);
   }
 
   public File getPresetFile(LXComponent device, String name) {
