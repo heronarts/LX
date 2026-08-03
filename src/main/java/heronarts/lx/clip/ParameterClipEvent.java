@@ -13,12 +13,20 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     POWER_EASE("Power Ease"),
     POWER_S_CURVE("S-Curve"),
     SMOOTHSTEP("Smoothstep"),
-    SINUSOIDAL("Sinusoidal");
+    SINUSOIDAL("Sinusoidal"),
+    WRAP("Wrap");
 
     public final String label;
 
     private Curve(String label) {
       this.label = label;
+    }
+
+    public double getShapeLimit() {
+      return switch (this) {
+      case WRAP -> 1000;
+      default -> 1;
+      };
     }
 
     @Override
@@ -87,13 +95,16 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   public ParameterClipEvent setCurve(Curve curve) {
     if (this.curve != curve) {
       this.curve = curve;
+      final double shapeLimit = this.curve.getShapeLimit();
+      this.shape = LXUtils.constrain(this.shape, -shapeLimit, shapeLimit);
       this.lane.onChange.bang();
     }
     return this;
   }
 
   public ParameterClipEvent setShape(double shape) {
-    shape = LXUtils.constrain(shape, -1, 1);
+    final double shapeLimit = this.curve.getShapeLimit();
+    shape = LXUtils.constrain(shape, -shapeLimit, shapeLimit);
     if (this.shape != shape) {
       this.shape = shape;
       this.lane.onChange.bang();
@@ -129,6 +140,7 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
     case POWER_S_CURVE -> interpolateSCurve(from, lerpFactor);
     case SMOOTHSTEP -> interpolateSmoothstep(from, lerpFactor);
     case SINUSOIDAL -> interpolateSinusoidal(from, lerpFactor);
+    case WRAP -> interpolateWrap(from, lerpFactor);
     };
   }
 
@@ -169,6 +181,11 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   private double interpolateSinusoidal(double from, double lerpFactor) {
     lerpFactor = shapeLerpFactor(lerpFactor, this.shape);
     return LXUtils.lerp(from, this.normalized, .5 - .5 * Math.cos(lerpFactor*Math.PI));
+  }
+
+  private double interpolateWrap(double from, double lerpFactor) {
+    double to = this.normalized - Math.round(this.shape * 3);
+    return LXUtils.wrapn(LXUtils.lerp(from, to, lerpFactor));
   }
 
   public boolean isLinear() {
