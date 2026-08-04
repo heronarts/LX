@@ -183,6 +183,15 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
       return null;
     }
     if (hasInterpolation()) {
+      if (next.getWraps() != 0) {
+        // Cutting a wrapped segment - interpolate in unwrapped space, the stitch keeps
+        // however many boundary crossings have already occurred by this cursor
+        final double unwrapped = next.interpolateUnwrapped(prior, CursorOp().getLerpFactor(cursor, prior.cursor, next.cursor));
+        final double normalized = LXUtils.wrapn(unwrapped);
+        final ParameterClipEvent stitch = new ParameterClipEvent(this, cursor, normalized);
+        stitch._setWraps((int) Math.round(unwrapped - normalized));
+        return stitch;
+      }
       return new ParameterClipEvent(this, cursor, interpolateValue(prior, next, cursor));
     }
     return new ParameterClipEvent(this, cursor, CursorOp().isAfterOrEqual(cursor, next.cursor) ? next.getNormalized() : prior.getNormalized());
@@ -297,6 +306,11 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     if (events.isEmpty()) {
       return false;
     }
+    if (stitch.getWraps() != 0) {
+      // A stitch carrying wraps holds boundary-crossing information, it is not
+      // redundant even between events of equal value
+      return false;
+    }
     ParameterClipEvent prior = null;
     ParameterClipEvent next = null;
     boolean equalsPrior = true;
@@ -374,6 +388,49 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     }
   }
 
+  /**
+   * Collapses the events in the given range down to a single segments. For wrappable parameters,
+   * the interior motion is first analyzed to detect boundary crossings, which are preserved
+   * as wraps on the surviving destination event.
+   */
+  @Override
+  public boolean collapseRange(Cursor from, Cursor to) {
+    ParameterClipEvent destination = null;
+    int wraps = 0;
+    if (hasInterpolation() && this.parameter.isWrappable()) {
+      final int fromIndex = cursorPlayIndex(from);
+      final int toIndex = cursorInsertIndex(to);
+      if (toIndex - fromIndex > 2) {
+        destination = this.events.get(toIndex - 1);
+        double prev = this.events.get(fromIndex).getNormalized();
+        for (int i = fromIndex + 1; i < toIndex; ++i) {
+          final ParameterClipEvent event = this.events.get(i);
+          final double normalized = event.getNormalized();
+          if (event.getWraps() != 0) {
+            // Explicit wraps on an interior segment count directly
+            wraps += event.getWraps();
+          } else {
+            // A jump of more than the threshold amount is inferred to have wrapped
+            final double delta = normalized - prev;
+            if (delta > .5) {
+              --wraps;
+            } else if (delta < -.5) {
+              ++wraps;
+            }
+          }
+          prev = normalized;
+        }
+      }
+    }
+    if (super.collapseRange(from, to)) {
+      if (destination != null) {
+        destination.setWraps(wraps);
+      }
+      return true;
+    }
+    return false;
+  }
+
   // RECORDING CONTROL
 
   private static final double SMOOTHING_THRESHOLD_MS = 250;
@@ -443,6 +500,9 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
         }
         // Now insert the value from the end of the loop
         ParameterClipEvent stitchLoopEnd = stitchOuter(this.mutableEvents, to, cursorPlayIndex(from));
+        // This stitch carries a value across the loop boundary, it does not traverse
+        // its source segment, clear any wraps picked up from interpolation
+        stitchLoopEnd._setWraps(0);
         if ((stitchBeforeLoop == null) || (stitchBeforeLoop.getNormalized() != stitchLoopEnd.getNormalized())) {
           recordEvent(stitchLoopEnd);
         }
@@ -490,7 +550,7 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
     boolean changed = false;
     this.mutableEvents.begin();
 
-    ParameterClipEvent stitchInner = null, stitchOuter = null;
+    ParameterClipEvent stitchInner = null, stitchOuter = null, stitchOuterNext = null;
     int stitchInnerIndex = -1;
 
     // Clear events in the [from-to] range, respecting inclusivity
@@ -500,6 +560,10 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
       if (CursorOp.isBefore(to, this.clip.length.cursor)) {
         stitchOuter = stitchOuter(this.events, to, endIndex);
+        if ((endIndex > 0) && (endIndex < this.events.size())) {
+          // Track the event the outer stitch cuts towards, its wraps may need updating below
+          stitchOuterNext = this.events.get(endIndex);
+        }
       }
 
       if (endIndex > startIndex) {
@@ -534,6 +598,18 @@ public abstract class ParameterClipLane extends LXClipLane<ParameterClipEvent> {
 
     // Now play back the range with edits applied (not outer stitch)
     playCursor(from, to, inclusive);
+
+    // If the overdub cut through a wrapped segment, the surviving destination event
+    // keeps only the boundary crossings after the cut. The outer stitch itself arrives
+    // from overdubbed material, it carries no crossings of its own.
+    if ((stitchOuter != null) && (stitchOuter.getWraps() != 0)) {
+      if ((stitchOuterNext != null) && (changed || (stitchInner != null))) {
+        if (stitchOuterNext._setWraps(stitchOuterNext.getWraps() - stitchOuter.getWraps())) {
+          changed = true;
+        }
+      }
+      stitchOuter._setWraps(0);
+    }
 
     // Add the outer stitch if it's not pointless
     if (stitchOuter != null) {
