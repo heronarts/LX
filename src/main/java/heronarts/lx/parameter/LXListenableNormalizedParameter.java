@@ -34,6 +34,7 @@ public abstract class LXListenableNormalizedParameter extends LXListenableParame
   private double exponent = 1;
   private boolean wrappable = false;
   private OscMode oscMode = OscMode.NORMALIZED;
+  private boolean serializable = true;
 
   protected LXListenableNormalizedParameter(String label, double value) {
     super(label, value);
@@ -120,6 +121,16 @@ public abstract class LXListenableNormalizedParameter extends LXListenableParame
       }
     }
     return (LXListenableNormalizedParameter) setNormalized(normalized);
+  }
+
+  public LXListenableNormalizedParameter setSerializable(boolean serializable) {
+    this.serializable = serializable;
+    return this;
+  }
+
+  @Override
+  public boolean isSerializable() {
+    return this.serializable;
   }
 
 }

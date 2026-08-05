@@ -97,6 +97,9 @@ public interface LXSerializable {
           // Let this store/restore from the underlying parameter values
           continue;
         }
+        if (!parameter.isSerializable()) {
+          continue;
+        }
         LXSerializable.Utils.saveParameter(parameter, obj, path);
       }
     }

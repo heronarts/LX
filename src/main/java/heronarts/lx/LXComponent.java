@@ -1502,6 +1502,9 @@ public abstract class LXComponent implements LXPath, LXParameterListener, LXSeri
         // Let this store/restore from the underlying parameter values
         continue;
       }
+      if (!parameter.isSerializable()) {
+        continue;
+      }
       LXSerializable.Utils.loadParameter(parameter, obj, path);
     }
   }

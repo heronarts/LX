@@ -392,4 +392,8 @@ public interface LXParameter extends LXPath {
     return false;
   }
 
+  public default boolean isSerializable() {
+    return true;
+  }
+
 }
