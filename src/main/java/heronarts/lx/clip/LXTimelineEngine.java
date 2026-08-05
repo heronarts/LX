@@ -45,9 +45,10 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
   // TODO: allow a list of compositions, not just one
   private LXComposition composition;
 
-  public final BooleanParameter arm =
+  public final BooleanParameter arm = (BooleanParameter)
     new BooleanParameter("Arm")
-    .setDescription("Starts the composition recording");
+    .setDescription("Starts the composition recording")
+    .setSerializable(false);
 
   public final BooleanParameter sync =
     new BooleanParameter("Sync", false)
@@ -60,8 +61,7 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
 
     addParameter("sync", this.sync);
     addParameter("focusedClip", this.focusedClip);
-
-    this.arm.addListener(this::armChanged);
+    addParameter("arm", this.arm);
   }
 
   public void initialize() {
@@ -82,7 +82,10 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
     return super.handleOscMessage(message, parts, index);
   }
 
-  private void armChanged(LXParameter p) {
+  @Override
+  public void onParameterChanged(LXParameter p) {
+    super.onParameterChanged(p);
+    if (p == this.arm) {
     // If "Start Transport With Record" preference is enabled, then start recording when arm is pressed.
     // TODO: update preference to project-specific location?
     // if (lx.preferences.startTransportWithRecord.isOn()) {
@@ -96,6 +99,7 @@ public class LXTimelineEngine extends LXComponent implements LXOscComponent, LXC
         }
       }
     // }
+    }
   }
 
   public void loop(double deltaMs) {
