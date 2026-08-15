@@ -149,14 +149,13 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
   }
 
   public double interpolateFrom(double from, double lerpFactor) {
-    if (this.wraps == 0) {
-      return interpolateUnwrapped(from, lerpFactor);
-    }
-    return LXUtils.wrapn(interpolateUnwrapped(from, lerpFactor));
+    return (this.wraps == 0) ?
+      interpolate(from, this.normalized, lerpFactor) :
+      LXUtils.wrapn(interpolate(from, this.normalized + this.wraps, lerpFactor));
   }
 
-  public double interpolateUnwrapped(ParameterClipEvent from, double lerpFactor) {
-    return interpolateUnwrapped(from.normalized, lerpFactor);
+  double interpolateUnwrapped(ParameterClipEvent from, double lerpFactor) {
+    return interpolate(from.normalized, this.normalized + this.wraps, lerpFactor);
   }
 
   /**
@@ -165,11 +164,11 @@ public class ParameterClipEvent extends LXClipEvent<ParameterClipEvent> {
    * and the result may fall outside of [0,1].
    *
    * @param from Value interpolating from
+   * @param to Value interpolating to
    * @param lerpFactor Interpolation amount
    * @return Interpolated value in unwrapped space
    */
-  public double interpolateUnwrapped(double from, double lerpFactor) {
-    final double to = this.normalized + this.wraps;
+  private double interpolate(double from, double to, double lerpFactor) {
     return switch (this.curve) {
     case POWER_EASE -> interpolatePowerEase(from, to, lerpFactor);
     case POWER_S_CURVE -> interpolateSCurve(from, to, lerpFactor);
