@@ -18,6 +18,8 @@
 
 package heronarts.lx.audio;
 
+import com.google.gson.JsonObject;
+
 import heronarts.lx.LX;
 import heronarts.lx.LXCategory;
 import heronarts.lx.modulator.LXModulator;
@@ -139,17 +141,19 @@ public class BandFilter extends LXModulator implements LXNormalizedParameter, LX
   @Override
   public void onParameterChanged(LXParameter p) {
     super.onParameterChanged(p);
-    if (p == this.minFreq) {
-      if (this.minFreq.getValue() > this.maxFreq.getValue()) {
-        this.minFreq.setValue(this.maxFreq.getValue());
-      } else {
-        updateAverageOctave();
-      }
-    } else if (p == this.maxFreq) {
-      if (this.maxFreq.getValue() < this.minFreq.getValue()) {
-        this.maxFreq.setValue(this.minFreq.getValue());
-      } else {
-        updateAverageOctave();
+    if (!this.inLoad) {
+      if (p == this.minFreq) {
+        if (this.minFreq.getValue() > this.maxFreq.getValue()) {
+          this.minFreq.setValue(this.maxFreq.getValue());
+        } else {
+          updateAverageOctave();
+        }
+      } else if (p == this.maxFreq) {
+        if (this.maxFreq.getValue() < this.minFreq.getValue()) {
+          this.maxFreq.setValue(this.minFreq.getValue());
+        } else {
+          updateAverageOctave();
+        }
       }
     }
   }
@@ -223,6 +227,21 @@ public class BandFilter extends LXModulator implements LXNormalizedParameter, LX
   @Override
   public double getNormalized() {
     return getValue();
+  }
+
+  private boolean inLoad = false;
+
+  @Override
+  public void load(LX lx, JsonObject obj) {
+    this.inLoad = true;
+    super.load(lx, obj);
+    this.inLoad = false;
+
+    // Constrain loaded values and update octave
+    if (this.maxFreq.getValue() < this.minFreq.getValue()) {
+      this.maxFreq.setValue(this.minFreq.getValue());
+    }
+    updateAverageOctave();
   }
 
   @Override
