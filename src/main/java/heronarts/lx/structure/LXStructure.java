@@ -678,6 +678,9 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     if (!fromLoad) {
       setDirty();
     }
+
+    // Clear the regeneration flag, we just did it
+    this.flagRegenerateModel = false;
   }
 
   private void regenerateOutputs() {
@@ -713,6 +716,7 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
   @Override
   public void fixtureOutputChanged(LXFixture fixture) {
     this.flagRegenerateOutputs = true;
+    setDirty();
   }
 
   @Override
@@ -727,7 +731,6 @@ public class LXStructure extends LXComponent implements LXFixtureContainer {
     }
     if (this.flagRegenerateOutputs) {
       regenerateOutputs();
-      setDirty();
       this.flagRegenerateOutputs = false;
     }
     if (this.flagRegenerateGeometry) {
