@@ -36,7 +36,27 @@ public class DDPDatagram extends LXDatagram {
   private static final int HEADER_LENGTH = 10;
 
   private static final int FLAGS_INDEX = 0;
+
+  private static final int OFFSET_SEQUENCE_NUMBER = 1;
+  private static final int OFFSET_DATA_TYPE = 2;
   private static final int OFFSET_DATA_OFFSET = 4;
+
+  public static final int DATA_TYPE_UNDEFINED = 0x00;
+  public static final int DATA_TYPE_RGB = 0x01;
+  public static final int DATA_TYPE_HSL = 0x02;
+  public static final int DATA_TYPE_RGBW = 0x03;
+  public static final int DATA_TYPE_GRAYSCALE = 0x04;
+
+  public static final int DATA_TYPE_SIZE_1BIT = 1;
+  public static final int DATA_TYPE_SIZE_4BIT = 2;
+  public static final int DATA_TYPE_SIZE_8BIT = 3;
+  public static final int DATA_TYPE_SIZE_16BIT = 4;
+  public static final int DATA_TYPE_SIZE_24BIT = 5;
+  public static final int DATA_TYPE_SIZE_32BIT = 6;
+
+  private boolean sequenceEnabled = false;
+
+  private byte sequence = 0;
 
   public DDPDatagram(LX lx, LXModel model) {
     this(lx, model.toIndexBuffer());
@@ -62,11 +82,11 @@ public class DDPDatagram extends LXDatagram {
     // Flags: V V x T S R Q P
     this.buffer[0] = 0x41;
 
-    // Reserved
-    this.buffer[1] = 0x00;
+    // Sequence number
+    this.buffer[OFFSET_SEQUENCE_NUMBER] = 0x00;
 
     // Data type
-    this.buffer[2] = 0x00;
+    this.buffer[OFFSET_DATA_TYPE] = DATA_TYPE_UNDEFINED;
 
     // Destination ID, default
     this.buffer[3] = 0x01;
@@ -112,5 +132,50 @@ public class DDPDatagram extends LXDatagram {
   @Override
   protected int getDataBufferOffset() {
     return HEADER_LENGTH;
+  }
+
+  /**
+   * Set whether to increment and send sequence numbers
+   *
+   * @param sequenceEnabled true if sequence should be incremented and transmitted
+   * @return this
+   */
+  public DDPDatagram setSequenceEnabled(boolean sequenceEnabled) {
+    this.sequenceEnabled = sequenceEnabled;
+    this.sequence = 0;
+    if (!this.sequenceEnabled) {
+      this.buffer[OFFSET_SEQUENCE_NUMBER] = 0;
+    }
+    return this;
+  }
+
+  @Override
+  protected LXBufferOutput updateDataBuffer(int[] colors, GammaTable glut, double brightness) {
+    int dataType = DATA_TYPE_UNDEFINED;
+    int dataTypeSize = DATA_TYPE_UNDEFINED;
+    for (IndexBuffer.Segment segment : this.indexBuffer.segments) {
+      if (segment.byteEncoder instanceof ByteOrder byteOrder) {
+        dataType =
+          (byteOrder == ByteOrder.W) ? DATA_TYPE_GRAYSCALE :
+          (byteOrder.hasWhite ? DATA_TYPE_RGBW : DATA_TYPE_RGB);
+        dataTypeSize = DATA_TYPE_SIZE_8BIT;
+      }
+      break;
+    }
+
+    this.buffer[OFFSET_DATA_TYPE] = (byte) (0xff & (dataType << 3) | dataTypeSize);
+
+    return super.updateDataBuffer(colors, glut, brightness);
+  }
+
+  @Override
+  protected void updateSequenceNumber() {
+    if (this.sequenceEnabled) {
+      // NOTE: DDP only uses 4-bit nonzero sequence numbers (1-15)
+      if (++this.sequence > 0x0f) {
+        this.sequence = 0x01;
+      }
+      this.buffer[OFFSET_SEQUENCE_NUMBER] = this.sequence;
+    }
   }
 }

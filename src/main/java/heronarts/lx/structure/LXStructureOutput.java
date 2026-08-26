@@ -209,7 +209,9 @@ public class LXStructureOutput extends LXOutput {
         }
         break;
       case DDP:
-        output = new DDPDatagram(lx, toIndexBuffer(), this.universe);
+        output =
+          new DDPDatagram(lx, toIndexBuffer(), this.universe)
+          .setSequenceEnabled(this.sequenceEnabled);
         break;
       case NONE:
         break;
