@@ -163,7 +163,7 @@ public class DDPDatagram extends LXDatagram {
       break;
     }
 
-    this.buffer[OFFSET_DATA_TYPE] = (byte) (0xff & (dataType << 3) | dataTypeSize);
+    this.buffer[OFFSET_DATA_TYPE] = (byte) (0xff & ((dataType << 3) | dataTypeSize));
 
     return super.updateDataBuffer(colors, glut, brightness);
   }
