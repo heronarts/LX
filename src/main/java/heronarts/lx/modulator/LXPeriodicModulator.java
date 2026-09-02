@@ -23,8 +23,8 @@ import com.google.gson.JsonObject;
 import heronarts.lx.LX;
 import heronarts.lx.Tempo;
 import heronarts.lx.parameter.BooleanParameter;
+import heronarts.lx.parameter.CompoundEnumParameter;
 import heronarts.lx.parameter.CompoundParameter;
-import heronarts.lx.parameter.EnumParameter;
 import heronarts.lx.parameter.FixedParameter;
 import heronarts.lx.parameter.LXParameter;
 
@@ -49,8 +49,8 @@ public abstract class LXPeriodicModulator extends LXModulator implements LXModul
     new BooleanParameter("Sync", false)
     .setDescription("Whether this modulator syncs to a tempo");
 
-  public final EnumParameter<Tempo.Division> tempoDivision =
-    new EnumParameter<Tempo.Division>("Division", Tempo.Division.QUARTER)
+  public final CompoundEnumParameter<Tempo.Division> tempoDivision =
+    new CompoundEnumParameter<Tempo.Division>("Division", Tempo.Division.QUARTER)
     .setDescription("Tempo division when in sync mode");
 
   public final BooleanParameter tempoLock =
