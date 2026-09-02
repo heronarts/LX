@@ -86,7 +86,7 @@ public class DDPDatagram extends LXDatagram {
     this.buffer[OFFSET_SEQUENCE_NUMBER] = 0x00;
 
     // Data type
-    this.buffer[OFFSET_DATA_TYPE] = DATA_TYPE_UNDEFINED;
+    this.buffer[OFFSET_DATA_TYPE] = getDataType(indexBuffer);
 
     // Destination ID, default
     this.buffer[3] = 0x01;
@@ -98,6 +98,21 @@ public class DDPDatagram extends LXDatagram {
     int dataLen = indexBuffer.numChannels;
     this.buffer[8] = (byte) (0xff & (dataLen >> 8));
     this.buffer[9] = (byte) (0xff & dataLen);
+  }
+
+  private static byte getDataType(IndexBuffer indexBuffer) {
+    int dataType = DATA_TYPE_UNDEFINED;
+    int dataTypeSize = DATA_TYPE_UNDEFINED;
+    for (IndexBuffer.Segment segment : indexBuffer.segments) {
+      if (segment.byteEncoder instanceof ByteOrder byteOrder) {
+        dataType =
+          (byteOrder == ByteOrder.W) ? DATA_TYPE_GRAYSCALE :
+          (byteOrder.hasWhite ? DATA_TYPE_RGBW : DATA_TYPE_RGB);
+        dataTypeSize = DATA_TYPE_SIZE_8BIT;
+      }
+      break;
+    }
+    return (byte) (0xff & ((dataType << 3) | dataTypeSize));
   }
 
   /**
@@ -147,25 +162,6 @@ public class DDPDatagram extends LXDatagram {
       this.buffer[OFFSET_SEQUENCE_NUMBER] = 0;
     }
     return this;
-  }
-
-  @Override
-  protected LXBufferOutput updateDataBuffer(int[] colors, GammaTable glut, double brightness) {
-    int dataType = DATA_TYPE_UNDEFINED;
-    int dataTypeSize = DATA_TYPE_UNDEFINED;
-    for (IndexBuffer.Segment segment : this.indexBuffer.segments) {
-      if (segment.byteEncoder instanceof ByteOrder byteOrder) {
-        dataType =
-          (byteOrder == ByteOrder.W) ? DATA_TYPE_GRAYSCALE :
-          (byteOrder.hasWhite ? DATA_TYPE_RGBW : DATA_TYPE_RGB);
-        dataTypeSize = DATA_TYPE_SIZE_8BIT;
-      }
-      break;
-    }
-
-    this.buffer[OFFSET_DATA_TYPE] = (byte) (0xff & ((dataType << 3) | dataTypeSize));
-
-    return super.updateDataBuffer(colors, glut, brightness);
   }
 
   @Override
