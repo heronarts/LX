@@ -144,11 +144,11 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     .setDescription("Whether effect settings are recalled");
 
   public final BooleanParameter recallModulation =
-    new BooleanParameter("Modulation", true)
+    new BooleanParameter("Modulation", false)
     .setDescription("Whether global modulation settings are recalled");
 
   public final BooleanParameter recallMaster =
-    new BooleanParameter("Master", true)
+    new BooleanParameter("Master", false)
     .setDescription("Whether master fader settings are recalled");
 
   public final BooleanParameter recallOutput =
@@ -535,23 +535,15 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     if (!view.enabled.isOn()) {
       return false;
     }
-    switch (view.scope) {
-    case EFFECTS:
-      return effect;
-    case MODULATION:
-      return modulation;
-    case PATTERNS:
-      return pattern;
-    case OUTPUT:
-      return output;
-    case MIXER:
-      return mixer;
-    case GLOBAL:
-      return true;
-    case MASTER:
-      return master;
-    }
-    return false;
+    return switch (view.scope) {
+      case EFFECTS -> effect;
+      case MODULATION -> modulation;
+      case PATTERNS -> pattern;
+      case OUTPUT -> output;
+      case MIXER -> mixer;
+      case GLOBAL -> true;
+      case MASTER -> master;
+    };
   }
 
   public double getTransitionProgress() {
@@ -803,6 +795,10 @@ public class LXSnapshotEngine extends LXComponent implements LXOscComponent, LXL
     clear();
 
     super.load(lx, obj);
+
+    if (obj.has(LXComponent.KEY_RESET)) {
+      this.parameters.reset();
+    }
 
     if (obj.has(KEY_SNAPSHOTS)) {
       JsonArray snapshotArr = obj.getAsJsonArray(KEY_SNAPSHOTS);
