@@ -732,8 +732,8 @@ public class LXColor {
     int srcAlpha = a + (a >= 0x7f ? 1 : 0);
     int dstAlpha = BLEND_ALPHA_FULL - srcAlpha;
 
-    int r = ((R_MASK - (dst & R_MASK)))  / (1 + (src & R_MASK >> R_SHIFT));
-    int g = ((G_MASK - (dst & G_MASK)) << 8) / (1 + (src & G_MASK >> G_SHIFT));
+    int r = ((R_MASK - (dst & R_MASK)))  / (1 + ((src & R_MASK) >> R_SHIFT));
+    int g = ((G_MASK - (dst & G_MASK)) << 8) / (1 + ((src & G_MASK) >> G_SHIFT));
     int b = ((B_MASK - (dst & B_MASK)) << 8) / (1 + (src & B_MASK));
 
     int rb = RB_MASK -
@@ -841,8 +841,8 @@ public class LXColor {
    */
   public static void maplerp(int[] src, int srcOffset, int srcNum, int[] dst, int dstOffset, int dstNum) {
     for (int i = 0; i < dstNum; ++i) {
-      double srcIndex = (int) ((srcNum - 1.) * (i / (dstNum - 1.)));
-      int srcInt = (int) srcIndex;
+      final double srcIndex = i * (srcNum - 1.) / (dstNum - 1.);
+      final int srcInt = (int) srcIndex;
       double lerp = srcIndex - srcInt;
       if ((lerp > 0) && (srcInt < srcNum - 1)) {
         dst[dstOffset + i] = LXColor.lerp(
