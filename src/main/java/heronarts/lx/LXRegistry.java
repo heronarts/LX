@@ -199,7 +199,7 @@ public class LXRegistry implements LXSerializable {
     heronarts.lx.modulator.Stepper.class,
     heronarts.lx.modulator.StepSequencer.class,
     heronarts.lx.modulator.Timer.class,
-    heronarts.lx.modulator.TrigonometryModulator.class,
+    heronarts.lx.modulator.FunctionsModulator.class,
     heronarts.lx.modulator.VariableLFO.class,
   };
 
