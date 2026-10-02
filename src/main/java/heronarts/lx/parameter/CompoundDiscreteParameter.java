@@ -196,7 +196,7 @@ public class CompoundDiscreteParameter extends DiscreteParameter implements LXCo
 
   @Override
   public int getBaseIndex() {
-    return super.getIndex();
+    return super.getBaseIndex();
   }
 
   @Override
