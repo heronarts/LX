@@ -216,7 +216,7 @@ public class CompoundDiscreteParameter extends DiscreteParameter implements LXCo
   @Override
   public double getValue() {
     if (this.range <= 1) {
-      return 0;
+      return this.minValue;
     }
     if (this.mutableModulations.size() == 0) {
       return super.getValue();
