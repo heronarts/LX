@@ -162,7 +162,7 @@ public class LXUtils {
   }
 
   public static int randomi(int min, int max) {
-    return (int) constrain(random(min, max+1), min, max);
+    return constrain((int) random(min, max+1), min, max);
   }
 
   public static double random(double max) {
