@@ -66,6 +66,11 @@ public class BooleanParameter extends LXListenableNormalizedParameter {
     return this.getValue() > 0.;
   }
 
+  public BooleanParameter setValue(boolean value, boolean notifyListeners) {
+    setValue(value ? 1. : 0., notifyListeners);
+    return this;
+  }
+
   public BooleanParameter setValue(boolean value) {
     setValue(value ? 1. : 0.);
     return this;
