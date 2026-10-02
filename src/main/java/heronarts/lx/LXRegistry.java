@@ -193,6 +193,7 @@ public class LXRegistry implements LXSerializable {
     heronarts.lx.modulator.OperatorModulator.class,
     heronarts.lx.modulator.Quantizer.class,
     heronarts.lx.modulator.Randomizer.class,
+    heronarts.lx.modulator.SampleAndHold.class,
     heronarts.lx.modulator.Scaler.class,
     heronarts.lx.modulator.Smoother.class,
     heronarts.lx.modulator.Spring.class,
