@@ -70,6 +70,7 @@ public class FunctionsModulator extends LXModulator implements LXNormalizedParam
     SAW_POS("Saw+", false, false, (v,s) -> v-Math.floor(v)),
     SQRT("Sqrt", false, false, (v,s) -> Math.sqrt(v)),
     EXP("Exp", false, false, (v,s) -> INV_E_MINUS_1*(Math.exp(v)-1)),
+    LOG("Log", false, false, (v,s) -> Math.log(1+v)),
     INV("Inv", false, false, (v,s) -> 1/(1+v*s)),
     POW("Pow(y)", false, false, (v,s) -> Math.pow(v,s)),
     EXPY("Exp(y)", false, false, (v,s) -> (Math.pow(s,v) - 1) / (s-1));
