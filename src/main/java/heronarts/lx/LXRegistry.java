@@ -183,6 +183,7 @@ public class LXRegistry implements LXSerializable {
     heronarts.lx.modulator.Damper.class,
     heronarts.lx.modulator.Interval.class,
     heronarts.lx.modulator.MacroKnobs.class,
+    heronarts.lx.modulator.MacroSelector.class,
     heronarts.lx.modulator.MacroSwitches.class,
     heronarts.lx.modulator.MacroTriggers.class,
     heronarts.lx.modulator.MidiNoteTrigger.class,

@@ -44,16 +44,19 @@ public abstract class LXMacroModulator extends LXModulator implements LXOscCompo
 
   public final StringParameter getMacroLabel(LXParameter parameter) {
     final LXParameter[] parameters = getMacroParameters();
-    for (int i = 0; i < parameters.length; ++i) {
-      if (parameters[i] == parameter) {
-        return getMacroLabels()[i];
+    final StringParameter[] labels = getMacroLabels();
+    if ((labels != null) && (parameters != null)) {
+      for (int i = 0; i < parameters.length; ++i) {
+        if (parameters[i] == parameter) {
+          return labels[i];
+        }
       }
     }
     return null;
   }
 
-  public abstract LXParameter[] getMacroParameters();
+  protected abstract LXParameter[] getMacroParameters();
 
-  public abstract StringParameter[] getMacroLabels();
+  protected abstract StringParameter[] getMacroLabels();
 
 }
